@@ -183,9 +183,16 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-            will-change: background-size;
+            will-change: background-size, transform;
             font-size: 1.75rem;
             font-weight: 800;
+            transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), text-shadow 0.25s ease;
+        }
+
+        /* END LEVEL VISUALS: Das aktuell gesungene Wort ploppt hervor! */
+        .lyric-word.active-word {
+            transform: scale(1.08) translateY(-2px);
+            text-shadow: 0 10px 25px rgba(255, 255, 255, 0.2);
         }
 
         .mask-image-gradient {
@@ -632,39 +639,7 @@
         let serverBaseProgress = 0;
         let trackIsPlaying = false;
         let lyricAnimFrame = null;
-        let lastProcessedUpdate = 0; // Verhindert veraltete Updates
-        let lastSeenProgressMs = -1; // ANTI-JITTER: Speichert den letzten echten Spotify-Wert
-
-        // --- NTP WORLD TIME SYNC (DIE ATOMBOMBE FÜR DYNAMISCHE ZEIT) ---
-        let localClockOffset = 0;
-        let isTimeSynced = false;
-
-        async function syncWorldwideTime() {
-            try {
-                const startMs = performance.now();
-                // Wir holen uns die absolut exakte, server-unabhängige Weltzeit
-                const response = await fetch('https://worldtimeapi.org/api/timezone/Etc/UTC');
-                if (!response.ok) throw new Error("Time API offline");
-                const data = await response.json();
-                const endMs = performance.now();
-                
-                // Ping berechnen, um das Ergebnis auf die Millisekunde zu schärfen
-                const latency = (endMs - startMs) / 2;
-                const trueWorldTime = new Date(data.datetime).getTime() + latency;
-                
-                // Wir berechnen exakt, wie falsch Jonas' PC-Uhr im Vergleich zur echten Weltzeit geht
-                localClockOffset = Date.now() - trueWorldTime;
-                isTimeSynced = true;
-            } catch (error) {
-                console.warn("Weltzeit-Sync fehlgeschlagen, vertraue lokaler Uhr.", error);
-            }
-        }
-
-        // Diese Funktion liefert immer die echte, korrigierte Weltzeit!
-        function getTrueDateNow() {
-            return isTimeSynced ? (Date.now() - localClockOffset) : Date.now();
-        }
-        // -------------------------------------------------------------
+        let lastSeenProgressMs = -1; 
 
         function formatTime(ms) {
             if (!ms || ms < 0) return "0:00";
@@ -684,20 +659,50 @@
             }
         }
 
-        // Besserer Parser: Entfernt störende Inline-Timestamps (z.B. von LRCLIB)
+        // Besserer Parser: Erkennt jetzt auch die versteckten Word-Level Timestamps!
         function parseLrc(lrcString) {
             const lines = lrcString.split('\n');
-            const regex = /\[(\d{2}):(\d{2})\.(\d{2,3})\](.*)/;
+            const lineRegex = /\[(\d{2}):(\d{2})\.(\d{2,3})\](.*)/;
+            const wordRegex = /<(\d{2}):(\d{2})\.(\d{2,3})>([^<]*)/g;
+            
             parsedLyrics = [];
             lines.forEach(line => {
-                const match = regex.exec(line);
+                const match = lineRegex.exec(line);
                 if (match) {
                     const m = parseInt(match[1]);
                     const s = parseInt(match[2]);
                     let msStr = match[3];
                     const ms = msStr.length === 2 ? parseInt(msStr) * 10 : parseInt(msStr);
-                    const text = match[4].replace(/<\d{2}:\d{2}\.\d{2,3}>/g, '').trim();
-                    parsedLyrics.push({ timeMs: (m * 60000) + (s * 1000) + ms, text: text || "♪" });
+                    const lineTime = (m * 60000) + (s * 1000) + ms;
+                    const rawText = match[4];
+
+                    let words = [];
+                    let hasWordSync = false;
+
+                    if (rawText.includes('<')) {
+                        let wordMatch;
+                        while ((wordMatch = wordRegex.exec(rawText)) !== null) {
+                            hasWordSync = true;
+                            const wm = parseInt(wordMatch[1]);
+                            const ws = parseInt(wordMatch[2]);
+                            let wmsStr = wordMatch[3];
+                            const wms = wmsStr.length === 2 ? parseInt(wmsStr) * 10 : parseInt(wmsStr);
+                            const wordTime = (wm * 60000) + (ws * 1000) + wms;
+                            const wordText = wordMatch[4].trim();
+                            if (wordText) words.push({ timeMs: wordTime, text: wordText });
+                        }
+                    }
+
+                    const cleanText = rawText.replace(/<\d{2}:\d{2}\.\d{2,3}>/g, '').trim();
+
+                    // Wenn keine Word-Timestamps da sind, bereiten wir es für den Silben-Fallback vor
+                    if (!hasWordSync && cleanText) {
+                        words = cleanText.split(' ').map(w => ({ timeMs: -1, text: w }));
+                    }
+
+                    if (cleanText) {
+                        parsedLyrics.push({ timeMs: lineTime, text: cleanText, hasWordSync: hasWordSync, words: words });
+                    }
                 }
             });
         }
@@ -708,9 +713,8 @@
                 return;
             }
             lyricsContent.innerHTML = '<div class="w-full pt-[40vh] pb-[40vh] px-4">' + parsedLyrics.map((line, idx) => {
-                const words = line.text.split(' ');
                 return `<div id="lyric-line-${idx}" class="lyric-line">` + 
-                    words.map((word, wIdx) => `<span id="word-${idx}-${wIdx}" class="lyric-word">${word}</span>`).join(' ') +
+                    line.words.map((wordObj, wIdx) => `<span id="word-${idx}-${wIdx}" class="lyric-word">${wordObj.text}</span>`).join(' ') +
                 `</div>`;
             }).join('') + '</div>';
         }
@@ -729,13 +733,27 @@
             });
         }
 
-        // Neue, PERFEKTE UI-Sync Logik
+        // -------------------------------------------------------------
+        // DIE END LEVEL LOGIK: DYNAMISCHER SYLLABLE COUNTER (FALLBACK)
+        // -------------------------------------------------------------
+        function getSyllableCount(word) {
+            word = word.toLowerCase().replace(/[^a-zäöüß]/g, '');
+            if (!word) return 1; 
+            if (word.length <= 3) return 1;
+            word = word.replace(/(?:[^laeiouyäöü]|ed|es|[^laeiouyäöü]e)$/, '');
+            word = word.replace(/^y/, '');
+            const match = word.match(/[aeiouyäöüß]{1,2}/g);
+            return match ? match.length : 1;
+        }
+
+        // Neue, PERFEKTE UI-Sync Logik (HYBRID: WORD-SYNC + SYLLABLE SYNC)
         function syncLyricsUI(forceScroll = false) {
             if (parsedLyrics.length === 0 || !mainMusicCard.classList.contains('lyrics-open')) return;
 
-            // LYRICS OFFSET FIX: Da der Timer jetzt ABSOLUT PERFEKT ist, 
-            // reicht ein minimaler visueller Vorlauf von 250ms, damit das Auge synchron mit dem Beat liest.
-            const syncMs = currentMs + 250;
+            // VISUAL TWEAK (VON JONAS): Startet etwas früher!
+            // Vorlauf auf 300ms justiert, damit das Auge es sofort catcht, wenn der Beat droppt.
+            const VISUAL_OFFSET = 300;
+            const syncMs = currentMs + VISUAL_OFFSET;
 
             let newActiveIdx = -1;
             for (let i = 0; i < parsedLyrics.length; i++) {
@@ -763,67 +781,125 @@
                 }
             }
 
-            // Realistischere Word-by-Word Animation
+            // Word-by-Word Animation
             parsedLyrics.forEach((line, idx) => {
                 const lineEl = document.getElementById(`lyric-line-${idx}`);
                 if (!lineEl) return;
 
-                const words = line.text.split(' ');
-                const totalChars = line.text.length;
-
                 if (idx < currentLyricIndex) {
-                    words.forEach((_, wIdx) => {
+                    line.words.forEach((_, wIdx) => {
                         const wordSpan = document.getElementById(`word-${idx}-${wIdx}`);
-                        if (wordSpan) wordSpan.style.setProperty('--fill-percent', '100%');
+                        if (wordSpan) {
+                            wordSpan.style.setProperty('--fill-percent', '100%');
+                            wordSpan.classList.remove('active-word');
+                        }
                     });
                 } else if (idx === currentLyricIndex) {
-                    const nextLine = parsedLyrics[idx + 1];
-                    let duration;
                     
-                    // DIE UNGESCHÖNTE WAHRHEIT: Wir haben keine Endzeiten im LRC!
-                    // Deshalb berechnen wir eine realistische Dauer basierend auf der Textlänge (ca. 100ms pro Buchstabe).
-                    // Mindestens 800ms, damit extrem kurze Wörter ("Oh") nicht einfach aufblitzen.
-                    const estimatedSingingTime = Math.max(800, totalChars * 100);
-                    
-                    if (nextLine) {
-                        const timeToNext = nextLine.timeMs - line.timeMs;
-                        // Er nutzt die realistische Sing-Zeit. ABER falls der Sänger extrem schnell
-                        // die nächste Line raushaut, cappen wir es bei 95% der Zeit bis zur nächsten Line.
-                        // Kommt eine lange Pause, greift die Sing-Zeit, er ist auf 100% und WARTET.
-                        duration = Math.min(estimatedSingingTime, timeToNext * 0.95);
+                    // JONAS SWEET SPOT FIX: Gap in Millisekunden vor dem nächsten Wort/Zeile
+                    const SWEET_SPOT_GAP = 3; 
+
+                    if (line.hasWordSync) {
+                        // 1. ABSOLUTES END LEVEL: Echte Timestamps, LINEARES Füllen!
+                        line.words.forEach((wordObj, wIdx) => {
+                            const wordSpan = document.getElementById(`word-${idx}-${wIdx}`);
+                            if (!wordSpan) return;
+
+                            const nextWord = line.words[wIdx + 1];
+                            const nextTime = nextWord ? nextWord.timeMs : (parsedLyrics[idx + 1] ? parsedLyrics[idx + 1].timeMs : wordObj.timeMs + 2000);
+                            
+                            // DIE MATHEMATISCH KORREKTE FORMEL:
+                            // Dauer = (Zeit bis zum nächsten Wort) + (Vorlauf) - (3ms Sweet Spot Gap)
+                            // Das streckt die Animation fehlerfrei und macht sie butterweich, ohne zu früh zu stoppen!
+                            let wordDuration = (nextTime - wordObj.timeMs) + VISUAL_OFFSET - SWEET_SPOT_GAP;
+                            if(wordDuration <= 0) wordDuration = 500;
+                            
+                            const wordElapsed = syncMs - wordObj.timeMs;
+                            let wordPercentRaw = (wordElapsed / wordDuration);
+                            
+                            if(wordPercentRaw < 0) wordPercentRaw = 0;
+                            if(wordPercentRaw > 1) wordPercentRaw = 1;
+
+                            // Lineares, absolut gleichmäßiges Füllen
+                            const wordPercent = wordPercentRaw * 100;
+                            wordSpan.style.setProperty('--fill-percent', `${wordPercent}%`);
+
+                            // Wort Pop-Effekt anwenden, während es gesungen wird
+                            if (wordPercentRaw > 0 && wordPercentRaw < 1) {
+                                wordSpan.classList.add('active-word');
+                            } else {
+                                wordSpan.classList.remove('active-word');
+                            }
+                        });
                     } else {
-                        // Letzte Zeile im Song
-                        duration = estimatedSingingTime;
-                    }
-
-                    const lineElapsed = syncMs - line.timeMs;
-                    const lineProgressRatio = Math.min(Math.max(lineElapsed / duration, 0), 1);
-
-                    let currentCharSum = 0;
-                    words.forEach((word, wIdx) => {
-                        const wordSpan = document.getElementById(`word-${idx}-${wIdx}`);
-                        if (!wordSpan) return;
-
-                        const wordLen = word.length;
-                        const wordStartRatio = currentCharSum / totalChars;
-                        const wordEndRatio = (currentCharSum + wordLen) / totalChars;
-
-                        let wordPercent = 0;
-                        if (lineProgressRatio > wordEndRatio) {
-                            wordPercent = 100;
-                        } else if (lineProgressRatio < wordStartRatio) {
-                            wordPercent = 0;
-                        } else {
-                            wordPercent = ((lineProgressRatio - wordStartRatio) / (wordEndRatio - wordStartRatio)) * 100;
-                        }
+                        // 2. FALLBACK: Silben-Schätzung LINEAR und Pop-Effekt!
+                        const nextLine = parsedLyrics[idx + 1];
+                        let duration;
                         
-                        wordSpan.style.setProperty('--fill-percent', `${wordPercent}%`);
-                        currentCharSum += wordLen + 1;
-                    });
+                        let totalSyllables = 0;
+                        const wordSyllables = line.words.map(w => {
+                            const count = getSyllableCount(w.text);
+                            totalSyllables += count;
+                            return count;
+                        });
+
+                        const estimatedSingingTime = Math.max(1000, totalSyllables * 350) + VISUAL_OFFSET;
+                        
+                        if (nextLine) {
+                            const timeToNext = nextLine.timeMs - line.timeMs;
+                            // JONAS FIX: Formel angewandt!
+                            duration = timeToNext + VISUAL_OFFSET - SWEET_SPOT_GAP; 
+                        } else {
+                            duration = estimatedSingingTime;
+                        }
+
+                        const lineElapsed = syncMs - line.timeMs;
+                        let lineProgressRatioRaw = (lineElapsed / duration);
+                        if(lineProgressRatioRaw < 0) lineProgressRatioRaw = 0;
+                        if(lineProgressRatioRaw > 1) lineProgressRatioRaw = 1;
+
+                        // Gesamte Zeile wird absolut linear gefüllt
+                        const lineProgressRatio = lineProgressRatioRaw;
+
+                        let currentSyllableSum = 0;
+                        line.words.forEach((wordObj, wIdx) => {
+                            const wordSpan = document.getElementById(`word-${idx}-${wIdx}`);
+                            if (!wordSpan) return;
+
+                            const wordSyl = wordSyllables[wIdx];
+                            const wordStartRatio = currentSyllableSum / totalSyllables;
+                            const wordEndRatio = (currentSyllableSum + wordSyl) / totalSyllables;
+
+                            let wordPercent = 0;
+                            let isCurrentlyActive = false;
+
+                            if (lineProgressRatio > wordEndRatio) {
+                                wordPercent = 100;
+                            } else if (lineProgressRatio < wordStartRatio) {
+                                wordPercent = 0;
+                            } else {
+                                wordPercent = ((lineProgressRatio - wordStartRatio) / (wordEndRatio - wordStartRatio)) * 100;
+                                isCurrentlyActive = true;
+                            }
+                            
+                            wordSpan.style.setProperty('--fill-percent', `${wordPercent}%`);
+                            
+                            if (isCurrentlyActive) {
+                                wordSpan.classList.add('active-word');
+                            } else {
+                                wordSpan.classList.remove('active-word');
+                            }
+
+                            currentSyllableSum += wordSyl; 
+                        });
+                    }
                 } else {
-                    words.forEach((_, wIdx) => {
+                    line.words.forEach((_, wIdx) => {
                         const wordSpan = document.getElementById(`word-${idx}-${wIdx}`);
-                        if (wordSpan) wordSpan.style.setProperty('--fill-percent', '0%');
+                        if (wordSpan) {
+                            wordSpan.style.setProperty('--fill-percent', '0%');
+                            wordSpan.classList.remove('active-word');
+                        }
                     });
                 }
             });
@@ -919,7 +995,7 @@
                 
                 lyricsMiniTitle.innerText = "Offline";
                 lyricsMiniArtist.innerText = "Keine Musik";
-                lyricsMiniArt.removeAttribute('src'); // Besser als leeren String, verhindert broken image icon
+                lyricsMiniArt.removeAttribute('src'); 
                 
                 trackIsPlaying = false;
                 currentTrackId = "";
@@ -936,8 +1012,6 @@
             mDot.className = "h-2 w-2 rounded-full bg-green-500 active-dot";
             const imgUrl = data.track.artwork_url;
             
-            // ANTI-BROKEN-IMAGE FIX: Separat checken! 
-            // Da das Mini-Art beim Pausieren gelöscht wurde, muss es unabhängig vom Main-Artwork neu gesetzt werden.
             if(mArtwork.getAttribute('src') !== imgUrl) {
                 mArtwork.src = imgUrl; 
                 mAmbient.style.backgroundImage = `url('${imgUrl}')`;
@@ -960,36 +1034,20 @@
             const newTrackId = data.track.title + "-" + data.track.artist;
             const isNewTrack = (newTrackId !== currentTrackId);
 
-            // ANTI-JITTER LOGIK: 
-            // Wenn die API uns mehrfach exakt denselben Fortschritt schickt (Cache), 
-            // zerschießt das unseren Timer. Wir ignorieren diese veralteten Daten restlos!
             if (data.track.progress_ms === lastSeenProgressMs && trackIsPlaying === isPlaying && !isNewTrack) {
                 return;
             }
             lastSeenProgressMs = data.track.progress_ms;
 
-            // WIR NUTZEN JETZT IMMER DIE ECHTE WELTZEIT (getTrueDateNow()) UM DAS ALTER ZU BERECHNEN
-            const apiUpdatedAt = data.updated_at ? new Date(data.updated_at).getTime() : getTrueDateNow();
-            if (apiUpdatedAt < lastProcessedUpdate) return;
-            lastProcessedUpdate = apiUpdatedAt;
-
-            // WAHRE DYNAMISCHE LATENZBERECHNUNG OHNE FESTE WERTE
-            let dataAge = getTrueDateNow() - apiUpdatedAt;
-            
-            if (dataAge < 0) dataAge = 0;
-            // JONAS FIX: 15-Sekunden Hard-Cap restlos entfernt! 
-            // Echte verstrichene Zeit muss komplett addiert werden.
-
-            let apiProgress = (data.track.progress_ms || 0);
-            if (isPlaying) {
-                apiProgress += dataAge;
-            }
-            if (data.track.duration_ms && apiProgress > data.track.duration_ms) {
+            // ABSOLUTE WAHRHEIT: Wir vertrauen nur noch der Ankunftszeit (performance.now()).
+            // Weltzeit (NTP) und Server-Uhr (updated_at) waren fehlerhaft und asynchron!
+            // Wir nehmen die Progress-MS + fixen 200ms Ping-Ausgleich für den WebSocket.
+            let apiProgress = (data.track.progress_ms || 0) + 200;
+            if (apiProgress > data.track.duration_ms) {
                 apiProgress = data.track.duration_ms;
             }
 
             if (isNewTrack) {
-                // Hard Reset für komplett neuen Track (zählt nie wieder bei 0 los, wenn der Song schon läuft!)
                 currentTrackId = newTrackId;
                 totalMs = data.track.duration_ms || 0;
                 timeTotalEl.innerText = formatTime(totalMs);
@@ -1001,7 +1059,6 @@
                 
                 fetchExternalLyrics(data.track.title, data.track.artist);
             } else {
-                // Play / Pause Status-Änderung sauber abfangen
                 if (!trackIsPlaying && isPlaying) {
                     trackIsPlaying = true;
                     serverBaseProgress = apiProgress;
@@ -1012,8 +1069,6 @@
                     trackIsPlaying = false;
                     currentMs = apiProgress;
                 } else if (trackIsPlaying) {
-                    // Timer läuft lokal perfekt weiter. Skip-Kontrolle:
-                    // Reduziert auf 2000ms. Das filtert API-Jitter, erkennt aber echtes Spulen sofort!
                     if (Math.abs(currentMs - apiProgress) > 2000) {
                         serverBaseProgress = apiProgress;
                         localStartTime = performance.now();
@@ -1029,7 +1084,6 @@
             miniIconBg.className = 'w-12 h-12 shrink-0 rounded-xl flex items-center justify-center transition-colors bg-green-500/10 text-green-500 active-dot';
             if(!isDashboardOpen) miniStatus.innerText = data.track.artist;
             
-            // LINK FIX: Keine kaputten "#" Links mehr, die die Seite einfach neu laden!
             const spotLinkEl = document.getElementById('link-spotify');
             const appleLinkEl = document.getElementById('link-apple');
             const noLinkEl = document.getElementById('link-none');
@@ -1073,7 +1127,6 @@
             musicSocket.onclose = () => setTimeout(connectMusicSocket, 3000); 
         }
 
-        // Fallback Polling: Zündet NUR NOCH, wenn der WebSocket tot ist!
         setInterval(() => {
             if (musicSocket && musicSocket.readyState === WebSocket.OPEN) return;
             fetch('https://npc-api.aikins.xyz/v1/users/gamingpig/now')
@@ -1104,15 +1157,8 @@
             mainMusicCard.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg)`;
         });
 
-        // INIT: Erst die Uhr weltweit perfekt synchronisieren, dann den Rest starten!
-        (async () => {
-            await syncWorldwideTime();
-            requestAnimationFrame(animateLoop);
-            connectMusicSocket();
-            
-            // Resync alle 10 Minuten für absolute Präzision, falls die PC Uhr driftet
-            setInterval(syncWorldwideTime, 600000);
-        })();
+        requestAnimationFrame(animateLoop);
+        connectMusicSocket();
 
     </script>
 </body>
