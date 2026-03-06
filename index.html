@@ -75,15 +75,13 @@
 
         /* --- Music Dashboard spezifische Styles --- */
         
-        /* IMMER dunkler Glass-Look NUR für das Haupt-Dashboard */
         #main-music-card {
             background: rgba(15, 23, 42, 0.8) !important;
             border-color: rgba(255, 255, 255, 0.1) !important;
         }
         
-        /* Dynamische Breite für Lyrics */
         #main-music-card.lyrics-open {
-            max-width: 800px !important; /* Breiter für den fetten Text */
+            max-width: 800px !important;
         }
         
         #main-music-card #track-title {
@@ -147,7 +145,6 @@
         
         .offline#main-music-card { border-color: rgba(59, 130, 246, 0.3) !important; }
 
-        /* Steuerelemente bei Offline restlos ausblenden */
         .offline #progress-container,
         .offline #controls-container { 
             display: none !important; 
@@ -156,7 +153,6 @@
         @keyframes pulse-dot { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.5); opacity: 0.5; } }
         .active-dot { animation: pulse-dot 2s infinite; }
 
-        /* Lyrics UI Animationen */
         .lyrics-open #lyrics-overlay {
             opacity: 1;
             transform: translateY(0);
@@ -164,16 +160,15 @@
         }
 
         .lyric-line {
-            display: block; /* Flexbox durch stabiles Block-Layout ersetzt für perfekten Umbruch */
+            display: block; 
             margin: 4vh 0; 
             line-height: 1.25; 
             transition: opacity 0.4s ease, filter 0.4s ease;
         }
         
-        /* Verbesserte Unschärfe und Skalierung der inaktiven Zeilen für einen knallharten Fokus-Effekt */
         .lyrics-open .lyric-line { 
             opacity: 0.25; 
-            filter: blur(2px); /* Blur leicht reduziert, damit der Umbruch nicht flimmert */
+            filter: blur(2px); 
         }
         .lyrics-open .lyric-line.active { 
             opacity: 1; 
@@ -183,16 +178,15 @@
         .lyric-word {
             position: relative;
             display: inline-block;
-            margin-right: 0; /* Statt flex-gap nutzen wir echte Whitespaces aus den Tokens! */
-            white-space: pre-wrap; /* NEU: Hält Leerzeichen am Leben für perfekten Textfluss */
+            margin-right: 0; 
+            white-space: pre-wrap; 
             background: linear-gradient(to right, #ffffff var(--fill-percent, 0%), rgba(255,255,255,0.2) var(--fill-percent, 0%));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
             will-change: background-size;
-            /* HIER DIE MAGIE: Back to the roots! Sauberer, lesbarer Default-Spotify-Vibe */
             font-size: clamp(1.2rem, 3vw + 0.5rem, 2.2rem); 
-            font-weight: 800; /* Etwas entspannter, damit es nicht zu klobig wirkt */
+            font-weight: 800; 
             letter-spacing: -0.02em; 
         }
 
@@ -234,7 +228,8 @@
 
     <!-- Theme Switcher -->
     <div class="fixed top-6 right-6 z-[110]">
-        <button id="theme-toggle" class="group p-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-2xl rounded-2xl border border-slate-200 dark:border-slate-700 hover:ring-2 hover:ring-blue-500 transition-all active:scale-90">
+        <!-- HINZUGEFÜGT: aria-label für Screenreader -->
+        <button id="theme-toggle" aria-label="Darkmode umschalten" class="group p-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-2xl rounded-2xl border border-slate-200 dark:border-slate-700 hover:ring-2 hover:ring-blue-500 transition-all active:scale-90">
             <span id="theme-icon-dark" class="hidden dark:block text-yellow-400 group-hover:rotate-12 transition-transform">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
             </span>
@@ -247,7 +242,8 @@
     <!-- Modal System -->
     <div id="modal-overlay" class="fixed inset-0 bg-slate-900/40 dark:bg-black/80 z-[200] hidden items-center justify-center p-4">
         <div class="modal-content glass-card w-full max-w-xl rounded-[2.5rem] p-10 relative border border-white/20 dark:border-white/5">
-            <button id="close-modal" class="absolute top-6 right-6 p-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-blue-500 transition-all">
+            <!-- HINZUGEFÜGT: aria-label für Screenreader -->
+            <button id="close-modal" aria-label="Modal schließen" class="absolute top-6 right-6 p-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-blue-500 transition-all">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
             </button>
             <div id="modal-body"></div>
@@ -280,7 +276,8 @@
                 Real Talk: Ausbildung, Alltag & alles, was zählt
             </h2>
             <div class="grid md:grid-cols-2 gap-5">
-                <div onclick="openModal('status')" class="glass-card p-6 rounded-[1.5rem] flex items-start gap-5 cursor-pointer group">
+                <!-- tabindex="0" und Rolle hinzugefügt für a11y -->
+                <div onclick="openModal('status')" role="button" tabindex="0" class="glass-card p-6 rounded-[1.5rem] flex items-start gap-5 cursor-pointer group">
                     <div class="p-3 bg-blue-500/10 text-blue-500 rounded-xl group-hover:bg-blue-500 group-hover:text-white transition-all">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                     </div>
@@ -290,7 +287,7 @@
                     </div>
                 </div>
 
-                <div onclick="openModal('background')" class="glass-card p-6 rounded-[1.5rem] flex items-start gap-5 cursor-pointer group">
+                <div onclick="openModal('background')" role="button" tabindex="0" class="glass-card p-6 rounded-[1.5rem] flex items-start gap-5 cursor-pointer group">
                     <div class="p-3 bg-purple-500/10 text-purple-500 rounded-xl group-hover:bg-purple-500 group-hover:text-white transition-all">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                     </div>
@@ -300,7 +297,7 @@
                     </div>
                 </div>
 
-                <div onclick="openModal('freizeit')" class="glass-card p-6 rounded-[1.5rem] flex items-start gap-5 cursor-pointer group">
+                <div onclick="openModal('freizeit')" role="button" tabindex="0" class="glass-card p-6 rounded-[1.5rem] flex items-start gap-5 cursor-pointer group">
                     <div class="p-3 bg-orange-500/10 text-orange-500 rounded-xl group-hover:bg-orange-500 group-hover:text-white transition-all">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 12h.01M18 12h.01M15 10h.01M15 14h.01"/></svg>
                     </div>
@@ -310,7 +307,7 @@
                     </div>
                 </div>
 
-                <div onclick="openModal('menschen')" class="glass-card p-6 rounded-[1.5rem] flex items-start gap-5 cursor-pointer group">
+                <div onclick="openModal('menschen')" role="button" tabindex="0" class="glass-card p-6 rounded-[1.5rem] flex items-start gap-5 cursor-pointer group">
                     <div class="p-3 bg-red-500/10 text-red-500 rounded-xl group-hover:bg-red-500 group-hover:text-white transition-all">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
                     </div>
@@ -328,8 +325,7 @@
                 Was bei mir gerade läuft
             </h2>
             
-            <!-- Mini-Player Toggle Button -->
-            <div id="mini-player-toggle" onclick="toggleDashboard()" class="glass-card w-full max-w-[400px] mx-auto p-4 rounded-[2rem] flex items-center justify-between cursor-pointer group mb-6 relative z-20 hover:scale-[1.01] hover:shadow-xl transition-all">
+            <div id="mini-player-toggle" onclick="toggleDashboard()" role="button" tabindex="0" class="glass-card w-full max-w-[400px] mx-auto p-4 rounded-[2rem] flex items-center justify-between cursor-pointer group mb-6 relative z-20 hover:scale-[1.01] hover:shadow-xl transition-all">
                 <div class="flex items-center gap-4 flex-1 min-w-0">
                     <div id="mini-icon-bg" class="w-12 h-12 shrink-0 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
@@ -352,21 +348,20 @@
                     <!-- Lyrics Overlay -->
                     <div id="lyrics-overlay" class="absolute inset-0 bg-slate-900/95 backdrop-blur-3xl rounded-[3rem] flex-col p-6 md:p-8 z-40 transition-all duration-500 opacity-0 translate-y-8 pointer-events-none flex">
                         
-                        <!-- Song-Info oben im Lyrics Modus -->
                         <div class="flex items-center justify-between gap-4 mb-6 shrink-0 w-full bg-white/5 p-4 rounded-2xl border border-white/10">
                             <div class="flex items-center gap-3 min-w-0">
-                                <img id="lyrics-mini-art" src="" class="w-10 h-10 rounded shadow-md object-cover shrink-0">
+                                <img id="lyrics-mini-art" src="" alt="Album Art" class="w-10 h-10 rounded shadow-md object-cover shrink-0">
                                 <div class="text-left min-w-0">
                                     <p id="lyrics-mini-title" class="text-sm font-bold text-white truncate">Titel</p>
                                     <p id="lyrics-mini-artist" class="text-xs text-white/60 truncate">Artist</p>
                                 </div>
                             </div>
-                            <button onclick="toggleLyrics(false)" class="p-2 hover:bg-white/10 rounded-full transition-colors text-white shrink-0">
+                            <!-- HINZUGEFÜGT: aria-label -->
+                            <button onclick="toggleLyrics(false)" aria-label="Lyrics schließen" class="p-2 hover:bg-white/10 rounded-full transition-colors text-white shrink-0">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                             </button>
                         </div>
 
-                        <!-- Der maskierte Scrollbereich -->
                         <div class="relative flex-1 overflow-hidden mask-image-gradient w-full max-w-2xl mx-auto">
                             <div id="lyrics-container" class="absolute inset-0 overflow-y-auto text-left w-full h-full pb-10">
                                 <div id="lyrics-content" class="transition-all flex flex-col items-start w-full">
@@ -378,8 +373,8 @@
 
                     <div id="music-picker" class="absolute inset-0 bg-slate-900/95 rounded-[3rem] hidden flex-col justify-center p-10 gap-4 z-50">
                         <p class="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-6">Service wählen</p>
-                        <a id="link-spotify" target="_blank" class="p-4 rounded-2xl bg-[#1DB954] text-white font-bold text-center hover:brightness-110 transition-all" style="display: none;">Spotify</a>
-                        <a id="link-apple" target="_blank" class="p-4 rounded-2xl bg-[#FC3C44] text-white font-bold text-center hover:brightness-110 transition-all" style="display: none;">Apple Music</a>
+                        <a id="link-spotify" target="_blank" rel="noopener noreferrer" class="p-4 rounded-2xl bg-[#1DB954] text-white font-bold text-center hover:brightness-110 transition-all" style="display: none;">Spotify</a>
+                        <a id="link-apple" target="_blank" rel="noopener noreferrer" class="p-4 rounded-2xl bg-[#FC3C44] text-white font-bold text-center hover:brightness-110 transition-all" style="display: none;">Apple Music</a>
                         <p id="link-none" class="text-white/50 text-sm font-bold" style="display: none;">Keine Links gefunden</p>
                         <button onclick="toggleMusicPicker(false)" class="text-white/50 text-xs mt-4 hover:text-white transition-colors">Abbrechen</button>
                     </div>
@@ -388,9 +383,9 @@
                         Gamingpig is Offline
                     </div>
 
-                    <div id="media-container" onclick="toggleMusicPicker(true)" class="relative z-10 w-[240px] h-[240px] md:w-[280px] md:h-[280px] shrink-0 rounded-2xl mx-auto mb-6 overflow-hidden flex items-center justify-center bg-[#121212] shadow-[0_20px_40px_rgba(0,0,0,0.8)] cursor-pointer hover:ring-2 hover:ring-white/20 transition-all">
-                        <img id="artwork" src="" alt="" class="w-full h-full object-cover">
-                        <div id="offline-icon" class="absolute text-6xl">🌙</div>
+                    <div id="media-container" onclick="toggleMusicPicker(true)" role="button" tabindex="0" class="relative z-10 w-[240px] h-[240px] md:w-[280px] md:h-[280px] shrink-0 rounded-2xl mx-auto mb-6 overflow-hidden flex items-center justify-center bg-[#121212] shadow-[0_20px_40px_rgba(0,0,0,0.8)] cursor-pointer hover:ring-2 hover:ring-white/20 transition-all">
+                        <img id="artwork" src="" alt="Album Artwork" class="w-full h-full object-cover">
+                        <div id="offline-icon" class="absolute text-6xl" aria-hidden="true">🌙</div>
                     </div>
 
                     <div class="relative z-10 mb-6 text-left px-2 w-full shrink-0">
@@ -398,7 +393,6 @@
                         <p id="track-artist" class="text-white/70 text-lg font-medium">Genieße die Stille</p>
                     </div>
 
-                    <!-- Progress Bar & Timestamps -->
                     <div id="progress-container" class="relative z-10 w-full px-2 mb-6 shrink-0 transition-all">
                         <div class="flex justify-between text-[11px] font-mono text-white/60 mb-2">
                             <span id="time-current">0:00</span>
@@ -415,8 +409,8 @@
                             <span id="status-text">Zen Mode</span>
                         </div>
                         
-                        <!-- Lyrics Button -->
-                        <button onclick="toggleLyrics(true)" class="p-2 text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all" title="Lyrics anzeigen">
+                        <!-- HINZUGEFÜGT: aria-label -->
+                        <button onclick="toggleLyrics(true)" aria-label="Lyrics anzeigen" class="p-2 text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all" title="Lyrics anzeigen">
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
                         </button>
                     </div>
@@ -426,6 +420,7 @@
 
         <!-- SOCIAL GRID -->
         <div class="grid gap-8 reveal">
+            <!-- Gleiche Social Cards wie vorher, nur aus Platzgründen hier gekürzt für Lesbarkeit oder gleich gelassen -->
             <div class="glass-card p-8 rounded-[2.5rem] group overflow-hidden relative border border-slate-200 dark:border-slate-800">
                 <div class="flex items-center gap-5 mb-6">
                     <div class="p-3 bg-pink-500/10 text-pink-600 rounded-2xl group-hover:rotate-12 transition-transform">
@@ -433,7 +428,7 @@
                     </div>
                     <h2 class="text-3xl font-bold">Jonas‘ TikTok</h2>
                 </div>
-                <a href="https://www.tiktok.com/@jonasjohnston2" target="_blank" class="group/link inline-flex items-center gap-3 text-xl text-blue-500 hover:text-blue-600 font-bold transition-all">
+                <a href="https://www.tiktok.com/@jonasjohnston2" target="_blank" rel="noopener noreferrer" class="group/link inline-flex items-center gap-3 text-xl text-blue-500 hover:text-blue-600 font-bold transition-all">
                     Hier geht's zu meinem TikTok Kanal
                     <div class="p-1.5 bg-blue-500/10 rounded-lg group-hover/link:translate-x-1 transition-transform">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
@@ -441,6 +436,7 @@
                 </a>
             </div>
 
+            <!-- YouTube -->
             <div class="glass-card p-8 rounded-[2.5rem] group overflow-hidden relative border border-slate-200 dark:border-slate-800">
                 <div class="flex items-center gap-5 mb-6">
                     <div class="p-3 bg-red-500/10 text-red-600 rounded-2xl group-hover:rotate-12 transition-transform">
@@ -448,7 +444,7 @@
                     </div>
                     <h2 class="text-3xl font-bold">Jonas' YouTube</h2>
                 </div>
-                <a href="https://www.youtube.com/@gamingpig9409" target="_blank" class="group/link inline-flex items-center gap-3 text-xl text-blue-500 hover:text-blue-600 font-bold transition-all">
+                <a href="https://www.youtube.com/@gamingpig9409" target="_blank" rel="noopener noreferrer" class="group/link inline-flex items-center gap-3 text-xl text-blue-500 hover:text-blue-600 font-bold transition-all">
                     Hier geht's zu meinem YouTube Kanal
                     <div class="p-1.5 bg-blue-500/10 rounded-lg group-hover/link:translate-x-1 transition-transform">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
@@ -456,6 +452,7 @@
                 </a>
             </div>
 
+            <!-- GitHub -->
             <div class="glass-card p-8 rounded-[2.5rem] group overflow-hidden relative border border-slate-200 dark:border-slate-800">
                 <div class="flex items-center gap-5 mb-6">
                     <div class="p-3 bg-slate-500/10 text-slate-900 dark:text-white rounded-2xl group-hover:rotate-12 transition-transform">
@@ -463,7 +460,7 @@
                     </div>
                     <h2 class="text-3xl font-bold">Jonas' GitHub</h2>
                 </div>
-                <a href="https://github.com/Gamingpig" target="_blank" class="group/link inline-flex items-center gap-3 text-xl text-blue-500 hover:text-blue-600 font-bold transition-all">
+                <a href="https://github.com/Gamingpig" target="_blank" rel="noopener noreferrer" class="group/link inline-flex items-center gap-3 text-xl text-blue-500 hover:text-blue-600 font-bold transition-all">
                     Hier geht's zu meinem GitHub Profil
                     <div class="p-1.5 bg-blue-500/10 rounded-lg group-hover/link:translate-x-1 transition-transform">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
@@ -471,6 +468,7 @@
                 </a>
             </div>
 
+            <!-- Tom's TikTok -->
             <div class="glass-card p-8 rounded-[2.5rem] group overflow-hidden relative border border-slate-200 dark:border-slate-800">
                 <div class="flex items-center gap-5 mb-6">
                     <div class="p-3 bg-pink-500/10 text-pink-600 rounded-2xl group-hover:rotate-12 transition-transform">
@@ -478,7 +476,7 @@
                     </div>
                     <h2 class="text-3xl font-bold">Tom's TikTok</h2>
                 </div>
-                <a href="https://www.tiktok.com/@crxy_tom_?is_from_webapp=1&sender_device=pc" target="_blank" class="group/link inline-flex items-center gap-3 text-xl text-blue-500 hover:text-blue-600 font-bold transition-all">
+                <a href="https://www.tiktok.com/@crxy_tom_?is_from_webapp=1&sender_device=pc" target="_blank" rel="noopener noreferrer" class="group/link inline-flex items-center gap-3 text-xl text-blue-500 hover:text-blue-600 font-bold transition-all">
                     Hier geht's zu Tom's TikTok Kanal
                     <div class="p-1.5 bg-blue-500/10 rounded-lg group-hover/link:translate-x-1 transition-transform">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
@@ -497,6 +495,20 @@
     </main>
 
     <script>
+        // HINZUGEFÜGT: XSS-Schutz Helper (escaped HTML Tags)
+        function escapeHTML(str) {
+            if (!str) return "";
+            return str.replace(/[&<>'"]/g, 
+                tag => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    "'": '&#39;',
+                    '"': '&quot;'
+                }[tag] || tag)
+            );
+        }
+
         // --- Theme Logik Portfolio ---
         const themeToggle = document.getElementById('theme-toggle');
         const html = document.documentElement;
@@ -524,10 +536,11 @@
 
         window.openModal = function(key) {
             const data = details[key];
+            // Sicher, da data aus dem internen Objekt kommt. Trotzdem Good Practice, falls man das mal aus einer API lädt.
             modalBody.innerHTML = `
                 <div class="text-xs font-black uppercase tracking-widest text-blue-500 mb-2">Deep Dive</div>
-                <h3 class="text-4xl font-extrabold text-slate-900 dark:text-white mb-6 leading-tight">${data.title}</h3>
-                <p class="text-slate-600 dark:text-slate-300 text-lg leading-relaxed font-medium mb-10">${data.content}</p>
+                <h3 class="text-4xl font-extrabold text-slate-900 dark:text-white mb-6 leading-tight">${escapeHTML(data.title)}</h3>
+                <p class="text-slate-600 dark:text-slate-300 text-lg leading-relaxed font-medium mb-10">${escapeHTML(data.content)}</p>
                 <button onclick="document.getElementById('close-modal').click()" class="w-full py-5 bg-blue-600 text-white rounded-[1.5rem] font-bold text-lg hover:bg-blue-700 hover:shadow-xl hover:shadow-blue-500/30 transition-all active:scale-95">Verstanden</button>
             `;
             modalOverlay.classList.remove('hidden');
@@ -549,19 +562,25 @@
             if (e.target === modalOverlay) closeModal.click();
         });
 
-        function reveal() {
-            const reveals = document.querySelectorAll(".reveal");
-            for (let i = 0; i < reveals.length; i++) {
-                const windowHeight = window.innerHeight;
-                const elementTop = reveals[i].getBoundingClientRect().top;
-                const elementVisible = 60;
-                if (elementTop < windowHeight - elementVisible) {
-                    reveals[i].classList.add("active");
+        // HINZUGEFÜGT: Performanter IntersectionObserver statt krassem Scroll-Event-Listener
+        const observerOptions = {
+            root: null,
+            rootMargin: '0px',
+            threshold: 0.1
+        };
+
+        const revealObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                    observer.unobserve(entry.target); // Optional: Nur einmalig einfliegen lassen
                 }
-            }
-        }
-        window.addEventListener("scroll", reveal);
-        window.addEventListener("load", reveal);
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.reveal').forEach(el => {
+            revealObserver.observe(el);
+        });
 
         // --- MUSIC DASHBOARD UI TOGGLES ---
         const musicCardWrapper = document.getElementById('music-card-wrapper');
@@ -612,7 +631,6 @@
             }
         };
 
-        // --- NEUE TIMER & LYRICS LOGIK ---
         const mTitle = document.getElementById('track-title');
         const mArtist = document.getElementById('track-artist');
         const mArtwork = document.getElementById('artwork');
@@ -635,15 +653,14 @@
         let parsedLyrics = [];
         let currentLyricIndex = -1;
         
-        // Präzise Timer-Variablen
         let localStartTime = 0;
         let serverBaseProgress = 0;
         let trackIsPlaying = false;
+        let isAnimating = false; // HINZUGEFÜGT: Status für die Animationsschleife
         let lyricAnimFrame = null;
         let lastProcessedUpdate = 0;
         let lastSeenProgressMs = -1;
 
-        // --- NTP WORLD TIME SYNC ---
         let localClockOffset = 0;
         let isTimeSynced = false;
 
@@ -687,7 +704,6 @@
             }
         }
 
-        // NEU: Super-intelligenter Tokenizer, der auch Bindestriche als Trennung erkennt!
         function tokenizeText(text) {
             return text.match(/([^\s\-]+[\s\-]*|[\s\-]+)/g) || [text];
         }
@@ -705,24 +721,24 @@
                     let msStr = match[3];
                     const ms = msStr.length === 2 ? parseInt(msStr) * 10 : parseInt(msStr);
                     const text = match[4].replace(/<\d{2}:\d{2}\.\d{2,3}>/g, '').trim();
-                    // Back to the roots: Wir pushen die Zeile einfach direkt rein, OHNE sie kaputt zu schneiden!
                     parsedLyrics.push({ timeMs: (m * 60000) + (s * 1000) + ms, text: text || "♪" });
                 }
             });
             
-            // Sortieren, falls die API mal unordentlich liefert
             parsedLyrics.sort((a, b) => a.timeMs - b.timeMs);
         }
 
         function renderLyrics(fallbackText) {
             if (parsedLyrics.length === 0) {
-                lyricsContent.innerHTML = `<p class="text-xl font-bold text-white/70 leading-relaxed whitespace-pre-wrap">${fallbackText || "Instrumental / Kein Text gefunden"}</p>`;
+                // HINZUGEFÜGT: escapeHTML benutzt für Sicherheit
+                lyricsContent.innerHTML = `<p class="text-xl font-bold text-white/70 leading-relaxed whitespace-pre-wrap">${escapeHTML(fallbackText) || "Instrumental / Kein Text gefunden"}</p>`;
                 return;
             }
             lyricsContent.innerHTML = '<div class="w-full pt-[40vh] pb-[40vh] px-4">' + parsedLyrics.map((line, idx) => {
                 const words = tokenizeText(line.text);
                 return `<div id="lyric-line-${idx}" class="lyric-line">` + 
-                    words.map((word, wIdx) => `<span id="word-${idx}-${wIdx}" class="lyric-word">${word}</span>`).join('') +
+                    // HINZUGEFÜGT: escapeHTML auf alle Wörter anwenden!
+                    words.map((word, wIdx) => `<span id="word-${idx}-${wIdx}" class="lyric-word">${escapeHTML(word)}</span>`).join('') +
                 `</div>`;
             }).join('') + '</div>';
         }
@@ -757,9 +773,6 @@
 
             if (newActiveIdx !== currentLyricIndex || forceScroll) {
                 
-                // KNALLHARTER BUGFIX: Die Atombombe gegen mehrere aktive Zeilen.
-                // Entfernt rücksichtslos bei JEDEM Update alle active Klassen im gesamten DOM, 
-                // bevor die neue Zeile fokussiert wird. 
                 document.querySelectorAll('.lyric-line.active').forEach(el => {
                     el.classList.remove('active');
                 });
@@ -777,7 +790,6 @@
                 }
             }
 
-            // Word-by-Word Animation
             parsedLyrics.forEach((line, idx) => {
                 const words = tokenizeText(line.text);
                 const totalChars = line.text.length;
@@ -822,7 +834,7 @@
                         }
                         
                         wordSpan.style.setProperty('--fill-percent', `${wordPercent}%`);
-                        currentCharSum += wordLen; // NEU: Kein +1 mehr, da Tokenizer Leerzeichen/Striche mitnimmt
+                        currentCharSum += wordLen;
                     });
                 } else {
                     words.forEach((_, wIdx) => {
@@ -833,6 +845,7 @@
             });
         }
 
+        // HINZUGEFÜGT: Optmierter Animations Loop, stoppt wenn Musik pausiert ist
         function animateLoop(now) {
             if (trackIsPlaying) {
                 currentMs = serverBaseProgress + (now - localStartTime);
@@ -842,8 +855,10 @@
                 if (mainMusicCard.classList.contains('lyrics-open')) {
                     syncLyricsUI();
                 }
+                lyricAnimFrame = requestAnimationFrame(animateLoop);
+            } else {
+                isAnimating = false; // Loop wurde unterbrochen
             }
-            lyricAnimFrame = requestAnimationFrame(animateLoop);
         }
 
         window.toggleLyrics = function(show) {
@@ -866,10 +881,10 @@
             }
         }
 
-        let currentFetchId = 0; // RACE CONDITION SCHUTZ
+        let currentFetchId = 0; 
 
         async function fetchExternalLyrics(title, artist) {
-            const fetchId = ++currentFetchId; // Generiere ID für diese Fetch-Anfrage
+            const fetchId = ++currentFetchId; 
             
             lyricsContent.innerHTML = '<p class="text-xl font-bold text-white/40 leading-snug animate-pulse">Suche nach synchronem Text auf LRCLIB...</p>';
             parsedLyrics = [];
@@ -879,7 +894,7 @@
                 const query = new URLSearchParams({ track_name: title, artist_name: artist });
                 const res = await fetch(`https://lrclib.net/api/get?${query}`);
                 
-                if (fetchId !== currentFetchId) return; // Knallhart abbrechen, wenn ein neueres Lied gesucht wird!
+                if (fetchId !== currentFetchId) return; 
                 
                 if (res.ok) {
                     const data = await res.json();
@@ -895,7 +910,7 @@
                 }
                 throw new Error("LRCLIB leer");
             } catch (err) {
-                if (fetchId !== currentFetchId) return; // Auch beim Fallback aufpassen
+                if (fetchId !== currentFetchId) return; 
                 
                 try {
                     const fallbackRes = await fetch(`https://api.lyrics.ovh/v1/${encodeURIComponent(artist)}/${encodeURIComponent(title)}`);
@@ -937,7 +952,7 @@
                 trackIsPlaying = false;
                 currentTrackId = "";
                 parsedLyrics = [];
-                currentLyricIndex = -1; // Reset zur Sicherheit
+                currentLyricIndex = -1; 
                 currentMs = 0;
                 totalMs = 0;
                 updateProgressUI();
@@ -1023,6 +1038,12 @@
                 }
             }
 
+            // HINZUGEFÜGT: Starte den AnimLoop nur, wenn er nicht schon läuft
+            if (trackIsPlaying && !isAnimating) {
+                isAnimating = true;
+                lyricAnimFrame = requestAnimationFrame(animateLoop);
+            }
+
             updateProgressUI();
 
             miniTitle.innerText = data.track.title;
@@ -1104,7 +1125,11 @@
 
         (async () => {
             await syncWorldwideTime();
-            requestAnimationFrame(animateLoop);
+            // Startet die loop nur, wenn Musik spielt, ansonsten wird sie gestoppt.
+            if (trackIsPlaying && !isAnimating) {
+                isAnimating = true;
+                requestAnimationFrame(animateLoop);
+            }
             connectMusicSocket();
             
             setInterval(syncWorldwideTime, 600000);
