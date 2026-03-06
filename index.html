@@ -409,16 +409,15 @@
                         <div class="relative flex-1 overflow-hidden mask-image-gradient w-full max-w-2xl mx-auto">
                             <div id="lyrics-container" class="absolute inset-0 overflow-y-auto text-left w-full h-full pb-10">
                                 <div id="lyrics-content" class="transition-all flex flex-col items-start w-full">
-                                    Suche nach Text...
+                                    <!-- Lyrics Inhalt wird hier generiert -->
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <div id="music-picker" class="absolute inset-0 bg-slate-900/95 rounded-[3rem] hidden flex-col justify-center p-10 gap-4 z-50">
-                        <p class="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-6">Service wählen</p>
-                        <a id="link-spotify" target="_blank" rel="noopener noreferrer" class="p-4 rounded-2xl bg-[#1DB954] text-white font-bold text-center hover:brightness-110 transition-all" style="display: none;">Spotify</a>
-                        <a id="link-apple" target="_blank" rel="noopener noreferrer" class="p-4 rounded-2xl bg-[#FC3C44] text-white font-bold text-center hover:brightness-110 transition-all" style="display: none;">Apple Music</a>
+                        <p class="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-2">Service wählen</p>
+                        <div id="dynamic-links-container" class="flex flex-col gap-3 w-full max-h-[180px] overflow-y-auto" style="scrollbar-width: thin;"></div>
                         <p id="link-none" class="text-white/50 text-sm font-bold" style="display: none;">Keine Links gefunden</p>
                         <button onclick="toggleMusicPicker(false)" class="text-white/50 text-xs mt-4 hover:text-white transition-colors">Abbrechen</button>
                     </div>
@@ -643,6 +642,15 @@
         });
 
         // --- MUSIC DASHBOARD UI TOGGLES ---
+        const fallbackMessages = [
+            "Sieht so aus, als hätten wir keinen Text für diesen Song.",
+            "Erwischt, wir arbeiten noch daran, den Text für diesen Song zu besorgen.",
+            "Du musst den Text für diesen Song wohl erraten.",
+            "Hmm. Wir kennen den Text für diesen Song nicht.",
+            "Leider kein Text am Start. Einfach den Vibe genießen!"
+        ];
+        let currentNoLyricsMessage = fallbackMessages[0];
+
         const musicCardWrapper = document.getElementById('music-card-wrapper');
         const musicChevron = document.getElementById('music-chevron');
         const miniTitle = document.getElementById('mini-title');
@@ -790,7 +798,24 @@
 
         function renderLyrics(fallbackText) {
             if (parsedLyrics.length === 0) {
-                lyricsContent.innerHTML = `<p class="text-xl font-bold text-white/70 leading-relaxed whitespace-pre-wrap">${escapeHTML(fallbackText) || "Instrumental / Kein Text gefunden"}</p>`;
+                const displayMsg = fallbackText || currentNoLyricsMessage;
+                const isCustomFallback = fallbackMessages.includes(displayMsg);
+                
+                if (isCustomFallback) {
+                    lyricsContent.innerHTML = `
+                        <div class="w-full flex flex-col justify-center min-h-[60vh] px-4 md:px-8">
+                            <h2 class="text-4xl md:text-6xl font-extrabold text-white tracking-tight leading-[1.1] text-left">
+                                ${escapeHTML(displayMsg)}
+                            </h2>
+                        </div>`;
+                } else {
+                    lyricsContent.innerHTML = `
+                        <div class="w-full pt-[20vh] pb-[40vh] px-4 md:px-8">
+                            <p class="text-2xl md:text-3xl font-bold text-white/80 leading-relaxed whitespace-pre-wrap text-left">
+                                ${escapeHTML(displayMsg)}
+                            </p>
+                        </div>`;
+                }
                 return;
             }
             lyricsContent.innerHTML = '<div class="w-full pt-[40vh] pb-[40vh] px-4">' + parsedLyrics.map((line, idx) => {
@@ -943,7 +968,12 @@
         async function fetchExternalLyrics(title, artist) {
             const fetchId = ++currentFetchId; 
             
-            lyricsContent.innerHTML = '<p class="text-xl font-bold text-white/40 leading-snug animate-pulse">Suche nach synchronem Text auf LRCLIB...</p>';
+            lyricsContent.innerHTML = `
+                <div class="w-full flex flex-col justify-center min-h-[60vh] px-4 md:px-8">
+                    <h2 class="text-4xl md:text-6xl font-extrabold text-white/30 tracking-tight leading-[1.1] text-left animate-pulse">
+                        Lade Text...
+                    </h2>
+                </div>`;
             parsedLyrics = [];
             currentLyricIndex = -1;
             
@@ -979,7 +1009,8 @@
                         }
                     }
                 } catch(e) {}
-                lyricsContent.innerHTML = '<p class="text-lg font-bold text-white/50 leading-snug">Weder synchrone noch normale Texte in öffentlichen Datenbanken gefunden.</p>';
+                // Weder synchrone noch normale Texte gefunden -> Zeige zufällige Spotify-like Message
+                renderLyrics(currentNoLyricsMessage);
             }
         }
 
@@ -1058,7 +1089,8 @@
 
             let apiProgress = (data.track.progress_ms || 0);
             if (isPlaying) {
-                apiProgress += dataAge;
+                // FIX: Harter 1000ms (1 Sekunde) Offset, um die Spotify-API Latenz auszugleichen
+                apiProgress += dataAge + 1000;
             }
             if (data.track.duration_ms && apiProgress > data.track.duration_ms) {
                 apiProgress = data.track.duration_ms;
@@ -1073,6 +1105,9 @@
                 serverBaseProgress = apiProgress;
                 localStartTime = performance.now();
                 currentMs = apiProgress;
+                
+                // Wähle für diesen Track eine neue zufällige Fallback Message
+                currentNoLyricsMessage = fallbackMessages[Math.floor(Math.random() * fallbackMessages.length)];
                 
                 fetchExternalLyrics(data.track.title, data.track.artist);
             } else {
@@ -1106,29 +1141,48 @@
             miniIconBg.className = 'w-12 h-12 shrink-0 rounded-xl flex items-center justify-center transition-colors bg-green-500/10 text-green-500 active-dot';
             if(!isDashboardOpen) miniStatus.innerText = data.track.artist;
             
-            const spotLinkEl = document.getElementById('link-spotify');
-            const appleLinkEl = document.getElementById('link-apple');
+            const linksContainer = document.getElementById('dynamic-links-container');
             const noLinkEl = document.getElementById('link-none');
             
-            const spotUrl = (data.track.platform_links && data.track.platform_links.spotify) || (data.track.external_urls && data.track.external_urls.spotify);
-            const appleUrl = (data.track.platform_links && data.track.platform_links.appleMusic);
-            
+            linksContainer.innerHTML = '';
             let hasLinks = false;
+            
+            // Hole alle Links aus beiden API Feldern
+            const availableLinks = { ...(data.track.platform_links || {}), ...(data.track.external_urls || {}) };
+            
+            const serviceStyles = {
+                spotify: { name: 'Spotify', bg: '#1DB954' },
+                applemusic: { name: 'Apple Music', bg: '#FC3C44' },
+                youtube: { name: 'YouTube Music', bg: '#FF0000' },
+                soundcloud: { name: 'SoundCloud', bg: '#FF5500' },
+                deezer: { name: 'Deezer', bg: '#00C7F2' },
+                tidal: { name: 'Tidal', bg: '#000000' }
+            };
 
-            if (spotUrl) {
-                spotLinkEl.href = spotUrl;
-                spotLinkEl.style.display = 'block';
+            for (const [key, url] of Object.entries(availableLinks)) {
+                if (!url || typeof url !== 'string' || !url.startsWith('http')) continue;
                 hasLinks = true;
-            } else {
-                spotLinkEl.style.display = 'none';
-            }
 
-            if (appleUrl) {
-                appleLinkEl.href = appleUrl;
-                appleLinkEl.style.display = 'block';
-                hasLinks = true;
-            } else {
-                appleLinkEl.style.display = 'none';
+                const lowerKey = key.toLowerCase();
+                let style = { name: key.charAt(0).toUpperCase() + key.slice(1), bg: '#3b82f6' }; 
+
+                // Suche nach dem passenden Service für Farbe und Namen
+                for (const [sKey, sValue] of Object.entries(serviceStyles)) {
+                    if (lowerKey.includes(sKey) || lowerKey === sKey) {
+                        style = sValue;
+                        break;
+                    }
+                }
+
+                const linkEl = document.createElement('a');
+                linkEl.href = url;
+                linkEl.target = '_blank';
+                linkEl.rel = 'noopener noreferrer';
+                linkEl.className = 'p-3 rounded-2xl text-white font-bold text-sm text-center hover:brightness-110 active:scale-95 transition-all';
+                linkEl.style.backgroundColor = style.bg;
+                linkEl.innerText = style.name;
+
+                linksContainer.appendChild(linkEl);
             }
 
             noLinkEl.style.display = hasLinks ? 'none' : 'block';
