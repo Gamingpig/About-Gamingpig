@@ -159,20 +159,29 @@
             pointer-events: auto;
         }
 
+        /* VERBESSERTE LYRICS ANIMATION */
         .lyric-line {
             display: block; 
             margin: 4vh 0; 
             line-height: 1.25; 
-            transition: opacity 0.4s ease, filter 0.4s ease;
+            transition: opacity 0.4s ease, filter 0.4s ease, transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transform-origin: left center;
+            /* FIX: Verhindert horizontalen Overflow auf Mobile */
+            overflow-wrap: break-word;
+            word-wrap: break-word;
+            padding-right: 1rem;
         }
         
         .lyrics-open .lyric-line { 
             opacity: 0.25; 
             filter: blur(2px); 
+            transform: scale(0.95);
         }
+        
         .lyrics-open .lyric-line.active { 
             opacity: 1; 
-            filter: blur(0px); 
+            filter: blur(0px) drop-shadow(0 0 12px rgba(255,255,255,0.15)); 
+            transform: scale(1.05); 
         }
 
         .lyric-word {
@@ -180,6 +189,7 @@
             display: inline-block;
             margin-right: 0; 
             white-space: pre-wrap; 
+            /* FIX: Kein Gradient-Bleed mehr, knallharter Cut ohne verfrühtes Weiß */
             background: linear-gradient(to right, #ffffff var(--fill-percent, 0%), rgba(255,255,255,0.2) var(--fill-percent, 0%));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -188,6 +198,8 @@
             font-size: clamp(1.2rem, 3vw + 0.5rem, 2.2rem); 
             font-weight: 800; 
             letter-spacing: -0.02em; 
+            /* FIX: Verhindert das Abschneiden des letzten Buchstabens bei italic/bold Fonts */
+            padding-right: 0.1em;
         }
 
         .mask-image-gradient {
@@ -197,6 +209,11 @@
 
         #lyrics-overlay {
             overflow: hidden;
+        }
+
+        #lyrics-container {
+            /* FIX: Keine horizontale Scrollbar mehr! */
+            overflow-x: hidden;
         }
 
         #lyrics-container::-webkit-scrollbar { width: 4px; }
@@ -228,7 +245,6 @@
 
     <!-- Theme Switcher -->
     <div class="fixed top-6 right-6 z-[110]">
-        <!-- HINZUGEFÜGT: aria-label für Screenreader -->
         <button id="theme-toggle" aria-label="Darkmode umschalten" class="group p-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-2xl rounded-2xl border border-slate-200 dark:border-slate-700 hover:ring-2 hover:ring-blue-500 transition-all active:scale-90">
             <span id="theme-icon-dark" class="hidden dark:block text-yellow-400 group-hover:rotate-12 transition-transform">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
@@ -242,7 +258,6 @@
     <!-- Modal System -->
     <div id="modal-overlay" class="fixed inset-0 bg-slate-900/40 dark:bg-black/80 z-[200] hidden items-center justify-center p-4">
         <div class="modal-content glass-card w-full max-w-xl rounded-[2.5rem] p-10 relative border border-white/20 dark:border-white/5">
-            <!-- HINZUGEFÜGT: aria-label für Screenreader -->
             <button id="close-modal" aria-label="Modal schließen" class="absolute top-6 right-6 p-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-blue-500 transition-all">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
             </button>
@@ -275,8 +290,7 @@
             <h2 class="text-3xl font-bold mb-10 text-blue-600 dark:text-blue-500 border-b-4 border-blue-600 dark:border-blue-500 pb-3 inline-block">
                 Real Talk: Ausbildung, Alltag & alles, was zählt
             </h2>
-            <div class="grid md:grid-cols-2 gap-5">
-                <!-- tabindex="0" und Rolle hinzugefügt für a11y -->
+            <div class="grid md:grid-cols-2 gap-5 mb-5">
                 <div onclick="openModal('status')" role="button" tabindex="0" class="glass-card p-6 rounded-[1.5rem] flex items-start gap-5 cursor-pointer group">
                     <div class="p-3 bg-blue-500/10 text-blue-500 rounded-xl group-hover:bg-blue-500 group-hover:text-white transition-all">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -317,6 +331,38 @@
                     </div>
                 </div>
             </div>
+
+            <div class="grid md:grid-cols-3 gap-5">
+                <div onclick="openModal('techstack')" role="button" tabindex="0" class="glass-card p-6 rounded-[1.5rem] flex items-start gap-5 cursor-pointer group md:col-span-1">
+                    <div class="p-3 bg-emerald-500/10 text-emerald-500 rounded-xl group-hover:bg-emerald-500 group-hover:text-white transition-all shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 16V7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v9m16 0H4m16 0 1.28 2.55a1 1 0 0 1-.9 1.45H3.62a1 1 0 0 1-.9-1.45L4 16"/></svg>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-lg mb-1">Tech Stack</h3>
+                        <p class="text-slate-500 dark:text-slate-400 text-sm leading-snug">Hardware, Linux, Windows...</p>
+                    </div>
+                </div>
+
+                <div onclick="openModal('setup')" role="button" tabindex="0" class="glass-card p-6 rounded-[1.5rem] flex items-start gap-5 cursor-pointer group md:col-span-1">
+                    <div class="p-3 bg-cyan-500/10 text-cyan-500 rounded-xl group-hover:bg-cyan-500 group-hover:text-white transition-all shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-lg mb-1">Mein Setup</h3>
+                        <p class="text-slate-500 dark:text-slate-400 text-sm leading-snug">DT 770 Pro & Rockster Cross...</p>
+                    </div>
+                </div>
+
+                <div onclick="openModal('contact')" role="button" tabindex="0" class="glass-card p-6 rounded-[1.5rem] flex items-start gap-5 cursor-pointer group md:col-span-1">
+                    <div class="p-3 bg-indigo-500/10 text-indigo-500 rounded-xl group-hover:bg-indigo-500 group-hover:text-white transition-all shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-lg mb-1">Kontakt</h3>
+                        <p class="text-slate-500 dark:text-slate-400 text-sm leading-snug">Connect mit mir...</p>
+                    </div>
+                </div>
+            </div>
         </section>
 
         <!-- MUSIC DASHBOARD INTEGRATION -->
@@ -340,7 +386,6 @@
                 </div>
             </div>
 
-            <!-- Wrapper für das Dashboard -->
             <div id="music-card-wrapper" class="hidden opacity-0 -translate-y-4 transition-all duration-300 ease-out origin-top flex justify-center">
                 <div id="main-music-card" class="glass-card offline w-full max-w-[400px] mx-auto p-10 rounded-[3rem] text-center relative z-10 overflow-hidden flex flex-col justify-center items-center">
                     <div id="ambient-bg"></div>
@@ -356,7 +401,6 @@
                                     <p id="lyrics-mini-artist" class="text-xs text-white/60 truncate">Artist</p>
                                 </div>
                             </div>
-                            <!-- HINZUGEFÜGT: aria-label -->
                             <button onclick="toggleLyrics(false)" aria-label="Lyrics schließen" class="p-2 hover:bg-white/10 rounded-full transition-colors text-white shrink-0">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                             </button>
@@ -409,7 +453,6 @@
                             <span id="status-text">Zen Mode</span>
                         </div>
                         
-                        <!-- HINZUGEFÜGT: aria-label -->
                         <button onclick="toggleLyrics(true)" aria-label="Lyrics anzeigen" class="p-2 text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all" title="Lyrics anzeigen">
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
                         </button>
@@ -420,7 +463,23 @@
 
         <!-- SOCIAL GRID -->
         <div class="grid gap-8 reveal">
-            <!-- Gleiche Social Cards wie vorher, nur aus Platzgründen hier gekürzt für Lesbarkeit oder gleich gelassen -->
+            <!-- Tic-Tac-Toe -->
+            <div class="glass-card p-8 rounded-[2.5rem] group overflow-hidden relative border border-slate-200 dark:border-slate-800">
+                <div class="flex items-center gap-5 mb-6">
+                    <div class="p-3 bg-indigo-500/10 text-indigo-500 rounded-2xl group-hover:rotate-12 transition-transform">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18v18H3zM21 9H3M21 15H3M9 3v18M15 3v18"/></svg>
+                    </div>
+                    <h2 class="text-3xl font-bold">Tic-Tac-Toe</h2>
+                </div>
+                <a href="https://gamingpig.github.io/tic-tac-toe-by-Gamingpig/" target="_blank" rel="noopener noreferrer" class="group/link inline-flex items-center gap-3 text-xl text-blue-500 hover:text-blue-600 font-bold transition-all">
+                    Lass uns ne Runde zocken!
+                    <div class="p-1.5 bg-blue-500/10 rounded-lg group-hover/link:translate-x-1 transition-transform">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    </div>
+                </a>
+            </div>
+
+            <!-- TikTok -->
             <div class="glass-card p-8 rounded-[2.5rem] group overflow-hidden relative border border-slate-200 dark:border-slate-800">
                 <div class="flex items-center gap-5 mb-6">
                     <div class="p-3 bg-pink-500/10 text-pink-600 rounded-2xl group-hover:rotate-12 transition-transform">
@@ -495,7 +554,6 @@
     </main>
 
     <script>
-        // HINZUGEFÜGT: XSS-Schutz Helper (escaped HTML Tags)
         function escapeHTML(str) {
             if (!str) return "";
             return str.replace(/[&<>'"]/g, 
@@ -523,11 +581,15 @@
             localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
         });
 
+        // ERWEITERT MIT NEUEN INFOS
         const details = {
             status: { title: "Ausbildung & Fokus", content: "Ich absolviere aktuell meine Ausbildung zum Fachinformatiker für Systemintegration. Technik und Systeme sind meine Welt. Ich liebe es, Server aufzusetzen, Netzwerke zu konfigurieren und alles am Laufen zu halten. Mein Hyperfokus hilft mir dabei, tief in komplexe IT-Strukturen einzutauchen und Fehler zu finden, bevor sie zum Problem werden." },
             background: { title: "Hintergrund & Weg", content: "Ich bin 19 Jahre alt und lebe in einer Jugendhilfeeinrichtung. Das hat mich früh gelehrt, unabhängig zu sein und meinen eigenen Weg zu gehen. Ich sehe Herausforderungen nicht als Hindernis, sondern als Chance, zu wachsen und meine eigene Zukunft zu gestalten." },
             freizeit: { title: "Gaming & Content", content: "Wenn die Server laufen, bin ich bei Forza Horizon 5 anzutreffen. Ich streame live auf TikTok und teile meine Leidenschaft für Gaming und Technik mit der Community. Es geht mir um den Vibe, den Austausch und das Meistern neuer Challenges." },
-            menschen: { title: "Meine Wahlfamilie", content: "Da ich ohne Eltern aufgewachsen bin, sind Freunde meine gewählte Familie. Loyalität und Vertrauen stehen für mich an erster Stelle. Mein bester Freund Tom ist dabei mein wichtigster Anker im Leben – wir gehen den Weg gemeinsam." }
+            menschen: { title: "Meine Wahlfamilie", content: "Da ich ohne Eltern aufgewachsen bin, sind Freunde meine gewählte Familie. Loyalität und Vertrauen stehen für mich an erster Stelle. Mein bester Freund Tom ist dabei mein wichtigster Anker im Leben – wir gehen den Weg gemeinsam." },
+            techstack: { title: "Tech Stack & Skills", content: "Als angehender Systemintegrator kenne ich mich mit dem Setup und der Wartung von IT-Infrastrukturen aus. Dazu gehören Windows Server, Linux-Distributionen, generelle Netzwerkkonfigurationen und intensives Hardware-Troubleshooting. Egal ob Laptops, PCs oder Smartphones – wenn was defekt ist, finde ich den Fehler und bringe es wieder ans Laufen." },
+            setup: { title: "Mein Audio Setup", content: "Guter Sound ist ein absolutes Muss beim Zocken oder Musikhören. An meinem Rechner nutze ich die Beyerdynamic DT 770 Pro (80 Ohm) Studio-Kopfhörer für extrem klaren Klang und geschlossene Isolation. Wenn ich die Bude beschallen will, läuft das über meinen Teufel Rockster Cross Bluetooth-Speaker, der einfach heftig reinhaut." },
+            contact: { title: "Kontakt & Connect", content: "Bock auf ne Runde Forza oder brauchst du Tech-Support? Du erreichst mich am besten direkt über meine Social Media Kanäle wie TikTok oder YouTube. Lass uns connecten!" }
         };
 
         const modalOverlay = document.getElementById('modal-overlay');
@@ -536,7 +598,6 @@
 
         window.openModal = function(key) {
             const data = details[key];
-            // Sicher, da data aus dem internen Objekt kommt. Trotzdem Good Practice, falls man das mal aus einer API lädt.
             modalBody.innerHTML = `
                 <div class="text-xs font-black uppercase tracking-widest text-blue-500 mb-2">Deep Dive</div>
                 <h3 class="text-4xl font-extrabold text-slate-900 dark:text-white mb-6 leading-tight">${escapeHTML(data.title)}</h3>
@@ -562,7 +623,6 @@
             if (e.target === modalOverlay) closeModal.click();
         });
 
-        // HINZUGEFÜGT: Performanter IntersectionObserver statt krassem Scroll-Event-Listener
         const observerOptions = {
             root: null,
             rootMargin: '0px',
@@ -573,7 +633,7 @@
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
                     entry.target.classList.add('active');
-                    observer.unobserve(entry.target); // Optional: Nur einmalig einfliegen lassen
+                    observer.unobserve(entry.target); 
                 }
             });
         }, observerOptions);
@@ -656,7 +716,7 @@
         let localStartTime = 0;
         let serverBaseProgress = 0;
         let trackIsPlaying = false;
-        let isAnimating = false; // HINZUGEFÜGT: Status für die Animationsschleife
+        let isAnimating = false; 
         let lyricAnimFrame = null;
         let lastProcessedUpdate = 0;
         let lastSeenProgressMs = -1;
@@ -730,14 +790,12 @@
 
         function renderLyrics(fallbackText) {
             if (parsedLyrics.length === 0) {
-                // HINZUGEFÜGT: escapeHTML benutzt für Sicherheit
                 lyricsContent.innerHTML = `<p class="text-xl font-bold text-white/70 leading-relaxed whitespace-pre-wrap">${escapeHTML(fallbackText) || "Instrumental / Kein Text gefunden"}</p>`;
                 return;
             }
             lyricsContent.innerHTML = '<div class="w-full pt-[40vh] pb-[40vh] px-4">' + parsedLyrics.map((line, idx) => {
                 const words = tokenizeText(line.text);
                 return `<div id="lyric-line-${idx}" class="lyric-line">` + 
-                    // HINZUGEFÜGT: escapeHTML auf alle Wörter anwenden!
                     words.map((word, wIdx) => `<span id="word-${idx}-${wIdx}" class="lyric-word">${escapeHTML(word)}</span>`).join('') +
                 `</div>`;
             }).join('') + '</div>';
@@ -845,7 +903,6 @@
             });
         }
 
-        // HINZUGEFÜGT: Optmierter Animations Loop, stoppt wenn Musik pausiert ist
         function animateLoop(now) {
             if (trackIsPlaying) {
                 currentMs = serverBaseProgress + (now - localStartTime);
@@ -857,7 +914,7 @@
                 }
                 lyricAnimFrame = requestAnimationFrame(animateLoop);
             } else {
-                isAnimating = false; // Loop wurde unterbrochen
+                isAnimating = false; 
             }
         }
 
@@ -1038,7 +1095,6 @@
                 }
             }
 
-            // HINZUGEFÜGT: Starte den AnimLoop nur, wenn er nicht schon läuft
             if (trackIsPlaying && !isAnimating) {
                 isAnimating = true;
                 lyricAnimFrame = requestAnimationFrame(animateLoop);
@@ -1125,7 +1181,6 @@
 
         (async () => {
             await syncWorldwideTime();
-            // Startet die loop nur, wenn Musik spielt, ansonsten wird sie gestoppt.
             if (trackIsPlaying && !isAnimating) {
                 isAnimating = true;
                 requestAnimationFrame(animateLoop);
