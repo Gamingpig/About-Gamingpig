@@ -1089,7 +1089,8 @@
 
             let apiProgress = (data.track.progress_ms || 0);
             if (isPlaying) {
-                apiProgress += dataAge;
+                // FIX: Harter 1000ms (1 Sekunde) Offset, um die Spotify-API Latenz auszugleichen
+                apiProgress += dataAge + 1000;
             }
             if (data.track.duration_ms && apiProgress > data.track.duration_ms) {
                 apiProgress = data.track.duration_ms;
