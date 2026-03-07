@@ -397,7 +397,8 @@
                                     <p id="lyrics-mini-artist" class="text-xs text-white/60 truncate">Artist</p>
                                 </div>
                             </div>
-                            <button onclick="toggleLyrics(false)" aria-label="Lyrics schließen" class="p-2 hover:bg-white/10 rounded-full transition-colors text-white shrink-0">
+
+                            <button onclick="toggleLyrics(false)" aria-label="Lyrics schließen" class="p-2 hover:bg-white/10 rounded-full transition-colors text-white shrink-0 ml-auto">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                             </button>
                         </div>
@@ -731,7 +732,7 @@
         async function syncWorldwideTime() {
             try {
                 const startMs = performance.now();
-                // FIX: Extrem wichtiges { cache: 'no-store' } für Mobile Browser wie Chrome auf Android
+                // Extrem wichtiges { cache: 'no-store' } für Mobile Browser
                 let response = await fetch('https://worldtimeapi.org/api/timezone/Etc/UTC', { cache: 'no-store' }).catch(() => null);
                 let trueWorldTime;
                 let endMs;
@@ -1093,24 +1094,24 @@
             }
             lastSeenProgressMs = data.track.progress_ms;
 
-            const apiUpdatedAt = data.updated_at ? new Date(data.updated_at).getTime() : getTrueDateNow();
-            if (apiUpdatedAt < lastProcessedUpdate) return;
-            lastProcessedUpdate = apiUpdatedAt;
-
-            // Die ungeschönte Wahrheit: Wir brauchen das dataAge UND die 1000ms Spotify-Server-Latenz!
-            let dataAge = getTrueDateNow() - apiUpdatedAt;
+            // DIE PERFEKTE MATHEMATIK
+            const nowUTC = getTrueDateNow();
+            const apiUpdatedAt = data.updated_at ? new Date(data.updated_at).getTime() : nowUTC;
             
-            // Fail-Safe: Wenn das Handy im Standby war oder der Cache kurz spinnt, schnellt dataAge hoch. 
-            // Wir ignorieren absurde Sprünge über 5 Sekunden (5000ms), damit das Pixel 8 Pro nicht in die Zukunft fliegt.
-            if (dataAge < 0 || dataAge > 5000) {
-                dataAge = 0; 
-            }
+            // dataAge ist exakt die Zeit, die vergangen ist, seit die API den "progress_ms" Snapshot gemacht hat!
+            let dataAge = nowUTC - apiUpdatedAt;
+            
+            // Wenn die Serveruhr minimal asynchron ist, fixen wir das auf 0.
+            if (dataAge < 0) dataAge = 0;
 
-            let apiProgress = (data.track.progress_ms || 0);
+            // Wir kappen dataAge NUR, wenn es komplett absurd ist (z.B. über 10 Minuten, weil die API hängt).
+            // Wenn du die Seite nach 40 Sekunden lädst, MUSS dataAge 40000ms sein, sonst bist du 40s in der Vergangenheit!
+            if (dataAge > 600000) dataAge = 0;
+
+            let apiProgress = data.track.progress_ms || 0;
             if (isPlaying) {
-                // Hier kommt die magische Sekunde zurück, die es auf dem Laptop perfekt gemacht hat!
-                // Echter Progress = API Progress + (Zeit seit dem API-Poll) + 1000ms (Spotify Server Lag)
-                apiProgress += dataAge + 1000;
+                // Echter Fortschritt = Snapshot-Wert + vergangene Zeit seit dem Snapshot + universeller Spotify-Lag (600ms)
+                apiProgress += dataAge + 600;
             }
             
             if (data.track.duration_ms && apiProgress > data.track.duration_ms) {
@@ -1211,7 +1212,6 @@
             if (musicSocket && musicSocket.readyState === WebSocket.OPEN) return; 
             musicSocket = new WebSocket('wss://npc-api.aikins.xyz/v1/users/gamingpig/ws');
             musicSocket.onopen = () => {
-                // Auch hier cachen von mobilen Browsern verbieten
                 fetch('https://npc-api.aikins.xyz/v1/users/gamingpig/now', { cache: 'no-store' })
                     .then(r => r.text())
                     .then(text => text ? JSON.parse(text) : null)
