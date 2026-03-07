@@ -166,6 +166,7 @@
             line-height: 1.25; 
             transition: opacity 0.4s ease, filter 0.4s ease, transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
             transform-origin: left center;
+            /* FIX: Verhindert horizontalen Overflow auf Mobile */
             overflow-wrap: break-word;
             word-wrap: break-word;
             padding-right: 1rem;
@@ -188,6 +189,7 @@
             display: inline-block;
             margin-right: 0; 
             white-space: pre-wrap; 
+            /* FIX: Kein Gradient-Bleed mehr, knallharter Cut ohne verfrühtes Weiß */
             background: linear-gradient(to right, #ffffff var(--fill-percent, 0%), rgba(255,255,255,0.2) var(--fill-percent, 0%));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -196,6 +198,7 @@
             font-size: clamp(1.2rem, 3vw + 0.5rem, 2.2rem); 
             font-weight: 800; 
             letter-spacing: -0.02em; 
+            /* FIX: Verhindert das Abschneiden des letzten Buchstabens bei italic/bold Fonts */
             padding-right: 0.1em;
         }
 
@@ -209,6 +212,7 @@
         }
 
         #lyrics-container {
+            /* FIX: Keine horizontale Scrollbar mehr! */
             overflow-x: hidden;
         }
 
@@ -363,9 +367,10 @@
 
         <!-- MUSIC DASHBOARD INTEGRATION -->
         <section class="mb-24 reveal relative">
-            <h2 class="text-3xl font-bold mb-10 text-blue-600 dark:text-blue-500 border-b-4 border-blue-600 dark:border-blue-500 pb-3 inline-block">
+            <h2 class="text-3xl font-bold mb-2 text-blue-600 dark:text-blue-500 border-b-4 border-blue-600 dark:border-blue-500 pb-3 inline-block">
                 Was bei mir gerade läuft
             </h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mb-10">*Hinweis: Der Time-Sync ist möglicherweise nicht immer zu 100% perfekt.</p>
             
             <div id="mini-player-toggle" onclick="toggleDashboard()" role="button" tabindex="0" class="glass-card w-full max-w-[400px] mx-auto p-4 rounded-[2rem] flex items-center justify-between cursor-pointer group mb-6 relative z-20 hover:scale-[1.01] hover:shadow-xl transition-all">
                 <div class="flex items-center gap-4 flex-1 min-w-0">
@@ -397,8 +402,7 @@
                                     <p id="lyrics-mini-artist" class="text-xs text-white/60 truncate">Artist</p>
                                 </div>
                             </div>
-
-                            <button onclick="toggleLyrics(false)" aria-label="Lyrics schließen" class="p-2 hover:bg-white/10 rounded-full transition-colors text-white shrink-0 ml-auto">
+                            <button onclick="toggleLyrics(false)" aria-label="Lyrics schließen" class="p-2 hover:bg-white/10 rounded-full transition-colors text-white shrink-0">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                             </button>
                         </div>
@@ -577,6 +581,7 @@
             localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
         });
 
+        // ERWEITERT MIT NEUEN INFOS
         const details = {
             status: { title: "Ausbildung & Fokus", content: "Ich absolviere aktuell meine Ausbildung zum Fachinformatiker für Systemintegration. Technik und Systeme sind meine Welt. Ich liebe es, Server aufzusetzen, Netzwerke zu konfigurieren und alles am Laufen zu halten. Mein Hyperfokus hilft mir dabei, tief in komplexe IT-Strukturen einzutauchen und Fehler zu finden, bevor sie zum Problem werden." },
             background: { title: "Hintergrund & Weg", content: "Ich bin 19 Jahre alt und lebe in einer Jugendhilfeeinrichtung. Das hat mich früh gelehrt, unabhängig zu sein und meinen eigenen Weg zu gehen. Ich sehe Herausforderungen nicht als Hindernis, sondern als Chance, zu wachsen und meine eigene Zukunft zu gestalten." },
@@ -731,33 +736,18 @@
         async function syncWorldwideTime() {
             try {
                 const startMs = performance.now();
-                // FIX: Dein originaler Code, ABER mit zwingendem no-store, damit dein Pixel 8 Pro nicht alte Cache-Zeiten nimmt!
-                let response = await fetch('https://worldtimeapi.org/api/timezone/Etc/UTC', { cache: 'no-store' }).catch(() => null);
-                let trueWorldTime;
-                let endMs;
+                const response = await fetch('https://worldtimeapi.org/api/timezone/Etc/UTC');
+                if (!response.ok) throw new Error("Time API offline");
+                const data = await response.json();
+                const endMs = performance.now();
                 
-                if (response && response.ok) {
-                    const data = await response.json();
-                    endMs = performance.now();
-                    const latency = (endMs - startMs) / 2;
-                    trueWorldTime = new Date(data.datetime).getTime() + latency;
-                } else {
-                    response = await fetch('https://npc-api.aikins.xyz/v1/users/gamingpig/now', { method: 'HEAD', cache: 'no-store' });
-                    endMs = performance.now();
-                    if (!response.ok) throw new Error("Beide Time-APIs offline");
-                    const dateHeader = response.headers.get('Date');
-                    if(dateHeader) {
-                        const latency = (endMs - startMs) / 2;
-                        trueWorldTime = new Date(dateHeader).getTime() + latency;
-                    } else {
-                        throw new Error("Kein Date Header");
-                    }
-                }
+                const latency = (endMs - startMs) / 2;
+                const trueWorldTime = new Date(data.datetime).getTime() + latency;
                 
                 localClockOffset = Date.now() - trueWorldTime;
                 isTimeSynced = true;
             } catch (error) {
-                console.warn("Weltzeit-Sync fehlgeschlagen.", error);
+                console.warn("Weltzeit-Sync fehlgeschlagen, vertraue lokaler Uhr.", error);
             }
         }
 
@@ -1020,6 +1010,7 @@
                         }
                     }
                 } catch(e) {}
+                // Weder synchrone noch normale Texte gefunden -> Zeige zufällige Spotify-like Message
                 renderLyrics(currentNoLyricsMessage);
             }
         }
@@ -1090,27 +1081,17 @@
             }
             lastSeenProgressMs = data.track.progress_ms;
 
-            // DIE UNGESCHÖNTE WAHRHEIT: Wir müssen dein dataAge zurückbringen! 
-            // Ohne das Alter des Snapshots hängen wir in der Vergangenheit fest.
-            const nowUTC = getTrueDateNow();
-            const apiUpdatedAt = data.updated_at ? new Date(data.updated_at).getTime() : nowUTC;
-            
-            let dataAge = nowUTC - apiUpdatedAt;
-            if (dataAge < 0) dataAge = 0;
-            if (dataAge > 30000) dataAge = 0; // Fail-Safe, falls der Timestamp absurd alt ist
+            const apiUpdatedAt = data.updated_at ? new Date(data.updated_at).getTime() : getTrueDateNow();
+            if (apiUpdatedAt < lastProcessedUpdate) return;
+            lastProcessedUpdate = apiUpdatedAt;
 
-            let apiProgress = data.track.progress_ms || 0;
-            
+            let dataAge = getTrueDateNow() - apiUpdatedAt;
+            if (dataAge < 0) dataAge = 0;
+
+            let apiProgress = (data.track.progress_ms || 0);
             if (isPlaying) {
-                // DIE UNGESCHÖNTE WAHRHEIT: Desktop (Canvas) braucht KEINE 1000ms Extrapuffer!
-                // Die API-Zeit + das berechnete Alter (dataAge) sind am Laptop mit DT 770 Pro schon perfekt.
-                // Nur bei mobilen Geräten (die Audio stärker puffern) müssen wir leicht anpassen.
-                const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-                const spotifyLag = isMobile ? 0 : 0; // Wir setzen ihn fürs Erste radikal auf 0 für ALLE.
-                
-                apiProgress += dataAge + spotifyLag;
+                apiProgress += dataAge;
             }
-            
             if (data.track.duration_ms && apiProgress > data.track.duration_ms) {
                 apiProgress = data.track.duration_ms;
             }
@@ -1125,6 +1106,7 @@
                 localStartTime = performance.now();
                 currentMs = apiProgress;
                 
+                // Wähle für diesen Track eine neue zufällige Fallback Message
                 currentNoLyricsMessage = fallbackMessages[Math.floor(Math.random() * fallbackMessages.length)];
                 
                 fetchExternalLyrics(data.track.title, data.track.artist);
@@ -1165,6 +1147,7 @@
             linksContainer.innerHTML = '';
             let hasLinks = false;
             
+            // Hole alle Links aus beiden API Feldern
             const availableLinks = { ...(data.track.platform_links || {}), ...(data.track.external_urls || {}) };
             
             const serviceStyles = {
@@ -1183,6 +1166,7 @@
                 const lowerKey = key.toLowerCase();
                 let style = { name: key.charAt(0).toUpperCase() + key.slice(1), bg: '#3b82f6' }; 
 
+                // Suche nach dem passenden Service für Farbe und Namen
                 for (const [sKey, sValue] of Object.entries(serviceStyles)) {
                     if (lowerKey.includes(sKey) || lowerKey === sKey) {
                         style = sValue;
@@ -1209,76 +1193,55 @@
             if (musicSocket && musicSocket.readyState === WebSocket.OPEN) return; 
             musicSocket = new WebSocket('wss://npc-api.aikins.xyz/v1/users/gamingpig/ws');
             musicSocket.onopen = () => {
-                fetch('https://npc-api.aikins.xyz/v1/users/gamingpig/now', { cache: 'no-store' })
-                    .then(r => r.text())
-                    .then(text => text ? JSON.parse(text) : null)
-                    .then(updateMusicUI)
-                    .catch(e => console.warn("API Error:", e));
+                fetch('https://npc-api.aikins.xyz/v1/users/gamingpig/now')
+                    .then(r => r.json()).then(updateMusicUI);
             };
             musicSocket.onmessage = (e) => {
-                try {
-                    const msg = JSON.parse(e.data);
-                    if (msg.event === "update") updateMusicUI(msg.data);
-                } catch(err) {
-                    console.warn("WebSocket JSON Parse Error:", err);
-                }
+                const msg = JSON.parse(e.data);
+                if (msg.event === "update") updateMusicUI(msg.data);
             };
             musicSocket.onclose = () => setTimeout(connectMusicSocket, 3000); 
         }
 
         setInterval(() => {
             if (musicSocket && musicSocket.readyState === WebSocket.OPEN) return;
-            fetch('https://npc-api.aikins.xyz/v1/users/gamingpig/now', { cache: 'no-store' })
-                .then(r => r.text())
-                .then(text => text ? JSON.parse(text) : null)
-                .then(updateMusicUI)
+            fetch('https://npc-api.aikins.xyz/v1/users/gamingpig/now')
+                .then(r => r.json()).then(updateMusicUI)
                 .catch(() => {});
         }, 5000);
 
         document.addEventListener("visibilitychange", () => {
             if (document.visibilityState === "visible") {
-                fetch('https://npc-api.aikins.xyz/v1/users/gamingpig/now', { cache: 'no-store' })
-                    .then(r => r.text())
-                    .then(text => text ? JSON.parse(text) : null)
-                    .then(updateMusicUI)
-                    .catch(e => console.warn("API Error:", e));
+                fetch('https://npc-api.aikins.xyz/v1/users/gamingpig/now')
+                    .then(r => r.json()).then(updateMusicUI);
                 if (!musicSocket || musicSocket.readyState === WebSocket.CLOSED) connectMusicSocket();
             }
         });
 
-        let hoverAnimFrame = null;
         mainMusicCard.addEventListener('mousemove', (e) => {
-            if (hoverAnimFrame) return; // Throttling - Verhindert Überlastung der Quadro FX 380!
-            hoverAnimFrame = requestAnimationFrame(() => {
-                const rect = mainMusicCard.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                const centerX = rect.width / 2;
-                const centerY = rect.height / 2;
-                const rotateX = (y - centerY) / 25; 
-                const rotateY = (centerX - x) / 25;
-                mainMusicCard.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
-                hoverAnimFrame = null;
-            });
+            const rect = mainMusicCard.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+            const rotateX = (y - centerY) / 25; 
+            const rotateY = (centerX - x) / 25;
+            mainMusicCard.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
         });
 
         mainMusicCard.addEventListener('mouseleave', () => {
-            if (hoverAnimFrame) {
-                cancelAnimationFrame(hoverAnimFrame);
-                hoverAnimFrame = null;
-            }
             mainMusicCard.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg)`;
         });
 
         (async () => {
-            // Wir starten deinen genialen World-Time-Sync direkt beim Start wieder!
             await syncWorldwideTime();
             if (trackIsPlaying && !isAnimating) {
                 isAnimating = true;
                 requestAnimationFrame(animateLoop);
             }
             connectMusicSocket();
-            setInterval(syncWorldwideTime, 600000); // Alle 10 Minuten Uhr nachstellen
+            
+            setInterval(syncWorldwideTime, 600000);
         })();
 
     </script>
