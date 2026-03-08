@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="de" class="scrollsmooth">
+<html lang="de" id="html-root">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -28,7 +28,11 @@
             -moz-osx-font-smoothing: grayscale;
         }
 
-        /* --- PERFORMANCE MODUS (LOW-END) --- */
+        /* --- EXTREME PERFORMANCE MODUS (LOW-END) --- */
+        body.low-end {
+            scroll-behavior: auto !important;
+        }
+
         body.low-end *, 
         body.low-end .reveal, 
         body.low-end .glass-card {
@@ -76,7 +80,7 @@
         }
         /* --- ENDE PERFORMANCE MODUS --- */
 
-        /* Animierter Hintergrund-Glow - Optimiert für alte GPUs */
+        /* Animierter Hintergrund-Glow */
         .mesh-gradient {
             position: fixed;
             top: 0;
@@ -466,7 +470,8 @@
             </div>
 
             <div id="music-card-wrapper" class="hidden opacity-0 -translate-y-4 transition-all duration-300 ease-out origin-top flex justify-center">
-                <div id="main-music-card" class="glass-card offline w-full max-w-[400px] mx-auto p-10 rounded-[3rem] text-center relative z-10 overflow-hidden flex flex-col justify-center items-center">
+                <!-- REDUZIERTES PADDING FÜR S4 MINI: p-6 anstatt p-10 -->
+                <div id="main-music-card" class="glass-card offline w-full max-w-[400px] mx-auto p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] text-center relative z-10 overflow-hidden flex flex-col justify-center items-center">
                     <div id="ambient-bg"></div>
 
                     <!-- Lyrics Overlay -->
@@ -501,11 +506,12 @@
                         <button onclick="toggleMusicPicker(false)" class="text-white/50 text-xs mt-4 hover:text-white transition-colors">Abbrechen</button>
                     </div>
 
-                    <div id="music-header-tag" class="relative z-10 text-[10px] font-black text-blue-500 uppercase tracking-[0.4em] mb-6 transition-all shrink-0">
+                    <div id="music-header-tag" class="relative z-10 text-[10px] font-black text-blue-500 uppercase tracking-[0.4em] mb-4 md:mb-6 transition-all shrink-0">
                         Gamingpig is Offline
                     </div>
 
-                    <div id="media-container" onclick="toggleMusicPicker(true)" role="button" tabindex="0" class="relative z-10 w-[240px] h-[240px] md:w-[280px] md:h-[280px] shrink-0 rounded-2xl mx-auto mb-6 overflow-hidden flex items-center justify-center bg-[#121212] shadow-[0_20px_40px_rgba(0,0,0,0.8)] cursor-pointer hover:ring-2 hover:ring-white/20 transition-all">
+                    <!-- RESPONSIVE SIZING FÜR COVER ART (FIX FÜR S4 MINI) -->
+                    <div id="media-container" onclick="toggleMusicPicker(true)" role="button" tabindex="0" class="relative z-10 w-full max-w-[200px] sm:max-w-[240px] md:max-w-[280px] aspect-square shrink-0 rounded-2xl mx-auto mb-4 md:mb-6 overflow-hidden flex items-center justify-center bg-[#121212] shadow-[0_20px_40px_rgba(0,0,0,0.8)] cursor-pointer hover:ring-2 hover:ring-white/20 transition-all">
                         <img id="artwork" src="" alt="Album Artwork" class="w-full h-full object-cover">
                         <div id="offline-icon" class="absolute text-6xl" aria-hidden="true">🌙</div>
                     </div>
@@ -654,6 +660,11 @@
             document.body.classList.add('low-end');
             perfToggle.classList.add('ring-2', 'ring-green-500');
             perfIcon.classList.add('text-green-500');
+            
+            // Animationen hart überspringen
+            setTimeout(() => {
+                document.querySelectorAll('.reveal').forEach(el => el.classList.add('active'));
+            }, 50);
         }
 
         perfToggle.addEventListener('click', () => {
@@ -662,6 +673,7 @@
             if (isActive) {
                 perfToggle.classList.add('ring-2', 'ring-green-500');
                 perfIcon.classList.add('text-green-500');
+                document.querySelectorAll('.reveal').forEach(el => el.classList.add('active'));
             } else {
                 perfToggle.classList.remove('ring-2', 'ring-green-500');
                 perfIcon.classList.remove('text-green-500');
@@ -731,6 +743,7 @@
         };
 
         const revealObserver = new IntersectionObserver((entries, observer) => {
+            if (document.body.classList.contains('low-end')) return; // Check für Performance Modus
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
                     entry.target.classList.add('active');
@@ -936,10 +949,13 @@
             const elementTop = el.offsetTop;
             const elementHeight = el.clientHeight;
             
+            // CHECK FÜR PERFORMANCE MODUS: Hartes Springen beim Scrollen, kein CPU-lastiges Interpolieren!
+            const scrollBehavior = document.body.classList.contains('low-end') ? 'auto' : 'smooth';
+            
             requestAnimationFrame(() => {
                 lyricsContainer.scrollTo({
                     top: elementTop - (containerHeight / 2) + (elementHeight / 2),
-                    behavior: 'smooth'
+                    behavior: scrollBehavior
                 });
             });
         }
@@ -1037,12 +1053,22 @@
             });
         }
 
+        let lastLowEndUpdate = 0;
         function animateLoop(now) {
             if (trackIsPlaying) {
                 currentMs = serverBaseProgress + (now - localStartTime);
                 if (totalMs > 0 && currentMs > totalMs) currentMs = totalMs;
                 
-                updateProgressUI();
+                // THROTTLING FÜR FORTSCHRITTSBALKEN
+                if (document.body.classList.contains('low-end')) {
+                    if (now - lastLowEndUpdate > 1000) { // Nur 1x pro Sekunde im Low-End Modus
+                        updateProgressUI();
+                        lastLowEndUpdate = now;
+                    }
+                } else {
+                    updateProgressUI(); // 60 FPS im Normal-Modus
+                }
+
                 if (mainMusicCard.classList.contains('lyrics-open')) {
                     syncLyricsUI();
                 }
@@ -1134,7 +1160,7 @@
                 mainMusicCard.classList.remove('playing');
                 if(mainMusicCard.classList.contains('lyrics-open')) toggleLyrics(false);
                 mHeader.innerText = "Gamingpig is Offline";
-                mHeader.className = "relative z-10 text-[10px] font-black text-blue-500 uppercase tracking-[0.4em] mb-6 transition-all";
+                mHeader.className = "relative z-10 text-[10px] font-black text-blue-500 uppercase tracking-[0.4em] mb-4 md:mb-6 transition-all shrink-0";
                 mTitle.innerText = "Aktuell ist es ruhig...";
                 mArtist.innerText = "Genieße die Stille";
                 mAmbient.style.backgroundImage = "none";
