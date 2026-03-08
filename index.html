@@ -10,6 +10,9 @@
             darkMode: 'class',
             theme: {
                 extend: {
+                    screens: {
+                        'xs': '320px',
+                    },
                     colors: {
                         techBlue: '#3b82f6',
                         techCyan: '#06b6d4',
@@ -26,6 +29,7 @@
             transition: background-color 0.5s cubic-bezier(0.4, 0, 0.2, 1), color 0.5s;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
+            overflow-x: hidden;
         }
 
         /* --- EXTREME PERFORMANCE MODUS (LOW-END) --- */
@@ -33,7 +37,6 @@
             scroll-behavior: auto !important;
         }
 
-        /* Komplettes Killen von Hardware-Beschleunigung und Animationen auf alten Geräten um VRAM zu sparen */
         body.low-end *, 
         body.low-end .reveal, 
         body.low-end .glass-card {
@@ -44,7 +47,6 @@
             will-change: auto !important; 
         }
         
-        /* Hintergrund-Effekte killen */
         body.low-end .mesh-gradient,
         body.low-end #ambient-bg {
             display: none !important;
@@ -60,7 +62,6 @@
             box-shadow: none !important;
         }
 
-        /* Lyrics Performance Fix */
         body.low-end .lyrics-open .lyric-line {
             opacity: 0.3 !important;
             filter: none !important;
@@ -72,7 +73,7 @@
             opacity: 1 !important;
             filter: none !important;
             transform: none !important;
-            color: #ffffff !important; /* Ganze Zeile hart weiß */
+            color: #ffffff !important;
         }
 
         body.low-end .lyric-word {
@@ -82,7 +83,6 @@
         }
         /* --- ENDE PERFORMANCE MODUS --- */
 
-        /* Animierter Hintergrund-Glow */
         .mesh-gradient {
             position: fixed;
             top: 0;
@@ -113,7 +113,6 @@
             transform: translateY(0);
         }
 
-        /* Glassmorphism Karten Portfolio */
         .glass-card {
             background: rgba(255, 255, 255, 0.9);
             border: 1px solid rgba(0, 0, 0, 0.05);
@@ -149,6 +148,7 @@
         #main-music-card {
             background: rgba(15, 23, 42, 0.85) !important;
             border-color: rgba(255, 255, 255, 0.1) !important;
+            transition: box-shadow 0.4s ease, max-width 0.5s cubic-bezier(0.2, 1, 0.3, 1);
         }
         
         #main-music-card.lyrics-open {
@@ -162,10 +162,6 @@
             color: rgba(255, 255, 255, 0.7) !important;
         }
 
-        #main-music-card {
-            transition: box-shadow 0.4s ease, max-width 0.5s cubic-bezier(0.2, 1, 0.3, 1);
-        }
-        
         #ambient-bg {
             position: absolute;
             inset: -50px;
@@ -277,7 +273,7 @@
             mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
         }
 
-        #lyrics-overlay {
+        #lyrics-overlay, #lyrics-container {
             overflow: hidden;
             will-change: transform, opacity;
         }
@@ -297,12 +293,14 @@
             transition: all 0.4s ease;
             will-change: opacity;
         }
+        
         .modal-content {
             transform: translateY(20px) scale(0.95) translateZ(0);
             opacity: 0;
             transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.5s ease;
             will-change: transform, opacity;
         }
+        
         .modal-open .modal-content {
             transform: translateY(0) scale(1) translateZ(0);
             opacity: 1;
@@ -315,6 +313,19 @@
         section, header, footer {
             contain: content;
         }
+
+        /* Tutorial Classes */
+        .tutorial-active-element {
+            position: relative !important;
+            z-index: 300 !important;
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.8), 0 0 15px rgba(59, 130, 246, 0.8) !important;
+            border-radius: inherit;
+            pointer-events: none;
+            background: white;
+        }
+        .dark .tutorial-active-element {
+            background: #0f172a;
+        }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen selection:bg-blue-500/30">
@@ -322,225 +333,239 @@
     <div class="mesh-gradient"></div>
 
     <!-- UI Controls Oben Rechts -->
-    <div class="fixed top-6 right-6 z-[110] flex items-center gap-3">
+    <div id="ui-controls" class="fixed top-2 right-2 xs:top-4 xs:right-4 sm:top-6 sm:right-6 z-[110] flex items-center gap-2 sm:gap-3 bg-transparent rounded-2xl">
+        
+        <!-- Tutorial Button -->
+        <button id="tutorial-start-btn" aria-label="Tutorial starten" class="group p-2 sm:p-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-2xl rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-700 hover:ring-2 hover:ring-purple-500 transition-all active:scale-90" title="Tutorial starten">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-500 transition-colors group-hover:text-purple-500 sm:w-6 sm:h-6"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+        </button>
+
         <!-- Performance Toggle Button -->
-        <button id="perf-toggle" aria-label="Performance Modus" class="group p-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-2xl rounded-2xl border border-slate-200 dark:border-slate-700 hover:ring-2 hover:ring-green-500 transition-all active:scale-90" title="Low-End Modus (Deaktiviert Animationen)">
-            <svg id="perf-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-500 transition-colors group-hover:text-green-500"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        <button id="perf-toggle" aria-label="Performance Modus" class="group p-2 sm:p-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-2xl rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-700 hover:ring-2 hover:ring-green-500 transition-all active:scale-90" title="Low-End Modus (Deaktiviert Animationen)">
+            <svg id="perf-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-500 transition-colors group-hover:text-green-500 sm:w-6 sm:h-6"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
         </button>
 
         <!-- Theme Switcher -->
-        <button id="theme-toggle" aria-label="Darkmode umschalten" class="group p-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-2xl rounded-2xl border border-slate-200 dark:border-slate-700 hover:ring-2 hover:ring-blue-500 transition-all active:scale-90">
+        <button id="theme-toggle" aria-label="Darkmode umschalten" class="group p-2 sm:p-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-2xl rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-700 hover:ring-2 hover:ring-blue-500 transition-all active:scale-90">
             <span id="theme-icon-dark" class="hidden dark:block text-yellow-400 group-hover:rotate-12 transition-transform">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="sm:w-6 sm:h-6"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
             </span>
             <span id="theme-icon-light" class="block dark:hidden text-slate-700 group-hover:-rotate-12 transition-transform">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="sm:w-6 sm:h-6"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
             </span>
         </button>
     </div>
 
+    <!-- Tutorial Box Overlay -->
+    <div id="tutorial-box" class="fixed hidden flex-col z-[310] bg-white dark:bg-slate-800 border-2 border-blue-500 rounded-2xl shadow-2xl p-6 w-[90%] max-w-sm left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 transition-all">
+        <div class="text-[10px] font-black uppercase tracking-widest text-blue-500 mb-2" id="tutorial-step-indicator">Schritt 1/4</div>
+        <h3 id="tutorial-title" class="text-xl font-bold mb-2 text-slate-900 dark:text-white">Willkommen!</h3>
+        <p id="tutorial-text" class="text-sm text-slate-600 dark:text-slate-300 mb-6">Lass uns einen kurzen Rundgang machen, damit du weißt, wie alles funktioniert.</p>
+        <div class="flex justify-between items-center mt-auto">
+            <button id="tutorial-skip" class="text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-bold">Überspringen</button>
+            <button id="tutorial-next" class="bg-blue-600 text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-blue-700 transition-all">Weiter</button>
+        </div>
+    </div>
+
     <!-- Modal System -->
-    <div id="modal-overlay" class="fixed inset-0 bg-slate-900/40 dark:bg-black/80 z-[200] hidden items-center justify-center p-4">
-        <div class="modal-content glass-card w-full max-w-xl rounded-[2.5rem] p-10 relative border border-white/20 dark:border-white/5">
-            <button id="close-modal" aria-label="Modal schließen" class="absolute top-6 right-6 p-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-blue-500 transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+    <div id="modal-overlay" class="fixed inset-0 bg-slate-900/40 dark:bg-black/80 z-[200] hidden items-center justify-center p-2 sm:p-4">
+        <div class="modal-content glass-card w-full max-w-xl rounded-[1.5rem] sm:rounded-[2.5rem] p-5 xs:p-6 sm:p-10 relative border border-white/20 dark:border-white/5 max-h-[90vh] overflow-y-auto">
+            <button id="close-modal" aria-label="Modal schließen" class="absolute top-3 right-3 sm:top-6 sm:right-6 p-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-blue-500 transition-all">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="sm:w-6 sm:h-6"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
             </button>
             <div id="modal-body"></div>
         </div>
     </div>
 
-    <main class="max-w-4xl mx-auto px-8 pt-40 pb-32">
+    <main id="main-content" class="max-w-4xl mx-auto px-4 xs:px-6 sm:px-8 pt-20 xs:pt-24 sm:pt-40 pb-20 sm:pb-32">
         
-        <header class="mb-20 reveal">
-            <div class="inline-flex items-center gap-2 px-3 py-1 mb-16 text-xs font-bold tracking-widest text-blue-600 uppercase bg-blue-100 dark:bg-blue-500/10 dark:text-blue-400 rounded-full">
+        <header id="header-section" class="mb-12 xs:mb-16 sm:mb-20 reveal mt-4 xs:mt-0 rounded-2xl">
+            <div class="inline-flex items-center gap-2 px-3 py-1 mb-6 xs:mb-10 sm:mb-16 text-[10px] xs:text-xs font-bold tracking-widest text-blue-600 uppercase bg-blue-100 dark:bg-blue-500/10 dark:text-blue-400 rounded-full">
                 <span class="relative flex h-2 w-2">
                     <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
                     <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
                 </span>
                 Systems Integration
             </div>
-            <h1 class="text-5xl md:text-7xl font-extrabold mb-8 py-2 tracking-tighter bg-gradient-to-br from-slate-900 via-slate-800 to-slate-600 dark:from-white dark:via-slate-200 dark:to-slate-400 bg-clip-text text-transparent leading-tight">
+            <h1 class="text-3xl xs:text-4xl sm:text-5xl md:text-7xl font-extrabold mb-4 sm:mb-8 py-2 tracking-tighter bg-gradient-to-br from-slate-900 via-slate-800 to-slate-600 dark:from-white dark:via-slate-200 dark:to-slate-400 bg-clip-text text-transparent leading-tight break-words">
                 Über Jonas Johnston
             </h1>
-            <p class="text-xl md:text-2xl leading-relaxed text-slate-600 dark:text-slate-400 font-medium">
+            <p class="text-base xs:text-lg sm:text-xl md:text-2xl leading-relaxed text-slate-600 dark:text-slate-400 font-medium">
                 Hallo! Ich bin Jonas Johnston, 19 Jahre alt und Technik affin. Ich habe ADHS und mein <span class="text-blue-600 dark:text-blue-400 font-bold italic">Hyperfokus</span> ist meine Superkraft, dadurch kann ich komplexe Probleme lösen wo andere schon längst aufgegeben hätten.
             </p>
-            <p class="mt-6 text-lg text-slate-500 dark:text-slate-500 leading-relaxed">
+            <p class="mt-4 sm:mt-6 text-sm xs:text-base sm:text-lg text-slate-500 dark:text-slate-500 leading-relaxed">
                 In meiner Freizeit beschäftige ich mich mit Gaming und Streaming. Ich bin zwar etwas schüchtern jedoch an sich ein sehr freundlicher und gelassener Mensch. Ich repariere auch gerne IT Geräte (Laptops, Tablets, PCs, Smartphones usw.).
             </p>
         </header>
 
-        <section class="mb-24 reveal">
-            <h2 class="text-3xl font-bold mb-10 text-blue-600 dark:text-blue-500 border-b-4 border-blue-600 dark:border-blue-500 pb-3 inline-block">
-                Real Talk: Ausbildung, Alltag & alles, was zählt
+        <section id="cards-section" class="mb-16 xs:mb-20 sm:mb-24 reveal rounded-3xl">
+            <h2 class="text-xl xs:text-2xl sm:text-3xl font-bold mb-6 sm:mb-10 text-blue-600 dark:text-blue-500 border-b-2 sm:border-b-4 border-blue-600 dark:border-blue-500 pb-2 sm:pb-3 inline-block break-words">
+                Real Talk: Ausbildung & Alltag
             </h2>
-            <div class="grid md:grid-cols-2 gap-5 mb-5">
-                <div onclick="openModal('status')" role="button" tabindex="0" class="glass-card p-6 rounded-[1.5rem] flex items-start gap-5 cursor-pointer group">
-                    <div class="p-3 bg-blue-500/10 text-blue-500 rounded-xl group-hover:bg-blue-500 group-hover:text-white transition-all">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 xs:gap-4 sm:gap-5 mb-3 xs:mb-4 sm:mb-5">
+                <div onclick="openModal('status')" role="button" tabindex="0" class="glass-card p-4 xs:p-5 sm:p-6 rounded-2xl sm:rounded-[1.5rem] flex items-start gap-3 sm:gap-5 cursor-pointer group">
+                    <div class="p-2 sm:p-3 bg-blue-500/10 text-blue-500 rounded-xl group-hover:bg-blue-500 group-hover:text-white transition-all shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="sm:w-6 sm:h-6"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                     </div>
                     <div>
-                        <h3 class="font-bold text-lg mb-1">Status</h3>
-                        <p class="text-slate-500 dark:text-slate-400 text-sm leading-snug">Ausbildung zum Fachinformatiker...</p>
+                        <h3 class="font-bold text-base sm:text-lg mb-1">Status</h3>
+                        <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm leading-snug">Ausbildung zum Fachinformatiker...</p>
                     </div>
                 </div>
 
-                <div onclick="openModal('background')" role="button" tabindex="0" class="glass-card p-6 rounded-[1.5rem] flex items-start gap-5 cursor-pointer group">
-                    <div class="p-3 bg-purple-500/10 text-purple-500 rounded-xl group-hover:bg-purple-500 group-hover:text-white transition-all">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                <div onclick="openModal('background')" role="button" tabindex="0" class="glass-card p-4 xs:p-5 sm:p-6 rounded-2xl sm:rounded-[1.5rem] flex items-start gap-3 sm:gap-5 cursor-pointer group">
+                    <div class="p-2 sm:p-3 bg-purple-500/10 text-purple-500 rounded-xl group-hover:bg-purple-500 group-hover:text-white transition-all shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="sm:w-6 sm:h-6"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                     </div>
                     <div>
-                        <h3 class="font-bold text-lg mb-1">Hintergrund</h3>
-                        <p class="text-slate-500 dark:text-slate-400 text-sm leading-snug">19 Jahre & Jugendhilfe...</p>
+                        <h3 class="font-bold text-base sm:text-lg mb-1">Hintergrund</h3>
+                        <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm leading-snug">19 Jahre & Jugendhilfe...</p>
                     </div>
                 </div>
 
-                <div onclick="openModal('freizeit')" role="button" tabindex="0" class="glass-card p-6 rounded-[1.5rem] flex items-start gap-5 cursor-pointer group">
-                    <div class="p-3 bg-orange-500/10 text-orange-500 rounded-xl group-hover:bg-orange-500 group-hover:text-white transition-all">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 12h.01M18 12h.01M15 10h.01M15 14h.01"/></svg>
+                <div onclick="openModal('freizeit')" role="button" tabindex="0" class="glass-card p-4 xs:p-5 sm:p-6 rounded-2xl sm:rounded-[1.5rem] flex items-start gap-3 sm:gap-5 cursor-pointer group">
+                    <div class="p-2 sm:p-3 bg-orange-500/10 text-orange-500 rounded-xl group-hover:bg-orange-500 group-hover:text-white transition-all shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="sm:w-6 sm:h-6"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 12h.01M18 12h.01M15 10h.01M15 14h.01"/></svg>
                     </div>
                     <div>
-                        <h3 class="font-bold text-lg mb-1">Freizeit</h3>
-                        <p class="text-slate-500 dark:text-slate-400 text-sm leading-snug">Forza Horizon 5 & Streaming...</p>
+                        <h3 class="font-bold text-base sm:text-lg mb-1">Freizeit</h3>
+                        <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm leading-snug">Forza Horizon 5 & Streaming...</p>
                     </div>
                 </div>
 
-                <div onclick="openModal('menschen')" role="button" tabindex="0" class="glass-card p-6 rounded-[1.5rem] flex items-start gap-5 cursor-pointer group">
-                    <div class="p-3 bg-red-500/10 text-red-500 rounded-xl group-hover:bg-red-500 group-hover:text-white transition-all">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+                <div onclick="openModal('menschen')" role="button" tabindex="0" class="glass-card p-4 xs:p-5 sm:p-6 rounded-2xl sm:rounded-[1.5rem] flex items-start gap-3 sm:gap-5 cursor-pointer group">
+                    <div class="p-2 sm:p-3 bg-red-500/10 text-red-500 rounded-xl group-hover:bg-red-500 group-hover:text-white transition-all shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="sm:w-6 sm:h-6"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
                     </div>
                     <div>
-                        <h3 class="font-bold text-lg mb-1">Menschen</h3>
-                        <p class="text-slate-500 dark:text-slate-400 text-sm leading-snug">Familie & Bester Freund Tom...</p>
+                        <h3 class="font-bold text-base sm:text-lg mb-1">Menschen</h3>
+                        <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm leading-snug">Familie & Bester Freund Tom...</p>
                     </div>
                 </div>
             </div>
 
-            <div class="grid md:grid-cols-3 gap-5">
-                <div onclick="openModal('techstack')" role="button" tabindex="0" class="glass-card p-6 rounded-[1.5rem] flex items-start gap-5 cursor-pointer group md:col-span-1">
-                    <div class="p-3 bg-emerald-500/10 text-emerald-500 rounded-xl group-hover:bg-emerald-500 group-hover:text-white transition-all shrink-0">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 16V7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v9m16 0H4m16 0 1.28 2.55a1 1 0 0 1-.9 1.45H3.62a1 1 0 0 1-.9-1.45L4 16"/></svg>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 xs:gap-4 sm:gap-5">
+                <div onclick="openModal('techstack')" role="button" tabindex="0" class="glass-card p-4 xs:p-5 sm:p-6 rounded-2xl sm:rounded-[1.5rem] flex items-start gap-3 sm:gap-5 cursor-pointer group md:col-span-1">
+                    <div class="p-2 sm:p-3 bg-emerald-500/10 text-emerald-500 rounded-xl group-hover:bg-emerald-500 group-hover:text-white transition-all shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="sm:w-6 sm:h-6"><path d="M20 16V7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v9m16 0H4m16 0 1.28 2.55a1 1 0 0 1-.9 1.45H3.62a1 1 0 0 1-.9-1.45L4 16"/></svg>
                     </div>
                     <div>
-                        <h3 class="font-bold text-lg mb-1">Tech Stack</h3>
-                        <p class="text-slate-500 dark:text-slate-400 text-sm leading-snug">Hardware, Linux, Windows...</p>
+                        <h3 class="font-bold text-base sm:text-lg mb-1">Tech Stack</h3>
+                        <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm leading-snug">Hardware, Linux, Windows...</p>
                     </div>
                 </div>
 
-                <div onclick="openModal('setup')" role="button" tabindex="0" class="glass-card p-6 rounded-[1.5rem] flex items-start gap-5 cursor-pointer group md:col-span-1">
-                    <div class="p-3 bg-cyan-500/10 text-cyan-500 rounded-xl group-hover:bg-cyan-500 group-hover:text-white transition-all shrink-0">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
+                <div onclick="openModal('setup')" role="button" tabindex="0" class="glass-card p-4 xs:p-5 sm:p-6 rounded-2xl sm:rounded-[1.5rem] flex items-start gap-3 sm:gap-5 cursor-pointer group md:col-span-1">
+                    <div class="p-2 sm:p-3 bg-cyan-500/10 text-cyan-500 rounded-xl group-hover:bg-cyan-500 group-hover:text-white transition-all shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="sm:w-6 sm:h-6"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
                     </div>
                     <div>
-                        <h3 class="font-bold text-lg mb-1">Mein Setup</h3>
-                        <p class="text-slate-500 dark:text-slate-400 text-sm leading-snug">DT 770 Pro & Rockster Cross...</p>
+                        <h3 class="font-bold text-base sm:text-lg mb-1">Mein Setup</h3>
+                        <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm leading-snug">DT 770 Pro & Rockster Cross...</p>
                     </div>
                 </div>
 
-                <div onclick="openModal('contact')" role="button" tabindex="0" class="glass-card p-6 rounded-[1.5rem] flex items-start gap-5 cursor-pointer group md:col-span-1">
-                    <div class="p-3 bg-indigo-500/10 text-indigo-500 rounded-xl group-hover:bg-indigo-500 group-hover:text-white transition-all shrink-0">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                <div onclick="openModal('contact')" role="button" tabindex="0" class="glass-card p-4 xs:p-5 sm:p-6 rounded-2xl sm:rounded-[1.5rem] flex items-start gap-3 sm:gap-5 cursor-pointer group md:col-span-1">
+                    <div class="p-2 sm:p-3 bg-indigo-500/10 text-indigo-500 rounded-xl group-hover:bg-indigo-500 group-hover:text-white transition-all shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="sm:w-6 sm:h-6"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
                     </div>
                     <div>
-                        <h3 class="font-bold text-lg mb-1">Kontakt</h3>
-                        <p class="text-slate-500 dark:text-slate-400 text-sm leading-snug">Connect mit mir...</p>
+                        <h3 class="font-bold text-base sm:text-lg mb-1">Kontakt</h3>
+                        <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm leading-snug">Connect mit mir...</p>
                     </div>
                 </div>
             </div>
+            <div class="text-center text-xs text-slate-500 dark:text-slate-400 mt-2">Klicke auf die Karten für Details.</div>
         </section>
 
         <!-- MUSIC DASHBOARD INTEGRATION -->
-        <section class="mb-24 reveal relative">
-            <h2 class="text-3xl font-bold mb-2 text-blue-600 dark:text-blue-500 border-b-4 border-blue-600 dark:border-blue-500 pb-3 inline-block">
+        <section id="music-section" class="mb-16 xs:mb-20 sm:mb-24 reveal relative rounded-3xl">
+            <h2 class="text-xl xs:text-2xl sm:text-3xl font-bold mb-2 text-blue-600 dark:text-blue-500 border-b-2 sm:border-b-4 border-blue-600 dark:border-blue-500 pb-2 sm:pb-3 inline-block break-words">
                 Was bei mir gerade läuft
             </h2>
-            <p class="text-xs text-slate-500 dark:text-slate-400 mb-10">*Hinweis: Der Time-Sync ist möglicherweise nicht immer zu 100% perfekt.</p>
+            <p class="text-[10px] xs:text-xs text-slate-500 dark:text-slate-400 mb-6 sm:mb-10">*Hinweis: Der Time-Sync ist möglicherweise nicht immer zu 100% perfekt.</p>
             
-            <div id="mini-player-toggle" onclick="toggleDashboard()" role="button" tabindex="0" class="glass-card w-full max-w-[400px] mx-auto p-4 rounded-[2rem] flex items-center justify-between cursor-pointer group mb-6 relative z-20 hover:scale-[1.01] hover:shadow-xl transition-all">
-                <div class="flex items-center gap-4 flex-1 min-w-0">
-                    <div id="mini-icon-bg" class="w-12 h-12 shrink-0 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+            <div id="mini-player-toggle" onclick="toggleDashboard()" role="button" tabindex="0" class="glass-card w-full max-w-[400px] mx-auto p-3 sm:p-4 rounded-2xl sm:rounded-[2rem] flex items-center justify-between cursor-pointer group mb-4 sm:mb-6 relative z-20 hover:scale-[1.01] hover:shadow-xl transition-all">
+                <div class="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+                    <div id="mini-icon-bg" class="w-10 h-10 sm:w-12 sm:h-12 shrink-0 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sm:w-6 sm:h-6"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
                     </div>
                     <div class="text-left flex-1 min-w-0 py-1">
-                        <p id="mini-title" class="text-sm font-bold text-slate-900 dark:text-white break-words whitespace-normal leading-snug transition-colors">Dashboard minimiert</p>
-                        <p id="mini-status" class="text-xs text-slate-500 dark:text-slate-400 break-words whitespace-normal mt-0.5 leading-snug transition-colors">Klicken zum Öffnen</p>
+                        <p id="mini-title" class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white break-words whitespace-normal leading-snug transition-colors">Dashboard minimiert</p>
+                        <p id="mini-status" class="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 break-words whitespace-normal mt-0.5 leading-snug transition-colors">Klicken zum Öffnen</p>
                     </div>
                 </div>
-                <div class="p-2 shrink-0 bg-slate-200/50 dark:bg-white/5 text-slate-500 dark:text-slate-400 rounded-full group-hover:bg-blue-500/10 group-hover:text-blue-500 transition-colors ml-2">
-                    <svg id="music-chevron" class="transition-transform duration-300" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                <div class="p-1.5 sm:p-2 shrink-0 bg-slate-200/50 dark:bg-white/5 text-slate-500 dark:text-slate-400 rounded-full group-hover:bg-blue-500/10 group-hover:text-blue-500 transition-colors ml-2">
+                    <svg id="music-chevron" class="transition-transform duration-300" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sm:w-5 sm:h-5"><path d="m6 9 6 6 6-6"/></svg>
                 </div>
             </div>
 
             <div id="music-card-wrapper" class="hidden opacity-0 -translate-y-4 transition-all duration-300 ease-out origin-top flex justify-center">
-                <!-- REDUZIERTES PADDING FÜR S4 MINI: p-6 anstatt p-10 -->
-                <div id="main-music-card" class="glass-card offline w-full max-w-[400px] mx-auto p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] text-center relative z-10 overflow-hidden flex flex-col justify-center items-center">
+                <div id="main-music-card" class="glass-card offline w-full max-w-[400px] mx-auto p-4 xs:p-6 md:p-10 rounded-3xl md:rounded-[3rem] text-center relative z-10 overflow-hidden flex flex-col justify-center items-center">
                     <div id="ambient-bg"></div>
 
                     <!-- Lyrics Overlay -->
-                    <div id="lyrics-overlay" class="absolute inset-0 bg-slate-900/95 backdrop-blur-3xl rounded-[3rem] flex-col p-6 md:p-8 z-40 transition-all duration-500 opacity-0 translate-y-8 pointer-events-none flex">
-                        
-                        <div class="flex items-center justify-between gap-4 mb-6 shrink-0 w-full bg-white/5 p-4 rounded-2xl border border-white/10">
-                            <div class="flex items-center gap-3 min-w-0">
-                                <img id="lyrics-mini-art" src="" alt="Album Art" class="w-10 h-10 rounded shadow-md object-cover shrink-0">
+                    <div id="lyrics-overlay" class="absolute inset-0 bg-slate-900/95 backdrop-blur-3xl rounded-3xl md:rounded-[3rem] flex-col p-4 xs:p-6 md:p-8 z-40 transition-all duration-500 opacity-0 translate-y-8 pointer-events-none flex">
+                        <div class="flex items-center justify-between gap-2 sm:gap-4 mb-4 sm:mb-6 shrink-0 w-full bg-white/5 p-2 xs:p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-white/10">
+                            <div class="flex items-center gap-2 sm:gap-3 min-w-0">
+                                <img id="lyrics-mini-art" src="" alt="Album Art" class="w-8 h-8 sm:w-10 sm:h-10 rounded shadow-md object-cover shrink-0">
                                 <div class="text-left min-w-0">
-                                    <p id="lyrics-mini-title" class="text-sm font-bold text-white truncate">Titel</p>
-                                    <p id="lyrics-mini-artist" class="text-xs text-white/60 truncate">Artist</p>
+                                    <p id="lyrics-mini-title" class="text-xs sm:text-sm font-bold text-white truncate">Titel</p>
+                                    <p id="lyrics-mini-artist" class="text-[10px] sm:text-xs text-white/60 truncate">Artist</p>
                                 </div>
                             </div>
-                            <button onclick="toggleLyrics(false)" aria-label="Lyrics schließen" class="p-2 hover:bg-white/10 rounded-full transition-colors text-white shrink-0">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                            <button onclick="toggleLyrics(false)" aria-label="Lyrics schließen" class="p-1.5 sm:p-2 hover:bg-white/10 rounded-full transition-colors text-white shrink-0">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sm:w-5 sm:h-5"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                             </button>
                         </div>
 
                         <div class="relative flex-1 overflow-hidden mask-image-gradient w-full max-w-2xl mx-auto">
-                            <div id="lyrics-container" class="absolute inset-0 overflow-y-auto text-left w-full h-full pb-10">
-                                <div id="lyrics-content" class="transition-all flex flex-col items-start w-full">
-                                    <!-- Lyrics Inhalt wird hier generiert -->
-                                </div>
+                            <div id="lyrics-container" class="absolute inset-0 overflow-y-auto text-left w-full h-full pb-6 sm:pb-10">
+                                <div id="lyrics-content" class="transition-all flex flex-col items-start w-full"></div>
                             </div>
                         </div>
                     </div>
 
-                    <div id="music-picker" class="absolute inset-0 bg-slate-900/95 rounded-[3rem] hidden flex-col justify-center p-10 gap-4 z-50">
-                        <p class="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-2">Service wählen</p>
-                        <div id="dynamic-links-container" class="flex flex-col gap-3 w-full max-h-[180px] overflow-y-auto" style="scrollbar-width: thin;"></div>
-                        <p id="link-none" class="text-white/50 text-sm font-bold" style="display: none;">Keine Links gefunden</p>
-                        <button onclick="toggleMusicPicker(false)" class="text-white/50 text-xs mt-4 hover:text-white transition-colors">Abbrechen</button>
+                    <div id="music-picker" class="absolute inset-0 bg-slate-900/95 rounded-3xl md:rounded-[3rem] hidden flex-col justify-center p-6 sm:p-10 gap-4 z-50">
+                        <p class="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1 sm:mb-2">Service wählen</p>
+                        <div id="dynamic-links-container" class="flex flex-col gap-2 sm:gap-3 w-full max-h-[140px] sm:max-h-[180px] overflow-y-auto" style="scrollbar-width: thin;"></div>
+                        <p id="link-none" class="text-white/50 text-xs sm:text-sm font-bold" style="display: none;">Keine Links gefunden</p>
+                        <button onclick="toggleMusicPicker(false)" class="text-white/50 text-[10px] sm:text-xs mt-2 sm:mt-4 hover:text-white transition-colors">Abbrechen</button>
                     </div>
 
-                    <div id="music-header-tag" class="relative z-10 text-[10px] font-black text-blue-500 uppercase tracking-[0.4em] mb-4 md:mb-6 transition-all shrink-0">
+                    <div id="music-header-tag" class="relative z-10 text-[8px] xs:text-[10px] font-black text-blue-500 uppercase tracking-[0.2em] xs:tracking-[0.4em] mb-3 sm:mb-4 md:mb-6 transition-all shrink-0">
                         Gamingpig is Offline
                     </div>
 
-                    <!-- RESPONSIVE SIZING FÜR COVER ART (FIX FÜR S4 MINI) -->
-                    <div id="media-container" onclick="toggleMusicPicker(true)" role="button" tabindex="0" class="relative z-10 w-full max-w-[200px] sm:max-w-[240px] md:max-w-[280px] aspect-square shrink-0 rounded-2xl mx-auto mb-4 md:mb-6 overflow-hidden flex items-center justify-center bg-[#121212] shadow-[0_20px_40px_rgba(0,0,0,0.8)] cursor-pointer hover:ring-2 hover:ring-white/20 transition-all">
+                    <div id="media-container" onclick="toggleMusicPicker(true)" role="button" tabindex="0" class="relative z-10 w-full max-w-[140px] xs:max-w-[180px] sm:max-w-[240px] md:max-w-[280px] aspect-square shrink-0 rounded-2xl mx-auto mb-3 sm:mb-4 md:mb-6 overflow-hidden flex items-center justify-center bg-[#121212] shadow-[0_10px_30px_rgba(0,0,0,0.8)] sm:shadow-[0_20px_40px_rgba(0,0,0,0.8)] cursor-pointer hover:ring-2 hover:ring-white/20 transition-all">
                         <img id="artwork" src="" alt="Album Artwork" class="w-full h-full object-cover">
-                        <div id="offline-icon" class="absolute text-6xl" aria-hidden="true">🌙</div>
+                        <div id="offline-icon" class="absolute text-4xl sm:text-6xl" aria-hidden="true">🌙</div>
                     </div>
 
-                    <div class="relative z-10 mb-6 text-left px-2 w-full shrink-0">
-                        <h2 id="track-title" class="text-2xl md:text-3xl font-extrabold text-white break-words leading-[1.1] mb-2 transition-all">Aktuell ist es ruhig...</h2>
-                        <p id="track-artist" class="text-white/70 text-lg font-medium">Genieße die Stille</p>
+                    <div class="relative z-10 mb-4 sm:mb-6 text-left px-1 sm:px-2 w-full shrink-0">
+                        <h2 id="track-title" class="text-lg xs:text-xl sm:text-2xl md:text-3xl font-extrabold text-white break-words leading-[1.1] mb-1 sm:mb-2 transition-all">Aktuell ist es ruhig...</h2>
+                        <p id="track-artist" class="text-white/70 text-sm sm:text-lg font-medium">Genieße die Stille</p>
                     </div>
 
-                    <div id="progress-container" class="relative z-10 w-full px-2 mb-6 shrink-0 transition-all">
-                        <div class="flex justify-between text-[11px] font-mono text-white/60 mb-2">
+                    <div id="progress-container" class="relative z-10 w-full px-1 sm:px-2 mb-4 sm:mb-6 shrink-0 transition-all">
+                        <div class="flex justify-between text-[9px] xs:text-[11px] font-mono text-white/60 mb-1 sm:mb-2">
                             <span id="time-current">0:00</span>
                             <span id="time-total">0:00</span>
                         </div>
-                        <div class="h-1.5 w-full bg-white/10 rounded-full overflow-hidden relative">
+                        <div class="h-1 sm:h-1.5 w-full bg-white/10 rounded-full overflow-hidden relative">
                             <div id="progress-bar" class="absolute top-0 left-0 h-full bg-white w-0 transition-all duration-300 ease-linear rounded-full"></div>
                         </div>
                     </div>
 
-                    <div id="controls-container" class="relative z-10 flex items-center justify-between px-2 w-full shrink-0 transition-all">
-                        <div class="inline-flex items-center gap-2.5 px-4 py-2 bg-white/5 rounded-full text-[0.7rem] font-extrabold uppercase tracking-[2px] border border-white/10 text-white">
-                            <span id="status-dot" class="h-2 w-2 rounded-full bg-blue-500"></span>
+                    <div id="controls-container" class="relative z-10 flex items-center justify-between px-1 sm:px-2 w-full shrink-0 transition-all">
+                        <div class="inline-flex items-center gap-1.5 xs:gap-2.5 px-3 py-1.5 xs:px-4 xs:py-2 bg-white/5 rounded-full text-[0.6rem] xs:text-[0.7rem] font-extrabold uppercase tracking-[1px] xs:tracking-[2px] border border-white/10 text-white">
+                            <span id="status-dot" class="h-1.5 w-1.5 xs:h-2 xs:w-2 rounded-full bg-blue-500"></span>
                             <span id="status-text">Zen Mode</span>
                         </div>
                         
-                        <button onclick="toggleLyrics(true)" aria-label="Lyrics anzeigen" class="p-2 text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all" title="Lyrics anzeigen">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                        <button onclick="toggleLyrics(true)" aria-label="Lyrics anzeigen" class="p-1.5 xs:p-2 text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all" title="Lyrics anzeigen">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="xs:w-5 xs:h-5"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
                         </button>
                     </div>
                 </div>
@@ -548,93 +573,93 @@
         </section>
 
         <!-- SOCIAL GRID -->
-        <div class="grid gap-8 reveal">
+        <div class="grid grid-cols-1 gap-4 xs:gap-6 sm:gap-8 reveal">
             <!-- Tic-Tac-Toe -->
-            <div class="glass-card p-8 rounded-[2.5rem] group overflow-hidden relative border border-slate-200 dark:border-slate-800">
-                <div class="flex items-center gap-5 mb-6">
-                    <div class="p-3 bg-indigo-500/10 text-indigo-500 rounded-2xl group-hover:rotate-12 transition-transform">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18v18H3zM21 9H3M21 15H3M9 3v18M15 3v18"/></svg>
+            <div class="glass-card p-5 xs:p-6 sm:p-8 rounded-[1.5rem] sm:rounded-[2.5rem] group overflow-hidden relative border border-slate-200 dark:border-slate-800">
+                <div class="flex items-center gap-3 sm:gap-5 mb-4 sm:mb-6">
+                    <div class="p-2 sm:p-3 bg-indigo-500/10 text-indigo-500 rounded-xl sm:rounded-2xl group-hover:rotate-12 transition-transform">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="sm:w-8 sm:h-8"><path d="M3 3h18v18H3zM21 9H3M21 15H3M9 3v18M15 3v18"/></svg>
                     </div>
-                    <h2 class="text-3xl font-bold">Tic-Tac-Toe</h2>
+                    <h2 class="text-xl xs:text-2xl sm:text-3xl font-bold">Tic-Tac-Toe</h2>
                 </div>
-                <a href="https://gamingpig.github.io/tic-tac-toe-by-Gamingpig/" target="_blank" rel="noopener noreferrer" class="group/link inline-flex items-center gap-3 text-xl text-blue-500 hover:text-blue-600 font-bold transition-all">
+                <a href="https://gamingpig.github.io/tic-tac-toe-by-Gamingpig/" target="_blank" rel="noopener noreferrer" class="group/link inline-flex items-center gap-2 sm:gap-3 text-base sm:text-xl text-blue-500 hover:text-blue-600 font-bold transition-all">
                     Lass uns ne Runde zocken!
-                    <div class="p-1.5 bg-blue-500/10 rounded-lg group-hover/link:translate-x-1 transition-transform">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    <div class="p-1 sm:p-1.5 bg-blue-500/10 rounded-md sm:rounded-lg group-hover/link:translate-x-1 transition-transform">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="sm:w-5 sm:h-5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                     </div>
                 </a>
             </div>
 
             <!-- TikTok -->
-            <div class="glass-card p-8 rounded-[2.5rem] group overflow-hidden relative border border-slate-200 dark:border-slate-800">
-                <div class="flex items-center gap-5 mb-6">
-                    <div class="p-3 bg-pink-500/10 text-pink-600 rounded-2xl group-hover:rotate-12 transition-transform">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/></svg>
+            <div class="glass-card p-5 xs:p-6 sm:p-8 rounded-[1.5rem] sm:rounded-[2.5rem] group overflow-hidden relative border border-slate-200 dark:border-slate-800">
+                <div class="flex items-center gap-3 sm:gap-5 mb-4 sm:mb-6">
+                    <div class="p-2 sm:p-3 bg-pink-500/10 text-pink-600 rounded-xl sm:rounded-2xl group-hover:rotate-12 transition-transform">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="sm:w-8 sm:h-8"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/></svg>
                     </div>
-                    <h2 class="text-3xl font-bold">Jonas‘ TikTok</h2>
+                    <h2 class="text-xl xs:text-2xl sm:text-3xl font-bold">Jonas‘ TikTok</h2>
                 </div>
-                <a href="https://www.tiktok.com/@jonasjohnston2" target="_blank" rel="noopener noreferrer" class="group/link inline-flex items-center gap-3 text-xl text-blue-500 hover:text-blue-600 font-bold transition-all">
-                    Hier geht's zu meinem TikTok Kanal
-                    <div class="p-1.5 bg-blue-500/10 rounded-lg group-hover/link:translate-x-1 transition-transform">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                <a href="https://www.tiktok.com/@jonasjohnston2" target="_blank" rel="noopener noreferrer" class="group/link inline-flex items-center gap-2 sm:gap-3 text-base sm:text-xl text-blue-500 hover:text-blue-600 font-bold transition-all">
+                    Hier geht's zu meinem Kanal
+                    <div class="p-1 sm:p-1.5 bg-blue-500/10 rounded-md sm:rounded-lg group-hover/link:translate-x-1 transition-transform">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="sm:w-5 sm:h-5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                     </div>
                 </a>
             </div>
 
             <!-- YouTube -->
-            <div class="glass-card p-8 rounded-[2.5rem] group overflow-hidden relative border border-slate-200 dark:border-slate-800">
-                <div class="flex items-center gap-5 mb-6">
-                    <div class="p-3 bg-red-500/10 text-red-600 rounded-2xl group-hover:rotate-12 transition-transform">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 2-2 103.38 103.38 0 0 1 15 0 2 2 0 0 1 2 2 24.12 24.12 0 0 1 0 10 2 2 0 0 1-2 2 103.38 103.38 0 0 1-15 0 2 2 0 0 1-2-2Z"/><path d="m10 15 5-3-5-3z"/></svg>
+            <div class="glass-card p-5 xs:p-6 sm:p-8 rounded-[1.5rem] sm:rounded-[2.5rem] group overflow-hidden relative border border-slate-200 dark:border-slate-800">
+                <div class="flex items-center gap-3 sm:gap-5 mb-4 sm:mb-6">
+                    <div class="p-2 sm:p-3 bg-red-500/10 text-red-600 rounded-xl sm:rounded-2xl group-hover:rotate-12 transition-transform">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="sm:w-8 sm:h-8"><path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 2-2 103.38 103.38 0 0 1 15 0 2 2 0 0 1 2 2 24.12 24.12 0 0 1 0 10 2 2 0 0 1-2 2 103.38 103.38 0 0 1-15 0 2 2 0 0 1-2-2Z"/><path d="m10 15 5-3-5-3z"/></svg>
                     </div>
-                    <h2 class="text-3xl font-bold">Jonas' YouTube</h2>
+                    <h2 class="text-xl xs:text-2xl sm:text-3xl font-bold">Jonas' YouTube</h2>
                 </div>
-                <a href="https://www.youtube.com/@gamingpig9409" target="_blank" rel="noopener noreferrer" class="group/link inline-flex items-center gap-3 text-xl text-blue-500 hover:text-blue-600 font-bold transition-all">
-                    Hier geht's zu meinem YouTube Kanal
-                    <div class="p-1.5 bg-blue-500/10 rounded-lg group-hover/link:translate-x-1 transition-transform">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                <a href="https://www.youtube.com/@gamingpig9409" target="_blank" rel="noopener noreferrer" class="group/link inline-flex items-center gap-2 sm:gap-3 text-base sm:text-xl text-blue-500 hover:text-blue-600 font-bold transition-all">
+                    Hier geht's zu meinem Kanal
+                    <div class="p-1 sm:p-1.5 bg-blue-500/10 rounded-md sm:rounded-lg group-hover/link:translate-x-1 transition-transform">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="sm:w-5 sm:h-5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                     </div>
                 </a>
             </div>
 
             <!-- GitHub -->
-            <div class="glass-card p-8 rounded-[2.5rem] group overflow-hidden relative border border-slate-200 dark:border-slate-800">
-                <div class="flex items-center gap-5 mb-6">
-                    <div class="p-3 bg-slate-500/10 text-slate-900 dark:text-white rounded-2xl group-hover:rotate-12 transition-transform">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
+            <div class="glass-card p-5 xs:p-6 sm:p-8 rounded-[1.5rem] sm:rounded-[2.5rem] group overflow-hidden relative border border-slate-200 dark:border-slate-800">
+                <div class="flex items-center gap-3 sm:gap-5 mb-4 sm:mb-6">
+                    <div class="p-2 sm:p-3 bg-slate-500/10 text-slate-900 dark:text-white rounded-xl sm:rounded-2xl group-hover:rotate-12 transition-transform">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="sm:w-8 sm:h-8"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
                     </div>
-                    <h2 class="text-3xl font-bold">Jonas' GitHub</h2>
+                    <h2 class="text-xl xs:text-2xl sm:text-3xl font-bold">Jonas' GitHub</h2>
                 </div>
-                <a href="https://github.com/Gamingpig" target="_blank" rel="noopener noreferrer" class="group/link inline-flex items-center gap-3 text-xl text-blue-500 hover:text-blue-600 font-bold transition-all">
-                    Hier geht's zu meinem GitHub Profil
-                    <div class="p-1.5 bg-blue-500/10 rounded-lg group-hover/link:translate-x-1 transition-transform">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                <a href="https://github.com/Gamingpig" target="_blank" rel="noopener noreferrer" class="group/link inline-flex items-center gap-2 sm:gap-3 text-base sm:text-xl text-blue-500 hover:text-blue-600 font-bold transition-all">
+                    Hier geht's zu meinem Profil
+                    <div class="p-1 sm:p-1.5 bg-blue-500/10 rounded-md sm:rounded-lg group-hover/link:translate-x-1 transition-transform">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="sm:w-5 sm:h-5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                     </div>
                 </a>
             </div>
 
             <!-- Tom's TikTok -->
-            <div class="glass-card p-8 rounded-[2.5rem] group overflow-hidden relative border border-slate-200 dark:border-slate-800">
-                <div class="flex items-center gap-5 mb-6">
-                    <div class="p-3 bg-pink-500/10 text-pink-600 rounded-2xl group-hover:rotate-12 transition-transform">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/></svg>
+            <div class="glass-card p-5 xs:p-6 sm:p-8 rounded-[1.5rem] sm:rounded-[2.5rem] group overflow-hidden relative border border-slate-200 dark:border-slate-800">
+                <div class="flex items-center gap-3 sm:gap-5 mb-4 sm:mb-6">
+                    <div class="p-2 sm:p-3 bg-pink-500/10 text-pink-600 rounded-xl sm:rounded-2xl group-hover:rotate-12 transition-transform">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="sm:w-8 sm:h-8"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/></svg>
                     </div>
-                    <h2 class="text-3xl font-bold">Tom's TikTok</h2>
+                    <h2 class="text-xl xs:text-2xl sm:text-3xl font-bold">Tom's TikTok</h2>
                 </div>
-                <a href="https://www.tiktok.com/@crxy_tom_?is_from_webapp=1&sender_device=pc" target="_blank" rel="noopener noreferrer" class="group/link inline-flex items-center gap-3 text-xl text-blue-500 hover:text-blue-600 font-bold transition-all">
-                    Hier geht's zu Tom's TikTok Kanal
-                    <div class="p-1.5 bg-blue-500/10 rounded-lg group-hover/link:translate-x-1 transition-transform">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                <a href="https://www.tiktok.com/@crxy_tom_?is_from_webapp=1&sender_device=pc" target="_blank" rel="noopener noreferrer" class="group/link inline-flex items-center gap-2 sm:gap-3 text-base sm:text-xl text-blue-500 hover:text-blue-600 font-bold transition-all">
+                    Hier geht's zu Tom's Kanal
+                    <div class="p-1 sm:p-1.5 bg-blue-500/10 rounded-md sm:rounded-lg group-hover/link:translate-x-1 transition-transform">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="sm:w-5 sm:h-5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                     </div>
                 </a>
             </div>
         </div>
 
-        <footer class="mt-40 text-center reveal">
-            <div class="inline-flex items-center gap-4 py-2 px-6 bg-slate-200/50 dark:bg-slate-900/50 rounded-full border border-slate-300 dark:border-slate-800">
-                <span class="text-xs font-black uppercase tracking-widest text-slate-500">Established 2026</span>
-                <div class="h-4 w-px bg-slate-300 dark:bg-slate-700"></div>
-                <p class="font-bold text-sm text-slate-900 dark:text-white">Erstellt von Jonas Johnston</p>
+        <footer class="mt-20 sm:mt-40 text-center reveal">
+            <div class="inline-flex items-center gap-2 sm:gap-4 py-2 px-4 sm:px-6 bg-slate-200/50 dark:bg-slate-900/50 rounded-full border border-slate-300 dark:border-slate-800 flex-wrap justify-center">
+                <span class="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-500">Established 2026</span>
+                <div class="hidden sm:block h-4 w-px bg-slate-300 dark:bg-slate-700"></div>
+                <p class="font-bold text-xs sm:text-sm text-slate-900 dark:text-white">Erstellt von Jonas Johnston</p>
             </div>
         </footer>
     </main>
@@ -653,38 +678,34 @@
             );
         }
 
-        // --- Performance Modus Logik ---
         const perfToggle = document.getElementById('perf-toggle');
         const perfIcon = document.getElementById('perf-icon');
-        const savedPerfMode = localStorage.getItem('perfMode');
-        
-        if (savedPerfMode === 'true') {
-            document.body.classList.add('low-end');
-            perfToggle.classList.add('ring-2', 'ring-green-500');
-            perfIcon.classList.add('text-green-500');
-            
-            // Animationen hart überspringen
-            setTimeout(() => {
+        const themeToggle = document.getElementById('theme-toggle');
+        const html = document.documentElement;
+
+        function applyPerformanceMode(isActive) {
+            if (isActive) {
+                document.body.classList.add('low-end');
+                perfToggle.classList.add('ring-2', 'ring-green-500');
+                perfIcon.classList.add('text-green-500');
                 document.querySelectorAll('.reveal').forEach(el => el.classList.add('active'));
-            }, 50);
+            } else {
+                document.body.classList.remove('low-end');
+                perfToggle.classList.remove('ring-2', 'ring-green-500');
+                perfIcon.classList.remove('text-green-500');
+            }
+        }
+
+        const savedPerfMode = localStorage.getItem('perfMode');
+        if (savedPerfMode === 'true') {
+            applyPerformanceMode(true);
         }
 
         perfToggle.addEventListener('click', () => {
             const isActive = document.body.classList.toggle('low-end');
             localStorage.setItem('perfMode', isActive);
-            if (isActive) {
-                perfToggle.classList.add('ring-2', 'ring-green-500');
-                perfIcon.classList.add('text-green-500');
-                document.querySelectorAll('.reveal').forEach(el => el.classList.add('active'));
-            } else {
-                perfToggle.classList.remove('ring-2', 'ring-green-500');
-                perfIcon.classList.remove('text-green-500');
-            }
+            applyPerformanceMode(isActive);
         });
-
-        // --- Theme Logik Portfolio ---
-        const themeToggle = document.getElementById('theme-toggle');
-        const html = document.documentElement;
 
         const savedTheme = localStorage.getItem('theme');
         if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
@@ -696,7 +717,110 @@
             localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
         });
 
-        // ERWEITERT MIT NEUEN INFOS
+        /* --- TUTORIAL ENGINE --- */
+        const tutorialSteps = [
+            {
+                targetId: 'header-section',
+                title: 'Willkommen!',
+                text: 'Das ist mein Portfolio. Hier erfährst du alles Wichtige über mich, meine Ausbildung und meine Interessen.'
+            },
+            {
+                targetId: 'ui-controls',
+                title: 'Kontrollzentrum',
+                text: 'Oben rechts findest du die Steuerung. Du kannst das Tutorial neustarten, den extremen Performance-Modus für alte Geräte aktivieren oder den Darkmode umschalten.'
+            },
+            {
+                targetId: 'cards-section',
+                title: 'Deep Dive',
+                text: 'Klicke auf diese Info-Karten. Ein Modal öffnet sich und gibt dir detaillierte Einblicke in mein Setup, meinen Tech-Stack und meinen Alltag.'
+            },
+            {
+                targetId: 'music-section',
+                title: 'Live Musik Integration',
+                text: 'Hier siehst du in Echtzeit, was ich gerade höre. Klicke auf das Dashboard, um die Lyrics und die Links zu den Streamingdiensten zu öffnen. Das war’s!'
+            }
+        ];
+
+        let currentStepIndex = 0;
+        let originalPerfModeState = localStorage.getItem('perfMode');
+        const tutorialBox = document.getElementById('tutorial-box');
+        const btnNext = document.getElementById('tutorial-next');
+        const btnSkip = document.getElementById('tutorial-skip');
+        const stepIndicator = document.getElementById('tutorial-step-indicator');
+        const tutorialTitle = document.getElementById('tutorial-title');
+        const tutorialText = document.getElementById('tutorial-text');
+        const btnStartTutorial = document.getElementById('tutorial-start-btn');
+        let activeTutorialTarget = null;
+
+        function clearTutorialHighlights() {
+            document.querySelectorAll('.tutorial-active-element').forEach(el => {
+                el.classList.remove('tutorial-active-element');
+            });
+        }
+
+        function endTutorial() {
+            tutorialBox.classList.add('hidden');
+            tutorialBox.classList.remove('flex');
+            clearTutorialHighlights();
+            localStorage.setItem('tutorialCompleted', 'true');
+            
+            if (originalPerfModeState !== 'true') {
+                applyPerformanceMode(false);
+                localStorage.setItem('perfMode', 'false');
+            }
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function showTutorialStep(index) {
+            clearTutorialHighlights();
+            if (index >= tutorialSteps.length) {
+                endTutorial();
+                return;
+            }
+
+            const step = tutorialSteps[index];
+            activeTutorialTarget = document.getElementById(step.targetId);
+            
+            if (activeTutorialTarget) {
+                activeTutorialTarget.classList.add('tutorial-active-element');
+                activeTutorialTarget.scrollIntoView({ behavior: 'auto', block: 'center' });
+            }
+
+            stepIndicator.innerText = `Schritt ${index + 1}/${tutorialSteps.length}`;
+            tutorialTitle.innerText = step.title;
+            tutorialText.innerText = step.text;
+
+            if (index === tutorialSteps.length - 1) {
+                btnNext.innerText = 'Abschließen';
+            } else {
+                btnNext.innerText = 'Weiter';
+            }
+        }
+
+        function startTutorial() {
+            currentStepIndex = 0;
+            originalPerfModeState = localStorage.getItem('perfMode');
+            
+            applyPerformanceMode(true);
+            
+            tutorialBox.classList.remove('hidden');
+            tutorialBox.classList.add('flex');
+            showTutorialStep(currentStepIndex);
+        }
+
+        btnNext.addEventListener('click', () => {
+            currentStepIndex++;
+            showTutorialStep(currentStepIndex);
+        });
+
+        btnSkip.addEventListener('click', endTutorial);
+        btnStartTutorial.addEventListener('click', startTutorial);
+
+        if (!localStorage.getItem('tutorialCompleted')) {
+            setTimeout(startTutorial, 500);
+        }
+
+        /* --- MODAL ENGINE --- */
         const details = {
             status: { title: "Ausbildung & Fokus", content: "Ich absolviere aktuell meine Ausbildung zum Fachinformatiker für Systemintegration. Technik und Systeme sind meine Welt. Ich liebe es, Server aufzusetzen, Netzwerke zu konfigurieren und alles am Laufen zu halten. Mein Hyperfokus hilft mir dabei, tief in komplexe IT-Strukturen einzutauchen und Fehler zu finden, bevor sie zum Problem werden." },
             background: { title: "Hintergrund & Weg", content: "Ich bin 19 Jahre alt und lebe in einer Jugendhilfeeinrichtung. Das hat mich früh gelehrt, unabhängig zu sein und meinen eigenen Weg zu gehen. Ich sehe Herausforderungen nicht als Hindernis, sondern als Chance, zu wachsen und meine eigene Zukunft zu gestalten." },
@@ -713,11 +837,12 @@
 
         window.openModal = function(key) {
             const data = details[key];
+            if(!data) return;
             modalBody.innerHTML = `
-                <div class="text-xs font-black uppercase tracking-widest text-blue-500 mb-2">Deep Dive</div>
-                <h3 class="text-4xl font-extrabold text-slate-900 dark:text-white mb-6 leading-tight">${escapeHTML(data.title)}</h3>
-                <p class="text-slate-600 dark:text-slate-300 text-lg leading-relaxed font-medium mb-10">${escapeHTML(data.content)}</p>
-                <button onclick="document.getElementById('close-modal').click()" class="w-full py-5 bg-blue-600 text-white rounded-[1.5rem] font-bold text-lg hover:bg-blue-700 hover:shadow-xl hover:shadow-blue-500/30 transition-all active:scale-95">Verstanden</button>
+                <div class="text-[10px] sm:text-xs font-black uppercase tracking-widest text-blue-500 mb-2">Deep Dive</div>
+                <h3 class="text-2xl xs:text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white mb-4 sm:mb-6 leading-tight break-words">${escapeHTML(data.title)}</h3>
+                <p class="text-slate-600 dark:text-slate-300 text-sm sm:text-lg leading-relaxed font-medium mb-6 sm:mb-10">${escapeHTML(data.content)}</p>
+                <button onclick="document.getElementById('close-modal').click()" class="w-full py-3 sm:py-5 bg-blue-600 text-white rounded-xl sm:rounded-[1.5rem] font-bold text-base sm:text-lg hover:bg-blue-700 hover:shadow-xl hover:shadow-blue-500/30 transition-all active:scale-95">Verstanden</button>
             `;
             modalOverlay.classList.remove('hidden');
             modalOverlay.classList.add('flex');
@@ -745,7 +870,7 @@
         };
 
         const revealObserver = new IntersectionObserver((entries, observer) => {
-            if (document.body.classList.contains('low-end')) return; // Check für Performance Modus
+            if (document.body.classList.contains('low-end')) return; 
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
                     entry.target.classList.add('active');
@@ -922,22 +1047,22 @@
                 
                 if (isCustomFallback) {
                     lyricsContent.innerHTML = `
-                        <div class="w-full flex flex-col justify-center min-h-[60vh] px-4 md:px-8">
-                            <h2 class="text-4xl md:text-6xl font-extrabold text-white tracking-tight leading-[1.1] text-left">
+                        <div class="w-full flex flex-col justify-center min-h-[60vh] px-2 sm:px-4 md:px-8">
+                            <h2 class="text-2xl xs:text-3xl sm:text-4xl md:text-6xl font-extrabold text-white tracking-tight leading-[1.1] text-left break-words">
                                 ${escapeHTML(displayMsg)}
                             </h2>
                         </div>`;
                 } else {
                     lyricsContent.innerHTML = `
-                        <div class="w-full pt-[20vh] pb-[40vh] px-4 md:px-8">
-                            <p class="text-2xl md:text-3xl font-bold text-white/80 leading-relaxed whitespace-pre-wrap text-left">
+                        <div class="w-full pt-[20vh] pb-[40vh] px-2 sm:px-4 md:px-8">
+                            <p class="text-lg xs:text-xl sm:text-2xl md:text-3xl font-bold text-white/80 leading-relaxed whitespace-pre-wrap text-left break-words">
                                 ${escapeHTML(displayMsg)}
                             </p>
                         </div>`;
                 }
                 return;
             }
-            lyricsContent.innerHTML = '<div class="w-full pt-[40vh] pb-[40vh] px-4">' + parsedLyrics.map((line, idx) => {
+            lyricsContent.innerHTML = '<div class="w-full pt-[40vh] pb-[40vh] px-2 sm:px-4">' + parsedLyrics.map((line, idx) => {
                 const words = tokenizeText(line.text);
                 return `<div id="lyric-line-${idx}" class="lyric-line">` + 
                     words.map((word, wIdx) => `<span id="word-${idx}-${wIdx}" class="lyric-word">${escapeHTML(word)}</span>`).join('') +
@@ -951,7 +1076,6 @@
             const elementTop = el.offsetTop;
             const elementHeight = el.clientHeight;
             
-            // CHECK FÜR PERFORMANCE MODUS: Hartes Springen beim Scrollen, kein CPU-lastiges Interpolieren!
             const scrollBehavior = document.body.classList.contains('low-end') ? 'auto' : 'smooth';
             
             requestAnimationFrame(() => {
@@ -995,9 +1119,6 @@
                 }
             }
 
-            // --- PERFORMANCE CHECK: CPU-Killer-Loop überspringen ---
-            // Wenn der Low-End Modus an ist, brechen wir hier knallhart ab.
-            // Es wird kein Farbverlauf pro Wort berechnet. Die Zeile wird per CSS (oben) einfach komplett weiß.
             if (document.body.classList.contains('low-end')) return;
 
             parsedLyrics.forEach((line, idx) => {
@@ -1058,11 +1179,10 @@
         let lastLowEndUpdate = 0;
         function animateLoop(now) {
             if (trackIsPlaying) {
-                // HARTES THROTTLING: Auf alten Geräten wird die GANZE Schleife gedrosselt (max ~3 FPS)
                 if (document.body.classList.contains('low-end')) {
-                    if (now - lastLowEndUpdate < 333) { 
+                    if (now - lastLowEndUpdate < 200) { 
                         lyricAnimFrame = requestAnimationFrame(animateLoop);
-                        return; // Bricht ab, CPU darf chillen
+                        return; 
                     }
                     lastLowEndUpdate = now;
                 }
@@ -1107,8 +1227,8 @@
             const fetchId = ++currentFetchId; 
             
             lyricsContent.innerHTML = `
-                <div class="w-full flex flex-col justify-center min-h-[60vh] px-4 md:px-8">
-                    <h2 class="text-4xl md:text-6xl font-extrabold text-white/30 tracking-tight leading-[1.1] text-left animate-pulse">
+                <div class="w-full flex flex-col justify-center min-h-[60vh] px-2 sm:px-4 md:px-8">
+                    <h2 class="text-2xl xs:text-3xl sm:text-4xl md:text-6xl font-extrabold text-white/30 tracking-tight leading-[1.1] text-left animate-pulse">
                         Lade Text...
                     </h2>
                 </div>`;
@@ -1149,7 +1269,6 @@
                         }
                     }
                 } catch(e) {}
-                // Weder synchrone noch normale Texte gefunden -> Zeige zufällige Spotify-like Message
                 renderLyrics(currentNoLyricsMessage);
             }
         }
@@ -1163,14 +1282,14 @@
                 mainMusicCard.classList.remove('playing');
                 if(mainMusicCard.classList.contains('lyrics-open')) toggleLyrics(false);
                 mHeader.innerText = "Gamingpig is Offline";
-                mHeader.className = "relative z-10 text-[10px] font-black text-blue-500 uppercase tracking-[0.4em] mb-4 md:mb-6 transition-all shrink-0";
+                mHeader.className = "relative z-10 text-[8px] xs:text-[10px] font-black text-blue-500 uppercase tracking-[0.2em] xs:tracking-[0.4em] mb-3 sm:mb-4 md:mb-6 transition-all shrink-0";
                 mTitle.innerText = "Aktuell ist es ruhig...";
                 mArtist.innerText = "Genieße die Stille";
                 mAmbient.style.backgroundImage = "none";
-                mDot.className = "h-2 w-2 rounded-full bg-blue-500";
+                mDot.className = "h-1.5 w-1.5 xs:h-2 xs:w-2 rounded-full bg-blue-500";
                 mText.innerText = "Zen Mode";
                 miniTitle.innerText = "Dashboard minimiert";
-                miniIconBg.className = "w-12 h-12 shrink-0 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center transition-colors";
+                miniIconBg.className = "w-10 h-10 sm:w-12 sm:h-12 shrink-0 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center transition-colors";
                 if(!isDashboardOpen) miniStatus.innerText = "Klicken zum Öffnen";
                 
                 lyricsMiniTitle.innerText = "Offline";
@@ -1190,10 +1309,9 @@
             mainMusicCard.classList.remove('offline');
             mainMusicCard.classList.add('playing');
             mHeader.innerText = "Gamingpig is listening to";
-            mDot.className = "h-2 w-2 rounded-full bg-green-500 active-dot";
+            mDot.className = "h-1.5 w-1.5 xs:h-2 xs:w-2 rounded-full bg-green-500 active-dot";
             const imgUrl = data.track.artwork_url;
             
-            // FILTERN VOM SPOTIFY SMART SHUFFLE TAG
             const rawArtist = data.track.artist || "Unknown";
             const cleanArtist = rawArtist.replace(/\s*•\s*From Smart Shuffle/gi, '').trim();
             
@@ -1210,14 +1328,12 @@
                 mTitle.innerText = data.track.title;
                 lyricsMiniTitle.innerText = data.track.title; 
             }
-            // Hier wieder den RAW Artist (mit Shuffle Tag) für die Anzeige verwenden!
             if(mArtist.innerText !== rawArtist) {
                 mArtist.innerText = rawArtist;
                 lyricsMiniArtist.innerText = rawArtist; 
             }
             mText.innerText = data.provider || "Streaming";
 
-            // Track ID aber weiterhin mit CLEAN Artist zusammensetzen, damit die Logik nicht stolpert
             const newTrackId = data.track.title + "-" + cleanArtist;
             const isNewTrack = (newTrackId !== currentTrackId);
 
@@ -1251,10 +1367,7 @@
                 localStartTime = performance.now();
                 currentMs = apiProgress;
                 
-                // Wähle für diesen Track eine neue zufällige Fallback Message
                 currentNoLyricsMessage = fallbackMessages[Math.floor(Math.random() * fallbackMessages.length)];
-                
-                // Mit cleanem Artist-Namen nach Lyrics suchen
                 fetchExternalLyrics(data.track.title, cleanArtist);
             } else {
                 if (!trackIsPlaying && isPlaying) {
@@ -1284,9 +1397,8 @@
             updateProgressUI();
 
             miniTitle.innerText = data.track.title;
-            miniIconBg.className = 'w-12 h-12 shrink-0 rounded-xl flex items-center justify-center transition-colors bg-green-500/10 text-green-500 active-dot';
+            miniIconBg.className = 'w-10 h-10 sm:w-12 sm:h-12 shrink-0 rounded-xl flex items-center justify-center transition-colors bg-green-500/10 text-green-500 active-dot';
             
-            // Auch hier den RAW Artist Namen nutzen, damit man den Tag im Mini-Dashboard sieht
             if(!isDashboardOpen) miniStatus.innerText = rawArtist;
             
             const linksContainer = document.getElementById('dynamic-links-container');
@@ -1295,7 +1407,6 @@
             linksContainer.innerHTML = '';
             let hasLinks = false;
             
-            // Hole alle Links aus beiden API Feldern
             const availableLinks = { ...(data.track.platform_links || {}), ...(data.track.external_urls || {}) };
             
             const serviceStyles = {
@@ -1314,7 +1425,6 @@
                 const lowerKey = key.toLowerCase();
                 let style = { name: key.charAt(0).toUpperCase() + key.slice(1), bg: '#3b82f6' }; 
 
-                // Suche nach dem passenden Service für Farbe und Namen
                 for (const [sKey, sValue] of Object.entries(serviceStyles)) {
                     if (lowerKey.includes(sKey) || lowerKey === sKey) {
                         style = sValue;
@@ -1326,7 +1436,7 @@
                 linkEl.href = url;
                 linkEl.target = '_blank';
                 linkEl.rel = 'noopener noreferrer';
-                linkEl.className = 'p-3 rounded-2xl text-white font-bold text-sm text-center hover:brightness-110 active:scale-95 transition-all';
+                linkEl.className = 'p-2 sm:p-3 rounded-xl sm:rounded-2xl text-white font-bold text-xs sm:text-sm text-center hover:brightness-110 active:scale-95 transition-all';
                 linkEl.style.backgroundColor = style.bg;
                 linkEl.innerText = style.name;
 
