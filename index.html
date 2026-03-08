@@ -112,7 +112,7 @@
         }
 
         #main-music-card {
-            transition: transform 0.1s linear, box-shadow 0.4s ease, max-width 0.5s cubic-bezier(0.2, 1, 0.3, 1);
+            transition: box-shadow 0.4s ease, max-width 0.5s cubic-bezier(0.2, 1, 0.3, 1);
         }
         
         #ambient-bg {
@@ -1090,6 +1090,10 @@
             mDot.className = "h-2 w-2 rounded-full bg-green-500 active-dot";
             const imgUrl = data.track.artwork_url;
             
+            // FILTERN VOM SPOTIFY SMART SHUFFLE TAG
+            const rawArtist = data.track.artist || "Unknown";
+            const cleanArtist = rawArtist.replace(/\s*•\s*From Smart Shuffle/gi, '').trim();
+            
             if(mArtwork.getAttribute('src') !== imgUrl) {
                 mArtwork.src = imgUrl; 
                 mAmbient.style.backgroundImage = `url('${imgUrl}')`;
@@ -1103,13 +1107,15 @@
                 mTitle.innerText = data.track.title;
                 lyricsMiniTitle.innerText = data.track.title; 
             }
-            if(mArtist.innerText !== data.track.artist) {
-                mArtist.innerText = data.track.artist;
-                lyricsMiniArtist.innerText = data.track.artist; 
+            // Hier wieder den RAW Artist (mit Shuffle Tag) für die Anzeige verwenden!
+            if(mArtist.innerText !== rawArtist) {
+                mArtist.innerText = rawArtist;
+                lyricsMiniArtist.innerText = rawArtist; 
             }
             mText.innerText = data.provider || "Streaming";
 
-            const newTrackId = data.track.title + "-" + data.track.artist;
+            // Track ID aber weiterhin mit CLEAN Artist zusammensetzen, damit die Logik nicht stolpert
+            const newTrackId = data.track.title + "-" + cleanArtist;
             const isNewTrack = (newTrackId !== currentTrackId);
 
             if (data.track.progress_ms === lastSeenProgressMs && trackIsPlaying === isPlaying && !isNewTrack) {
@@ -1145,7 +1151,8 @@
                 // Wähle für diesen Track eine neue zufällige Fallback Message
                 currentNoLyricsMessage = fallbackMessages[Math.floor(Math.random() * fallbackMessages.length)];
                 
-                fetchExternalLyrics(data.track.title, data.track.artist);
+                // Mit cleanem Artist-Namen nach Lyrics suchen
+                fetchExternalLyrics(data.track.title, cleanArtist);
             } else {
                 if (!trackIsPlaying && isPlaying) {
                     trackIsPlaying = true;
@@ -1175,7 +1182,9 @@
 
             miniTitle.innerText = data.track.title;
             miniIconBg.className = 'w-12 h-12 shrink-0 rounded-xl flex items-center justify-center transition-colors bg-green-500/10 text-green-500 active-dot';
-            if(!isDashboardOpen) miniStatus.innerText = data.track.artist;
+            
+            // Auch hier den RAW Artist Namen nutzen, damit man den Tag im Mini-Dashboard sieht
+            if(!isDashboardOpen) miniStatus.innerText = rawArtist;
             
             const linksContainer = document.getElementById('dynamic-links-container');
             const noLinkEl = document.getElementById('link-none');
@@ -1259,29 +1268,6 @@
                     .catch(err => console.error("Visibility fetch error:", err));
                 if (!musicSocket || musicSocket.readyState === WebSocket.CLOSED) connectMusicSocket();
             }
-        });
-
-        // 3D Hover Effect Throttled for Performance
-        let isHoverTicking = false;
-        mainMusicCard.addEventListener('mousemove', (e) => {
-            if (!isHoverTicking) {
-                window.requestAnimationFrame(() => {
-                    const rect = mainMusicCard.getBoundingClientRect();
-                    const x = e.clientX - rect.left;
-                    const y = e.clientY - rect.top;
-                    const centerX = rect.width / 2;
-                    const centerY = rect.height / 2;
-                    const rotateX = (y - centerY) / 25; 
-                    const rotateY = (centerX - x) / 25;
-                    mainMusicCard.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(0)`;
-                    isHoverTicking = false;
-                });
-                isHoverTicking = true;
-            }
-        });
-
-        mainMusicCard.addEventListener('mouseleave', () => {
-            mainMusicCard.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg) translateZ(0)`;
         });
 
         (async () => {
