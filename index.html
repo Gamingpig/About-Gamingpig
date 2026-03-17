@@ -1879,6 +1879,12 @@
                     availableLinks.spotify = mainSpotifyUrl;
                 }
 
+                // SPOTIFY SMART FALLBACK: Wenn die API wirklich gar nichts liefert, baue einen dynamischen Search-Link!
+                if (!availableLinks.spotify) {
+                    const searchQuery = encodeURIComponent(`${data.track.title} ${rawArtist}`.trim());
+                    availableLinks.spotify = `https://open.spotify.com/search/${searchQuery}`;
+                }
+
                 const serviceStyles = {
                     spotify: { name: 'Spotify', bg: '#1DB954' },
                     applemusic: { name: 'Apple Music', bg: '#FC3C44' },
