@@ -75,7 +75,7 @@
         /* --- ORIGINAL V17 GLASS CARD --- */
         .glass-card {
             background: rgba(255, 255, 255, 0.9); border: 1px solid rgba(0, 0, 0, 0.05);
-            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.4s, box-shadow 0.4s;
+            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.4s, box-shadow 0.4s;
             transform: translateZ(0); will-change: transform;
         }
         .dark .glass-card { background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255, 255, 255, 0.05); }
@@ -356,7 +356,7 @@
                     </div>
                     <div>
                         <h3 class="font-bold text-sm xxs:text-base sm:text-lg mb-0.5 xxs:mb-1">Menschen</h3>
-                        <p class="text-slate-500 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">Familie & Bester Freund Tom...</p>
+                        <p class="text-slate-500 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">Tom & Danilo (Anker)...</p>
                     </div>
                 </div>
 
@@ -833,7 +833,7 @@
             status: { title: "Ausbildung & Fokus", content: "Ich absolviere aktuell meine Ausbildung zum Fachinformatiker für Systemintegration. Technik und Systeme sind meine Welt. Ich liebe es, Server aufzusetzen, Netzwerke zu konfigurieren und alles am Laufen zu halten. Mein Hyperfokus hilft mir dabei, tief in komplexe IT-Strukturen einzutauchen und Fehler zu finden, bevor sie zum Problem werden." },
             background: { title: "Hintergrund & Weg", content: "Ich bin 19 Jahre alt und lebe in einer Jugendhilfeeinrichtung. Das hat mich früh gelehrt, unabhängig zu sein und meinen eigenen Weg zu gehen. Ich sehe Herausforderungen nicht als Hindernis, sondern als Chance, zu wachsen und meine eigene Zukunft zu gestalten." },
             freizeit: { title: "Gaming & Content", content: "Wenn die Server laufen, bin ich bei Forza Horizon 5 anzutreffen. Ich streame live auf TikTok und teile meine Leidenschaft für Gaming und Technik mit der Community. Es geht mir um den Vibe, den Austausch und das Meistern neuer Challenges." },
-            menschen: { title: "Meine Wahlfamilie", content: "Da ich ohne Eltern aufgewachsen bin, sind Freunde meine gewählte Familie. Loyalität und Vertrauen stehen für mich an erster Stelle. Mein bester Freund Tom ist dabei mein wichtigster Anker im Leben – wir gehen den Weg gemeinsam." },
+            menschen: { title: "Meine Wahlfamilie", content: "Da ich ohne Eltern aufgewachsen bin, sind Freunde meine gewählte Familie. Loyalität und Vertrauen stehen für mich an erster Stelle. Tom und Danilo sind dabei meine beiden wichtigsten Anker im Leben – wir gehen den Weg gemeinsam." },
             techstack: { title: "Tech Stack & Skills", content: "Als angehender Systemintegrator kenne ich mich mit dem Setup und Wartung von IT-Infrastrukturen aus. Dazu gehören Windows Server, Linux-Distributionen, generelle Netzwerkkonfigurationen und intensives Hardware-Troubleshooting. Egal ob Laptops, PCs oder Smartphones – wenn was defekt ist, finde ich den Fehler." },
             setup: { title: "Mein Audio Setup", content: "Guter Sound ist ein absolutes Muss beim Zocken oder Musikhören. An meinem Rechner nutze ich die Beyerdynamic DT 770 Pro (80 Ohm) Studio-Kopfhörer für extrem klaren Klang und geschlossene Isolation. Wenn ich die Bude beschallen will, läuft das über meinen Teufel Rockster Cross Bluetooth-Speaker, der einfach heftig reinhaut." },
             labor: { title: "Labor & Projekte", content: "Meine persönliche Spielwiese. Hier baue ich komplexe Docker-Umgebungen, administriere Webserver und setze eigene APIs auf. Ich teste Netzwerkarchitekturen bis an ihre Grenzen und automatisiere Prozesse, um mein Setup stetig auf das nächste Level zu pushen." },
@@ -1285,16 +1285,14 @@
                     line.tokens.forEach((tok) => {
                         tok.rawDuration = tok.weight * 80;
                         tok.rawPause = 30;
-                        let maxGap = Math.min(timeToNextLine, 8000);
-                        let dynamicPauseBase = maxGap * 0.05;
 
                         if (tok.isPhraseEnd) {
                             if (/[.!?]$/.test(tok.cleanText)) {
-                                tok.rawPause = Math.max(400, Math.min(dynamicPauseBase * 2.5, 1500));
+                                tok.rawPause = 300; // Harter Cut, max ~300ms Basis
                             } else if (/[,;:]$/.test(tok.cleanText)) {
-                                tok.rawPause = Math.max(200, Math.min(dynamicPauseBase * 1.5, 800));
+                                tok.rawPause = 120; // Kurzer Atmer, max ~120ms Basis
                             } else {
-                                tok.rawPause = Math.max(100, Math.min(dynamicPauseBase * 0.8, 400));
+                                tok.rawPause = 60;  // Normales Zeilenende
                             }
                         }
                         totalRawTime += tok.rawDuration + tok.rawPause;
@@ -2012,71 +2010,71 @@
                             const centerY = rect.top + (rect.height / 2);
                             shockwave.style.left = `${centerX}px`; shockwave.style.top = `${centerY}px`;
                             shockwave.classList.remove('trigger-emp'); void shockwave.offsetWidth; shockwave.classList.add('trigger-emp');
-                    }
-                    setTimeout(() => document.body.classList.remove('is-shaking'), 800);
-                    setTimeout(() => { if (shockwave) shockwave.classList.remove('trigger-emp'); }, 4000);
-                }, 400); 
-                
-                setTimeout(() => {
-                    mediaCont.classList.remove('impact-media-in'); infoCont.classList.remove('impact-text-in'); lyricsCont.classList.remove('impact-lyrics-in');
-                    infoCont.style.animationDelay = '0s'; lyricsCont.style.animationDelay = '0s';
-                }, 900); 
-            }, 650); 
-        } else {
-            applyDataChanges(0);
+                        }
+                        setTimeout(() => document.body.classList.remove('is-shaking'), 800);
+                        setTimeout(() => { if (shockwave) shockwave.classList.remove('trigger-emp'); }, 4000);
+                    }, 400); 
+                    
+                    setTimeout(() => {
+                        mediaCont.classList.remove('impact-media-in'); infoCont.classList.remove('impact-text-in'); lyricsCont.classList.remove('impact-lyrics-in');
+                        infoCont.style.animationDelay = '0s'; lyricsCont.style.animationDelay = '0s';
+                    }, 900); 
+                }, 650); 
+            } else {
+                applyDataChanges(0);
+            }
         }
-    }
 
-    let musicSocket = null;
-    function connectMusicSocket() {
-        if (musicSocket && musicSocket.readyState === WebSocket.OPEN) return; 
-        musicSocket = new WebSocket('wss://npc-api.aikins.xyz/v1/users/gamingpig/ws');
-        musicSocket.onopen = () => {
+        let musicSocket = null;
+        function connectMusicSocket() {
+            if (musicSocket && musicSocket.readyState === WebSocket.OPEN) return; 
+            musicSocket = new WebSocket('wss://npc-api.aikins.xyz/v1/users/gamingpig/ws');
+            musicSocket.onopen = () => {
+                let pStart = performance.now();
+                fetch('https://npc-api.aikins.xyz/v1/users/gamingpig/now')
+                    .then(r => r.text())
+                    .then(text => text ? updateMusicUI(JSON.parse(text), (performance.now() - pStart) / 2) : null)
+                    .catch(err => console.error("Socket fetch error:", err));
+            };
+            musicSocket.onmessage = (e) => {
+                try {
+                    const msg = JSON.parse(e.data);
+                    if (msg.event === "update") updateMusicUI(msg.data, 20);
+                } catch(err) {}
+            };
+            musicSocket.onclose = () => setTimeout(connectMusicSocket, 3000); 
+        }
+
+        setInterval(() => {
+            if (musicSocket && musicSocket.readyState === WebSocket.OPEN) return;
             let pStart = performance.now();
             fetch('https://npc-api.aikins.xyz/v1/users/gamingpig/now')
                 .then(r => r.text())
                 .then(text => text ? updateMusicUI(JSON.parse(text), (performance.now() - pStart) / 2) : null)
-                .catch(err => console.error("Socket fetch error:", err));
-        };
-        musicSocket.onmessage = (e) => {
-            try {
-                const msg = JSON.parse(e.data);
-                if (msg.event === "update") updateMusicUI(msg.data, 20);
-            } catch(err) {}
-        };
-        musicSocket.onclose = () => setTimeout(connectMusicSocket, 3000); 
-    }
+                .catch(() => {});
+        }, 5000);
 
-    setInterval(() => {
-        if (musicSocket && musicSocket.readyState === WebSocket.OPEN) return;
-        let pStart = performance.now();
-        fetch('https://npc-api.aikins.xyz/v1/users/gamingpig/now')
-            .then(r => r.text())
-            .then(text => text ? updateMusicUI(JSON.parse(text), (performance.now() - pStart) / 2) : null)
-            .catch(() => {});
-    }, 5000);
+        document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "visible") {
+                let pStart = performance.now();
+                fetch('https://npc-api.aikins.xyz/v1/users/gamingpig/now')
+                    .then(r => r.text())
+                    .then(text => text ? updateMusicUI(JSON.parse(text), (performance.now() - pStart) / 2) : null)
+                    .catch(err => console.error("Visibility fetch error:", err));
+                if (!musicSocket || musicSocket.readyState === WebSocket.CLOSED) connectMusicSocket();
+            }
+        });
 
-    document.addEventListener("visibilitychange", () => {
-        if (document.visibilityState === "visible") {
-            let pStart = performance.now();
-            fetch('https://npc-api.aikins.xyz/v1/users/gamingpig/now')
-                .then(r => r.text())
-                .then(text => text ? updateMusicUI(JSON.parse(text), (performance.now() - pStart) / 2) : null)
-                .catch(err => console.error("Visibility fetch error:", err));
-            if (!musicSocket || musicSocket.readyState === WebSocket.CLOSED) connectMusicSocket();
-        }
-    });
-
-    (async () => {
-        setLyricsStyle(currentLyricsStyle); 
-        await syncWorldwideTime();
-        if (trackIsPlaying && !isAnimating) {
-            isAnimating = true;
-            requestAnimationFrame(animateLoop);
-        }
-        connectMusicSocket();
-        setInterval(syncWorldwideTime, 600000);
-    })();
-</script>
+        (async () => {
+            setLyricsStyle(currentLyricsStyle); 
+            await syncWorldwideTime();
+            if (trackIsPlaying && !isAnimating) {
+                isAnimating = true;
+                requestAnimationFrame(animateLoop);
+            }
+            connectMusicSocket();
+            setInterval(syncWorldwideTime, 600000);
+        })();
+    </script>
 </body>
 </html>
