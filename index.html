@@ -54,6 +54,30 @@
         body.low-end #main-music-card.lyrics-open { background: #0f172a !important; border-color: #1e293b !important; box-shadow: none !important; }
         body.low-end .lyrics-open #lyrics-overlay { background: #1e293b !important; }
         
+        /* FIX: Lesbarer Text im Low-End Modus */
+        body.low-end .lyric-word, 
+        body.low-end .lyric-char {
+            color: inherit !important;
+            background: none !important;
+            -webkit-text-fill-color: inherit !important;
+            text-shadow: none !important;
+            opacity: 1 !important;
+            filter: none !important;
+            transform: none !important;
+            animation: none !important;
+        }
+        body.low-end .lyric-line {
+            color: rgba(255, 255, 255, 0.4) !important;
+            opacity: 1 !important;
+            filter: none !important;
+            transform: none !important;
+        }
+        body.low-end .lyric-line.active {
+            color: #ffffff !important;
+            text-shadow: 0 0 15px rgba(255, 255, 255, 0.5) !important;
+            font-size: 1.05em !important;
+        }
+
         #status-dot { display: none; }
         body.low-end #status-dot { display: block !important; }
         body.low-end .eq-bars { display: none !important; }
@@ -241,10 +265,6 @@
             100% { transform: scale(20) translateZ(0); opacity: 0; box-shadow: 0 0 30px 5px rgba(59, 130, 246, 0), inset 0 0 30px transparent; } 
         }
     </style>
-    
-    <script>
-        const DEFAULT_SYNC_OFFSET = -800; 
-    </script>
 </head>
 <body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen selection:bg-blue-500/30 overflow-x-hidden">
 
@@ -677,10 +697,133 @@
             );
         }
 
+        // --- 1. DOM ELEMENTS ---
         const perfToggle = document.getElementById('perf-toggle');
         const perfIcon = document.getElementById('perf-icon');
         const themeToggle = document.getElementById('theme-toggle');
         const html = document.documentElement;
+        
+        const tutorialBox = document.getElementById('tutorial-box');
+        const btnNext = document.getElementById('tutorial-next');
+        const btnSkip = document.getElementById('tutorial-skip');
+        const stepIndicator = document.getElementById('tutorial-step-indicator');
+        const tutorialTitle = document.getElementById('tutorial-title');
+        const tutorialText = document.getElementById('tutorial-text');
+        const btnStartTutorial = document.getElementById('tutorial-start-btn');
+        
+        const modalOverlay = document.getElementById('modal-overlay');
+        const modalBody = document.getElementById('modal-body');
+        const closeModal = document.getElementById('close-modal');
+        
+        const musicCardWrapper = document.getElementById('music-card-wrapper');
+        const musicChevron = document.getElementById('music-chevron');
+        const miniTitle = document.getElementById('mini-title');
+        const miniStatus = document.getElementById('mini-status');
+        const miniIconBg = document.getElementById('mini-icon-bg');
+        const mainMusicCard = document.getElementById('main-music-card');
+        
+        const lyricsSettingsMenu = document.getElementById('lyrics-settings-menu');
+        const lyricsContainer = document.getElementById('lyrics-container');
+        const canvasVideo = document.getElementById('canvas-video');
+        const btnToggleCanvas = document.getElementById('btn-toggle-canvas');
+        
+        const syncSlider = document.getElementById('sync-slider');
+        const syncValueEl = document.getElementById('sync-value');
+        
+        const mPicker = document.getElementById('music-picker');
+        const mTitle = document.getElementById('track-title');
+        const mArtist = document.getElementById('track-artist');
+        const mArtwork = document.getElementById('artwork');
+        const mAmbient = document.getElementById('ambient-bg');
+        const mGlow = document.getElementById('ambilight-glow');
+        const mHeader = document.getElementById('music-header-tag');
+        const mDot = document.getElementById('status-dot');
+        const mText = document.getElementById('status-text');
+        const timeCurrentEl = document.getElementById('time-current');
+        const timeTotalEl = document.getElementById('time-total');
+        const progressBar = document.getElementById('progress-bar');
+        const lyricsContent = document.getElementById('lyrics-content');
+        const lyricsMiniArt = document.getElementById('lyrics-mini-art');
+        const lyricsMiniTitle = document.getElementById('lyrics-mini-title');
+        const lyricsMiniArtist = document.getElementById('lyrics-mini-artist');
+
+        // --- 2. DATA & STATE VARIABLES ---
+        const tutorialSteps = [
+            {
+                targetId: 'header-section',
+                title: 'Willkommen!',
+                text: 'Das ist mein Portfolio. Hier erfährst du alles Wichtige über mich, meine Ausbildung und meine Interessen.'
+            },
+            {
+                targetId: 'ui-controls',
+                title: 'Kontrollzentrum',
+                text: 'Oben rechts findest du die Steuerung. Du kannst das Tutorial neustarten, den extremen Performance-Modus für alte Geräte aktivieren oder den Darkmode umschalten.'
+            },
+            {
+                targetId: 'cards-section',
+                title: 'Deep Dive',
+                text: 'Klicke auf diese Info-Karten. Ein Modal öffnet sich und gibt dir detaillierte Einblicke in mein Setup, meinen Tech-Stack und meinen Alltag.'
+            },
+            {
+                targetId: 'music-section',
+                title: 'Live Musik Integration',
+                text: 'Hier siehst du in Echtzeit, was ich gerade höre. Klicke auf das Dashboard, um die Lyrics und die Links zu den Streamingdiensten zu öffnen. Das war’s!'
+            }
+        ];
+
+        const details = {
+            status: { title: "Ausbildung & Fokus", content: "Ich absolviere aktuell meine Ausbildung zum Fachinformatiker für Systemintegration. Technik und Systeme sind meine Welt. Ich liebe es, Server aufzusetzen, Netzwerke zu konfigurieren und alles am Laufen zu halten. Mein Hyperfokus hilft mir dabei, tief in komplexe IT-Strukturen einzutauchen und Fehler zu finden, bevor sie zum Problem werden." },
+            background: { title: "Hintergrund & Weg", content: "Ich bin 19 Jahre alt und lebe in einer Jugendhilfeeinrichtung. Das hat mich früh gelehrt, unabhängig zu sein und meinen eigenen Weg zu gehen. Ich sehe Herausforderungen nicht als Hindernis, sondern als Chance, zu wachsen und meine eigene Zukunft zu gestalten." },
+            freizeit: { title: "Gaming & Content", content: "Wenn die Server laufen, bin ich bei Forza Horizon 5 anzutreffen. Ich streame live auf TikTok und teile meine Leidenschaft für Gaming und Technik mit der Community. Es geht mir um den Vibe, den Austausch und das Meistern neuer Challenges." },
+            menschen: { title: "Meine Wahlfamilie", content: "Da ich ohne Eltern aufgewachsen bin, sind Freunde meine gewählte Familie. Loyalität und Vertrauen stehen für mich an erster Stelle. Mein neuer Anker ist Danilo, aber Tom bleibt es mit ihm gemeinsam – wir gehen den Weg zusammen." },
+            techstack: { title: "Tech Stack & Skills", content: "Als angehender Systemintegrator kenne ich mich mit dem Setup und Wartung von IT-Infrastrukturen aus. Dazu gehören Windows Server, Linux-Distributionen, generelle Netzwerkkonfigurationen und intensives Hardware-Troubleshooting. Egal ob Laptops, PCs oder Smartphones – wenn was defekt ist, finde ich den Fehler." },
+            setup: { title: "Mein Audio Setup", content: "Guter Sound ist ein absolutes Muss beim Zocken oder Musikhören. An meinem Rechner nutze ich die Beyerdynamic DT 770 Pro (80 Ohm) Studio-Kopfhörer für extrem klaren Klang und geschlossene Isolation. Wenn ich die Bude beschallen will, läuft das über meinen Teufel Rockster Cross Bluetooth-Speaker, der einfach heftig reinhaut." },
+            labor: { title: "Labor & Projekte", content: "Meine persönliche Spielwiese. Hier baue ich komplexe Docker-Umgebungen, administriere Webserver und setze eigene APIs auf. Ich teste Netzwerkarchitekturen bis an ihre Grenzen und automatisiere Prozesse, um mein Setup stetig auf das nächste Level zu pushen." },
+            contact: { title: "Kontakt & Connect", content: "Bock auf ne Runde Forza oder brauchst du Tech-Support? Du erreichst mich am besten direkt über meine Social Media Kanäle wie TikTok oder YouTube. Lass uns connecten!" }
+        };
+
+        const fallbackMessages = [
+            "Sieht so aus, als hätten wir keinen Text für diesen Song.",
+            "Erwischt, wir arbeiten noch daran, den Text für diesen Song zu besorgen.",
+            "Du musst den Text für diesen Song wohl erraten.",
+            "Hmm. Wir kennen den Text für diesen Song nicht.",
+            "Leider kein Text am Start. Einfach den Vibe genießen!"
+        ];
+        
+        let currentStepIndex = 0;
+        let originalPerfModeState = localStorage.getItem('perfMode');
+        let activeTutorialTarget = null;
+        let currentNoLyricsMessage = fallbackMessages[0];
+        let isDashboardOpen = false;
+        let isLyricsSettingsOpen = false;
+        let currentLyricsStyle = localStorage.getItem('lyricsStyle') || 'fill';
+        let canvasEnabled = localStorage.getItem('canvasEnabled') !== 'false';
+        let currentCanvasUrl = null;
+        let liveSyncOffset = typeof DEFAULT_SYNC_OFFSET !== 'undefined' ? DEFAULT_SYNC_OFFSET : -800;
+        
+        let currentMs = 0;
+        let totalMs = 0;
+        let currentTrackId = ""; 
+        let parsedLyrics = [];
+        let currentLyricIndex = -1;
+        
+        let localStartTime = 0;
+        let serverBaseProgress = 0;
+        let trackIsPlaying = false;
+        let isAnimating = false; 
+        let lyricAnimFrame = null;
+        let lastProcessedUpdate = 0;
+        let lastSeenProgressMs = -1;
+        let localClockOffset = 0;
+        let isTimeSynced = false;
+        let isUserScrolling = false;
+        let userScrollTimeout = null;
+        let currentFetchId = 0;
+        let offlineTimeout = null;
+        let musicSocket = null;
+        let lastLowEndUpdate = 0;
+
+        // --- 3. LOGIC & EVENT LISTENERS ---
 
         function applyPerformanceMode(isActive) {
             if (isActive) {
@@ -692,6 +835,10 @@
                 document.body.classList.remove('low-end');
                 perfToggle.classList.remove('ring-2', 'ring-green-500');
                 perfIcon.classList.remove('text-green-500');
+            }
+            if (typeof parsedLyrics !== 'undefined' && parsedLyrics.length > 0) {
+                renderLyrics();
+                syncLyricsUI(true, true);
             }
         }
 
@@ -720,41 +867,6 @@
             html.classList.toggle('dark');
             localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
         });
-
-        /* --- TUTORIAL ENGINE --- */
-        const tutorialSteps = [
-            {
-                targetId: 'header-section',
-                title: 'Willkommen!',
-                text: 'Das ist mein Portfolio. Hier erfährst du alles Wichtige über mich, meine Ausbildung und meine Interessen.'
-            },
-            {
-                targetId: 'ui-controls',
-                title: 'Kontrollzentrum',
-                text: 'Oben rechts findest du die Steuerung. Du kannst das Tutorial neustarten, den extremen Performance-Modus für alte Geräte aktivieren oder den Darkmode umschalten.'
-            },
-            {
-                targetId: 'cards-section',
-                title: 'Deep Dive',
-                text: 'Klicke auf diese Info-Karten. Ein Modal öffnet sich und gibt dir detaillierte Einblicke in mein Setup, meinen Tech-Stack und meinen Alltag.'
-            },
-            {
-                targetId: 'music-section',
-                title: 'Live Musik Integration',
-                text: 'Hier siehst du in Echtzeit, was ich gerade höre. Klicke auf das Dashboard, um die Lyrics und die Links zu den Streamingdiensten zu öffnen. Das war’s!'
-            }
-        ];
-
-        let currentStepIndex = 0;
-        let originalPerfModeState = localStorage.getItem('perfMode');
-        const tutorialBox = document.getElementById('tutorial-box');
-        const btnNext = document.getElementById('tutorial-next');
-        const btnSkip = document.getElementById('tutorial-skip');
-        const stepIndicator = document.getElementById('tutorial-step-indicator');
-        const tutorialTitle = document.getElementById('tutorial-title');
-        const tutorialText = document.getElementById('tutorial-text');
-        const btnStartTutorial = document.getElementById('tutorial-start-btn');
-        let activeTutorialTarget = null;
 
         function clearTutorialHighlights() {
             document.querySelectorAll('.tutorial-active-element').forEach(el => {
@@ -828,22 +940,6 @@
             setTimeout(startTutorial, 500);
         }
 
-        /* --- MODAL ENGINE --- */
-        const details = {
-            status: { title: "Ausbildung & Fokus", content: "Ich absolviere aktuell meine Ausbildung zum Fachinformatiker für Systemintegration. Technik und Systeme sind meine Welt. Ich liebe es, Server aufzusetzen, Netzwerke zu konfigurieren und alles am Laufen zu halten. Mein Hyperfokus hilft mir dabei, tief in komplexe IT-Strukturen einzutauchen und Fehler zu finden, bevor sie zum Problem werden." },
-            background: { title: "Hintergrund & Weg", content: "Ich bin 19 Jahre alt und lebe in einer Jugendhilfeeinrichtung. Das hat mich früh gelehrt, unabhängig zu sein und meinen eigenen Weg zu gehen. Ich sehe Herausforderungen nicht als Hindernis, sondern als Chance, zu wachsen und meine eigene Zukunft zu gestalten." },
-            freizeit: { title: "Gaming & Content", content: "Wenn die Server laufen, bin ich bei Forza Horizon 5 anzutreffen. Ich streame live auf TikTok und teile meine Leidenschaft für Gaming und Technik mit der Community. Es geht mir um den Vibe, den Austausch und das Meistern neuer Challenges." },
-            menschen: { title: "Meine Wahlfamilie", content: "Da ich ohne Eltern aufgewachsen bin, sind Freunde meine gewählte Familie. Loyalität und Vertrauen stehen für mich an erster Stelle. Tom und Danilo sind dabei meine beiden wichtigsten Anker im Leben – wir gehen den Weg gemeinsam." },
-            techstack: { title: "Tech Stack & Skills", content: "Als angehender Systemintegrator kenne ich mich mit dem Setup und Wartung von IT-Infrastrukturen aus. Dazu gehören Windows Server, Linux-Distributionen, generelle Netzwerkkonfigurationen und intensives Hardware-Troubleshooting. Egal ob Laptops, PCs oder Smartphones – wenn was defekt ist, finde ich den Fehler." },
-            setup: { title: "Mein Audio Setup", content: "Guter Sound ist ein absolutes Muss beim Zocken oder Musikhören. An meinem Rechner nutze ich die Beyerdynamic DT 770 Pro (80 Ohm) Studio-Kopfhörer für extrem klaren Klang und geschlossene Isolation. Wenn ich die Bude beschallen will, läuft das über meinen Teufel Rockster Cross Bluetooth-Speaker, der einfach heftig reinhaut." },
-            labor: { title: "Labor & Projekte", content: "Meine persönliche Spielwiese. Hier baue ich komplexe Docker-Umgebungen, administriere Webserver und setze eigene APIs auf. Ich teste Netzwerkarchitekturen bis an ihre Grenzen und automatisiere Prozesse, um mein Setup stetig auf das nächste Level zu pushen." },
-            contact: { title: "Kontakt & Connect", content: "Bock auf ne Runde Forza oder brauchst du Tech-Support? Du erreichst mich am besten direkt über meine Social Media Kanäle wie TikTok oder YouTube. Lass uns connecten!" }
-        };
-
-        const modalOverlay = document.getElementById('modal-overlay');
-        const modalBody = document.getElementById('modal-body');
-        const closeModal = document.getElementById('close-modal');
-
         window.openModal = function(key) {
             const data = details[key];
             if(!data) return;
@@ -892,24 +988,6 @@
             revealObserver.observe(el);
         });
 
-        // --- MUSIC DASHBOARD UI TOGGLES ---
-        const fallbackMessages = [
-            "Sieht so aus, als hätten wir keinen Text für diesen Song.",
-            "Erwischt, wir arbeiten noch daran, den Text für diesen Song zu besorgen.",
-            "Du musst den Text für diesen Song wohl erraten.",
-            "Hmm. Wir kennen den Text für diesen Song nicht.",
-            "Leider kein Text am Start. Einfach den Vibe genießen!"
-        ];
-        let currentNoLyricsMessage = fallbackMessages[0];
-
-        const musicCardWrapper = document.getElementById('music-card-wrapper');
-        const musicChevron = document.getElementById('music-chevron');
-        const miniTitle = document.getElementById('mini-title');
-        const miniStatus = document.getElementById('mini-status');
-        const miniIconBg = document.getElementById('mini-icon-bg');
-        const mainMusicCard = document.getElementById('main-music-card');
-        let isDashboardOpen = false;
-
         window.toggleDashboard = function() {
             isDashboardOpen = !isDashboardOpen;
             if (isDashboardOpen) {
@@ -937,7 +1015,6 @@
             }
         };
 
-        const mPicker = document.getElementById('music-picker');
         window.toggleMusicPicker = function(show) {
             if (!mainMusicCard.classList.contains('offline')) {
                 if(show) {
@@ -950,32 +1027,14 @@
             }
         };
 
-        // --- LYRICS SETTINGS & CANVAS TOGGLE ---
-        let isLyricsSettingsOpen = false;
-        const lyricsSettingsMenu = document.getElementById('lyrics-settings-menu');
-        const lyricsContainer = document.getElementById('lyrics-container');
-        let currentLyricsStyle = localStorage.getItem('lyricsStyle') || 'fill';
-        
-        let canvasEnabled = localStorage.getItem('canvasEnabled') !== 'false';
-        const canvasVideo = document.getElementById('canvas-video');
-        const btnToggleCanvas = document.getElementById('btn-toggle-canvas');
-        let currentCanvasUrl = null;
-
-        // --- LIVE SYNC OFFSET FIX ---
-        const syncSlider = document.getElementById('sync-slider');
-        const syncValueEl = document.getElementById('sync-value');
-        let liveSyncOffset = typeof DEFAULT_SYNC_OFFSET !== 'undefined' ? DEFAULT_SYNC_OFFSET : -800;
-        
         if (syncSlider && syncValueEl) {
             syncSlider.value = liveSyncOffset;
             syncValueEl.innerText = liveSyncOffset;
             
-            // Nur die Zahl flüssig updaten beim Ziehen
             syncSlider.addEventListener('input', (e) => {
                 syncValueEl.innerText = e.target.value;
             });
 
-            // Erst wenn du loslässt oder reinklickst wird schwer kalkuliert
             syncSlider.addEventListener('change', (e) => {
                 liveSyncOffset = parseInt(e.target.value);
                 syncValueEl.innerText = liveSyncOffset;
@@ -1072,42 +1131,6 @@
             }
         };
 
-        const mTitle = document.getElementById('track-title');
-        const mArtist = document.getElementById('track-artist');
-        const mArtwork = document.getElementById('artwork');
-        const mAmbient = document.getElementById('ambient-bg');
-        const mGlow = document.getElementById('ambilight-glow');
-        const mHeader = document.getElementById('music-header-tag');
-        const mDot = document.getElementById('status-dot');
-        const mText = document.getElementById('status-text');
-        const timeCurrentEl = document.getElementById('time-current');
-        const timeTotalEl = document.getElementById('time-total');
-        const progressBar = document.getElementById('progress-bar');
-        const lyricsContent = document.getElementById('lyrics-content');
-        const lyricsMiniArt = document.getElementById('lyrics-mini-art');
-        const lyricsMiniTitle = document.getElementById('lyrics-mini-title');
-        const lyricsMiniArtist = document.getElementById('lyrics-mini-artist');
-
-        let currentMs = 0;
-        let totalMs = 0;
-        let currentTrackId = ""; 
-        let parsedLyrics = [];
-        let currentLyricIndex = -1;
-        
-        let localStartTime = 0;
-        let serverBaseProgress = 0;
-        let trackIsPlaying = false;
-        let isAnimating = false; 
-        let lyricAnimFrame = null;
-        let lastProcessedUpdate = 0;
-        let lastSeenProgressMs = -1;
-
-        let localClockOffset = 0;
-        let isTimeSynced = false;
-
-        let isUserScrolling = false;
-        let userScrollTimeout = null;
-        
         function handleUserScroll() {
             isUserScrolling = true;
             clearTimeout(userScrollTimeout);
@@ -1170,15 +1193,11 @@
 
         function getCharWeight(char, isLastWord, isVowel) {
             const c = char.toLowerCase();
-            // Intelligentere Gewichtung: Vokale werden am Zeilenende krasser gestretcht
             if (/[aeiouyæøåœäöüáéíóúàèìòùâêîôûãẽĩõũ]/.test(c)) {
                 return isLastWord ? 6.0 : 2.5; 
             }
-            // Sonoranten/Frikative (kann man summen/ziehen)
             if (/[mnlrwjvszñç]/.test(c)) return 1.2; 
-            // Plosive (kurze harte Klicks)
             if (/[tkpbgdcqfxh]/.test(c)) return 0.4; 
-            // Satzzeichen bringen keine Singzeit, das sind Pausen
             if (/[\n\r\t.,!? ]/.test(c)) return 0.0; 
             return 1.0; 
         }
@@ -1244,12 +1263,11 @@
             for (let i = 0; i < parsedLyrics.length; i++) {
                 let line = parsedLyrics[i];
                 
-                // Finde die WAHRE nächste Zeile (ignoriere Adlibs die sofort überlappen)
                 let timeToNextLine = 5000;
                 let trueNextLineTime = line.timeMs + 5000;
                 for (let k = i + 1; k < parsedLyrics.length; k++) {
                     let diff = parsedLyrics[k].timeMs - line.timeMs;
-                    if (diff > 150) { // Mindestens 150ms in der Zukunft
+                    if (diff > 150) { 
                         timeToNextLine = diff;
                         trueNextLineTime = parsedLyrics[k].timeMs;
                         break;
@@ -1270,7 +1288,6 @@
                     }
                     if (tok.rawWeight === 0) tok.rawWeight = 0.5; 
                     
-                    // KNALLHARTER FIX: Nicht-lineare Skalierung. Lange Wörter werden komprimiert!
                     tok.weight = Math.pow(tok.rawWeight, 0.75);
                     
                     lineWeight += tok.weight;
@@ -1280,30 +1297,30 @@
                     let maxAvailableTime = timeToNextLine * 0.95; 
                     if (maxAvailableTime > 15000) maxAvailableTime = 15000;
 
-                    // Erster Pass: Berechne die komplett rohe Wunsch-Zeit inkl. aller dynamischen Pausen!
                     let totalRawTime = 0;
                     line.tokens.forEach((tok) => {
                         tok.rawDuration = tok.weight * 80;
                         tok.rawPause = 30;
+                        let maxGap = Math.min(timeToNextLine, 8000);
+                        let dynamicPauseBase = maxGap * 0.05;
 
                         if (tok.isPhraseEnd) {
                             if (/[.!?]$/.test(tok.cleanText)) {
-                                tok.rawPause = 300; // Harter Cut, max ~300ms Basis
+                                tok.rawPause = Math.max(400, Math.min(dynamicPauseBase * 2.5, 1500));
                             } else if (/[,;:]$/.test(tok.cleanText)) {
-                                tok.rawPause = 120; // Kurzer Atmer, max ~120ms Basis
+                                tok.rawPause = Math.max(200, Math.min(dynamicPauseBase * 1.5, 800));
                             } else {
-                                tok.rawPause = 60;  // Normales Zeilenende
+                                tok.rawPause = Math.max(100, Math.min(dynamicPauseBase * 0.8, 400));
                             }
                         }
                         totalRawTime += tok.rawDuration + tok.rawPause;
                     });
 
-                    // Zweiter Pass: Strikte Skalierung, damit die Gesamtzeit niemals timeToNextLine sprengt
                     let timeScale = 1.0;
                     if (totalRawTime > maxAvailableTime) {
-                        timeScale = maxAvailableTime / totalRawTime; // Knallhart komprimieren
+                        timeScale = maxAvailableTime / totalRawTime; 
                     } else {
-                        timeScale = Math.min(maxAvailableTime / totalRawTime, 1.25); // Sanft stretchen
+                        timeScale = Math.min(maxAvailableTime / totalRawTime, 1.25); 
                     }
                     
                     let currentOffsetMs = line.timeMs;
@@ -1315,7 +1332,6 @@
                         tok.duration = tok.rawDuration * timeScale;
                         let microPause = tok.rawPause * timeScale;
 
-                        // Vocal-Hold: Nur wenn das Wort mit einem Vokal endet und wir noch echten Puffer haben
                         if (j === line.tokens.length - 1 && totalRawTime * timeScale < maxAvailableTime) {
                             let remainingExtra = maxAvailableTime - (totalRawTime * timeScale);
                             if (/[aeiouyæøåœäöüáéíóúàèìòùâêîôûãẽĩõũ][^a-zA-Z]*$/.test(tok.cleanText.toLowerCase())) {
@@ -1323,7 +1339,6 @@
                             }
                         }
                         
-                        // ABSOLUTE STRICT BOUND: Darf niemals die nächste Zeile überschneiden
                         let maxAllowedDuration = trueNextLineTime - tok.timeMs;
                         if (tok.duration > maxAllowedDuration * 0.95) {
                             tok.duration = Math.max(10, maxAllowedDuration * 0.95);
@@ -1349,7 +1364,6 @@
                             tok.duration = rawGap;
                         }
                         
-                        // ABSOLUTE STRICT BOUND
                         if (tok.duration > rawGap * 0.95) {
                             tok.duration = rawGap * 0.95;
                         }
@@ -1392,7 +1406,12 @@
                 syncBadge.className = "px-1.5 xxs:px-2 py-1 mr-1 xxs:mr-2 bg-blue-500/20 text-blue-400 text-[8px] xxs:text-[10px] sm:text-xs rounded font-bold shrink-0 whitespace-nowrap";
             }
             
+            const isLowEnd = document.body.classList.contains('low-end');
+            
             lyricsContent.innerHTML = '<div class="w-full pt-[40vh] pb-[40vh] px-2 sm:px-4">' + parsedLyrics.map((line, idx) => {
+                if (isLowEnd) {
+                    return `<div id="lyric-line-${idx}" class="lyric-line">${escapeHTML(line.text)}</div>`;
+                }
                 return `<div id="lyric-line-${idx}" class="lyric-line">` + 
                     line.tokens.map((tok, wIdx) => {
                         const chars = tok.cleanText.split('').map((c, cIdx) => {
@@ -1532,11 +1551,10 @@
             });
         }
 
-        let lastLowEndUpdate = 0;
         function animateLoop(now) {
             if (trackIsPlaying) {
                 if (document.body.classList.contains('low-end')) {
-                    if (now - lastLowEndUpdate < 200) { 
+                    if (now - lastLowEndUpdate < 250) { 
                         lyricAnimFrame = requestAnimationFrame(animateLoop);
                         return; 
                     }
@@ -1556,17 +1574,6 @@
                 isAnimating = false; 
             }
         }
-
-        window.toggleLyrics = function(show) {
-            if(show) {
-                mainMusicCard.classList.add('lyrics-open');
-                setTimeout(() => syncLyricsUI(true), 100); 
-            } else {
-                mainMusicCard.classList.remove('lyrics-open');
-            }
-        }
-
-        let currentFetchId = 0; 
 
         function isDummyLyrics(text) {
             if (!text) return true;
@@ -1708,8 +1715,6 @@
             }
         }
 
-        let offlineTimeout = null;
-
         function updateMusicUI(data, dynamicLatency = 50) {
             const hasTrack = data && data.track;
             const isPlaying = data && data.status === "playing";
@@ -1799,11 +1804,9 @@
                     if (rawAge >= 0 && rawAge <= maxAllowedAge) {
                         dataAge = rawAge;
                     } else {
-                        // Knallharter Fix: Kein künstlicher 600ms Bullshit mehr, wenn der Timestamp out of sync ist!
                         dataAge = 0; 
                     }
                 } else {
-                    // Knallharter Fix: Wenn kein Timestamp da ist, vertrauen wir rein auf die Latenz-Messung
                     dataAge = 0; 
                 }
                 
@@ -2025,7 +2028,6 @@
             }
         }
 
-        let musicSocket = null;
         function connectMusicSocket() {
             if (musicSocket && musicSocket.readyState === WebSocket.OPEN) return; 
             musicSocket = new WebSocket('wss://npc-api.aikins.xyz/v1/users/gamingpig/ws');
