@@ -155,14 +155,14 @@
             backdrop-filter: blur(40px) saturate(200%) brightness(1.15) !important;
         }
 
-        /* Dynamisches Spotlight (Glare), das der Maus folgt - Heller und polierter */
+        /* Dynamisches Spotlight (Glare), das der Maus/dem Finger folgt */
         body.liquid-glass-active .glass-card::before {
             content: '';
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
             background: radial-gradient(circle 350px at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255,255,255,0.6), transparent 50%);
             z-index: -1;
-            opacity: 0;
+            opacity: var(--glare-opacity, 0); /* Dynamisch für Mobile und Desktop */
             transition: opacity 0.4s var(--apple-ease);
             pointer-events: none;
             mix-blend-mode: overlay;
@@ -172,47 +172,56 @@
             mix-blend-mode: screen;
         }
 
-        body.liquid-glass-active .glass-card:hover::before {
-            opacity: 1;
-        }
-
         @keyframes card-liquid-idle {
             0% { border-radius: 24px; box-shadow: var(--gl-shadow-idle); }
             50% { border-radius: 28px 20px 26px 22px; box-shadow: var(--gl-shadow-idle-2); }
             100% { border-radius: 22px 26px 20px 28px; box-shadow: var(--gl-shadow-idle-3); }
         }
 
-        /* HOVER: Apple-Style massive Scaling, Extreme Blurs & Brightness, dicker innerer Glow */
-        body.liquid-glass-active .glass-card:not(#main-music-card):not(#mini-player-toggle):hover {
-            transform: scale(1.12) translateY(-8px) !important; 
-            border-color: rgba(255, 255, 255, 0.8) !important;
-            border-top: 1px solid rgba(255, 255, 255, 1) !important; /* Strahlende Kante oben */
-            background-color: rgba(255, 255, 255, 0.15) !important; /* Bleibt transparent für den Blur */
-            box-shadow: 0 50px 80px -20px rgba(0, 0, 0, 0.2), 
-                        inset 0 1px 2px rgba(255, 255, 255, 1), 
-                        inset 0 0 20px rgba(255, 255, 255, 0.5), /* Innerer dicker Glas-Glow */
-                        inset 10px 0 40px rgba(6, 182, 212, 0.2), 
-                        inset -10px 0 40px rgba(168, 85, 247, 0.2) !important;
-            -webkit-backdrop-filter: blur(60px) saturate(300%) brightness(1.15) !important;
-            backdrop-filter: blur(60px) saturate(300%) brightness(1.15) !important;
-            border-radius: 32px !important;
-            z-index: 50;
+        /* MOBIL-FIX: Verhindert Sticky-Hovers auf Touch-Geräten! */
+        @media (hover: hover) and (pointer: fine) {
+            body.liquid-glass-active .glass-card:hover::before {
+                opacity: 1;
+            }
+
+            /* HOVER: Apple-Style massive Scaling, Extreme Blurs & Brightness, dicker innerer Glow */
+            body.liquid-glass-active .glass-card:not(#main-music-card):not(#mini-player-toggle):hover {
+                transform: scale(1.12) translateY(-8px) !important; 
+                border-color: rgba(255, 255, 255, 0.8) !important;
+                border-top: 1px solid rgba(255, 255, 255, 1) !important; 
+                background-color: rgba(255, 255, 255, 0.15) !important; 
+                box-shadow: 0 50px 80px -20px rgba(0, 0, 0, 0.2), 
+                            inset 0 1px 2px rgba(255, 255, 255, 1), 
+                            inset 0 0 20px rgba(255, 255, 255, 0.5), 
+                            inset 10px 0 40px rgba(6, 182, 212, 0.2), 
+                            inset -10px 0 40px rgba(168, 85, 247, 0.2) !important;
+                -webkit-backdrop-filter: blur(60px) saturate(300%) brightness(1.15) !important;
+                backdrop-filter: blur(60px) saturate(300%) brightness(1.15) !important;
+                border-radius: 32px !important;
+                z-index: 50;
+            }
+
+            .dark body.liquid-glass-active .glass-card:not(#main-music-card):not(#mini-player-toggle):hover {
+                background-color: rgba(25, 30, 45, 0.4) !important;
+                border-top: 1px solid rgba(255, 255, 255, 0.4) !important;
+                border-color: rgba(6, 182, 212, 0.5) !important;
+                box-shadow: 0 50px 80px -20px rgba(0, 0, 0, 0.8), 
+                            inset 0 1px 2px rgba(255, 255, 255, 0.4), 
+                            inset 0 0 20px rgba(255, 255, 255, 0.1),
+                            inset 10px 0 40px rgba(6, 182, 212, 0.3), 
+                            inset -10px 0 40px rgba(168, 85, 247, 0.3) !important;
+                -webkit-backdrop-filter: blur(60px) saturate(250%) brightness(1.25) !important;
+                backdrop-filter: blur(60px) saturate(250%) brightness(1.25) !important;
+            }
+
+            /* Standard Hover, wenn Liquid Glass aus ist */
+            body:not(.liquid-glass-active) .glass-card:not(#main-music-card):not(#mini-player-toggle):hover {
+                transform: translateY(-6px) scale(1.02) translate3d(0,0,0);
+                border-color: #3b82f6; box-shadow: 0 15px 30px -10px rgba(59, 130, 246, 0.15);
+            }
         }
 
-        .dark body.liquid-glass-active .glass-card:not(#main-music-card):not(#mini-player-toggle):hover {
-            background-color: rgba(25, 30, 45, 0.4) !important;
-            border-top: 1px solid rgba(255, 255, 255, 0.4) !important;
-            border-color: rgba(6, 182, 212, 0.5) !important;
-            box-shadow: 0 50px 80px -20px rgba(0, 0, 0, 0.8), 
-                        inset 0 1px 2px rgba(255, 255, 255, 0.4), 
-                        inset 0 0 20px rgba(255, 255, 255, 0.1),
-                        inset 10px 0 40px rgba(6, 182, 212, 0.3), 
-                        inset -10px 0 40px rgba(168, 85, 247, 0.3) !important;
-            -webkit-backdrop-filter: blur(60px) saturate(250%) brightness(1.25) !important;
-            backdrop-filter: blur(60px) saturate(250%) brightness(1.25) !important;
-        }
-
-        /* 🎈 APPLE SQUISH AUF KLICK 🎈 */
+        /* 🎈 APPLE SQUISH AUF KLICK (Das funktioniert auch auf Mobile als Touch-Feedback) 🎈 */
         body.liquid-glass-active .glass-card:not(#main-music-card):not(#mini-player-toggle):active {
             transform: scale(0.92) translateY(4px) !important;
             border-radius: 40px !important;
@@ -396,7 +405,7 @@
         body.low-end #liquid-blobs { display: none !important; animation: none !important; }
 
         /* ========================================================= */
-        /* --- ENDE LIQUID GLASS MODE --- */
+        /* --- ENDE LIQUID Glass MODE --- */
         /* ========================================================= */
 
         /* --- STANDARD V17 GLASS CARD --- */
@@ -412,11 +421,6 @@
         @supports (backdrop-filter: blur(12px)) or (-webkit-backdrop-filter: blur(12px)) {
             .glass-card { background: rgba(255, 255, 255, 0.75); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
             .dark .glass-card { background: rgba(15, 23, 42, 0.65); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
-        }
-
-        body:not(.liquid-glass-active) .glass-card:not(#main-music-card):not(#mini-player-toggle):hover {
-            transform: translateY(-6px) scale(1.02) translate3d(0,0,0);
-            border-color: #3b82f6; box-shadow: 0 15px 30px -10px rgba(59, 130, 246, 0.15);
         }
         
         #main-music-card {
@@ -625,8 +629,8 @@
     <div id="tutorial-wrapper" class="fixed inset-0 z-[310] hidden items-center justify-center pointer-events-none">
         <div id="tutorial-box" class="flex-col bg-white dark:bg-slate-800 border-2 border-blue-500 rounded-[2rem] pointer-events-auto p-6 sm:p-8 w-[95%] max-w-sm relative shadow-2xl">
             <div class="text-[10px] font-black uppercase tracking-widest text-blue-500 mb-2" id="tutorial-step-indicator">Schritt 1/4</div>
-            <h3 id="tutorial-title" class="text-xl sm:text-2xl font-extrabold mb-2 text-slate-900 dark:text-white">Willkommen!</h3>
-            <p id="tutorial-text" class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mb-8 font-medium">Lass uns einen kurzen Rundgang machen, damit du weißt, wie alles funktioniert.</p>
+            <h3 id="tutorial-title" class="text-xl sm:text-2xl font-extrabold mb-2 text-slate-900 dark:text-white">Willkommen in meiner Welt!</h3>
+            <p id="tutorial-text" class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mb-8 font-medium">Das ist mein persönliches Portfolio. Hier erfährst du alles Wichtige über mich, meinen Weg in die Systemintegration und was mich antreibt. Mein Hyperfokus ist hier Programm!</p>
             <div class="flex justify-between items-center mt-auto">
                 <button id="tutorial-skip" class="text-[10px] sm:text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-bold transition-colors">Überspringen</button>
                 <button id="tutorial-next" class="bg-blue-600 text-white px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-500/30 transition-all active:scale-95">Weiter</button>
@@ -2468,31 +2472,52 @@
             // Nur das Hover Tracking für das Grid (Main Card soll clean bleiben)
             if (card.id === 'main-music-card' || card.id === 'mini-player-toggle') return; 
 
-            card.addEventListener('mousemove', (e) => {
-                // Nur wenn Liquid Glass an ist und der PC nicht im Potato-Modus läuft
+            const updateSpotlight = (clientX, clientY) => {
                 if (!document.body.classList.contains('liquid-glass-active') || document.body.classList.contains('low-end')) {
                     card.style.setProperty('--mouse-x', '50%');
                     card.style.setProperty('--mouse-y', '50%');
                     return;
                 }
                 const rect = card.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
+                const x = clientX - rect.left;
+                const y = clientY - rect.top;
                 
-                // Wir übergeben nur noch die Mausposition an das CSS für den Spotlight-Effekt
                 card.style.setProperty('--mouse-x', `${x}px`);
                 card.style.setProperty('--mouse-y', `${y}px`);
-            });
+            };
 
-            card.addEventListener('mouseleave', () => {
+            const resetSpotlight = () => {
                 if (!document.body.classList.contains('liquid-glass-active')) return;
                 
-                // Spotlight Position auf die Mitte zurücksetzen, smooth über CSS
+                // Für Mobile: Glare ausblenden
+                if(window.matchMedia("(hover: none)").matches) {
+                    card.style.setProperty('--glare-opacity', '0');
+                }
+                
                 setTimeout(() => {
                     card.style.setProperty('--mouse-x', '50%');
                     card.style.setProperty('--mouse-y', '50%');
-                }, 400); // Wartet bis die Opacity (beim Leave) etwas runtergefahren ist
-            });
+                }, 400); 
+            };
+
+            // Mouse Events
+            card.addEventListener('mousemove', (e) => updateSpotlight(e.clientX, e.clientY));
+            card.addEventListener('mouseleave', resetSpotlight);
+            
+            // Touch Events (Mobile Support Fix)
+            card.addEventListener('touchstart', (e) => {
+                if(window.matchMedia("(hover: none)").matches) {
+                    card.style.setProperty('--glare-opacity', '1');
+                }
+                updateSpotlight(e.touches[0].clientX, e.touches[0].clientY);
+            }, {passive: true});
+            
+            card.addEventListener('touchmove', (e) => {
+                updateSpotlight(e.touches[0].clientX, e.touches[0].clientY);
+            }, {passive: true});
+            
+            card.addEventListener('touchend', resetSpotlight);
+            card.addEventListener('touchcancel', resetSpotlight);
         });
 
         (async () => {
