@@ -25,15 +25,38 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@500;800&display=swap');
         
+        :root {
+            /* Apple iOS Spring & Ease Curves */
+            --apple-spring: cubic-bezier(0.32, 0.72, 0, 1);
+            --apple-ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+            --apple-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+            --liquid-flow: cubic-bezier(0.4, 0, 0.2, 1);
+            --crazy-wobble: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            /* Ultra extreme Curve für die rein/raus Pop-Animationen */
+            --ultra-wobble: cubic-bezier(0.68, -0.85, 0.265, 2.5);
+            /* Extrem smoothe, viskose Liquid-Curve */
+            --liquid-fluid: cubic-bezier(0.25, 1, 0.35, 1.2);
+            
+            /* Liquid Glass Dynamic Shadows */
+            --gl-shadow-idle: 0 15px 35px rgba(0,0,0,0.1), inset 0 1px 1px rgba(255,255,255,0.6), inset 0 -1px 2px rgba(255,255,255,0.1);
+            --gl-shadow-idle-2: 0 18px 40px rgba(0,0,0,0.12), inset 0 1px 2px rgba(255,255,255,0.7), inset 0 -1px 2px rgba(255,255,255,0.15);
+            --gl-shadow-idle-3: 0 12px 30px rgba(0,0,0,0.08), inset 0 1px 1px rgba(255,255,255,0.5), inset 0 -1px 1px rgba(255,255,255,0.05);
+        }
+
+        html.dark {
+            --gl-shadow-idle: 0 15px 35px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.2), inset 0 -1px 1px rgba(255,255,255,0.05);
+            --gl-shadow-idle-2: 0 18px 40px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.25), inset 0 -1px 2px rgba(255,255,255,0.08);
+            --gl-shadow-idle-3: 0 12px 30px rgba(0,0,0,0.35), inset 0 1px 1px rgba(255,255,255,0.15), inset 0 -1px 1px rgba(255,255,255,0.03);
+        }
+
         html, body {
             max-width: 100vw;
             overflow-x: clip; 
         }
 
-        /* URSPRÜNGLICHER V17 THEME FALLBACK */
         body {
             font-family: 'Inter', sans-serif;
-            transition: background-color 0.5s cubic-bezier(0.4, 0, 0.2, 1), color 0.5s;
+            transition: background-color 0.5s var(--apple-ease), color 0.5s var(--apple-ease);
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
             background-color: #020617; 
@@ -48,13 +71,11 @@
         }
         body.low-end .mesh-gradient, body.low-end #ambient-bg, body.low-end #ambilight-glow, body.low-end #particles-container, body.low-end #canvas-video { display: none !important; }
         body.low-end .reveal { opacity: 1 !important; transform: none !important; }
-        body.low-end .glass-card:not(#main-music-card):not(#mini-player-toggle):hover { transform: none !important; box-shadow: none !important; }
+        body.low-end .glass-card:not(#main-music-card):not(#mini-player-toggle):hover { transform: none !important; box-shadow: none !important; border-radius: inherit !important; }
         
-        /* Knallharter Fix: Solider, dunkelgrauer Hintergrund für Lyrics im Performance Mode */
         body.low-end #main-music-card.lyrics-open { background: #0f172a !important; border-color: #1e293b !important; box-shadow: none !important; }
         body.low-end .lyrics-open #lyrics-overlay { background: #1e293b !important; }
         
-        /* FIX: Lesbarer Text im Low-End Modus */
         body.low-end .lyric-word, 
         body.low-end .lyric-char {
             color: inherit !important;
@@ -64,13 +85,10 @@
             opacity: 1 !important;
             filter: none !important;
             transform: none !important;
-            animation: none !important;
         }
         body.low-end .lyric-line {
             color: rgba(255, 255, 255, 0.4) !important;
             opacity: 1 !important;
-            filter: none !important;
-            transform: none !important;
         }
         body.low-end .lyric-line.active {
             color: #ffffff !important;
@@ -82,7 +100,7 @@
         body.low-end #status-dot { display: block !important; }
         body.low-end .eq-bars { display: none !important; }
 
-        /* --- ORIGINAL MESH GRADIENT WIEDERHERGESTELLT --- */
+        /* --- MESH GRADIENT --- */
         .mesh-gradient {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; overflow: hidden;
             background: radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.05) 0%, transparent 50%);
@@ -93,30 +111,318 @@
                         radial-gradient(circle at 80% 70%, rgba(168, 85, 247, 0.08) 0%, transparent 40%);
         }
 
-        .reveal { opacity: 0; transform: translateY(30px); transition: opacity 0.8s cubic-bezier(0.2, 1, 0.3, 1), transform 0.8s cubic-bezier(0.2, 1, 0.3, 1); will-change: opacity, transform; }
-        .reveal.active { opacity: 1; transform: translateY(0); }
+        /* ========================================================= */
+        /* --- TRUE LIQUID GLASS MODE (APPLE VISION OS STYLE) ------ */
+        /* ========================================================= */
+        
+        body.liquid-glass-active .mesh-gradient { display: none !important; } 
 
-        /* --- ORIGINAL V17 GLASS CARD --- */
+        /* IDLE ZUSTAND - Extrem glasig, hohe Blur-Werte, starke Lichtkanten */
+        body.liquid-glass-active .glass-card {
+            position: relative;
+            overflow: hidden; 
+            background: linear-gradient(120deg, 
+                rgba(255, 255, 255, 0.15) 0%, 
+                rgba(255, 255, 255, 0.02) 35%, 
+                rgba(255, 255, 255, 0.25) 50%, /* Sharp Glare */
+                rgba(255, 255, 255, 0.02) 65%, 
+                rgba(255, 255, 255, 0.1) 100%
+            ) !important;
+            background-size: 250% 250% !important;
+            border: 1px solid rgba(255, 255, 255, 0.3) !important;
+            border-top: 1px solid rgba(255, 255, 255, 0.7) !important; /* Extreme Lichtkante oben */
+            border-left: 1px solid rgba(255, 255, 255, 0.4) !important;
+            -webkit-backdrop-filter: blur(40px) saturate(250%) !important;
+            backdrop-filter: blur(40px) saturate(250%) !important;
+            animation: card-liquid-idle 6s ease-in-out infinite alternate !important;
+            transform: scale(1) translateY(0);
+            will-change: transform, border-radius, box-shadow, filter;
+            transition: transform 0.8s var(--apple-spring), box-shadow 0.8s var(--apple-spring), border-radius 0.6s var(--apple-ease), filter 0.6s var(--apple-ease), background-color 0.4s ease !important;
+        }
+        
+        .dark body.liquid-glass-active .glass-card {
+            background: linear-gradient(120deg, 
+                rgba(15, 23, 42, 0.3) 0%, 
+                rgba(255, 255, 255, 0.01) 35%, 
+                rgba(255, 255, 255, 0.12) 50%, 
+                rgba(255, 255, 255, 0.01) 65%, 
+                rgba(15, 23, 42, 0.2) 100%
+            ) !important;
+            border-top: 1px solid rgba(255, 255, 255, 0.25) !important;
+            border-left: 1px solid rgba(255, 255, 255, 0.1) !important;
+            border-color: rgba(255, 255, 255, 0.08) !important;
+            -webkit-backdrop-filter: blur(40px) saturate(200%) brightness(1.15) !important;
+            backdrop-filter: blur(40px) saturate(200%) brightness(1.15) !important;
+        }
+
+        /* Dynamisches Spotlight (Glare), das der Maus folgt - Heller und polierter */
+        body.liquid-glass-active .glass-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle 350px at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255,255,255,0.6), transparent 50%);
+            z-index: -1;
+            opacity: 0;
+            transition: opacity 0.4s var(--apple-ease);
+            pointer-events: none;
+            mix-blend-mode: overlay;
+        }
+        .dark body.liquid-glass-active .glass-card::before {
+            background: radial-gradient(circle 350px at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255,255,255,0.25), transparent 50%);
+            mix-blend-mode: screen;
+        }
+
+        body.liquid-glass-active .glass-card:hover::before {
+            opacity: 1;
+        }
+
+        @keyframes card-liquid-idle {
+            0% { border-radius: 24px; box-shadow: var(--gl-shadow-idle); }
+            50% { border-radius: 28px 20px 26px 22px; box-shadow: var(--gl-shadow-idle-2); }
+            100% { border-radius: 22px 26px 20px 28px; box-shadow: var(--gl-shadow-idle-3); }
+        }
+
+        /* HOVER: Apple-Style massive Scaling, Extreme Blurs & Brightness, dicker innerer Glow */
+        body.liquid-glass-active .glass-card:not(#main-music-card):not(#mini-player-toggle):hover {
+            transform: scale(1.12) translateY(-8px) !important; 
+            border-color: rgba(255, 255, 255, 0.8) !important;
+            border-top: 1px solid rgba(255, 255, 255, 1) !important; /* Strahlende Kante oben */
+            background-color: rgba(255, 255, 255, 0.15) !important; /* Bleibt transparent für den Blur */
+            box-shadow: 0 50px 80px -20px rgba(0, 0, 0, 0.2), 
+                        inset 0 1px 2px rgba(255, 255, 255, 1), 
+                        inset 0 0 20px rgba(255, 255, 255, 0.5), /* Innerer dicker Glas-Glow */
+                        inset 10px 0 40px rgba(6, 182, 212, 0.2), 
+                        inset -10px 0 40px rgba(168, 85, 247, 0.2) !important;
+            -webkit-backdrop-filter: blur(60px) saturate(300%) brightness(1.15) !important;
+            backdrop-filter: blur(60px) saturate(300%) brightness(1.15) !important;
+            border-radius: 32px !important;
+            z-index: 50;
+        }
+
+        .dark body.liquid-glass-active .glass-card:not(#main-music-card):not(#mini-player-toggle):hover {
+            background-color: rgba(25, 30, 45, 0.4) !important;
+            border-top: 1px solid rgba(255, 255, 255, 0.4) !important;
+            border-color: rgba(6, 182, 212, 0.5) !important;
+            box-shadow: 0 50px 80px -20px rgba(0, 0, 0, 0.8), 
+                        inset 0 1px 2px rgba(255, 255, 255, 0.4), 
+                        inset 0 0 20px rgba(255, 255, 255, 0.1),
+                        inset 10px 0 40px rgba(6, 182, 212, 0.3), 
+                        inset -10px 0 40px rgba(168, 85, 247, 0.3) !important;
+            -webkit-backdrop-filter: blur(60px) saturate(250%) brightness(1.25) !important;
+            backdrop-filter: blur(60px) saturate(250%) brightness(1.25) !important;
+        }
+
+        /* 🎈 APPLE SQUISH AUF KLICK 🎈 */
+        body.liquid-glass-active .glass-card:not(#main-music-card):not(#mini-player-toggle):active {
+            transform: scale(0.92) translateY(4px) !important;
+            border-radius: 40px !important;
+            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-radius 0.2s !important;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3), inset 0 0 30px rgba(255,255,255,0.6) !important;
+            filter: brightness(0.9) !important;
+        }
+
+
+        /* ========================================================= */
+        /* --- CRAZY FANCY WINDOW OPEN/CLOSE ANIMATIONS (ÜBERALL) -- */
+        /* ========================================================= */
+
+        /* 1. Modal (Info-Karten) */
+        body.liquid-glass-active .modal-opening .modal-content {
+            animation: ext-pop-in 1.2s var(--liquid-fluid) forwards !important;
+            transform-origin: center center;
+        }
+        body.liquid-glass-active .modal-closing .modal-content {
+            animation: ext-pop-out 0.9s var(--liquid-fluid) forwards !important;
+            transform-origin: center center;
+        }
+
+        /* 2. Lyrics Overlay */
+        body.liquid-glass-active .lyrics-open #lyrics-overlay {
+            animation: ext-pop-in 1.2s var(--liquid-fluid) forwards !important;
+            transform-origin: bottom center;
+        }
+        body.liquid-glass-active .lyrics-closing-state #lyrics-overlay {
+            animation: ext-pop-out 0.9s var(--liquid-fluid) forwards !important;
+            transform-origin: bottom center;
+        }
+
+        /* 3. Settings Menü (Zahnrad im Music Player) */
+        body.liquid-glass-active .settings-opening {
+            display: flex !important;
+            animation: ext-pop-in 1.2s var(--liquid-fluid) forwards !important;
+            transform-origin: top right;
+        }
+        body.liquid-glass-active .settings-closing {
+            animation: ext-pop-out 0.9s var(--liquid-fluid) forwards !important;
+            transform-origin: top right;
+        }
+
+        /* 4. Music Picker (Link-Auswahl) */
+        body.liquid-glass-active .picker-opening {
+            display: flex !important;
+            animation: ext-pop-in 1.2s var(--liquid-fluid) forwards !important;
+            transform-origin: center center;
+        }
+        body.liquid-glass-active .picker-closing {
+            animation: ext-pop-out 0.9s var(--liquid-fluid) forwards !important;
+            transform-origin: center center;
+        }
+
+        /* 5. Tutorial Box */
+        body.liquid-glass-active .tutorial-opening {
+            animation: ext-pop-in 1.2s var(--liquid-fluid) forwards !important;
+            transform-origin: center center;
+        }
+        body.liquid-glass-active .tutorial-closing {
+            animation: ext-pop-out 0.9s var(--liquid-fluid) forwards !important;
+            transform-origin: center center;
+        }
+
+        /* 6. Dashboard selbst */
+        body.liquid-glass-active .dashboard-opening {
+            display: flex !important;
+            animation: ext-dashboard-in 1.2s var(--liquid-fluid) forwards !important;
+            transform-origin: top center;
+        }
+        body.liquid-glass-active .dashboard-closing {
+            animation: ext-dashboard-out 0.9s var(--liquid-fluid) forwards !important;
+            transform-origin: top center;
+        }
+
+        /* DIE EXTREMEN KEYFRAMES (Viskoses Liquid Glass) */
+        @keyframes ext-pop-in {
+            0% { transform: translateY(120px) scale(0.4, 1.7); opacity: 0; border-radius: 100px; filter: blur(30px); }
+            45% { transform: translateY(-30px) scale(1.15, 0.85); opacity: 1; border-radius: 20px; filter: blur(0px); }
+            75% { transform: translateY(15px) scale(0.92, 1.08); border-radius: 50px; }
+            100% { transform: translateY(0) scale(1, 1); border-radius: 2.5rem; opacity: 1; }
+        }
+
+        @keyframes ext-pop-out {
+            0% { transform: translateY(0) scale(1, 1); opacity: 1; filter: blur(0px); }
+            35% { transform: translateY(-20px) scale(1.1, 0.9); opacity: 1; border-radius: 30px; }
+            100% { transform: translateY(200px) scale(0.3, 2.0); opacity: 0; border-radius: 100px; filter: blur(30px); }
+        }
+
+        @keyframes ext-dashboard-in {
+            0% { transform: translateY(-100px) scale(0.4, 1.8); opacity: 0; border-radius: 100px; filter: blur(30px); }
+            45% { transform: translateY(35px) scale(1.15, 0.85); opacity: 1; border-radius: 15px; filter: blur(0px); }
+            75% { transform: translateY(-15px) scale(0.9, 1.1); border-radius: 50px; }
+            100% { transform: translateY(0) scale(1, 1); border-radius: 3rem; opacity: 1; }
+        }
+
+        @keyframes ext-dashboard-out {
+            0% { transform: translateY(0) scale(1, 1); opacity: 1; filter: blur(0px); }
+            35% { transform: translateY(20px) scale(1.1, 0.9); opacity: 1; border-radius: 40px; }
+            100% { transform: translateY(-150px) scale(0.3, 2.0); opacity: 0; filter: blur(30px); }
+        }
+
+        /* --- TUTORIAL MORPHING BEIM WEITER-KLICKEN --- */
+        @keyframes tutorial-morph {
+            0% { transform: scale(1); filter: blur(0px); }
+            50% { transform: scale(0.95); filter: blur(8px); }
+            100% { transform: scale(1); filter: blur(0px); }
+        }
+        body.liquid-glass-active .tutorial-morphing {
+            animation: tutorial-morph 0.5s var(--liquid-fluid) !important;
+        }
+
+        /* --- STANDARD FALLBACKS (Wenn Liquid Glass OFF ist) --- */
+        .modal-opening .modal-content, .picker-opening, .tutorial-opening, .settings-opening {
+            animation: std-pop-in 0.5s var(--apple-spring) forwards;
+        }
+        .modal-closing .modal-content, .picker-closing, .tutorial-closing, .settings-closing {
+            animation: std-pop-out 0.4s var(--apple-ease) forwards;
+        }
+        .dashboard-opening { display: flex !important; animation: std-pop-in 0.5s var(--apple-spring) forwards; }
+        .dashboard-closing { animation: std-pop-out 0.4s var(--apple-ease) forwards; }
+        .lyrics-open #lyrics-overlay { animation: std-pop-in 0.5s var(--apple-spring) forwards; }
+        .lyrics-closing-state #lyrics-overlay { animation: std-pop-out 0.4s var(--apple-ease) forwards; }
+
+        @keyframes std-pop-in {
+            0% { opacity: 0; transform: scale(0.8) translateY(-20px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        @keyframes std-pop-out {
+            0% { opacity: 1; transform: scale(1) translateY(0); }
+            100% { opacity: 0; transform: scale(0.8) translateY(20px); }
+        }
+
+
+        /* Apple Aura Background - EXTREME FARBVERMISCHUNG (APPLE MESH GRADIENT) */
+        #liquid-blobs {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; overflow: hidden; pointer-events: none;
+            opacity: 0; transition: opacity 1.5s var(--apple-ease); display: none;
+            background: #f8fafc;
+        }
+        .dark #liquid-blobs { background: #020617; }
+        body.liquid-glass-active:not(.low-end) #liquid-blobs { display: block; opacity: 1; }
+        
+        .blob-container {
+            position: absolute; width: 100%; height: 100%;
+            /* Massiver Blur für nahtlose, sirupartige Vermischung der Farben */
+            filter: blur(120px) saturate(150%); 
+            opacity: 0.4; /* Stark reduziert, damit der Text lesbar bleibt */
+            transform: translate3d(0,0,0);
+            /* Langsame Rotation des gesamten Containers für ständigen Farbwechsel */
+            animation: container-rotate 40s linear infinite;
+        }
+        .dark .blob-container { 
+            opacity: 0.25; /* Im Darkmode noch weiter runter für starken Kontrast */
+        }
+        
+        .blob {
+            position: absolute; 
+            will-change: transform, border-radius;
+            animation: blob-morph 20s ease-in-out infinite alternate;
+        }
+        
+        /* Hochgesättigte, lebendige Apple-Farben */
+        .blob-1 { top: -10%; left: -10%; width: 70vw; height: 70vw; background: #ff0080; animation-delay: 0s; animation-duration: 25s; }
+        .blob-2 { top: 20%; right: -20%; width: 80vw; height: 80vw; background: #7928ca; animation-delay: -5s; animation-duration: 30s; animation-direction: alternate-reverse; }
+        .blob-3 { bottom: -20%; left: 10%; width: 70vw; height: 70vw; background: #00d2ff; animation-delay: -10s; animation-duration: 22s; }
+        .blob-4 { top: 30%; left: 30%; width: 60vw; height: 60vw; background: #ff4d4d; animation-delay: -15s; animation-duration: 28s; animation-direction: alternate-reverse; }
+        
+        @keyframes container-rotate {
+            from { transform: rotate(0deg) scale(1.2); }
+            to { transform: rotate(360deg) scale(1.2); }
+        }
+
+        @keyframes blob-morph {
+            0% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
+            50% { border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%; transform: translate3d(10vw, 8vh, 0) rotate(90deg) scale(1.15); }
+            100% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; transform: translate3d(-8vw, 12vh, 0) rotate(180deg) scale(0.9); }
+        }
+
+        body.low-end #liquid-blobs { display: none !important; animation: none !important; }
+
+        /* ========================================================= */
+        /* --- ENDE LIQUID GLASS MODE --- */
+        /* ========================================================= */
+
+        /* --- STANDARD V17 GLASS CARD --- */
+        .reveal { opacity: 0; transform: translateY(100px) scale(0.9); transition: opacity 0.8s var(--apple-ease), transform 1s var(--apple-spring); will-change: opacity, transform; }
+        .reveal.active { opacity: 1; transform: translateY(0) scale(1); }
+
         .glass-card {
             background: rgba(255, 255, 255, 0.9); border: 1px solid rgba(0, 0, 0, 0.05);
-            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.4s, box-shadow 0.4s;
-            transform: translateZ(0); will-change: transform;
+            transition: transform 0.4s var(--apple-spring), border-color 0.4s ease, box-shadow 0.4s ease, border-radius 0.4s ease;
+            transform: translate3d(0,0,0); will-change: transform;
         }
         .dark .glass-card { background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255, 255, 255, 0.05); }
-        @supports (backdrop-filter: blur(8px)) or (-webkit-backdrop-filter: blur(8px)) {
-            .glass-card { background: rgba(255, 255, 255, 0.75); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
-            .dark .glass-card { background: rgba(15, 23, 42, 0.65); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+        @supports (backdrop-filter: blur(12px)) or (-webkit-backdrop-filter: blur(12px)) {
+            .glass-card { background: rgba(255, 255, 255, 0.75); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+            .dark .glass-card { background: rgba(15, 23, 42, 0.65); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
         }
 
-        .glass-card:not(#main-music-card):not(#mini-player-toggle):hover {
-            transform: translateY(-6px) scale(1.01) translateZ(0);
+        body:not(.liquid-glass-active) .glass-card:not(#main-music-card):not(#mini-player-toggle):hover {
+            transform: translateY(-6px) scale(1.02) translate3d(0,0,0);
             border-color: #3b82f6; box-shadow: 0 15px 30px -10px rgba(59, 130, 246, 0.15);
         }
         
         #main-music-card {
             background: rgba(15, 23, 42, 0.4) !important; border-color: rgba(255, 255, 255, 0.15) !important;
             -webkit-backdrop-filter: blur(25px) saturate(1.5); backdrop-filter: blur(25px) saturate(1.5);
-            transition: box-shadow 0.4s ease, max-width 0.5s cubic-bezier(0.2, 1, 0.3, 1), min-height 0.4s ease;
+            transition: box-shadow 0.4s ease, max-width 0.5s var(--apple-spring), min-height 0.4s var(--apple-spring);
         }
         #main-music-card.lyrics-open { max-width: 800px !important; min-height: 80vh !important; }
         #main-music-card #track-title { color: #ffffff !important; }
@@ -138,29 +444,29 @@
         .playing #ambilight-glow { animation: ambilight-pulse 6s infinite alternate ease-in-out; opacity: 0.8; }
         .dark .playing #ambilight-glow { opacity: 0.6; }
         @keyframes ambilight-pulse {
-            0% { transform: scale(1) translateZ(0); opacity: 0.6; }
-            100% { transform: scale(1.05) translateZ(0); opacity: 0.9; }
+            0% { transform: scale(1) translate3d(0,0,0); opacity: 0.6; }
+            100% { transform: scale(1.05) translate3d(0,0,0); opacity: 0.9; }
         }
 
         /* --- PARTICLES --- */
         #particles-container { position: absolute; inset: -100px; z-index: -1; overflow: hidden; pointer-events: none; opacity: 0; transition: opacity 1s ease; }
         .playing #particles-container { opacity: 1; }
-        .particle { position: absolute; bottom: 0; width: 4px; height: 4px; background: rgba(255, 255, 255, 0.4); border-radius: 50%; box-shadow: 0 0 10px rgba(255, 255, 255, 0.8); animation: float-up linear infinite; opacity: 0; }
-        @keyframes float-up { 0% { transform: translateY(0) scale(1); opacity: 0; } 50% { opacity: 1; } 100% { transform: translateY(-300px) scale(0); opacity: 0; } }
+        .particle { position: absolute; bottom: 0; width: 4px; height: 4px; background: rgba(255, 255, 255, 0.4); border-radius: 50%; box-shadow: 0 0 10px rgba(255, 255, 255, 0.8); animation: float-up linear infinite; opacity: 0; transform: translate3d(0,0,0); }
+        @keyframes float-up { 0% { transform: translate3d(0,0,0) scale(1); opacity: 0; } 50% { opacity: 1; } 100% { transform: translate3d(0, -300px, 0) scale(0); opacity: 0; } }
         .p1 { left: 10%; animation-duration: 4s; animation-delay: 0s; } .p2 { left: 30%; animation-duration: 5s; animation-delay: 1s; width: 6px; height: 6px; }
         .p3 { left: 50%; animation-duration: 3.5s; animation-delay: 2s; } .p4 { left: 70%; animation-duration: 6s; animation-delay: 0.5s; width: 3px; height: 3px; }
         .p5 { left: 90%; animation-duration: 4.5s; animation-delay: 1.5s; } .p6 { left: 20%; animation-duration: 5.5s; animation-delay: 3s; }
         .p7 { left: 80%; animation-duration: 4s; animation-delay: 2.5s; width: 5px; height: 5px; } .p8 { left: 40%; animation-duration: 6.5s; animation-delay: 0.8s; }
 
-        #ambient-bg { position: absolute; inset: -50px; z-index: 0; background-size: cover; background-position: center; filter: blur(35px) brightness(0.75) saturate(1.8); opacity: 0; transition: opacity 1s ease; transform: scale(1.1) translateZ(0); pointer-events: none; will-change: transform, opacity; }
+        #ambient-bg { position: absolute; inset: -50px; z-index: 0; background-size: cover; background-position: center; filter: blur(35px) brightness(0.75) saturate(1.8); opacity: 0; transition: opacity 1s ease; transform: scale(1.1) translate3d(0,0,0); pointer-events: none; will-change: transform, opacity; }
         .playing #ambient-bg { opacity: 1; animation: ambient-drift 15s infinite alternate ease-in-out; }
-        @keyframes ambient-drift { 0% { transform: scale(1.1) translate(0, 0) translateZ(0); } 100% { transform: scale(1.2) translate(-5px, 5px) translateZ(0); } }
+        @keyframes ambient-drift { 0% { transform: scale(1.1) translate3d(0, 0, 0); } 100% { transform: scale(1.2) translate3d(-5px, 5px, 0); } }
 
         .playing #track-title, .playing #track-artist { text-shadow: 0 2px 10px rgba(0,0,0,0.8); }
-        #media-container { transition: transform 0.4s ease; transform: translateZ(0); } #media-container:active { transform: scale(0.97) translateZ(0); }
-        #artwork { transition: opacity 0.5s ease; opacity: 1; transform: translateZ(0); }
-        #offline-icon { transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); opacity: 0; transform: scale(0.5) translateZ(0); pointer-events: none; visibility: hidden; }
-        .offline #artwork { opacity: 0; } .offline #offline-icon { opacity: 1; transform: scale(1) translateZ(0); filter: drop-shadow(0 0 15px #3b82f6); visibility: visible; }
+        #media-container { transition: transform 0.4s var(--apple-spring); transform: translate3d(0,0,0); } #media-container:active { transform: scale(0.95) translate3d(0,0,0); }
+        #artwork { transition: opacity 0.5s ease; opacity: 1; transform: translate3d(0,0,0); }
+        #offline-icon { transition: all 0.4s var(--apple-ease); opacity: 0; transform: scale(0.5) translate3d(0,0,0); pointer-events: none; visibility: hidden; }
+        .offline #artwork { opacity: 0; } .offline #offline-icon { opacity: 1; transform: scale(1) translate3d(0,0,0); filter: drop-shadow(0 0 15px #3b82f6); visibility: visible; }
         .offline#main-music-card { border-color: rgba(59, 130, 246, 0.3) !important; }
         .offline #progress-container, .offline #controls-container { display: none !important; }
 
@@ -172,10 +478,11 @@
         .eq-bar:nth-child(3) { height: 6px; animation-duration: 0.5s; } .eq-bar:nth-child(4) { height: 10px; animation-duration: 0.7s; }
         @keyframes eq-bounce { 0% { transform: scaleY(0.2); } 100% { transform: scaleY(1); } }
 
-        .lyrics-open #lyrics-overlay { opacity: 1; transform: translateY(0) translateZ(0); pointer-events: auto; visibility: visible; }
-        .lyric-line { display: block; margin: 4vh 0; line-height: 1.25; transition: opacity 0.4s ease, filter 0.4s ease, transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); transform-origin: left center; overflow-wrap: break-word; word-wrap: break-word; white-space: pre-wrap; padding-right: 1rem; will-change: opacity, transform; transform: translateZ(0); }
-        .lyrics-open .lyric-line { opacity: 0.25; filter: blur(1px); transform: scale(0.95) translateZ(0); }
-        .lyrics-open .lyric-line.active { opacity: 1; filter: blur(0px) drop-shadow(0 0 8px rgba(255,255,255,0.1)); transform: scale(1.05) translateZ(0); }
+        /* FIXED NESTED BACKDROP FILTER RENDER BUG */
+        .lyrics-open #lyrics-overlay { pointer-events: auto; visibility: visible; }
+        .lyric-line { display: block; margin: 4vh 0; line-height: 1.25; transition: opacity 0.4s ease, filter 0.4s ease, transform 0.5s var(--apple-bounce); transform-origin: left center; overflow-wrap: break-word; word-wrap: break-word; white-space: pre-wrap; padding-right: 1rem; will-change: opacity, transform; transform: translate3d(0,0,0); }
+        .lyrics-open .lyric-line { opacity: 0.25; filter: blur(1px); transform: scale(0.95) translate3d(0,0,0); }
+        .lyrics-open .lyric-line.active { opacity: 1; filter: blur(0px) drop-shadow(0 0 8px rgba(255,255,255,0.1)); transform: scale(1.05) translate3d(0,0,0); }
 
         /* --- LYRICS ANIMATION STYLES --- */
         .lyric-word { position: relative; display: inline-block; margin-right: 0; white-space: nowrap; will-change: background-size, transform, color, filter, opacity; font-size: 14px; font-size: clamp(0.75rem, 4vw, 2.2rem); font-weight: 800; letter-spacing: -0.02em; transition: color 0.1s linear, transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), text-shadow 0.1s linear, filter 0.1s linear, opacity 0.1s linear; }
@@ -199,7 +506,7 @@
         .lyrics-style-flip .lyric-word { color: rgba(255, 255, 255, 0.2); transform: perspective(400px) rotateX(-90deg); transform-origin: bottom; opacity: 0; } .lyrics-style-flip .lyric-word.word-passed { color: rgba(255, 255, 255, 0.7); transform: perspective(400px) rotateX(0deg); opacity: 1; } .lyrics-style-flip .lyric-word.word-active { color: #ffffff; transform: perspective(400px) rotateX(0deg); opacity: 1; text-shadow: 0 0 15px rgba(255,255,255,0.6); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .lyrics-style-zoom .lyric-word { color: rgba(255, 255, 255, 0.1); transform: scale(2) translateY(-10px); opacity: 0; } .lyrics-style-zoom .lyric-word.word-passed { color: rgba(255, 255, 255, 0.6); transform: scale(1) translateY(0); opacity: 1; } .lyrics-style-zoom .lyric-word.word-active { color: #ffffff; transform: scale(1) translateY(0); opacity: 1; text-shadow: 0 0 10px #3b82f6; transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s; }
         
-        .lyrics-style-kinetic .lyric-word { color: rgba(255,255,255,0.1); transform: scale(1.5) translateZ(0); filter: blur(8px); opacity: 0; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); } .lyrics-style-kinetic .lyric-word.word-passed { color: rgba(255,255,255,0.5); transform: scale(1) translateZ(0); filter: blur(0); opacity: 1; } .lyrics-style-kinetic .lyric-word.word-active { color: #ffffff; transform: scale(1.1) translateZ(0); filter: blur(0); opacity: 1; text-shadow: 0 10px 20px rgba(59,130,246,0.6); }
+        .lyrics-style-kinetic .lyric-word { color: rgba(255,255,255,0.1); transform: scale(1.5) translate3d(0,0,0); filter: blur(8px); opacity: 0; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); } .lyrics-style-kinetic .lyric-word.word-passed { color: rgba(255,255,255,0.5); transform: scale(1) translate3d(0,0,0); filter: blur(0); opacity: 1; } .lyrics-style-kinetic .lyric-word.word-active { color: #ffffff; transform: scale(1.1) translate3d(0,0,0); filter: blur(0); opacity: 1; text-shadow: 0 10px 20px rgba(59,130,246,0.6); }
         .lyrics-style-hellfire .lyric-word { color: rgba(255,255,255,0.2); transition: all 0.3s; } .lyrics-style-hellfire .lyric-word.word-passed { color: #ff9a9e; opacity: 0.6; } .lyrics-style-hellfire .lyric-word.word-active { background: linear-gradient(90deg, #ff9a9e, #fecfef, #ff9a9e); background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: hellfire-burn 1s linear infinite; transform: scale(1.05); text-shadow: 0 0 15px rgba(255,0,0,0.5); } @keyframes hellfire-burn { to { background-position: 200% center; } }
         .lyrics-style-hologram .lyric-word { color: rgba(255,255,255,0.2); } .lyrics-style-hologram .lyric-word.word-passed { color: rgba(255,255,255,0.6); } .lyrics-style-hologram .lyric-word.word-active { color: #ffffff; animation: holo-flicker 0.15s infinite; text-shadow: -2px 0 red, 2px 0 cyan; } @keyframes holo-flicker { 0%, 100% { opacity: 1; transform: skewX(0deg); } 50% { opacity: 0.8; transform: skewX(2deg); } }
         
@@ -229,41 +536,47 @@
         #lyrics-container::-webkit-scrollbar-track { background: transparent; }
         #lyrics-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
 
-        #modal-overlay { backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); transition: all 0.4s ease; will-change: opacity; }
-        .modal-content { transform: translateY(20px) scale(0.95) translateZ(0); opacity: 0; transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.5s ease; will-change: transform, opacity; }
-        .modal-open .modal-content { transform: translateY(0) scale(1) translateZ(0); opacity: 1; }
-
+        #modal-overlay { backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); transition: all 0.5s var(--apple-ease); will-change: opacity; }
+        
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #3b82f6; border-radius: 10px; }
 
-        .tutorial-active-element { z-index: 300 !important; box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.8), 0 0 15px rgba(59, 130, 246, 0.8) !important; border-radius: inherit; pointer-events: none; }
+        /* Smoothed out Impact Animations to avoid clipping */
+        .impact-media-out, .impact-text-out, .impact-lyrics-out { animation: quantumCrushOut 0.65s var(--apple-ease) forwards !important; will-change: transform, opacity, filter, box-shadow; transform-origin: center center !important; }
+        .impact-media-in, .impact-text-in, .impact-lyrics-in { animation: quantumBurstIn 0.8s var(--apple-spring) forwards !important; will-change: transform, opacity, filter, drop-shadow; transform-origin: center center !important; }
+        body.is-shaking #main-content, body.is-shaking #ui-controls, body.is-shaking .mesh-gradient { animation: quantumShockwave 0.5s var(--apple-ease) both !important; will-change: transform, filter; transform-origin: center center !important; }
+
+        @keyframes quantumCrushOut { 0% { transform: perspective(1200px) translate3d(0,0,0) scale(1); filter: blur(0) brightness(1) contrast(1); opacity: 1; } 20% { transform: perspective(1200px) translate3d(0,0,80px) scale(1.05); filter: blur(0) brightness(1.5) contrast(1.1); opacity: 1; box-shadow: 0 0 30px rgba(59, 130, 246, 0.4); } 100% { transform: perspective(1200px) translate3d(0,0,-1500px) scale(0.1); filter: blur(10px) brightness(0) contrast(2); opacity: 0; box-shadow: 0 0 0px rgba(0,0,0,0); } }
+        @keyframes quantumBurstIn { 0% { transform: perspective(1200px) translate3d(0,0,-1500px) scale(0.1); filter: blur(20px) brightness(4) contrast(2); opacity: 0; drop-shadow(0 0 50px rgba(255, 255, 255, 1)); } 60% { transform: perspective(1200px) translate3d(0,0,100px) scale(1.05); filter: blur(0px) brightness(1.5) contrast(1.2); opacity: 1; drop-shadow(0 0 30px rgba(6, 182, 212, 0.6)); } 100% { transform: perspective(1200px) translate3d(0,0,0) scale(1); filter: blur(0) brightness(1) contrast(1); opacity: 1; drop-shadow(0 0 0px transparent); } }
+        @keyframes quantumShockwave { 0% { transform: translate3d(0, 0, 0) scale(1); filter: blur(0) contrast(1); } 10% { transform: translate3d(-10px, 10px, 0) scale(1.02); filter: blur(1px) contrast(1.3); } 20% { transform: translate3d(15px, -8px, 0) scale(0.98); filter: contrast(1.2); } 30% { transform: translate3d(-15px, 10px, 0) scale(1.01); filter: blur(0.5px) contrast(1.1); } 40% { transform: translate3d(10px, -10px, 0) scale(1); } 50% { transform: translate3d(-5px, 5px, 0); filter: contrast(1); } 60% { transform: translate3d(5px, -5px, 0); } 70% { transform: translate3d(-3px, 3px, 0); } 80% { transform: translate3d(2px, -2px, 0); } 90% { transform: translate3d(-1px, 1px, 0); } 100% { transform: translate3d(0, 0, 0); filter: blur(0) contrast(1); } }
+
+        #global-emp-shockwave { position: fixed; top: 0; left: 0; width: 100px; height: 100px; margin-top: -50px; margin-left: -50px; border-radius: 50%; pointer-events: none; opacity: 0; z-index: 99999; will-change: transform, opacity; }
+        .trigger-emp { animation: empDetonationLight 4s var(--apple-ease) forwards !important; }
+        .dark .trigger-emp { animation: empDetonationDark 4s var(--apple-ease) forwards !important; mix-blend-mode: screen; }
+
+        @keyframes empDetonationLight { 
+            0% { transform: scale(0.1) translate3d(0,0,0); opacity: 1; box-shadow: 0 0 30px 10px rgba(37, 99, 235, 0.6), inset 0 0 30px rgba(37, 99, 235, 0.6); } 
+            30% { opacity: 0.8; box-shadow: 0 0 60px 20px rgba(147, 51, 234, 0.5), inset 0 0 60px rgba(147, 51, 234, 0.4); } 
+            100% { transform: scale(20) translate3d(0,0,0); opacity: 0; box-shadow: 0 0 10px 2px transparent, inset 0 0 10px transparent; } 
+        }
+        @keyframes empDetonationDark { 
+            0% { transform: scale(0.1) translate3d(0,0,0); opacity: 1; box-shadow: 0 0 60px 30px rgba(6, 182, 212, 1), inset 0 0 60px rgba(6, 182, 212, 1); } 
+            30% { opacity: 0.8; box-shadow: 0 0 90px 20px rgba(168, 85, 247, 0.8), inset 0 0 90px rgba(168, 85, 247, 0.5); } 
+            100% { transform: scale(20) translate3d(0,0,0); opacity: 0; box-shadow: 0 0 30px 5px rgba(59, 130, 246, 0), inset 0 0 30px transparent; } 
+        }
+
+        /* --- TUTORIAL HIGHLIGHTING --- */
+        .tutorial-active-element {
+            z-index: 300 !important;
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7), 0 0 50px 15px rgba(59, 130, 246, 0.5) !important;
+            border-radius: inherit;
+            pointer-events: none;
+            transition: box-shadow 0.8s var(--liquid-fluid) !important;
+        }
         .tutorial-active-element:not(#ui-controls) { position: relative !important; background: white; }
         .dark .tutorial-active-element:not(#ui-controls) { background: #0f172a; }
         #ui-controls.tutorial-active-element { position: fixed !important; background: transparent !important; border-radius: 1rem; }
-
-        .impact-media-out, .impact-text-out, .impact-lyrics-out { animation: quantumCrushOut 0.65s cubic-bezier(0.5, 0, 0, 1) forwards !important; will-change: transform, opacity, filter, box-shadow; transform-origin: center center !important; }
-        .impact-media-in, .impact-text-in, .impact-lyrics-in { animation: quantumBurstIn 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.4) forwards !important; will-change: transform, opacity, filter, drop-shadow; transform-origin: center center !important; }
-        body.is-shaking #main-content, body.is-shaking #ui-controls, body.is-shaking .mesh-gradient { animation: quantumShockwave 0.5s cubic-bezier(0.1, 0.9, 0.3, 1) both !important; will-change: transform, filter; transform-origin: center center !important; }
-
-        @keyframes quantumCrushOut { 0% { transform: perspective(1200px) translateZ(0) scale(1); filter: blur(0) brightness(1) contrast(1); opacity: 1; } 20% { transform: perspective(1200px) translateZ(80px) scale(1.08); filter: blur(0) brightness(1.8) contrast(1.2); opacity: 1; box-shadow: 0 0 40px rgba(59, 130, 246, 0.6); } 100% { transform: perspective(1200px) translateZ(-2500px) scale(0.01); filter: blur(20px) brightness(0) contrast(3) hue-rotate(-45deg); opacity: 0; box-shadow: 0 0 0px rgba(0,0,0,0); } }
-        @keyframes quantumBurstIn { 0% { transform: perspective(1200px) translateZ(-2500px) scale(0.01); filter: blur(40px) brightness(8) contrast(4) saturate(4); opacity: 0; drop-shadow(0 0 100px rgba(255, 255, 255, 1)); } 50% { transform: perspective(1200px) translateZ(250px) scale(1.2); filter: blur(2px) brightness(2.5) contrast(1.5) saturate(1.5); opacity: 1; drop-shadow(0 0 60px rgba(6, 182, 212, 0.8)); } 75% { transform: perspective(1200px) translateZ(-40px) scale(0.95); filter: blur(0) brightness(0.8) contrast(1); opacity: 1; drop-shadow(0 0 10px rgba(59, 130, 246, 0.3)); } 100% { transform: perspective(1200px) translateZ(0) scale(1); filter: blur(0) brightness(1) contrast(1) saturate(1); opacity: 1; drop-shadow(0 0 0px transparent); } }
-        @keyframes quantumShockwave { 0% { transform: translate3d(0, 0, 0) scale(1); filter: blur(0) contrast(1) hue-rotate(0deg); } 10% { transform: translate3d(-15px, 15px, 0) scale(1.03); filter: blur(1px) contrast(1.6) hue-rotate(-15deg); } 20% { transform: translate3d(20px, -10px, 0) scale(0.97); filter: contrast(1.4) hue-rotate(15deg); } 30% { transform: translate3d(-25px, 15px, 0) scale(1.02); filter: blur(0.5px) contrast(1.2); } 40% { transform: translate3d(15px, -15px, 0) scale(1); } 50% { transform: translate3d(-10px, 10px, 0); filter: contrast(1) hue-rotate(0deg); } 60% { transform: translate3d(8px, -8px, 0); } 70% { transform: translate3d(-5px, 5px, 0); } 80% { transform: translate3d(3px, -3px, 0); } 90% { transform: translate3d(-1px, 1px, 0); } 100% { transform: translate3d(0, 0, 0); filter: blur(0) contrast(1) hue-rotate(0deg); } }
-
-        #global-emp-shockwave { position: fixed; top: 0; left: 0; width: 100px; height: 100px; margin-top: -50px; margin-left: -50px; border-radius: 50%; pointer-events: none; opacity: 0; z-index: 99999; will-change: transform, opacity; }
-        .trigger-emp { animation: empDetonationLight 4s cubic-bezier(0.1, 0.9, 0.2, 1) forwards !important; }
-        .dark .trigger-emp { animation: empDetonationDark 4s cubic-bezier(0.1, 0.9, 0.2, 1) forwards !important; mix-blend-mode: screen; }
-
-        @keyframes empDetonationLight { 
-            0% { transform: scale(0.1) translateZ(0); opacity: 1; box-shadow: 0 0 30px 10px rgba(37, 99, 235, 0.6), inset 0 0 30px rgba(37, 99, 235, 0.6); } 
-            30% { opacity: 0.8; box-shadow: 0 0 60px 20px rgba(147, 51, 234, 0.5), inset 0 0 60px rgba(147, 51, 234, 0.4); } 
-            100% { transform: scale(20) translateZ(0); opacity: 0; box-shadow: 0 0 10px 2px transparent, inset 0 0 10px transparent; } 
-        }
-        @keyframes empDetonationDark { 
-            0% { transform: scale(0.1) translateZ(0); opacity: 1; box-shadow: 0 0 60px 30px rgba(6, 182, 212, 1), inset 0 0 60px rgba(6, 182, 212, 1); } 
-            30% { opacity: 0.8; box-shadow: 0 0 90px 20px rgba(168, 85, 247, 0.8), inset 0 0 90px rgba(168, 85, 247, 0.5); } 
-            100% { transform: scale(20) translateZ(0); opacity: 0; box-shadow: 0 0 30px 5px rgba(59, 130, 246, 0), inset 0 0 30px transparent; } 
-        }
     </style>
     
     <script>
@@ -273,11 +586,23 @@
 <body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen selection:bg-blue-500/30 overflow-x-hidden">
 
     <div class="mesh-gradient"></div>
+    <div id="liquid-blobs">
+        <div class="blob-container">
+            <div class="blob blob-1"></div>
+            <div class="blob blob-2"></div>
+            <div class="blob blob-3"></div>
+            <div class="blob blob-4"></div>
+        </div>
+    </div>
     
     <div id="global-emp-shockwave"></div>
     
-    <!-- ORIGINAL V17 UI CONTROLS -->
+    <!-- UI CONTROLS -->
     <div id="ui-controls" class="fixed top-1 right-1 xxs:top-2 xxs:right-2 xs:top-4 xs:right-4 sm:top-6 sm:right-6 z-[110] flex items-center gap-1 sm:gap-3 bg-transparent rounded-2xl">
+        <button id="liquid-glass-toggle" aria-label="Liquid Glass umschalten" class="group p-1.5 xxs:p-2 sm:p-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-2xl rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-700 hover:ring-2 hover:ring-cyan-500 transition-all active:scale-90" title="Apple Liquid Glass Modus">
+            <svg id="liquid-glass-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-500 transition-colors group-hover:text-cyan-500 sm:w-6 sm:h-6"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+        </button>
+
         <button id="tutorial-start-btn" aria-label="Tutorial starten" class="group p-1.5 xxs:p-2 sm:p-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-2xl rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-700 hover:ring-2 hover:ring-purple-500 transition-all active:scale-90" title="Tutorial starten">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-500 transition-colors group-hover:text-purple-500 sm:w-6 sm:h-6"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
         </button>
@@ -296,16 +621,20 @@
         </button>
     </div>
 
-    <div id="tutorial-box" class="fixed hidden flex-col z-[310] bg-white dark:bg-slate-800 border-2 border-blue-500 rounded-2xl shadow-2xl p-4 sm:p-6 w-[95%] max-w-sm left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 transition-all">
-        <div class="text-[10px] font-black uppercase tracking-widest text-blue-500 mb-2" id="tutorial-step-indicator">Schritt 1/4</div>
-        <h3 id="tutorial-title" class="text-lg sm:text-xl font-bold mb-2 text-slate-900 dark:text-white">Willkommen!</h3>
-        <p id="tutorial-text" class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mb-6">Lass uns einen kurzen Rundgang machen, damit du weißt, wie alles funktioniert.</p>
-        <div class="flex justify-between items-center mt-auto">
-            <button id="tutorial-skip" class="text-[10px] sm:text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-bold">Überspringen</button>
-            <button id="tutorial-next" class="bg-blue-600 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl font-bold text-xs sm:text-sm hover:bg-blue-700 transition-all">Weiter</button>
+    <!-- Das Tutorial Fenster -->
+    <div id="tutorial-wrapper" class="fixed inset-0 z-[310] hidden items-center justify-center pointer-events-none">
+        <div id="tutorial-box" class="flex-col bg-white dark:bg-slate-800 border-2 border-blue-500 rounded-[2rem] pointer-events-auto p-6 sm:p-8 w-[95%] max-w-sm relative shadow-2xl">
+            <div class="text-[10px] font-black uppercase tracking-widest text-blue-500 mb-2" id="tutorial-step-indicator">Schritt 1/4</div>
+            <h3 id="tutorial-title" class="text-xl sm:text-2xl font-extrabold mb-2 text-slate-900 dark:text-white">Willkommen!</h3>
+            <p id="tutorial-text" class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mb-8 font-medium">Lass uns einen kurzen Rundgang machen, damit du weißt, wie alles funktioniert.</p>
+            <div class="flex justify-between items-center mt-auto">
+                <button id="tutorial-skip" class="text-[10px] sm:text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-bold transition-colors">Überspringen</button>
+                <button id="tutorial-next" class="bg-blue-600 text-white px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-500/30 transition-all active:scale-95">Weiter</button>
+            </div>
         </div>
     </div>
 
+    <!-- Das Haupt-Modal -->
     <div id="modal-overlay" class="fixed inset-0 bg-slate-900/40 dark:bg-black/80 z-[200] hidden items-center justify-center p-2 sm:p-4">
         <div class="modal-content glass-card w-full max-w-xl rounded-[1rem] xxs:rounded-[1.5rem] sm:rounded-[2.5rem] p-4 xxs:p-5 xs:p-6 sm:p-10 relative border border-white/20 dark:border-white/5 max-h-[90vh] overflow-y-auto">
             <button id="close-modal" aria-label="Modal schließen" class="absolute top-2 right-2 xxs:top-3 xxs:right-3 sm:top-6 sm:right-6 p-1.5 sm:p-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-blue-500 transition-all">
@@ -317,28 +646,26 @@
 
     <main id="main-content" class="max-w-4xl mx-auto px-2 xxs:px-3 xs:px-6 sm:px-8 pt-16 xxs:pt-20 xs:pt-24 sm:pt-40 pb-16 xxs:pb-20 sm:pb-32">
         
-        <!-- ORIGINAL V17 HEADER -->
-        <header id="header-section" class="mb-10 xxs:mb-12 xs:mb-16 sm:mb-20 reveal mt-4 xs:mt-0 rounded-2xl">
-            <div class="inline-flex items-center gap-2 px-2 py-1 sm:px-3 sm:py-1 mb-4 xxs:mb-6 xs:mb-10 sm:mb-16 text-[8px] xxs:text-[10px] xs:text-xs font-bold tracking-widest text-blue-600 uppercase bg-blue-100 dark:bg-blue-500/10 dark:text-blue-400 rounded-full">
+        <header id="header-section" class="mb-10 xxs:mb-12 xs:mb-16 sm:mb-20 reveal mt-4 xs:mt-0 rounded-2xl relative z-10">
+            <div class="inline-flex items-center gap-2 px-2 py-1 sm:px-3 sm:py-1 mb-4 xxs:mb-6 xs:mb-10 sm:mb-16 text-[8px] xxs:text-[10px] xs:text-xs font-bold tracking-widest text-blue-600 uppercase bg-blue-100 dark:bg-blue-500/10 dark:text-blue-400 rounded-full shadow-sm">
                 <span class="relative flex h-1.5 w-1.5 sm:h-2 sm:w-2">
                     <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
                     <span class="relative inline-flex rounded-full h-1.5 w-1.5 sm:h-2 sm:w-2 bg-blue-500"></span>
                 </span>
                 Systems Integration
             </div>
-            <h1 class="text-2xl xxs:text-3xl xs:text-4xl sm:text-5xl md:text-7xl font-extrabold mb-3 xxs:mb-4 sm:mb-8 py-1 sm:py-2 tracking-tighter bg-gradient-to-br from-slate-900 via-slate-800 to-slate-600 dark:from-white dark:via-slate-200 dark:to-slate-400 bg-clip-text text-transparent leading-tight break-words">
+            <h1 class="text-2xl xxs:text-3xl xs:text-4xl sm:text-5xl md:text-7xl font-extrabold mb-3 xxs:mb-4 sm:mb-8 py-1 sm:py-2 tracking-tighter bg-gradient-to-br from-slate-900 via-slate-800 to-slate-600 dark:from-white dark:via-slate-200 dark:to-slate-400 bg-clip-text text-transparent leading-tight break-words drop-shadow-md">
                 Über Jonas Johnston
             </h1>
-            <p class="text-sm xxs:text-base xs:text-lg sm:text-xl md:text-2xl leading-relaxed text-slate-600 dark:text-slate-400 font-medium">
+            <p class="text-sm xxs:text-base xs:text-lg sm:text-xl md:text-2xl leading-relaxed text-slate-700 dark:text-slate-300 font-medium drop-shadow-sm">
                 Hallo! Ich bin Jonas Johnston, 19 Jahre alt und technikaffin. Ich habe ADHS und mein <span class="text-blue-600 dark:text-blue-400 font-bold italic">Hyperfokus</span> ist meine Superkraft, dadurch kann ich komplexe Probleme lösen, wo andere schon längst aufgegeben hätten.
             </p>
-            <p class="mt-3 xxs:mt-4 sm:mt-6 text-xs xxs:text-sm xs:text-base sm:text-lg text-slate-500 dark:text-slate-500 leading-relaxed">
+            <p class="mt-3 xxs:mt-4 sm:mt-6 text-xs xxs:text-sm xs:text-base sm:text-lg text-slate-600 dark:text-slate-400 leading-relaxed drop-shadow-sm">
                 In meiner Freizeit beschäftige ich mich mit Gaming und Streaming. Ich bin zwar etwas schüchtern, jedoch an sich ein sehr freundlicher und gelassener Mensch. Ich repariere auch gerne IT Geräte (Laptops, Tablets, PCs, Smartphones usw.).
             </p>
         </header>
 
-        <!-- ORIGINAL V17 ABOUT CARDS GRID -->
-        <section id="cards-section" class="mb-12 xxs:mb-16 xs:mb-20 sm:mb-24 reveal rounded-3xl">
+        <section id="cards-section" class="mb-12 xxs:mb-16 xs:mb-20 sm:mb-24 reveal rounded-3xl relative z-10">
             <h2 class="text-lg xxs:text-xl xs:text-2xl sm:text-3xl font-bold mb-4 xxs:mb-6 sm:mb-10 text-blue-600 dark:text-blue-500 border-b-2 sm:border-b-4 border-blue-600 dark:border-blue-500 pb-1.5 xxs:pb-2 sm:pb-3 inline-block break-words">
                 Real Talk: Ausbildung & Alltag
             </h2>
@@ -446,11 +773,12 @@
                     </div>
                 </div>
                 <div class="p-1 xxs:p-1.5 sm:p-2 shrink-0 bg-slate-200/50 dark:bg-white/5 text-slate-500 dark:text-slate-400 rounded-full group-hover:bg-blue-500/10 group-hover:text-blue-500 transition-colors ml-1 xxs:ml-2">
-                    <svg id="music-chevron" class="transition-transform duration-300" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-4 xxs:h-4 sm:w-5 sm:h-5"><path d="m6 9 6 6 6-6"/></svg>
+                    <svg id="music-chevron" class="transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-4 xxs:h-4 sm:w-5 sm:h-5"><path d="m6 9 6 6 6-6"/></svg>
                 </div>
             </div>
 
-            <div id="music-card-wrapper" class="relative hidden opacity-0 -translate-y-4 transition-all duration-300 ease-out origin-top flex justify-center">
+            <!-- Das Dashboard Fenster -->
+            <div id="music-card-wrapper" class="relative hidden origin-top flex justify-center">
                 
                 <div id="main-music-card" class="glass-card offline w-full max-w-[400px] mx-auto p-3 xxs:p-4 xs:p-6 md:p-10 rounded-[1.5rem] xxs:rounded-3xl md:rounded-[3rem] text-center relative z-10 flex flex-col justify-center items-center">
                     
@@ -473,9 +801,9 @@
                         <div class="particle p8" style="left:45%; animation-delay:3.1s"></div>
                     </div>
 
-                    <div id="lyrics-overlay" class="absolute inset-0 bg-black/40 backdrop-blur-2xl rounded-[1.5rem] xxs:rounded-3xl md:rounded-[3rem] flex-col p-2 xxs:p-3 xs:p-6 md:p-8 z-40 transition-all duration-500 opacity-0 translate-y-8 pointer-events-none flex border border-white/10 invisible">
+                    <!-- Das Lyrics Fenster -->
+                    <div id="lyrics-overlay" class="absolute inset-0 bg-black/50 rounded-[1.5rem] xxs:rounded-3xl md:rounded-[3rem] flex-col p-2 xxs:p-3 xs:p-6 md:p-8 z-40 transition-all duration-500 opacity-0 pointer-events-none flex border border-white/10 invisible">
                         
-                        <!-- KNALLHARTER FIX: z-[100] rettet die Dropdown Settings vor den Lyrics Animationen! -->
                         <div class="flex items-center justify-between gap-1.5 xxs:gap-2 sm:gap-4 mb-3 xxs:mb-4 sm:mb-6 shrink-0 w-full bg-white/10 p-1.5 xxs:p-2 xs:p-3 sm:p-4 rounded-lg xxs:rounded-xl sm:rounded-2xl border border-white/10 relative z-[100]">
                             <div class="flex items-center gap-1.5 xxs:gap-2 sm:gap-3 min-w-0 flex-1">
                                 <img id="lyrics-mini-art" src="" alt="Album Art" class="w-6 h-6 xxs:w-8 xxs:h-8 sm:w-10 sm:h-10 rounded shadow-md object-cover shrink-0">
@@ -494,8 +822,8 @@
                                     <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-4 xxs:h-4 sm:w-5 sm:h-5"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/></svg>
                                 </button>
                                 
-                                <!-- KNALLHARTER FIX: Kein backdrop-blur mehr, stattdessen solides bg-slate-900 um Safari/Chrome Rendering-Bugs bei verschachtelten Filtern zu blockieren. Höherer Z-Index. -->
-                                <div id="lyrics-settings-menu" class="absolute top-full right-0 mt-2 xxs:mt-3 sm:mt-4 bg-slate-900 border border-slate-700 rounded-xl p-1.5 xxs:p-2 sm:p-3 shadow-2xl hidden flex-col gap-1.5 min-w-[140px] xxs:min-w-[160px] sm:min-w-[180px] z-[9999] origin-top-right transition-all opacity-0 scale-95 max-h-[350px] overflow-y-auto">
+                                <!-- Das Settings Menü Fenster -->
+                                <div id="lyrics-settings-menu" class="absolute top-full right-0 mt-2 xxs:mt-3 sm:mt-4 bg-slate-900 border border-slate-700 rounded-xl p-1.5 xxs:p-2 sm:p-3 shadow-2xl hidden flex-col gap-1.5 min-w-[140px] xxs:min-w-[160px] sm:min-w-[180px] z-[9999] origin-top-right max-h-[350px] overflow-y-auto">
                                     <p class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1 px-1 sticky top-0 bg-slate-900 py-1 z-10">Animation Style</p>
                                     <button onclick="setLyricsStyle('fill')" id="btn-style-fill" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Classic Fill</button>
                                     <button onclick="setLyricsStyle('bounce')" id="btn-style-bounce" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Bouncy Pop</button>
@@ -546,6 +874,7 @@
                         </div>
                     </div>
 
+                    <!-- Das Music Picker Fenster -->
                     <div id="music-picker" class="absolute inset-0 bg-black/60 backdrop-blur-xl rounded-[1.5rem] xxs:rounded-3xl md:rounded-[3rem] hidden flex-col justify-center p-4 xxs:p-6 sm:p-10 gap-2 xxs:gap-4 z-50">
                         <p class="text-[8px] xxs:text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1 sm:mb-2">Service wählen</p>
                         <div id="dynamic-links-container" class="flex flex-col gap-1.5 xxs:gap-2 sm:gap-3 w-full max-h-[120px] xxs:max-h-[140px] sm:max-h-[180px] overflow-y-auto" style="scrollbar-width: thin;"></div>
@@ -594,7 +923,6 @@
             </div>
         </section>
 
-        <!-- ORIGINAL V17 SOCIAL GRID -->
         <div class="grid grid-cols-1 gap-3 xxs:gap-4 xs:gap-6 sm:gap-8 reveal">
             <!-- Tic-Tac-Toe -->
             <div class="glass-card p-3 xxs:p-5 xs:p-6 sm:p-8 rounded-[1rem] xxs:rounded-[1.5rem] sm:rounded-[2.5rem] group overflow-hidden relative border border-slate-200 dark:border-slate-800">
@@ -677,7 +1005,6 @@
             </div>
         </div>
 
-        <!-- ORIGINAL V17 FOOTER -->
         <footer class="mt-12 xxs:mt-20 sm:mt-40 text-center reveal">
             <div class="inline-flex items-center gap-1.5 xxs:gap-2 sm:gap-4 py-1.5 px-3 xxs:py-2 xxs:px-4 sm:px-6 bg-slate-200/50 dark:bg-slate-900/50 rounded-full border border-slate-300 dark:border-slate-800 flex-wrap justify-center">
                 <span class="text-[8px] xxs:text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-500">Established 2026</span>
@@ -705,8 +1032,11 @@
         const perfToggle = document.getElementById('perf-toggle');
         const perfIcon = document.getElementById('perf-icon');
         const themeToggle = document.getElementById('theme-toggle');
+        const liquidGlassToggle = document.getElementById('liquid-glass-toggle');
+        const liquidGlassIcon = document.getElementById('liquid-glass-icon');
         const html = document.documentElement;
         
+        const tutorialWrapper = document.getElementById('tutorial-wrapper');
         const tutorialBox = document.getElementById('tutorial-box');
         const btnNext = document.getElementById('tutorial-next');
         const btnSkip = document.getElementById('tutorial-skip');
@@ -755,23 +1085,23 @@
         const tutorialSteps = [
             {
                 targetId: 'header-section',
-                title: 'Willkommen!',
-                text: 'Das ist mein Portfolio. Hier erfährst du alles Wichtige über mich, meine Ausbildung und meine Interessen.'
+                title: 'Willkommen in meiner Welt!',
+                text: 'Das ist mein persönliches Portfolio. Hier erfährst du alles Wichtige über mich, meinen Weg in die Systemintegration und was mich antreibt. Mein Hyperfokus ist hier Programm!'
             },
             {
                 targetId: 'ui-controls',
-                title: 'Kontrollzentrum',
-                text: 'Oben rechts findest du die Steuerung. Du kannst das Tutorial neustarten, den extremen Performance-Modus für alte Geräte aktivieren oder den Darkmode umschalten.'
+                title: 'Dein Kontrollzentrum',
+                text: 'Oben rechts hast du die volle Macht: Aktiviere den krassen "Apple Liquid Glass" Modus (Achtung: frisst Leistung!), wechsle in den Darkmode, schalte den Low-End-Modus ein, falls dein Gerät laggt, oder starte dieses Tutorial neu.'
             },
             {
                 targetId: 'cards-section',
-                title: 'Deep Dive',
-                text: 'Klicke auf diese Info-Karten. Ein Modal öffnet sich und gibt dir detaillierte Einblicke in mein Setup, meinen Tech-Stack und meinen Alltag.'
+                title: 'Deep Dive: Wer bin ich?',
+                text: 'Klicke auf diese interaktiven Karten. Sie öffnen detaillierte Popups, in denen ich dir mehr über mein Audio-Setup, meinen Tech-Stack, meine Homelab-Projekte und meine Freizeit erzähle.'
             },
             {
                 targetId: 'music-section',
-                title: 'Live Musik Integration',
-                text: 'Hier siehst du in Echtzeit, was ich gerade höre. Klicke auf das Dashboard, um die Lyrics und die Links zu den Streamingdiensten zu öffnen. Das war’s!'
+                title: 'Echtzeit Musik Integration',
+                text: 'Der wildeste Part: Das Dashboard zeigt in Echtzeit, was ich gerade höre! Klicke darauf, um die synchronisierten Lyrics mit verrückten Shadern zu sehen oder dir die Links zu Spotify & Co. zu holen.'
             }
         ];
 
@@ -862,6 +1192,30 @@
             applyPerformanceMode(isActive);
         });
 
+        // --- LIQUID GLASS LOGIC ---
+        function applyLiquidGlassMode(isActive) {
+            if (isActive) {
+                document.body.classList.add('liquid-glass-active');
+                liquidGlassToggle.classList.add('ring-2', 'ring-cyan-500');
+                liquidGlassIcon.classList.add('text-cyan-500', 'fill-cyan-500/20');
+            } else {
+                document.body.classList.remove('liquid-glass-active');
+                liquidGlassToggle.classList.remove('ring-2', 'ring-cyan-500');
+                liquidGlassIcon.classList.remove('text-cyan-500', 'fill-cyan-500/20');
+            }
+        }
+
+        const savedLiquidGlass = localStorage.getItem('liquidGlassMode');
+        if (savedLiquidGlass === 'true') {
+            applyLiquidGlassMode(true);
+        }
+
+        liquidGlassToggle.addEventListener('click', () => {
+            const isActive = document.body.classList.toggle('liquid-glass-active');
+            localStorage.setItem('liquidGlassMode', isActive);
+            applyLiquidGlassMode(isActive);
+        });
+
         const savedTheme = localStorage.getItem('theme');
         if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             html.classList.add('dark');
@@ -879,20 +1233,26 @@
         }
 
         function endTutorial() {
-            tutorialBox.classList.add('hidden');
-            tutorialBox.classList.remove('flex');
-            clearTutorialHighlights();
-            localStorage.setItem('tutorialCompleted', 'true');
-            
-            if (originalPerfModeState !== 'true' && window.innerWidth >= 360) {
-                applyPerformanceMode(false);
-                localStorage.setItem('perfMode', 'false');
-            }
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            tutorialBox.classList.remove('tutorial-opening');
+            tutorialBox.classList.add('tutorial-closing');
             
             setTimeout(() => {
-                window.location.reload();
-            }, 300);
+                tutorialWrapper.classList.add('hidden');
+                tutorialWrapper.classList.remove('flex');
+                tutorialBox.classList.remove('tutorial-closing');
+                clearTutorialHighlights();
+                localStorage.setItem('tutorialCompleted', 'true');
+                
+                if (originalPerfModeState !== 'true' && window.innerWidth >= 360) {
+                    applyPerformanceMode(false);
+                    localStorage.setItem('perfMode', 'false');
+                }
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                
+                setTimeout(() => {
+                    window.location.reload();
+                }, 300);
+            }, 850);
         }
 
         function showTutorialStep(index) {
@@ -927,14 +1287,23 @@
             
             applyPerformanceMode(true);
             
-            tutorialBox.classList.remove('hidden');
-            tutorialBox.classList.add('flex');
+            tutorialWrapper.classList.remove('hidden');
+            tutorialWrapper.classList.add('flex');
+            tutorialBox.classList.remove('tutorial-closing');
+            tutorialBox.classList.add('tutorial-opening');
             showTutorialStep(currentStepIndex);
         }
 
         btnNext.addEventListener('click', () => {
-            currentStepIndex++;
-            showTutorialStep(currentStepIndex);
+            // Liquid morph effect auf die Box anwenden
+            tutorialBox.classList.remove('tutorial-morphing');
+            void tutorialBox.offsetWidth; // Trigger reflow
+            tutorialBox.classList.add('tutorial-morphing');
+            
+            setTimeout(() => {
+                currentStepIndex++;
+                showTutorialStep(currentStepIndex);
+            }, 200); // Tauscht den Text aus, wenn der Blur am stärksten ist
         });
 
         btnSkip.addEventListener('click', endTutorial);
@@ -953,19 +1322,19 @@
                 <p class="text-slate-600 dark:text-slate-300 text-xs xxs:text-sm sm:text-lg leading-relaxed font-medium mb-4 xxs:mb-6 sm:mb-10">${escapeHTML(data.content)}</p>
                 <button onclick="document.getElementById('close-modal').click()" class="w-full py-2 xxs:py-3 sm:py-5 bg-blue-600 text-white rounded-xl sm:rounded-[1.5rem] font-bold text-sm xxs:text-base sm:text-lg hover:bg-blue-700 hover:shadow-xl hover:shadow-blue-500/30 transition-all active:scale-95">Verstanden</button>
             `;
-            modalOverlay.classList.remove('hidden');
-            modalOverlay.classList.add('flex');
+            modalOverlay.classList.remove('hidden', 'modal-closing');
+            modalOverlay.classList.add('flex', 'modal-opening');
             document.body.style.overflow = 'hidden';
-            setTimeout(() => modalOverlay.classList.add('modal-open'), 10);
         };
 
         closeModal.addEventListener('click', () => {
-            modalOverlay.classList.remove('modal-open');
+            modalOverlay.classList.remove('modal-opening');
+            modalOverlay.classList.add('modal-closing');
             setTimeout(() => {
                 modalOverlay.classList.add('hidden');
-                modalOverlay.classList.remove('flex');
+                modalOverlay.classList.remove('flex', 'modal-closing');
                 document.body.style.overflow = 'auto';
-            }, 400);
+            }, 850); 
         });
 
         modalOverlay.addEventListener('click', (e) => {
@@ -995,20 +1364,20 @@
         window.toggleDashboard = function() {
             isDashboardOpen = !isDashboardOpen;
             if (isDashboardOpen) {
-                musicCardWrapper.classList.remove('hidden');
-                setTimeout(() => {
-                    musicCardWrapper.classList.remove('opacity-0', '-translate-y-4');
-                    musicCardWrapper.classList.add('opacity-100', 'translate-y-0');
-                }, 10);
+                musicCardWrapper.classList.remove('hidden', 'dashboard-closing');
+                musicCardWrapper.classList.add('dashboard-opening');
                 musicChevron.style.transform = 'rotate(180deg)';
                 miniStatus.innerText = "Klicken zum Schließen";
             } else {
-                musicCardWrapper.classList.remove('opacity-100', 'translate-y-0');
-                musicCardWrapper.classList.add('opacity-0', '-translate-y-4');
+                musicCardWrapper.classList.remove('dashboard-opening');
+                musicCardWrapper.classList.add('dashboard-closing');
                 musicChevron.style.transform = 'rotate(0deg)';
                 setTimeout(() => {
-                    musicCardWrapper.classList.add('hidden');
-                }, 300);
+                    if (!isDashboardOpen) {
+                        musicCardWrapper.classList.add('hidden');
+                        musicCardWrapper.classList.remove('dashboard-closing');
+                    }
+                }, 850); 
                 
                 if (mainMusicCard.classList.contains('offline')) {
                     miniStatus.innerText = "Klicken zum Öffnen";
@@ -1022,11 +1391,15 @@
         window.toggleMusicPicker = function(show) {
             if (!mainMusicCard.classList.contains('offline')) {
                 if(show) {
-                    mPicker.classList.remove('hidden');
-                    mPicker.classList.add('flex');
+                    mPicker.classList.remove('hidden', 'picker-closing');
+                    mPicker.classList.add('flex', 'picker-opening');
                 } else {
-                    mPicker.classList.add('hidden');
-                    mPicker.classList.remove('flex');
+                    mPicker.classList.remove('picker-opening');
+                    mPicker.classList.add('picker-closing');
+                    setTimeout(() => {
+                        mPicker.classList.add('hidden');
+                        mPicker.classList.remove('flex', 'picker-closing');
+                    }, 850);
                 }
             }
         };
@@ -1076,15 +1449,15 @@
         window.toggleLyricsSettings = function() {
             isLyricsSettingsOpen = !isLyricsSettingsOpen;
             if (isLyricsSettingsOpen) {
-                lyricsSettingsMenu.classList.remove('hidden');
-                setTimeout(() => {
-                    lyricsSettingsMenu.classList.remove('opacity-0', 'scale-95');
-                    lyricsSettingsMenu.classList.add('opacity-100', 'scale-100');
-                }, 10);
+                lyricsSettingsMenu.classList.remove('hidden', 'settings-closing');
+                lyricsSettingsMenu.classList.add('settings-opening');
             } else {
-                lyricsSettingsMenu.classList.remove('opacity-100', 'scale-100');
-                lyricsSettingsMenu.classList.add('opacity-0', 'scale-95');
-                setTimeout(() => lyricsSettingsMenu.classList.add('hidden'), 200);
+                lyricsSettingsMenu.classList.remove('settings-opening');
+                lyricsSettingsMenu.classList.add('settings-closing');
+                setTimeout(() => {
+                    lyricsSettingsMenu.classList.add('hidden');
+                    lyricsSettingsMenu.classList.remove('settings-closing');
+                }, 850);
             }
         };
 
@@ -1137,10 +1510,14 @@
 
         window.toggleLyrics = function(show) {
             if(show) {
+                mainMusicCard.classList.remove('lyrics-closing-state');
                 mainMusicCard.classList.add('lyrics-open');
                 setTimeout(() => syncLyricsUI(true), 100); 
             } else {
-                mainMusicCard.classList.remove('lyrics-open');
+                mainMusicCard.classList.add('lyrics-closing-state');
+                setTimeout(() => {
+                    mainMusicCard.classList.remove('lyrics-open', 'lyrics-closing-state');
+                }, 850);
             }
         };
 
@@ -2082,6 +2459,40 @@
                     .catch(err => console.error("Visibility fetch error:", err));
                 if (!musicSocket || musicSocket.readyState === WebSocket.CLOSED) connectMusicSocket();
             }
+        });
+
+        // ========================================================= //
+        // --- 3D LIQUID GLASS MOUSE INTERACTION TRACKING ---------- //
+        // ========================================================= //
+        document.querySelectorAll('.glass-card').forEach(card => {
+            // Nur das Hover Tracking für das Grid (Main Card soll clean bleiben)
+            if (card.id === 'main-music-card' || card.id === 'mini-player-toggle') return; 
+
+            card.addEventListener('mousemove', (e) => {
+                // Nur wenn Liquid Glass an ist und der PC nicht im Potato-Modus läuft
+                if (!document.body.classList.contains('liquid-glass-active') || document.body.classList.contains('low-end')) {
+                    card.style.setProperty('--mouse-x', '50%');
+                    card.style.setProperty('--mouse-y', '50%');
+                    return;
+                }
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                // Wir übergeben nur noch die Mausposition an das CSS für den Spotlight-Effekt
+                card.style.setProperty('--mouse-x', `${x}px`);
+                card.style.setProperty('--mouse-y', `${y}px`);
+            });
+
+            card.addEventListener('mouseleave', () => {
+                if (!document.body.classList.contains('liquid-glass-active')) return;
+                
+                // Spotlight Position auf die Mitte zurücksetzen, smooth über CSS
+                setTimeout(() => {
+                    card.style.setProperty('--mouse-x', '50%');
+                    card.style.setProperty('--mouse-y', '50%');
+                }, 400); // Wartet bis die Opacity (beim Leave) etwas runtergefahren ist
+            });
         });
 
         (async () => {
