@@ -50,8 +50,9 @@
         }
 
         html, body {
+            width: 100%;
             max-width: 100vw;
-            overflow-x: hidden; 
+            overflow-x: hidden; /* FIX: 'clip' verursacht auf vielen Mobile-Browsern schwere Darstellungsfehler */
             -webkit-overflow-scrolling: touch; /* Mobile Scroll Fix */
         }
 
@@ -101,6 +102,20 @@
         body.low-end #status-dot { display: block !important; }
         body.low-end .eq-bars { display: none !important; }
 
+        /* FIX: Sanfter Text Shadow im Light Mode, damit sich der Text vom Glas abhebt */
+        html:not(.dark) body.liquid-glass-active main p,
+        html:not(.dark) body.liquid-glass-active main h1,
+        html:not(.dark) body.liquid-glass-active main h2,
+        html:not(.dark) body.liquid-glass-active main h3,
+        html:not(.dark) body.liquid-glass-active main span,
+        html:not(.dark) body.liquid-glass-active main div {
+            text-shadow: 0 1px 2px rgba(255, 255, 255, 0.7);
+        }
+        /* Music Card behält seine eigenen Schatten */
+        html:not(.dark) body.liquid-glass-active #main-music-card * {
+            text-shadow: none !important;
+        }
+
         /* --- MESH GRADIENT --- */
         .mesh-gradient {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; overflow: hidden;
@@ -118,27 +133,30 @@
         
         body.liquid-glass-active .mesh-gradient { display: none !important; } 
 
-        /* IDLE ZUSTAND - Extrem glasig, hohe Blur-Werte, starke Lichtkanten */
+        /* IDLE ZUSTAND - Milchglas im Light Mode für perfekten Kontrast */
         body.liquid-glass-active .glass-card {
             position: relative;
             overflow: hidden; 
+            /* FIX: Mehr weiß (0.5, 0.6), damit das Glas milchig und der Text lesbar wird */
             background: linear-gradient(120deg, 
-                rgba(255, 255, 255, 0.15) 0%, 
-                rgba(255, 255, 255, 0.02) 35%, 
-                rgba(255, 255, 255, 0.25) 50%, /* Sharp Glare */
-                rgba(255, 255, 255, 0.02) 65%, 
-                rgba(255, 255, 255, 0.1) 100%
+                rgba(255, 255, 255, 0.5) 0%, 
+                rgba(255, 255, 255, 0.15) 35%, 
+                rgba(255, 255, 255, 0.6) 50%, /* Sharp Glare */
+                rgba(255, 255, 255, 0.15) 65%, 
+                rgba(255, 255, 255, 0.4) 100%
             ) !important;
             background-size: 250% 250% !important;
-            border: 1px solid rgba(255, 255, 255, 0.3) !important;
-            border-top: 1px solid rgba(255, 255, 255, 0.7) !important; /* Extreme Lichtkante oben */
-            border-left: 1px solid rgba(255, 255, 255, 0.4) !important;
-            -webkit-backdrop-filter: blur(40px) saturate(250%) !important;
-            backdrop-filter: blur(40px) saturate(250%) !important;
+            border: 1px solid rgba(255, 255, 255, 0.6) !important;
+            border-top: 1px solid rgba(255, 255, 255, 0.9) !important; /* Extreme Lichtkante oben */
+            border-left: 1px solid rgba(255, 255, 255, 0.7) !important;
+            /* FIX: Saturate runter auf 120%, damit die Blobs nicht durchbrennen */
+            -webkit-backdrop-filter: blur(40px) saturate(120%) !important;
+            backdrop-filter: blur(40px) saturate(120%) !important;
             animation: card-liquid-idle 6s ease-in-out infinite alternate !important;
             transform: scale(1) translateY(0);
-            will-change: transform, border-radius, box-shadow, filter;
-            transition: transform 0.8s var(--apple-spring), box-shadow 0.8s var(--apple-spring), border-radius 0.6s var(--apple-ease), filter 0.6s var(--apple-ease), background-color 0.4s ease !important;
+            will-change: transform, border-radius; /* FIX: filter und box-shadow entfernt, um Mobile-VRAM-Exhaustion zu verhindern */
+            /* FIX: min-height und max-width für smoothes Fensterwachstum in der Transition ergänzt */
+            transition: transform 0.8s var(--apple-spring), box-shadow 0.8s var(--apple-spring), border-radius 0.6s var(--apple-ease), filter 0.6s var(--apple-ease), background-color 0.4s ease, min-height 1s var(--liquid-fluid), max-width 1s var(--liquid-fluid), padding 1s var(--liquid-fluid) !important;
         }
         
         .dark body.liquid-glass-active .glass-card {
@@ -188,16 +206,16 @@
             /* HOVER: Apple-Style massive Scaling, Extreme Blurs & Brightness, dicker innerer Glow */
             body.liquid-glass-active .glass-card:not(#main-music-card):not(#mini-player-toggle):hover {
                 transform: scale(1.12) translateY(-8px) !important; 
-                border-color: rgba(255, 255, 255, 0.8) !important;
+                border-color: rgba(255, 255, 255, 0.9) !important;
                 border-top: 1px solid rgba(255, 255, 255, 1) !important; 
-                background-color: rgba(255, 255, 255, 0.15) !important; 
+                background-color: rgba(255, 255, 255, 0.3) !important; /* FIX: Mehr Milchglas beim Hovern */
                 box-shadow: 0 50px 80px -20px rgba(0, 0, 0, 0.2), 
                             inset 0 1px 2px rgba(255, 255, 255, 1), 
-                            inset 0 0 20px rgba(255, 255, 255, 0.5), 
-                            inset 10px 0 40px rgba(6, 182, 212, 0.2), 
-                            inset -10px 0 40px rgba(168, 85, 247, 0.2) !important;
-                -webkit-backdrop-filter: blur(60px) saturate(300%) brightness(1.15) !important;
-                backdrop-filter: blur(60px) saturate(300%) brightness(1.15) !important;
+                            inset 0 0 20px rgba(255, 255, 255, 0.8), /* Hellerer innerer Glow */
+                            inset 10px 0 40px rgba(6, 182, 212, 0.15), 
+                            inset -10px 0 40px rgba(168, 85, 247, 0.15) !important;
+                -webkit-backdrop-filter: blur(60px) saturate(150%) brightness(1.05) !important; /* Saturate reduziert */
+                backdrop-filter: blur(60px) saturate(150%) brightness(1.05) !important;
                 border-radius: 32px !important;
                 z-index: 50;
             }
@@ -235,6 +253,34 @@
         /* ========================================================= */
         /* --- CRAZY FANCY WINDOW OPEN/CLOSE ANIMATIONS (ÜBERALL) -- */
         /* ========================================================= */
+
+        /* --- LAYOUT SHIFT FIX FÜR DAS DASHBOARD --- */
+        #music-card-layout-wrapper {
+            display: grid;
+            grid-template-rows: 0fr;
+            transition: grid-template-rows 0.6s var(--apple-spring), padding 0.6s var(--apple-spring);
+            padding-top: 0;
+            width: 100%;
+        }
+        /* FIX: Die ID ist im CSS extrem stark. Deswegen zwingen wir hier display: none für .hidden, damit keine 0px Linien im Renderbug bleiben! */
+        #music-card-layout-wrapper.hidden {
+            display: none !important;
+        }
+        body.liquid-glass-active #music-card-layout-wrapper {
+            transition: grid-template-rows 1.2s var(--liquid-fluid), padding 1.2s var(--liquid-fluid);
+        }
+        #music-card-layout-wrapper.is-open {
+            grid-template-rows: 1fr;
+            padding-top: 1.5rem;
+        }
+        #music-card-wrapper {
+            min-height: 0;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start; /* FIX: Verhindert, dass die Hauptkarte vertikal zusammengedrückt wird beim Grid-Collapse */
+            overflow: visible; /* Damit die fetten Glows von Main-Music-Card nicht abgeschnitten werden! */
+        }
 
         /* 1. Modal (Info-Karten) */
         body.liquid-glass-active .modal-opening .modal-content {
@@ -288,13 +334,12 @@
             transform-origin: center center;
         }
 
-        /* 6. Dashboard selbst */
-        body.liquid-glass-active .dashboard-opening {
-            display: flex !important;
+        /* 6. Dashboard selbst (Die Pop-Animation liegt direkt auf der Karte) */
+        body.liquid-glass-active .dashboard-opening #main-music-card {
             animation: ext-dashboard-in 1.2s var(--liquid-fluid) forwards !important;
             transform-origin: top center;
         }
-        body.liquid-glass-active .dashboard-closing {
+        body.liquid-glass-active .dashboard-closing #main-music-card {
             animation: ext-dashboard-out 0.9s var(--liquid-fluid) forwards !important;
             transform-origin: top center;
         }
@@ -343,8 +388,10 @@
         .modal-closing .modal-content, .picker-closing, .tutorial-closing, .settings-closing {
             animation: std-pop-out 0.4s var(--apple-ease) forwards;
         }
-        .dashboard-opening { display: flex !important; animation: std-pop-in 0.5s var(--apple-spring) forwards; }
-        .dashboard-closing { animation: std-pop-out 0.4s var(--apple-ease) forwards; }
+        
+        .dashboard-opening #main-music-card { animation: std-pop-in 0.5s var(--apple-spring) forwards; transform-origin: top center; }
+        .dashboard-closing #main-music-card { animation: std-pop-out 0.4s var(--apple-ease) forwards; transform-origin: top center; }
+        
         .lyrics-open #lyrics-overlay { animation: std-pop-in 0.5s var(--apple-spring) forwards; }
         .lyrics-closing-state #lyrics-overlay { animation: std-pop-out 0.4s var(--apple-ease) forwards; }
 
@@ -371,8 +418,10 @@
             position: absolute; width: 100%; height: 100%;
             /* Massiver Blur für nahtlose, sirupartige Vermischung der Farben */
             filter: blur(120px) saturate(150%); 
-            opacity: 0.4; /* Stark reduziert, damit der Text lesbar bleibt */
+            /* FIX: Opacity runtergeschraubt, damit der Text im Light Mode nicht überblendet wird */
+            opacity: 0.3; 
             transform: translate3d(0,0,0);
+            backface-visibility: hidden; /* FIX: Erzwingt GPU und verhindert WebKit-Flackern bei extremen Blurs */
             /* Langsame Rotation des gesamten Containers für ständigen Farbwechsel */
             animation: container-rotate 40s linear infinite;
         }
@@ -410,7 +459,8 @@
         /* ========================================================= */
 
         /* --- STANDARD V17 GLASS CARD --- */
-        .reveal { opacity: 0; transform: translateY(100px) scale(0.9); transition: opacity 0.8s var(--apple-ease), transform 1s var(--apple-spring); will-change: opacity, transform; }
+        /* FIX: Reveal Start-Wert entschärft, um Mobile Clipping beim Laden zu verhindern */
+        .reveal { opacity: 0; transform: translateY(40px) scale(0.96); transition: opacity 0.8s var(--apple-ease), transform 1s var(--apple-spring); will-change: opacity, transform; }
         .reveal.active { opacity: 1; transform: translateY(0) scale(1); }
 
         .glass-card {
@@ -543,9 +593,12 @@
 
         #modal-overlay { backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); transition: all 0.5s var(--apple-ease); will-change: opacity; }
         
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #3b82f6; border-radius: 10px; }
+        /* FIX: Scrollbar Fix für Mobile - Zerstört nicht mehr das Layout */
+        @media (pointer: fine) {
+            ::-webkit-scrollbar { width: 8px; }
+            ::-webkit-scrollbar-track { background: transparent; }
+            ::-webkit-scrollbar-thumb { background: #3b82f6; border-radius: 10px; }
+        }
 
         /* Smoothed out Impact Animations to avoid clipping */
         .impact-media-out, .impact-text-out, .impact-lyrics-out { animation: quantumCrushOut 0.65s var(--apple-ease) forwards !important; will-change: transform, opacity, filter, box-shadow; transform-origin: center center !important; }
@@ -603,20 +656,21 @@
     <div id="global-emp-shockwave"></div>
     
     <!-- UI CONTROLS -->
-    <div id="ui-controls" class="fixed top-1 right-1 xxs:top-2 xxs:right-2 xs:top-4 xs:right-4 sm:top-6 sm:right-6 z-[110] flex items-center gap-1 sm:gap-3 bg-transparent rounded-2xl">
-        <button id="liquid-glass-toggle" aria-label="Liquid Glass umschalten" class="group p-1.5 xxs:p-2 sm:p-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-2xl rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-700 hover:ring-2 hover:ring-cyan-500 transition-all active:scale-90" title="Apple Liquid Glass Modus">
+    <!-- FIX: Verschachtelten backdrop-blur-sm hier entfernt, da die inneren Buttons schon blur haben. Vermeidet Mobile Glitches -->
+    <div id="ui-controls" class="fixed top-2 right-2 xs:top-4 xs:right-4 sm:top-6 sm:right-6 z-[110] flex items-center gap-1.5 sm:gap-3 bg-white/10 dark:bg-black/10 p-1 rounded-2xl sm:rounded-3xl border border-white/20 dark:border-slate-800/50 shadow-sm">
+        <button id="liquid-glass-toggle" aria-label="Liquid Glass umschalten" class="group p-2 sm:p-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-lg rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-700 hover:ring-2 hover:ring-cyan-500 transition-all active:scale-90" title="Apple Liquid Glass Modus">
             <svg id="liquid-glass-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-500 transition-colors group-hover:text-cyan-500 sm:w-6 sm:h-6"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
         </button>
 
-        <button id="tutorial-start-btn" aria-label="Tutorial starten" class="group p-1.5 xxs:p-2 sm:p-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-2xl rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-700 hover:ring-2 hover:ring-purple-500 transition-all active:scale-90" title="Tutorial starten">
+        <button id="tutorial-start-btn" aria-label="Tutorial starten" class="group p-2 sm:p-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-lg rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-700 hover:ring-2 hover:ring-purple-500 transition-all active:scale-90" title="Tutorial starten">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-500 transition-colors group-hover:text-purple-500 sm:w-6 sm:h-6"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
         </button>
 
-        <button id="perf-toggle" aria-label="Performance Modus" class="group p-1.5 xxs:p-2 sm:p-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-2xl rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-700 hover:ring-2 hover:ring-green-500 transition-all active:scale-90" title="Low-End Modus (Deaktiviert Animationen)">
+        <button id="perf-toggle" aria-label="Performance Modus" class="group p-2 sm:p-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-lg rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-700 hover:ring-2 hover:ring-green-500 transition-all active:scale-90" title="Low-End Modus (Deaktiviert Animationen)">
             <svg id="perf-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-500 transition-colors group-hover:text-green-500 sm:w-6 sm:h-6"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
         </button>
 
-        <button id="theme-toggle" aria-label="Darkmode umschalten" class="group p-1.5 xxs:p-2 sm:p-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-2xl rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-700 hover:ring-2 hover:ring-blue-500 transition-all active:scale-90">
+        <button id="theme-toggle" aria-label="Darkmode umschalten" class="group p-2 sm:p-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-lg rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-700 hover:ring-2 hover:ring-blue-500 transition-all active:scale-90">
             <span id="theme-icon-dark" class="hidden dark:block text-yellow-400 group-hover:rotate-12 transition-transform">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="sm:w-6 sm:h-6"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
             </span>
@@ -649,7 +703,8 @@
         </div>
     </div>
 
-    <main id="main-content" class="max-w-4xl mx-auto px-2 xxs:px-3 xs:px-6 sm:px-8 pt-16 xxs:pt-20 xs:pt-24 sm:pt-40 pb-16 xxs:pb-20 sm:pb-32">
+    <!-- FIX: Padding top massiv erhöht, damit UI Controls auf Mobile nicht blockieren -->
+    <main id="main-content" class="max-w-4xl mx-auto px-4 xs:px-6 sm:px-8 pt-28 xs:pt-36 sm:pt-40 pb-16 xxs:pb-20 sm:pb-32">
         
         <header id="header-section" class="mb-10 xxs:mb-12 xs:mb-16 sm:mb-20 reveal mt-4 xs:mt-0 rounded-2xl relative z-10">
             <div class="inline-flex items-center gap-2 px-2 py-1 sm:px-3 sm:py-1 mb-4 xxs:mb-6 xs:mb-10 sm:mb-16 text-[8px] xxs:text-[10px] xs:text-xs font-bold tracking-widest text-blue-600 uppercase bg-blue-100 dark:bg-blue-500/10 dark:text-blue-400 rounded-full shadow-sm">
@@ -677,82 +732,82 @@
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5 xxs:gap-3 xs:gap-4 sm:gap-5">
                 <div onclick="openModal('status')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group">
-                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-blue-500/10 text-blue-500 rounded-lg xxs:rounded-xl group-hover:bg-blue-500 group-hover:text-white transition-all shrink-0">
+                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-blue-500/10 text-blue-600 dark:text-blue-500 rounded-lg xxs:rounded-xl group-hover:bg-blue-500 group-hover:text-white transition-all shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                     </div>
                     <div>
                         <h3 class="font-bold text-sm xxs:text-base sm:text-lg mb-0.5 xxs:mb-1">Status</h3>
-                        <p class="text-slate-500 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">Ausbildung zum Fachinformatiker...</p>
+                        <p class="text-slate-700 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">Ausbildung zum Fachinformatiker...</p>
                     </div>
                 </div>
 
                 <div onclick="openModal('background')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group">
-                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-purple-500/10 text-purple-500 rounded-lg xxs:rounded-xl group-hover:bg-purple-500 group-hover:text-white transition-all shrink-0">
+                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-purple-500/10 text-purple-600 dark:text-purple-500 rounded-lg xxs:rounded-xl group-hover:bg-purple-500 group-hover:text-white transition-all shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                     </div>
                     <div>
                         <h3 class="font-bold text-sm xxs:text-base sm:text-lg mb-0.5 xxs:mb-1">Hintergrund</h3>
-                        <p class="text-slate-500 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">19 Jahre & Jugendhilfe...</p>
+                        <p class="text-slate-700 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">19 Jahre & Jugendhilfe...</p>
                     </div>
                 </div>
 
                 <div onclick="openModal('freizeit')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group">
-                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-orange-500/10 text-orange-500 rounded-lg xxs:rounded-xl group-hover:bg-orange-500 group-hover:text-white transition-all shrink-0">
+                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-orange-500/10 text-orange-600 dark:text-orange-500 rounded-lg xxs:rounded-xl group-hover:bg-orange-500 group-hover:text-white transition-all shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 12h.01M18 12h.01M15 10h.01M15 14h.01"/></svg>
                     </div>
                     <div>
                         <h3 class="font-bold text-sm xxs:text-base sm:text-lg mb-0.5 xxs:mb-1">Freizeit</h3>
-                        <p class="text-slate-500 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">Forza Horizon 5 & Streaming...</p>
+                        <p class="text-slate-700 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">Forza Horizon 5 & Streaming...</p>
                     </div>
                 </div>
 
                 <div onclick="openModal('menschen')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group">
-                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-red-500/10 text-red-500 rounded-lg xxs:rounded-xl group-hover:bg-red-500 group-hover:text-white transition-all shrink-0">
+                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-red-500/10 text-red-600 dark:text-red-500 rounded-lg xxs:rounded-xl group-hover:bg-red-500 group-hover:text-white transition-all shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
                     </div>
                     <div>
                         <h3 class="font-bold text-sm xxs:text-base sm:text-lg mb-0.5 xxs:mb-1">Menschen</h3>
-                        <p class="text-slate-500 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">Tom & Danilo (Anker)...</p>
+                        <p class="text-slate-700 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">Tom & Danilo (Anker)...</p>
                     </div>
                 </div>
 
                 <div onclick="openModal('techstack')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group">
-                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-emerald-500/10 text-emerald-500 rounded-lg xxs:rounded-xl group-hover:bg-emerald-500 group-hover:text-white transition-all shrink-0">
+                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 rounded-lg xxs:rounded-xl group-hover:bg-emerald-500 group-hover:text-white transition-all shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="M20 16V7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v9m16 0H4m16 0 1.28 2.55a1 1 0 0 1-.9 1.45H3.62a1 1 0 0 1-.9-1.45L4 16"/></svg>
                     </div>
                     <div>
                         <h3 class="font-bold text-sm xxs:text-base sm:text-lg mb-0.5 xxs:mb-1">Tech Stack</h3>
-                        <p class="text-slate-500 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">Hardware, Linux, Windows...</p>
+                        <p class="text-slate-700 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">Hardware, Linux, Windows...</p>
                     </div>
                 </div>
 
                 <div onclick="openModal('setup')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group">
-                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-cyan-500/10 text-cyan-500 rounded-lg xxs:rounded-xl group-hover:bg-cyan-500 group-hover:text-white transition-all shrink-0">
+                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-cyan-500/10 text-cyan-600 dark:text-cyan-500 rounded-lg xxs:rounded-xl group-hover:bg-cyan-500 group-hover:text-white transition-all shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
                     </div>
                     <div>
                         <h3 class="font-bold text-sm xxs:text-base sm:text-lg mb-0.5 xxs:mb-1">Setup</h3>
-                        <p class="text-slate-500 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">DT 770 Pro & Rockster Cross...</p>
+                        <p class="text-slate-700 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">DT 770 Pro & Rockster Cross...</p>
                     </div>
                 </div>
 
                 <div onclick="openModal('labor')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group">
-                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-yellow-500/10 text-yellow-500 rounded-lg xxs:rounded-xl group-hover:bg-yellow-500 group-hover:text-white transition-all shrink-0">
+                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-yellow-500/10 text-yellow-600 dark:text-yellow-500 rounded-lg xxs:rounded-xl group-hover:bg-yellow-500 group-hover:text-white transition-all shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="M10 2v7.31"/><path d="M14 9.3V1.99"/><path d="M8.5 2h7"/><path d="M14 9.3a6.5 6.5 0 1 1-4 0"/><path d="M5.52 16h12.96"/></svg>
                     </div>
                     <div>
                         <h3 class="font-bold text-sm xxs:text-base sm:text-lg mb-0.5 xxs:mb-1">Labor</h3>
-                        <p class="text-slate-500 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">Server & Docker...</p>
+                        <p class="text-slate-700 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">Server & Docker...</p>
                     </div>
                 </div>
 
                 <div onclick="openModal('contact')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group">
-                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-indigo-500/10 text-indigo-500 rounded-lg xxs:rounded-xl group-hover:bg-indigo-500 group-hover:text-white transition-all shrink-0">
+                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-indigo-500/10 text-indigo-600 dark:text-indigo-500 rounded-lg xxs:rounded-xl group-hover:bg-indigo-500 group-hover:text-white transition-all shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
                     </div>
                     <div>
                         <h3 class="font-bold text-sm xxs:text-base sm:text-lg mb-0.5 xxs:mb-1">Kontakt</h3>
-                        <p class="text-slate-500 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">Connect mit mir...</p>
+                        <p class="text-slate-700 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">Connect mit mir...</p>
                     </div>
                 </div>
             </div>
@@ -765,164 +820,166 @@
             <h2 class="text-lg xxs:text-xl xs:text-2xl sm:text-3xl font-bold mb-1.5 xxs:mb-2 text-blue-600 dark:text-blue-500 border-b-2 sm:border-b-4 border-blue-600 dark:border-blue-500 pb-1.5 xxs:pb-2 sm:pb-3 inline-block break-words">
                 Was bei mir gerade läuft
             </h2>
-            <p class="text-[8px] xxs:text-[10px] xs:text-xs text-slate-500 dark:text-slate-400 mb-4 xxs:mb-6 sm:mb-10">*Hinweis: Der Time-Sync ist auf -800ms optimiert.</p>
+            <p class="text-[8px] xxs:text-[10px] xs:text-xs text-slate-600 dark:text-slate-400 mb-4 xxs:mb-6 sm:mb-10">*Hinweis: Der Time-Sync ist auf -800ms optimiert.</p>
             
             <div id="mini-player-toggle" onclick="toggleDashboard()" role="button" tabindex="0" class="glass-card w-full max-w-[400px] mx-auto p-2 xxs:p-3 sm:p-4 rounded-[1.2rem] xxs:rounded-2xl sm:rounded-[2rem] flex items-center justify-between cursor-pointer group mb-3 xxs:mb-4 sm:mb-6 relative z-20 hover:scale-[1.01] hover:shadow-xl transition-all">
                 <div class="flex items-center gap-2 xxs:gap-3 sm:gap-4 flex-1 min-w-0">
-                    <div id="mini-icon-bg" class="w-8 h-8 xxs:w-10 xxs:h-10 sm:w-12 sm:h-12 shrink-0 rounded-lg xxs:rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center transition-colors">
+                    <div id="mini-icon-bg" class="w-8 h-8 xxs:w-10 xxs:h-10 sm:w-12 sm:h-12 shrink-0 rounded-lg xxs:rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-500 flex items-center justify-center transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
                     </div>
                     <div class="text-left flex-1 min-w-0 py-0.5 xxs:py-1">
                         <p id="mini-title" class="text-[10px] xxs:text-xs sm:text-sm font-bold text-slate-900 dark:text-white break-words whitespace-normal leading-snug transition-colors">Dashboard minimiert</p>
-                        <p id="mini-status" class="text-[8px] xxs:text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 break-words whitespace-normal mt-0.5 leading-snug transition-colors">Klicken zum Öffnen</p>
+                        <p id="mini-status" class="text-[8px] xxs:text-[10px] sm:text-xs text-slate-600 dark:text-slate-400 break-words whitespace-normal mt-0.5 leading-snug transition-colors">Klicken zum Öffnen</p>
                     </div>
                 </div>
-                <div class="p-1 xxs:p-1.5 sm:p-2 shrink-0 bg-slate-200/50 dark:bg-white/5 text-slate-500 dark:text-slate-400 rounded-full group-hover:bg-blue-500/10 group-hover:text-blue-500 transition-colors ml-1 xxs:ml-2">
+                <div class="p-1 xxs:p-1.5 sm:p-2 shrink-0 bg-slate-200/50 dark:bg-white/5 text-slate-700 dark:text-slate-400 rounded-full group-hover:bg-blue-500/10 group-hover:text-blue-500 transition-colors ml-1 xxs:ml-2">
                     <svg id="music-chevron" class="transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-4 xxs:h-4 sm:w-5 sm:h-5"><path d="m6 9 6 6 6-6"/></svg>
                 </div>
             </div>
 
-            <!-- Das Dashboard Fenster -->
-            <div id="music-card-wrapper" class="relative hidden origin-top flex justify-center">
-                
-                <div id="main-music-card" class="glass-card offline w-full max-w-[400px] mx-auto p-3 xxs:p-4 xs:p-6 md:p-10 rounded-[1.5rem] xxs:rounded-3xl md:rounded-[3rem] text-center relative z-10 flex flex-col justify-center items-center">
+            <!-- Das Dashboard Fenster (Layout-Shift Wrapper) -->
+            <div id="music-card-layout-wrapper" class="hidden">
+                <div id="music-card-wrapper" class="relative origin-top flex justify-center w-full">
                     
-                    <div class="absolute inset-0 rounded-[inherit] overflow-hidden z-0 pointer-events-none">
-                        <div id="ambient-bg"></div>
-                        <video id="canvas-video" class="absolute inset-0 w-full h-full object-cover z-[1] opacity-0 transition-opacity duration-1000" loop muted playsinline></video>
-                        <div class="absolute inset-0 bg-black/10 z-[2]"></div>
-                    </div>
-
-                    <div id="ambilight-glow"></div>
-
-                    <div id="particles-container">
-                        <div class="particle p1"></div><div class="particle p2"></div>
-                        <div class="particle p3"></div><div class="particle p4"></div>
-                        <div class="particle p5"></div><div class="particle p6"></div>
-                        <div class="particle p7"></div><div class="particle p8"></div>
-                        <div class="particle p1" style="left:15%; animation-delay:1.2s"></div>
-                        <div class="particle p3" style="left:65%; animation-delay:2.7s"></div>
-                        <div class="particle p5" style="left:85%; animation-delay:0.3s"></div>
-                        <div class="particle p8" style="left:45%; animation-delay:3.1s"></div>
-                    </div>
-
-                    <!-- Das Lyrics Fenster -->
-                    <div id="lyrics-overlay" class="absolute inset-0 bg-black/50 rounded-[1.5rem] xxs:rounded-3xl md:rounded-[3rem] flex-col p-2 xxs:p-3 xs:p-6 md:p-8 z-40 transition-all duration-500 opacity-0 pointer-events-none flex border border-white/10 invisible">
+                    <div id="main-music-card" class="glass-card offline w-full max-w-[400px] mx-auto p-3 xxs:p-4 xs:p-6 md:p-10 rounded-[1.5rem] xxs:rounded-3xl md:rounded-[3rem] text-center relative z-10 flex flex-col justify-center items-center">
                         
-                        <div class="flex items-center justify-between gap-1.5 xxs:gap-2 sm:gap-4 mb-3 xxs:mb-4 sm:mb-6 shrink-0 w-full bg-white/10 p-1.5 xxs:p-2 xs:p-3 sm:p-4 rounded-lg xxs:rounded-xl sm:rounded-2xl border border-white/10 relative z-[100]">
-                            <div class="flex items-center gap-1.5 xxs:gap-2 sm:gap-3 min-w-0 flex-1">
-                                <img id="lyrics-mini-art" src="" alt="Album Art" class="w-6 h-6 xxs:w-8 xxs:h-8 sm:w-10 sm:h-10 rounded shadow-md object-cover shrink-0">
-                                <div class="text-left min-w-0">
-                                    <p id="lyrics-mini-title" class="text-[10px] xxs:text-xs sm:text-sm font-bold text-white truncate">Titel</p>
-                                    <p id="lyrics-mini-artist" class="text-[8px] xxs:text-[10px] sm:text-xs text-white/60 truncate">Artist</p>
+                        <div class="absolute inset-0 rounded-[inherit] overflow-hidden z-0 pointer-events-none">
+                            <div id="ambient-bg"></div>
+                            <video id="canvas-video" class="absolute inset-0 w-full h-full object-cover z-[1] opacity-0 transition-opacity duration-1000" loop muted playsinline></video>
+                            <div class="absolute inset-0 bg-black/10 z-[2]"></div>
+                        </div>
+
+                        <div id="ambilight-glow"></div>
+
+                        <div id="particles-container">
+                            <div class="particle p1"></div><div class="particle p2"></div>
+                            <div class="particle p3"></div><div class="particle p4"></div>
+                            <div class="particle p5"></div><div class="particle p6"></div>
+                            <div class="particle p7"></div><div class="particle p8"></div>
+                            <div class="particle p1" style="left:15%; animation-delay:1.2s"></div>
+                            <div class="particle p3" style="left:65%; animation-delay:2.7s"></div>
+                            <div class="particle p5" style="left:85%; animation-delay:0.3s"></div>
+                            <div class="particle p8" style="left:45%; animation-delay:3.1s"></div>
+                        </div>
+
+                        <!-- Das Lyrics Fenster -->
+                        <div id="lyrics-overlay" class="absolute inset-0 bg-black/50 rounded-[1.5rem] xxs:rounded-3xl md:rounded-[3rem] flex-col p-2 xxs:p-3 xs:p-6 md:p-8 z-40 transition-all duration-500 opacity-0 pointer-events-none flex border border-white/10 invisible">
+                            
+                            <div class="flex items-center justify-between gap-1.5 xxs:gap-2 sm:gap-4 mb-3 xxs:mb-4 sm:mb-6 shrink-0 w-full bg-white/10 p-1.5 xxs:p-2 xs:p-3 sm:p-4 rounded-lg xxs:rounded-xl sm:rounded-2xl border border-white/10 relative z-[100]">
+                                <div class="flex items-center gap-1.5 xxs:gap-2 sm:gap-3 min-w-0 flex-1">
+                                    <img id="lyrics-mini-art" src="" alt="Album Art" class="w-6 h-6 xxs:w-8 xxs:h-8 sm:w-10 sm:h-10 rounded shadow-md object-cover shrink-0">
+                                    <div class="text-left min-w-0">
+                                        <p id="lyrics-mini-title" class="text-[10px] xxs:text-xs sm:text-sm font-bold text-white truncate">Titel</p>
+                                        <p id="lyrics-mini-artist" class="text-[8px] xxs:text-[10px] sm:text-xs text-white/60 truncate">Artist</p>
+                                    </div>
                                 </div>
+                                
+                                <div class="relative flex items-center">
+                                    <div id="sync-status-badge" class="px-1.5 xxs:px-2 py-1 mr-1 xxs:mr-2 bg-blue-500/20 text-blue-400 text-[8px] xxs:text-[10px] sm:text-xs rounded font-bold shrink-0 whitespace-nowrap hidden">
+                                        Lyrics: Synced
+                                    </div>
+
+                                    <button onclick="toggleLyricsSettings()" aria-label="Lyrics Einstellungen" class="p-1 xxs:p-1.5 sm:p-2 hover:bg-white/10 rounded-full transition-colors text-white shrink-0 mr-0.5 xxs:mr-1 sm:mr-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-4 xxs:h-4 sm:w-5 sm:h-5"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/></svg>
+                                    </button>
+                                    
+                                    <!-- Das Settings Menü Fenster -->
+                                    <div id="lyrics-settings-menu" class="absolute top-full right-0 mt-2 xxs:mt-3 sm:mt-4 bg-slate-900 border border-slate-700 rounded-xl p-1.5 xxs:p-2 sm:p-3 shadow-2xl hidden flex-col gap-1.5 min-w-[140px] xxs:min-w-[160px] sm:min-w-[180px] z-[9999] origin-top-right max-h-[350px] overflow-y-auto">
+                                        <p class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1 px-1 sticky top-0 bg-slate-900 py-1 z-10">Animation Style</p>
+                                        <button onclick="setLyricsStyle('fill')" id="btn-style-fill" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Classic Fill</button>
+                                        <button onclick="setLyricsStyle('bounce')" id="btn-style-bounce" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Bouncy Pop</button>
+                                        <button onclick="setLyricsStyle('fade')" id="btn-style-fade" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Smooth Fade</button>
+                                        <button onclick="setLyricsStyle('blur')" id="btn-style-blur" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Smooth Focus</button>
+                                        <button onclick="setLyricsStyle('wave')" id="btn-style-wave" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Wave Slide</button>
+                                        <button onclick="setLyricsStyle('wave-char')" id="btn-style-wave-char" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Wave Slide (Letters)</button>
+                                        <button onclick="setLyricsStyle('neon')" id="btn-style-neon" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Neon Glow</button>
+                                        <button onclick="setLyricsStyle('typewriter')" id="btn-style-typewriter" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Typewriter</button>
+                                        <button onclick="setLyricsStyle('pop')" id="btn-style-pop" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Elastic Pop</button>
+                                        <button onclick="setLyricsStyle('karaoke')" id="btn-style-karaoke" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Karaoke Bar</button>
+                                        <button onclick="setLyricsStyle('glitch')" id="btn-style-glitch" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Cyber Glitch</button>
+                                        <button onclick="setLyricsStyle('flip')" id="btn-style-flip" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">3D Flip</button>
+                                        <button onclick="setLyricsStyle('zoom')" id="btn-style-zoom" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Zoom Slide</button>
+                                        
+                                        <div class="h-px w-full bg-slate-700 my-1"></div>
+                                        <p class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-red-500 mb-1 px-1">Overkill Shaders</p>
+                                        <button onclick="setLyricsStyle('kinetic')" id="btn-style-kinetic" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Kinetic Impact</button>
+                                        <button onclick="setLyricsStyle('hellfire')" id="btn-style-hellfire" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Hellfire Burn</button>
+                                        <button onclick="setLyricsStyle('hologram')" id="btn-style-hologram" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Hologram Jitter</button>
+                                        <button onclick="setLyricsStyle('matrix')" id="btn-style-matrix" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Matrix Rain</button>
+
+                                        <div class="h-px w-full bg-slate-700 my-1"></div>
+                                        <p class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1 px-1">Features</p>
+                                        <button onclick="toggleCanvasVideo()" id="btn-toggle-canvas" class="text-left text-[10px] xxs:text-xs sm:text-sm text-green-400 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">Canvas: AN</button>
+                                        
+                                        <div class="h-px w-full bg-slate-700 my-1"></div>
+                                        <div class="flex justify-between items-center px-1 mb-1">
+                                            <p class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-blue-400">Live Sync Offset</p>
+                                            <button onclick="resetSyncOffset(this)" class="text-[7px] xxs:text-[8px] bg-blue-500/20 hover:bg-blue-500/40 text-blue-300 px-1.5 py-0.5 rounded transition-colors uppercase font-bold tracking-wider active:scale-95">Re-Sync</button>
+                                        </div>
+                                        <div class="px-2 py-1 flex items-center gap-2">
+                                            <input type="range" id="sync-slider" min="-5000" max="5000" step="50" value="-800" class="w-full h-1 bg-slate-600 rounded-lg appearance-none cursor-pointer">
+                                            <span id="sync-value" class="text-[8px] xxs:text-[10px] text-white font-mono w-6 xxs:w-8 text-right">-800</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <button onclick="toggleLyrics(false)" aria-label="Lyrics schließen" class="p-1 xxs:p-1.5 sm:p-2 hover:bg-white/10 rounded-full transition-colors text-white shrink-0">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-4 xxs:h-4 sm:w-5 sm:h-5"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="relative flex-1 overflow-hidden mask-image-gradient w-full max-w-2xl mx-auto">
+                                <div id="lyrics-container" class="absolute inset-0 overflow-y-auto overflow-x-hidden text-left w-full h-full pb-6 sm:pb-10 lyrics-style-fill">
+                                    <div id="lyrics-content" class="transition-all flex flex-col items-start w-full min-h-full"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Das Music Picker Fenster -->
+                        <div id="music-picker" class="absolute inset-0 bg-black/60 backdrop-blur-xl rounded-[1.5rem] xxs:rounded-3xl md:rounded-[3rem] hidden flex-col justify-center p-4 xxs:p-6 sm:p-10 gap-2 xxs:gap-4 z-50">
+                            <p class="text-[8px] xxs:text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1 sm:mb-2">Service wählen</p>
+                            <div id="dynamic-links-container" class="flex flex-col gap-1.5 xxs:gap-2 sm:gap-3 w-full max-h-[120px] xxs:max-h-[140px] sm:max-h-[180px] overflow-y-auto" style="scrollbar-width: thin;"></div>
+                            <p id="link-none" class="text-white/50 text-[10px] xxs:text-xs sm:text-sm font-bold" style="display: none;">Keine Links gefunden</p>
+                            <button onclick="toggleMusicPicker(false)" class="text-white/50 text-[8px] xxs:text-[10px] sm:text-xs mt-1 xxs:mt-2 sm:mt-4 hover:text-white transition-colors">Abbrechen</button>
+                        </div>
+
+                        <div id="music-header-tag" class="relative z-10 text-[6px] xxs:text-[8px] xs:text-[10px] font-black text-blue-500 uppercase tracking-[0.1em] xxs:tracking-[0.2em] xs:tracking-[0.4em] mb-2 xxs:mb-3 sm:mb-4 md:mb-6 transition-all shrink-0">
+                            Gamingpig is Offline
+                        </div>
+
+                        <div id="media-container" onclick="toggleMusicPicker(true)" role="button" tabindex="0" class="relative z-10 w-full max-w-[100px] xxs:max-w-[140px] xs:max-w-[180px] sm:max-w-[240px] md:max-w-[280px] aspect-square shrink-0 rounded-xl xxs:rounded-2xl mx-auto mb-2 xxs:mb-3 sm:mb-4 md:mb-6 overflow-hidden flex items-center justify-center bg-[#121212] shadow-[0_10px_30px_rgba(0,0,0,0.8)] sm:shadow-[0_20px_40px_rgba(0,0,0,0.8)] cursor-pointer hover:ring-2 hover:ring-white/20 transition-all">
+                            <img id="artwork" src="" alt="Album Artwork" class="w-full h-full object-cover">
+                            <div id="offline-icon" class="absolute text-2xl xxs:text-4xl sm:text-6xl" aria-hidden="true">🌙</div>
+                        </div>
+
+                        <div id="track-info-container" class="relative z-10 mb-2 xxs:mb-4 sm:mb-6 text-left px-1 sm:px-2 w-full shrink-0">
+                            <h2 id="track-title" class="text-base xxs:text-lg xs:text-xl sm:text-2xl md:text-3xl font-extrabold text-white break-words leading-[1.1] mb-0.5 xxs:mb-1 sm:mb-2 transition-all">Aktuell ist es ruhig...</h2>
+                            <p id="track-artist" class="text-white/70 text-xs xxs:text-sm sm:text-lg font-medium">Genieße die Stille</p>
+                        </div>
+
+                        <div id="progress-container" class="relative z-10 w-full px-1 sm:px-2 mb-2 xxs:mb-4 sm:mb-6 shrink-0 transition-all">
+                            <div class="flex justify-between text-[7px] xxs:text-[9px] xs:text-[11px] font-mono text-white/60 mb-0.5 xxs:mb-1 sm:mb-2">
+                                <span id="time-current">0:00</span>
+                                <span id="time-total">0:00</span>
+                            </div>
+                            <div class="h-0.5 xxs:h-1 sm:h-1.5 w-full bg-white/10 rounded-full overflow-hidden relative">
+                                <div id="progress-bar" class="absolute top-0 left-0 h-full bg-white w-0 transition-all duration-300 ease-linear rounded-full"></div>
+                            </div>
+                        </div>
+
+                        <div id="controls-container" class="relative z-10 flex items-center justify-between px-1 sm:px-2 w-full shrink-0 transition-all">
+                            <div class="inline-flex items-center gap-1 xxs:gap-1.5 xs:gap-2.5 px-2 py-1 xxs:px-3 xxs:py-1.5 xs:px-4 xs:py-2 bg-white/5 rounded-full text-[0.4rem] xxs:text-[0.6rem] xs:text-[0.7rem] font-extrabold uppercase tracking-[0.5px] xxs:tracking-[1px] xs:tracking-[2px] border border-white/10 text-white">
+                                <span id="status-dot" class="h-1 w-1 xxs:h-1.5 xxs:w-1.5 xs:h-2 xs:w-2 rounded-full bg-blue-500"></span>
+                                <div class="eq-bars hidden xxs:flex">
+                                    <div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div>
+                                </div>
+                                <span id="status-text">Zen Mode</span>
                             </div>
                             
-                            <div class="relative flex items-center">
-                                <div id="sync-status-badge" class="px-1.5 xxs:px-2 py-1 mr-1 xxs:mr-2 bg-blue-500/20 text-blue-400 text-[8px] xxs:text-[10px] sm:text-xs rounded font-bold shrink-0 whitespace-nowrap hidden">
-                                    Lyrics: Synced
-                                </div>
-
-                                <button onclick="toggleLyricsSettings()" aria-label="Lyrics Einstellungen" class="p-1 xxs:p-1.5 sm:p-2 hover:bg-white/10 rounded-full transition-colors text-white shrink-0 mr-0.5 xxs:mr-1 sm:mr-2">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-4 xxs:h-4 sm:w-5 sm:h-5"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/></svg>
-                                </button>
-                                
-                                <!-- Das Settings Menü Fenster -->
-                                <div id="lyrics-settings-menu" class="absolute top-full right-0 mt-2 xxs:mt-3 sm:mt-4 bg-slate-900 border border-slate-700 rounded-xl p-1.5 xxs:p-2 sm:p-3 shadow-2xl hidden flex-col gap-1.5 min-w-[140px] xxs:min-w-[160px] sm:min-w-[180px] z-[9999] origin-top-right max-h-[350px] overflow-y-auto">
-                                    <p class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1 px-1 sticky top-0 bg-slate-900 py-1 z-10">Animation Style</p>
-                                    <button onclick="setLyricsStyle('fill')" id="btn-style-fill" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Classic Fill</button>
-                                    <button onclick="setLyricsStyle('bounce')" id="btn-style-bounce" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Bouncy Pop</button>
-                                    <button onclick="setLyricsStyle('fade')" id="btn-style-fade" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Smooth Fade</button>
-                                    <button onclick="setLyricsStyle('blur')" id="btn-style-blur" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Smooth Focus</button>
-                                    <button onclick="setLyricsStyle('wave')" id="btn-style-wave" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Wave Slide</button>
-                                    <button onclick="setLyricsStyle('wave-char')" id="btn-style-wave-char" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Wave Slide (Letters)</button>
-                                    <button onclick="setLyricsStyle('neon')" id="btn-style-neon" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Neon Glow</button>
-                                    <button onclick="setLyricsStyle('typewriter')" id="btn-style-typewriter" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Typewriter</button>
-                                    <button onclick="setLyricsStyle('pop')" id="btn-style-pop" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Elastic Pop</button>
-                                    <button onclick="setLyricsStyle('karaoke')" id="btn-style-karaoke" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Karaoke Bar</button>
-                                    <button onclick="setLyricsStyle('glitch')" id="btn-style-glitch" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Cyber Glitch</button>
-                                    <button onclick="setLyricsStyle('flip')" id="btn-style-flip" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">3D Flip</button>
-                                    <button onclick="setLyricsStyle('zoom')" id="btn-style-zoom" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Zoom Slide</button>
-                                    
-                                    <div class="h-px w-full bg-slate-700 my-1"></div>
-                                    <p class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-red-500 mb-1 px-1">Overkill Shaders</p>
-                                    <button onclick="setLyricsStyle('kinetic')" id="btn-style-kinetic" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Kinetic Impact</button>
-                                    <button onclick="setLyricsStyle('hellfire')" id="btn-style-hellfire" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Hellfire Burn</button>
-                                    <button onclick="setLyricsStyle('hologram')" id="btn-style-hologram" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Hologram Jitter</button>
-                                    <button onclick="setLyricsStyle('matrix')" id="btn-style-matrix" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Matrix Rain</button>
-
-                                    <div class="h-px w-full bg-slate-700 my-1"></div>
-                                    <p class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1 px-1">Features</p>
-                                    <button onclick="toggleCanvasVideo()" id="btn-toggle-canvas" class="text-left text-[10px] xxs:text-xs sm:text-sm text-green-400 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">Canvas: AN</button>
-                                    
-                                    <div class="h-px w-full bg-slate-700 my-1"></div>
-                                    <div class="flex justify-between items-center px-1 mb-1">
-                                        <p class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-blue-400">Live Sync Offset</p>
-                                        <button onclick="resetSyncOffset(this)" class="text-[7px] xxs:text-[8px] bg-blue-500/20 hover:bg-blue-500/40 text-blue-300 px-1.5 py-0.5 rounded transition-colors uppercase font-bold tracking-wider active:scale-95">Re-Sync</button>
-                                    </div>
-                                    <div class="px-2 py-1 flex items-center gap-2">
-                                        <input type="range" id="sync-slider" min="-5000" max="5000" step="50" value="-800" class="w-full h-1 bg-slate-600 rounded-lg appearance-none cursor-pointer">
-                                        <span id="sync-value" class="text-[8px] xxs:text-[10px] text-white font-mono w-6 xxs:w-8 text-right">-800</span>
-                                    </div>
-                                </div>
-                                
-                                <button onclick="toggleLyrics(false)" aria-label="Lyrics schließen" class="p-1 xxs:p-1.5 sm:p-2 hover:bg-white/10 rounded-full transition-colors text-white shrink-0">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-4 xxs:h-4 sm:w-5 sm:h-5"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                                </button>
-                            </div>
+                            <button onclick="toggleLyrics(true)" aria-label="Lyrics anzeigen" class="p-1 xxs:p-1.5 xs:p-2 text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all" title="Lyrics anzeigen">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-4 xxs:h-4 xs:w-5 xs:h-5"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                            </button>
                         </div>
-
-                        <div class="relative flex-1 overflow-hidden mask-image-gradient w-full max-w-2xl mx-auto">
-                            <div id="lyrics-container" class="absolute inset-0 overflow-y-auto overflow-x-hidden text-left w-full h-full pb-6 sm:pb-10 lyrics-style-fill">
-                                <div id="lyrics-content" class="transition-all flex flex-col items-start w-full min-h-full"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Das Music Picker Fenster -->
-                    <div id="music-picker" class="absolute inset-0 bg-black/60 backdrop-blur-xl rounded-[1.5rem] xxs:rounded-3xl md:rounded-[3rem] hidden flex-col justify-center p-4 xxs:p-6 sm:p-10 gap-2 xxs:gap-4 z-50">
-                        <p class="text-[8px] xxs:text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1 sm:mb-2">Service wählen</p>
-                        <div id="dynamic-links-container" class="flex flex-col gap-1.5 xxs:gap-2 sm:gap-3 w-full max-h-[120px] xxs:max-h-[140px] sm:max-h-[180px] overflow-y-auto" style="scrollbar-width: thin;"></div>
-                        <p id="link-none" class="text-white/50 text-[10px] xxs:text-xs sm:text-sm font-bold" style="display: none;">Keine Links gefunden</p>
-                        <button onclick="toggleMusicPicker(false)" class="text-white/50 text-[8px] xxs:text-[10px] sm:text-xs mt-1 xxs:mt-2 sm:mt-4 hover:text-white transition-colors">Abbrechen</button>
-                    </div>
-
-                    <div id="music-header-tag" class="relative z-10 text-[6px] xxs:text-[8px] xs:text-[10px] font-black text-blue-500 uppercase tracking-[0.1em] xxs:tracking-[0.2em] xs:tracking-[0.4em] mb-2 xxs:mb-3 sm:mb-4 md:mb-6 transition-all shrink-0">
-                        Gamingpig is Offline
-                    </div>
-
-                    <div id="media-container" onclick="toggleMusicPicker(true)" role="button" tabindex="0" class="relative z-10 w-full max-w-[100px] xxs:max-w-[140px] xs:max-w-[180px] sm:max-w-[240px] md:max-w-[280px] aspect-square shrink-0 rounded-xl xxs:rounded-2xl mx-auto mb-2 xxs:mb-3 sm:mb-4 md:mb-6 overflow-hidden flex items-center justify-center bg-[#121212] shadow-[0_10px_30px_rgba(0,0,0,0.8)] sm:shadow-[0_20px_40px_rgba(0,0,0,0.8)] cursor-pointer hover:ring-2 hover:ring-white/20 transition-all">
-                        <img id="artwork" src="" alt="Album Artwork" class="w-full h-full object-cover">
-                        <div id="offline-icon" class="absolute text-2xl xxs:text-4xl sm:text-6xl" aria-hidden="true">🌙</div>
-                    </div>
-
-                    <div id="track-info-container" class="relative z-10 mb-2 xxs:mb-4 sm:mb-6 text-left px-1 sm:px-2 w-full shrink-0">
-                        <h2 id="track-title" class="text-base xxs:text-lg xs:text-xl sm:text-2xl md:text-3xl font-extrabold text-white break-words leading-[1.1] mb-0.5 xxs:mb-1 sm:mb-2 transition-all">Aktuell ist es ruhig...</h2>
-                        <p id="track-artist" class="text-white/70 text-xs xxs:text-sm sm:text-lg font-medium">Genieße die Stille</p>
-                    </div>
-
-                    <div id="progress-container" class="relative z-10 w-full px-1 sm:px-2 mb-2 xxs:mb-4 sm:mb-6 shrink-0 transition-all">
-                        <div class="flex justify-between text-[7px] xxs:text-[9px] xs:text-[11px] font-mono text-white/60 mb-0.5 xxs:mb-1 sm:mb-2">
-                            <span id="time-current">0:00</span>
-                            <span id="time-total">0:00</span>
-                        </div>
-                        <div class="h-0.5 xxs:h-1 sm:h-1.5 w-full bg-white/10 rounded-full overflow-hidden relative">
-                            <div id="progress-bar" class="absolute top-0 left-0 h-full bg-white w-0 transition-all duration-300 ease-linear rounded-full"></div>
-                        </div>
-                    </div>
-
-                    <div id="controls-container" class="relative z-10 flex items-center justify-between px-1 sm:px-2 w-full shrink-0 transition-all">
-                        <div class="inline-flex items-center gap-1 xxs:gap-1.5 xs:gap-2.5 px-2 py-1 xxs:px-3 xxs:py-1.5 xs:px-4 xs:py-2 bg-white/5 rounded-full text-[0.4rem] xxs:text-[0.6rem] xs:text-[0.7rem] font-extrabold uppercase tracking-[0.5px] xxs:tracking-[1px] xs:tracking-[2px] border border-white/10 text-white">
-                            <span id="status-dot" class="h-1 w-1 xxs:h-1.5 xxs:w-1.5 xs:h-2 xs:w-2 rounded-full bg-blue-500"></span>
-                            <div class="eq-bars hidden xxs:flex">
-                                <div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div>
-                            </div>
-                            <span id="status-text">Zen Mode</span>
-                        </div>
-                        
-                        <button onclick="toggleLyrics(true)" aria-label="Lyrics anzeigen" class="p-1 xxs:p-1.5 xs:p-2 text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all" title="Lyrics anzeigen">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-4 xxs:h-4 xs:w-5 xs:h-5"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-                        </button>
                     </div>
                 </div>
             </div>
@@ -932,7 +989,7 @@
             <!-- Tic-Tac-Toe -->
             <div class="glass-card p-3 xxs:p-5 xs:p-6 sm:p-8 rounded-[1rem] xxs:rounded-[1.5rem] sm:rounded-[2.5rem] group overflow-hidden relative border border-slate-200 dark:border-slate-800">
                 <div class="flex items-center gap-2 xxs:gap-3 sm:gap-5 mb-2 xxs:mb-4 sm:mb-6">
-                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-indigo-500/10 text-indigo-500 rounded-lg xxs:rounded-xl sm:rounded-2xl group-hover:rotate-12 transition-transform">
+                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-indigo-500/10 text-indigo-600 dark:text-indigo-500 rounded-lg xxs:rounded-xl sm:rounded-2xl group-hover:rotate-12 transition-transform">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-6 xxs:h-6 sm:w-8 sm:h-8"><path d="M3 3h18v18H3zM21 9H3M21 15H3M9 3v18M15 3v18"/></svg>
                     </div>
                     <h2 class="text-base xxs:text-xl xs:text-2xl sm:text-3xl font-bold">Tic-Tac-Toe</h2>
@@ -948,7 +1005,7 @@
             <!-- TikTok -->
             <div class="glass-card p-3 xxs:p-5 xs:p-6 sm:p-8 rounded-[1rem] xxs:rounded-[1.5rem] sm:rounded-[2.5rem] group overflow-hidden relative border border-slate-200 dark:border-slate-800">
                 <div class="flex items-center gap-2 xxs:gap-3 sm:gap-5 mb-2 xxs:mb-4 sm:mb-6">
-                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-pink-500/10 text-pink-600 rounded-lg xxs:rounded-xl sm:rounded-2xl group-hover:rotate-12 transition-transform">
+                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-pink-500/10 text-pink-600 dark:text-pink-500 rounded-lg xxs:rounded-xl sm:rounded-2xl group-hover:rotate-12 transition-transform">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-6 xxs:h-6 sm:w-8 sm:h-8"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/></svg>
                     </div>
                     <h2 class="text-base xxs:text-xl xs:text-2xl sm:text-3xl font-bold">Jonas‘ TikTok</h2>
@@ -964,7 +1021,7 @@
             <!-- YouTube -->
             <div class="glass-card p-3 xxs:p-5 xs:p-6 sm:p-8 rounded-[1rem] xxs:rounded-[1.5rem] sm:rounded-[2.5rem] group overflow-hidden relative border border-slate-200 dark:border-slate-800">
                 <div class="flex items-center gap-2 xxs:gap-3 sm:gap-5 mb-2 xxs:mb-4 sm:mb-6">
-                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-red-500/10 text-red-600 rounded-lg xxs:rounded-xl sm:rounded-2xl group-hover:rotate-12 transition-transform">
+                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-red-500/10 text-red-600 dark:text-red-500 rounded-lg xxs:rounded-xl sm:rounded-2xl group-hover:rotate-12 transition-transform">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-6 xxs:h-6 sm:w-8 sm:h-8"><path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 2-2 103.38 103.38 0 0 1 15 0 2 2 0 0 1 2 2 24.12 24.12 0 0 1 0 10 2 2 0 0 1-2 2 103.38 103.38 0 0 1-15 0 2 2 0 0 1-2-2Z"/><path d="m10 15 5-3-5-3z"/></svg>
                     </div>
                     <h2 class="text-base xxs:text-xl xs:text-2xl sm:text-3xl font-bold">Jonas' YouTube</h2>
@@ -996,7 +1053,7 @@
             <!-- Tom's TikTok -->
             <div class="glass-card p-3 xxs:p-5 xs:p-6 sm:p-8 rounded-[1rem] xxs:rounded-[1.5rem] sm:rounded-[2.5rem] group overflow-hidden relative border border-slate-200 dark:border-slate-800">
                 <div class="flex items-center gap-2 xxs:gap-3 sm:gap-5 mb-2 xxs:mb-4 sm:mb-6">
-                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-pink-500/10 text-pink-600 rounded-lg xxs:rounded-xl sm:rounded-2xl group-hover:rotate-12 transition-transform">
+                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-pink-500/10 text-pink-600 dark:text-pink-500 rounded-lg xxs:rounded-xl sm:rounded-2xl group-hover:rotate-12 transition-transform">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-6 xxs:h-6 sm:w-8 sm:h-8"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/></svg>
                     </div>
                     <h2 class="text-base xxs:text-xl xs:text-2xl sm:text-3xl font-bold">Tom's TikTok</h2>
@@ -1012,9 +1069,9 @@
 
         <footer class="mt-12 xxs:mt-20 sm:mt-40 text-center reveal">
             <div class="inline-flex items-center gap-1.5 xxs:gap-2 sm:gap-4 py-1.5 px-3 xxs:py-2 xxs:px-4 sm:px-6 bg-slate-200/50 dark:bg-slate-900/50 rounded-full border border-slate-300 dark:border-slate-800 flex-wrap justify-center">
-                <span class="text-[8px] xxs:text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-500">Established 2026</span>
+                <span class="text-[8px] xxs:text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-400">Established 2026</span>
                 <div class="hidden sm:block h-4 w-px bg-slate-300 dark:bg-slate-700"></div>
-                <p class="font-bold text-[10px] xxs:text-xs sm:text-sm text-slate-900 dark:text-white">Erstellt von Jonas Johnston</p>
+                <p class="font-bold text-[10px] xxs:text-xs sm:text-sm text-slate-800 dark:text-white">Erstellt von Jonas Johnston</p>
             </div>
         </footer>
     </main>
@@ -1054,6 +1111,7 @@
         const modalBody = document.getElementById('modal-body');
         const closeModal = document.getElementById('close-modal');
         
+        const musicCardLayoutWrapper = document.getElementById('music-card-layout-wrapper');
         const musicCardWrapper = document.getElementById('music-card-wrapper');
         const musicChevron = document.getElementById('music-chevron');
         const miniTitle = document.getElementById('mini-title');
@@ -1114,7 +1172,7 @@
             status: { title: "Ausbildung & Fokus", content: "Ich absolviere aktuell meine Ausbildung zum Fachinformatiker für Systemintegration. Technik und Systeme sind meine Welt. Ich liebe es, Server aufzusetzen, Netzwerke zu konfigurieren und alles am Laufen zu halten. Mein Hyperfokus hilft mir dabei, tief in komplexe IT-Strukturen einzutauchen und Fehler zu finden, bevor sie zum Problem werden." },
             background: { title: "Hintergrund & Weg", content: "Ich bin 19 Jahre alt und lebe in einer Jugendhilfeeinrichtung. Das hat mich früh gelehrt, unabhängig zu sein und meinen eigenen Weg zu gehen. Ich sehe Herausforderungen nicht als Hindernis, sondern als Chance, zu wachsen und meine eigene Zukunft zu gestalten." },
             freizeit: { title: "Gaming & Content", content: "Wenn die Server laufen, bin ich bei Forza Horizon 5 anzutreffen. Ich streame live auf TikTok und teile meine Leidenschaft für Gaming und Technik mit der Community. Es geht mir um den Vibe, den Austausch und das Meistern neuer Challenges." },
-            menschen: { title: "Meine Wahlfamilie", content: "Da ich ohne Eltern aufgewachsen bin, sind Freunde meine gewählte Familie. Loyalität und Vertrauen stehen für mich an erster Stelle. Mein neuer Anker ist Danilo, aber Tom bleibt es mit ihm gemeinsam – wir gehen den Weg zusammen." },
+            menschen: { title: "Meine Wahlfamilie", content: "Da ich ohne Eltern aufgewachsen bin, sind Freunde meine gewählte Familie. Loyalität und Vertrauen stehen für mich an erster Stelle. Mein neuer Anker ist Danilo, aber Tom und Lukas bleiben es mit ihm gemeinsam – wir gehen den Weg zusammen." },
             techstack: { title: "Tech Stack & Skills", content: "Als angehender Systemintegrator kenne ich mich mit dem Setup und Wartung von IT-Infrastrukturen aus. Dazu gehören Windows Server, Linux-Distributionen, generelle Netzwerkkonfigurationen und intensives Hardware-Troubleshooting. Egal ob Laptops, PCs oder Smartphones – wenn was defekt ist, finde ich den Fehler." },
             setup: { title: "Mein Audio Setup", content: "Guter Sound ist ein absolutes Muss beim Zocken oder Musikhören. An meinem Rechner nutze ich die Beyerdynamic DT 770 Pro (80 Ohm) Studio-Kopfhörer für extrem klaren Klang und geschlossene Isolation. Wenn ich die Bude beschallen will, läuft das über meinen Teufel Rockster Cross Bluetooth-Speaker, der einfach heftig reinhaut." },
             labor: { title: "Labor & Projekte", content: "Meine persönliche Spielwiese. Hier baue ich komplexe Docker-Umgebungen, administriere Webserver und setze eigene APIs auf. Ich teste Netzwerkarchitekturen bis an ihre Grenzen und automatisiere Prozesse, um mein Setup stetig auf das nächste Level zu pushen." },
@@ -1366,23 +1424,38 @@
             revealObserver.observe(el);
         });
 
+        // --- DASHBOARD LOGIC FIX ---
+        let dashboardTimeout;
         window.toggleDashboard = function() {
             isDashboardOpen = !isDashboardOpen;
+            clearTimeout(dashboardTimeout); // Verhindert, dass alte Timeouts den State zerstören
+            
             if (isDashboardOpen) {
-                musicCardWrapper.classList.remove('hidden', 'dashboard-closing');
-                musicCardWrapper.classList.add('dashboard-opening');
+                musicCardLayoutWrapper.classList.remove('hidden');
+                
+                // Kurze Verzögerung, damit display:grid vom Browser gerendert wird, 
+                // bevor die Transition zu 1fr startet. Das fixt das harte Snappen.
+                setTimeout(() => {
+                    musicCardWrapper.classList.remove('dashboard-closing');
+                    musicCardWrapper.classList.add('dashboard-opening');
+                    musicCardLayoutWrapper.classList.add('is-open');
+                }, 20);
+                
                 musicChevron.style.transform = 'rotate(180deg)';
                 miniStatus.innerText = "Klicken zum Schließen";
             } else {
                 musicCardWrapper.classList.remove('dashboard-opening');
                 musicCardWrapper.classList.add('dashboard-closing');
+                musicCardLayoutWrapper.classList.remove('is-open');
+                
                 musicChevron.style.transform = 'rotate(0deg)';
-                setTimeout(() => {
+                
+                dashboardTimeout = setTimeout(() => {
                     if (!isDashboardOpen) {
-                        musicCardWrapper.classList.add('hidden');
+                        musicCardLayoutWrapper.classList.add('hidden');
                         musicCardWrapper.classList.remove('dashboard-closing');
                     }
-                }, 850); 
+                }, 900); // Exakt synchronisiert mit der 0.9s Out-Animation!
                 
                 if (mainMusicCard.classList.contains('offline')) {
                     miniStatus.innerText = "Klicken zum Öffnen";
