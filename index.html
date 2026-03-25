@@ -37,7 +37,7 @@
             /* Extrem smoothe, viskose Liquid-Curve */
             --liquid-fluid: cubic-bezier(0.25, 1, 0.35, 1.2);
             
-            /* Liquid Glass Dynamic Shadows (Statisch und GPU freundlich!) */
+            /* Liquid Glass Dynamic Shadows */
             --gl-shadow-idle: 0 15px 35px rgba(0,0,0,0.1), inset 0 1px 1px rgba(255,255,255,0.6), inset 0 -1px 2px rgba(255,255,255,0.1);
             --gl-shadow-idle-2: 0 18px 40px rgba(0,0,0,0.12), inset 0 1px 2px rgba(255,255,255,0.7), inset 0 -1px 2px rgba(255,255,255,0.15);
             --gl-shadow-idle-3: 0 12px 30px rgba(0,0,0,0.08), inset 0 1px 1px rgba(255,255,255,0.5), inset 0 -1px 1px rgba(255,255,255,0.05);
@@ -102,7 +102,8 @@
         body.low-end #status-dot { display: block !important; }
         body.low-end .eq-bars { display: none !important; }
 
-        /* FIX FÜR LOW-END MODUS: Sichtbarkeit erzwingen */
+        /* FIX FÜR LOW-END MODUS: Da Animationen deaktiviert sind, blieben die Fenster unsichtbar (opacity: 0). 
+           Hier erzwingen wir knallhart die Sichtbarkeit für alle Popups! */
         body.low-end .lyrics-open #lyrics-overlay,
         body.low-end .modal-opening .modal-content,
         body.low-end .picker-opening,
@@ -113,10 +114,13 @@
             visibility: visible !important;
             transform: none !important;
         }
+
+        /* Im Performance Mode nehmen wir massives Schwarz/Slate, da Blur deaktiviert ist */
         body.low-end .lyrics-open #lyrics-overlay {
             background-color: #020617 !important; 
         }
 
+        /* FIX: Sanfter Text Shadow im Light Mode, damit sich der Text vom Glas abhebt */
         html:not(.dark) body.liquid-glass-active main p,
         html:not(.dark) body.liquid-glass-active main h1,
         html:not(.dark) body.liquid-glass-active main h2,
@@ -125,6 +129,7 @@
         html:not(.dark) body.liquid-glass-active main div {
             text-shadow: 0 1px 2px rgba(255, 255, 255, 0.7);
         }
+        /* Music Card behält seine eigenen Schatten */
         html:not(.dark) body.liquid-glass-active #main-music-card * {
             text-shadow: none !important;
         }
@@ -141,11 +146,12 @@
         }
 
         /* ========================================================= */
-        /* --- TRUE LIQUID GLASS MODE (GPU OPTIMIZED 120FPS) ------- */
+        /* --- TRUE LIQUID GLASS MODE (APPLE VISION OS STYLE) ------ */
         /* ========================================================= */
         
         body.liquid-glass-active .mesh-gradient { display: none !important; } 
 
+        /* IDLE ZUSTAND - Milchglas im Light Mode für perfekten Kontrast */
         body.liquid-glass-active .glass-card {
             position: relative;
             overflow: hidden; 
@@ -162,17 +168,10 @@
             border-left: 1px solid rgba(255, 255, 255, 0.7) !important;
             -webkit-backdrop-filter: blur(40px) saturate(120%) !important;
             backdrop-filter: blur(40px) saturate(120%) !important;
-            
-            /* ULTIMATIVER GPU FIX: Feste Schatten und Geometrie! Keine border-radius Animationen mehr! */
-            border-radius: 28px !important;
-            box-shadow: var(--gl-shadow-idle) !important;
-            
-            /* STATIC FIX: Auf- und Ab-Schweben entfernt, Karten bleiben starr */
-            transform: translate3d(0,0,0);
-            backface-visibility: hidden;
-            will-change: transform; 
-            /* Filter/Box-Shadow Transition nur bei Hover-Zustandswechsel triggern! */
-            transition: transform 0.6s var(--apple-spring), box-shadow 0.6s var(--apple-ease), background-color 0.4s ease, min-height 0.8s var(--liquid-fluid), max-width 0.8s var(--liquid-fluid), padding 0.8s var(--liquid-fluid) !important;
+            animation: card-liquid-idle 6s ease-in-out infinite alternate !important;
+            transform: scale(1) translateY(0);
+            will-change: transform, border-radius; /* FIX: filter und box-shadow entfernt, um Mobile-VRAM-Exhaustion zu verhindern */
+            transition: transform 0.8s var(--apple-spring), box-shadow 0.8s var(--apple-spring), border-radius 0.6s var(--apple-ease), filter 0.6s var(--apple-ease), background-color 0.4s ease, min-height 1s var(--liquid-fluid), max-width 1s var(--liquid-fluid), padding 1s var(--liquid-fluid) !important;
         }
         
         .dark body.liquid-glass-active .glass-card {
@@ -202,19 +201,27 @@
             }
         }
 
-        /* Dynamisches Spotlight: GPU-Todesfalle mix-blend-mode: overlay ENTFERNT. Normaler Alpha-Verlauf. */
+        /* Dynamisches Spotlight (Glare), das der Maus/dem Finger folgt */
         body.liquid-glass-active .glass-card::before {
             content: '';
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle 350px at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255,255,255,0.3), transparent 50%);
+            background: radial-gradient(circle 350px at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255,255,255,0.6), transparent 50%);
             z-index: -1;
-            opacity: var(--glare-opacity, 0); 
+            opacity: var(--glare-opacity, 0); /* Dynamisch für Mobile und Desktop */
             transition: opacity 0.4s var(--apple-ease);
             pointer-events: none;
+            mix-blend-mode: overlay;
         }
         .dark body.liquid-glass-active .glass-card::before {
-            background: radial-gradient(circle 350px at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255,255,255,0.1), transparent 50%);
+            background: radial-gradient(circle 350px at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255,255,255,0.25), transparent 50%);
+            mix-blend-mode: screen;
+        }
+
+        @keyframes card-liquid-idle {
+            0% { border-radius: 24px; box-shadow: var(--gl-shadow-idle); }
+            50% { border-radius: 28px 20px 26px 22px; box-shadow: var(--gl-shadow-idle-2); }
+            100% { border-radius: 22px 26px 20px 28px; box-shadow: var(--gl-shadow-idle-3); }
         }
 
         /* MOBIL-FIX: Verhindert Sticky-Hovers auf Touch-Geräten! */
@@ -225,16 +232,18 @@
 
             /* HOVER: Apple-Style massive Scaling, Extreme Blurs & Brightness, dicker innerer Glow */
             body.liquid-glass-active .glass-card:not(#main-music-card):not(#mini-player-toggle):hover {
-                transform: scale(1.05) translate3d(0, -8px, 0) !important; /* Scale reduziert für weniger Layout-Stress */
+                transform: scale(1.12) translateY(-8px) !important; 
                 border-color: rgba(255, 255, 255, 0.9) !important;
                 border-top: 1px solid rgba(255, 255, 255, 1) !important; 
                 background-color: rgba(255, 255, 255, 0.3) !important; /* FIX: Mehr Milchglas beim Hovern */
-                box-shadow: 0 40px 60px -20px rgba(0, 0, 0, 0.15), 
+                box-shadow: 0 50px 80px -20px rgba(0, 0, 0, 0.2), 
                             inset 0 1px 2px rgba(255, 255, 255, 1), 
-                            inset 0 0 20px rgba(255, 255, 255, 0.8) !important; /* Hellerer innerer Glow */
-                -webkit-backdrop-filter: blur(50px) saturate(150%) brightness(1.05) !important; /* Saturate reduziert */
-                backdrop-filter: blur(50px) saturate(150%) brightness(1.05) !important;
-                border-radius: 30px !important;
+                            inset 0 0 20px rgba(255, 255, 255, 0.8), /* Hellerer innerer Glow */
+                            inset 10px 0 40px rgba(6, 182, 212, 0.15), 
+                            inset -10px 0 40px rgba(168, 85, 247, 0.15) !important;
+                -webkit-backdrop-filter: blur(60px) saturate(150%) brightness(1.05) !important; /* Saturate reduziert */
+                backdrop-filter: blur(60px) saturate(150%) brightness(1.05) !important;
+                border-radius: 32px !important;
                 z-index: 50;
             }
 
@@ -242,11 +251,13 @@
                 background-color: rgba(25, 30, 45, 0.4) !important;
                 border-top: 1px solid rgba(255, 255, 255, 0.4) !important;
                 border-color: rgba(6, 182, 212, 0.5) !important;
-                box-shadow: 0 40px 60px -20px rgba(0, 0, 0, 0.6), 
+                box-shadow: 0 50px 80px -20px rgba(0, 0, 0, 0.8), 
                             inset 0 1px 2px rgba(255, 255, 255, 0.4), 
-                            inset 0 0 20px rgba(255, 255, 255, 0.1) !important;
-                -webkit-backdrop-filter: blur(50px) saturate(250%) brightness(1.25) !important;
-                backdrop-filter: blur(50px) saturate(250%) brightness(1.25) !important;
+                            inset 0 0 20px rgba(255, 255, 255, 0.1),
+                            inset 10px 0 40px rgba(6, 182, 212, 0.3), 
+                            inset -10px 0 40px rgba(168, 85, 247, 0.3) !important;
+                -webkit-backdrop-filter: blur(60px) saturate(250%) brightness(1.25) !important;
+                backdrop-filter: blur(60px) saturate(250%) brightness(1.25) !important;
             }
 
             /* Standard Hover, wenn Liquid Glass aus ist */
@@ -258,10 +269,10 @@
 
         /* 🎈 APPLE SQUISH AUF KLICK (JS Gesteuert für Mobile-Scroll-Fix) 🎈 */
         body.liquid-glass-active .glass-card.is-squished:not(#main-music-card):not(#mini-player-toggle) {
-            transform: scale(0.94) translate3d(0, 4px, 0) !important;
-            border-radius: 36px !important;
+            transform: scale(0.92) translateY(4px) !important;
+            border-radius: 40px !important;
             transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-radius 0.2s !important;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2), inset 0 0 30px rgba(255,255,255,0.4) !important;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3), inset 0 0 30px rgba(255,255,255,0.6) !important;
             filter: brightness(0.9) !important;
         }
 
@@ -283,7 +294,7 @@
             display: none !important;
         }
         body.liquid-glass-active #music-card-layout-wrapper {
-            transition: grid-template-rows 1s var(--liquid-fluid), padding 1s var(--liquid-fluid);
+            transition: grid-template-rows 1.2s var(--liquid-fluid), padding 1.2s var(--liquid-fluid);
         }
         #music-card-layout-wrapper.is-open {
             grid-template-rows: 1fr;
@@ -296,96 +307,95 @@
             justify-content: center;
             align-items: flex-start; /* FIX: Verhindert, dass die Hauptkarte vertikal zusammengedrückt wird beim Grid-Collapse */
             overflow: visible; /* Damit die fetten Glows von Main-Music-Card nicht abgeschnitten werden! */
-            transform: translate3d(0,0,0); /* Hardware Composite Layer Fix */
         }
 
         /* 1. Modal (Info-Karten) */
         body.liquid-glass-active .modal-opening .modal-content {
-            animation: ext-pop-in 1s var(--liquid-fluid) forwards !important;
+            animation: ext-pop-in 1.2s var(--liquid-fluid) forwards !important;
             transform-origin: center center;
         }
         body.liquid-glass-active .modal-closing .modal-content {
-            animation: ext-pop-out 0.8s var(--liquid-fluid) forwards !important;
+            animation: ext-pop-out 0.9s var(--liquid-fluid) forwards !important;
             transform-origin: center center;
         }
 
         /* 2. Lyrics Overlay */
         body.liquid-glass-active .lyrics-open #lyrics-overlay {
-            animation: ext-pop-in 1s var(--liquid-fluid) forwards !important;
+            animation: ext-pop-in 1.2s var(--liquid-fluid) forwards !important;
             transform-origin: bottom center;
         }
         body.liquid-glass-active .lyrics-closing-state #lyrics-overlay {
-            animation: ext-pop-out 0.8s var(--liquid-fluid) forwards !important;
+            animation: ext-pop-out 0.9s var(--liquid-fluid) forwards !important;
             transform-origin: bottom center;
         }
 
         /* 3. Settings Menü (Zahnrad im Music Player) */
         body.liquid-glass-active .settings-opening {
             display: flex !important;
-            animation: ext-pop-in 1s var(--liquid-fluid) forwards !important;
+            animation: ext-pop-in 1.2s var(--liquid-fluid) forwards !important;
             transform-origin: top right;
         }
         body.liquid-glass-active .settings-closing {
-            animation: ext-pop-out 0.8s var(--liquid-fluid) forwards !important;
+            animation: ext-pop-out 0.9s var(--liquid-fluid) forwards !important;
             transform-origin: top right;
         }
 
         /* 4. Music Picker (Link-Auswahl) */
         body.liquid-glass-active .picker-opening {
             display: flex !important;
-            animation: ext-pop-in 1s var(--liquid-fluid) forwards !important;
+            animation: ext-pop-in 1.2s var(--liquid-fluid) forwards !important;
             transform-origin: center center;
         }
         body.liquid-glass-active .picker-closing {
-            animation: ext-pop-out 0.8s var(--liquid-fluid) forwards !important;
+            animation: ext-pop-out 0.9s var(--liquid-fluid) forwards !important;
             transform-origin: center center;
         }
 
         /* 5. Tutorial Box */
         body.liquid-glass-active .tutorial-opening {
-            animation: ext-pop-in 1s var(--liquid-fluid) forwards !important;
+            animation: ext-pop-in 1.2s var(--liquid-fluid) forwards !important;
             transform-origin: center center;
         }
         body.liquid-glass-active .tutorial-closing {
-            animation: ext-pop-out 0.8s var(--liquid-fluid) forwards !important;
+            animation: ext-pop-out 0.9s var(--liquid-fluid) forwards !important;
             transform-origin: center center;
         }
 
         /* 6. Dashboard selbst (Die Pop-Animation liegt direkt auf der Karte) */
         body.liquid-glass-active .dashboard-opening #main-music-card {
-            animation: ext-dashboard-in 1s var(--liquid-fluid) forwards !important;
+            animation: ext-dashboard-in 1.2s var(--liquid-fluid) forwards !important;
             transform-origin: top center;
         }
         body.liquid-glass-active .dashboard-closing #main-music-card {
-            animation: ext-dashboard-out 0.8s var(--liquid-fluid) forwards !important;
+            animation: ext-dashboard-out 0.9s var(--liquid-fluid) forwards !important;
             transform-origin: top center;
         }
 
-        /* Perfomante Transforms mit translate3d für GPU Offloading */
+        /* DIE EXTREMEN KEYFRAMES (Viskoses Liquid Glass) */
         @keyframes ext-pop-in {
-            0% { transform: translate3d(0, 100px, 0) scale(0.6, 1.4); opacity: 0; filter: blur(20px); }
-            50% { transform: translate3d(0, -15px, 0) scale(1.05, 0.95); opacity: 1; filter: blur(0px); }
-            75% { transform: translate3d(0, 8px, 0) scale(0.98, 1.02); }
-            100% { transform: translate3d(0, 0, 0) scale(1, 1); opacity: 1; }
+            0% { transform: translateY(120px) scale(0.4, 1.7); opacity: 0; border-radius: 100px; filter: blur(30px); }
+            45% { transform: translateY(-30px) scale(1.15, 0.85); opacity: 1; border-radius: 20px; filter: blur(0px); }
+            75% { transform: translateY(15px) scale(0.92, 1.08); border-radius: 50px; }
+            100% { transform: translateY(0) scale(1, 1); border-radius: 2.5rem; opacity: 1; }
         }
 
         @keyframes ext-pop-out {
-            0% { transform: translate3d(0, 0, 0) scale(1, 1); opacity: 1; filter: blur(0px); }
-            35% { transform: translate3d(0, -10px, 0) scale(1.05, 0.95); opacity: 1; }
-            100% { transform: translate3d(0, 150px, 0) scale(0.6, 1.4); opacity: 0; filter: blur(20px); }
+            0% { transform: translateY(0) scale(1, 1); opacity: 1; filter: blur(0px); }
+            35% { transform: translateY(-20px) scale(1.1, 0.9); opacity: 1; border-radius: 30px; }
+            100% { transform: translateY(200px) scale(0.3, 2.0); opacity: 0; border-radius: 100px; filter: blur(30px); }
         }
 
         @keyframes ext-dashboard-in {
-            0% { transform: translate3d(0, -80px, 0) scale(0.6, 1.4); opacity: 0; filter: blur(20px); }
-            50% { transform: translate3d(0, 20px, 0) scale(1.05, 0.95); opacity: 1; filter: blur(0px); }
-            75% { transform: translate3d(0, -10px, 0) scale(0.96, 1.04); }
-            100% { transform: translate3d(0, 0, 0) scale(1, 1); opacity: 1; }
+            0% { transform: translateY(-100px) scale(0.4, 1.8); opacity: 0; border-radius: 100px; filter: blur(30px); }
+            45% { transform: translateY(35px) scale(1.15, 0.85); opacity: 1; border-radius: 15px; filter: blur(0px); }
+            75% { transform: translateY(-15px) scale(0.9, 1.1); border-radius: 50px; }
+            100% { transform: translateY(0) scale(1, 1); border-radius: 3rem; opacity: 1; }
         }
 
         @keyframes ext-dashboard-out {
-            0% { transform: translate3d(0, 0, 0) scale(1, 1); opacity: 1; filter: blur(0px); }
-            35% { transform: translate3d(0, 15px, 0) scale(1.05, 0.95); opacity: 1; }
-            100% { transform: translate3d(0, -120px, 0) scale(0.6, 1.4); opacity: 0; filter: blur(20px); }
+            0% { transform: translateY(0) scale(1, 1); opacity: 1; filter: blur(0px); }
+            35% { transform: translateY(20px) scale(1.1, 0.9); opacity: 1; border-radius: 40px; }
+            100% { transform: translateY(-150px) scale(0.3, 2.0); opacity: 0; filter: blur(30px); }
         }
 
         /* --- TUTORIAL MORPHING BEIM WEITER-KLICKEN --- */
@@ -413,16 +423,16 @@
         .lyrics-closing-state #lyrics-overlay { animation: std-pop-out 0.4s var(--apple-ease) forwards; }
 
         @keyframes std-pop-in {
-            0% { opacity: 0; transform: scale(0.8) translate3d(0, -20px, 0); }
-            100% { opacity: 1; transform: scale(1) translate3d(0, 0, 0); }
+            0% { opacity: 0; transform: scale(0.8) translateY(-20px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
         }
         @keyframes std-pop-out {
-            0% { opacity: 1; transform: scale(1) translate3d(0, 0, 0); }
-            100% { opacity: 0; transform: scale(0.8) translate3d(0, 20px, 0); }
+            0% { opacity: 1; transform: scale(1) translateY(0); }
+            100% { opacity: 0; transform: scale(0.8) translateY(20px); }
         }
 
 
-        /* Apple Aura Background - GPUs GERETTET: Radial Gradients statt Blur! */
+        /* Apple Aura Background - EXTREME FARBVERMISCHUNG OHNE VRAM LAG! */
         #liquid-blobs {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; overflow: hidden; pointer-events: none;
             opacity: 0; transition: opacity 1.5s var(--apple-ease); display: none;
@@ -433,10 +443,10 @@
         
         .blob-container {
             position: absolute; width: 100%; height: 100%;
-            opacity: 0.5; /* Leicht angehoben, da Blur weg ist */
+            opacity: 0.4; /* Stark reduziert, damit der Text lesbar bleibt */
             transform: translate3d(0,0,0);
-            backface-visibility: hidden; 
-            will-change: transform; 
+            backface-visibility: hidden; /* FIX: Erzwingt GPU und verhindert WebKit-Flackern */
+            will-change: transform; /* Hardware Acceleration Override für Mobile GPUs */
             /* Langsame Rotation des gesamten Containers für ständigen Farbwechsel */
             animation: container-rotate 40s linear infinite;
         }
@@ -453,19 +463,18 @@
         .blob {
             position: absolute; 
             will-change: transform;
-            transform: translate3d(0,0,0);
             animation: blob-morph 20s ease-in-out infinite alternate;
         }
         
-        /* Die weichen Kanten kommen jetzt durch den transparenten 0-70% Verlauf */
-        .blob-1 { top: -20%; left: -20%; width: 80vw; height: 80vw; background: radial-gradient(circle, rgba(255,0,128,1) 0%, rgba(255,0,128,0) 70%); animation-delay: 0s; animation-duration: 25s; }
-        .blob-2 { top: 10%; right: -30%; width: 90vw; height: 90vw; background: radial-gradient(circle, rgba(121,40,202,1) 0%, rgba(121,40,202,0) 70%); animation-delay: -5s; animation-duration: 30s; animation-direction: alternate-reverse; }
-        .blob-3 { bottom: -30%; left: 0%; width: 80vw; height: 80vw; background: radial-gradient(circle, rgba(0,210,255,1) 0%, rgba(0,210,255,0) 70%); animation-delay: -10s; animation-duration: 22s; }
-        .blob-4 { top: 20%; left: 20%; width: 70vw; height: 70vw; background: radial-gradient(circle, rgba(255,77,77,1) 0%, rgba(255,77,77,0) 70%); animation-delay: -15s; animation-duration: 28s; animation-direction: alternate-reverse; }
+        /* Hochgesättigte, lebendige Apple-Farben als softe Verläufe (Zero-Lag Blur) */
+        .blob-1 { top: -10%; left: -10%; width: 70vw; height: 70vw; background: radial-gradient(circle, rgba(255,0,128,1) 0%, rgba(255,0,128,0) 70%); animation-delay: 0s; animation-duration: 25s; }
+        .blob-2 { top: 20%; right: -20%; width: 80vw; height: 80vw; background: radial-gradient(circle, rgba(121,40,202,1) 0%, rgba(121,40,202,0) 70%); animation-delay: -5s; animation-duration: 30s; animation-direction: alternate-reverse; }
+        .blob-3 { bottom: -20%; left: 10%; width: 70vw; height: 70vw; background: radial-gradient(circle, rgba(0,210,255,1) 0%, rgba(0,210,255,0) 70%); animation-delay: -10s; animation-duration: 22s; }
+        .blob-4 { top: 30%; left: 30%; width: 60vw; height: 60vw; background: radial-gradient(circle, rgba(255,77,77,1) 0%, rgba(255,77,77,0) 70%); animation-delay: -15s; animation-duration: 28s; animation-direction: alternate-reverse; }
         
         @keyframes container-rotate {
-            from { transform: translate3d(0,0,0) rotate(0deg) scale(1.2); }
-            to { transform: translate3d(0,0,0) rotate(360deg) scale(1.2); }
+            from { transform: rotate(0deg) scale(1.2); }
+            to { transform: rotate(360deg) scale(1.2); }
         }
 
         @keyframes blob-morph {
@@ -521,14 +530,14 @@
         .playing #ambilight-glow { animation: ambilight-pulse 6s infinite alternate ease-in-out; opacity: 0.8; }
         .dark .playing #ambilight-glow { opacity: 0.6; }
         @keyframes ambilight-pulse {
-            0% { transform: translate3d(0,0,0) scale(1); opacity: 0.6; }
-            100% { transform: translate3d(0,0,0) scale(1.05); opacity: 0.9; }
+            0% { transform: scale(1) translate3d(0,0,0); opacity: 0.6; }
+            100% { transform: scale(1.05) translate3d(0,0,0); opacity: 0.9; }
         }
 
         /* --- PARTICLES --- */
         #particles-container { position: absolute; inset: -100px; z-index: -1; overflow: hidden; pointer-events: none; opacity: 0; transition: opacity 1s ease; }
         .playing #particles-container { opacity: 1; }
-        .particle { position: absolute; bottom: 0; width: 4px; height: 4px; background: rgba(255, 255, 255, 0.4); border-radius: 50%; box-shadow: 0 0 10px rgba(255, 255, 255, 0.8); animation: float-up linear infinite; opacity: 0; transform: translate3d(0,0,0); will-change: transform; }
+        .particle { position: absolute; bottom: 0; width: 4px; height: 4px; background: rgba(255, 255, 255, 0.4); border-radius: 50%; box-shadow: 0 0 10px rgba(255, 255, 255, 0.8); animation: float-up linear infinite; opacity: 0; transform: translate3d(0,0,0); }
         @keyframes float-up { 0% { transform: translate3d(0,0,0) scale(1); opacity: 0; } 50% { opacity: 1; } 100% { transform: translate3d(0, -300px, 0) scale(0); opacity: 0; } }
         .p1 { left: 10%; animation-duration: 4s; animation-delay: 0s; } .p2 { left: 30%; animation-duration: 5s; animation-delay: 1s; width: 6px; height: 6px; }
         .p3 { left: 50%; animation-duration: 3.5s; animation-delay: 2s; } .p4 { left: 70%; animation-duration: 6s; animation-delay: 0.5s; width: 3px; height: 3px; }
@@ -537,7 +546,7 @@
 
         #ambient-bg { position: absolute; inset: -50px; z-index: 0; background-size: cover; background-position: center; filter: blur(35px) brightness(0.75) saturate(1.8); opacity: 0; transition: opacity 1s ease; transform: scale(1.1) translate3d(0,0,0); pointer-events: none; will-change: transform, opacity; }
         .playing #ambient-bg { opacity: 1; animation: ambient-drift 15s infinite alternate ease-in-out; }
-        @keyframes ambient-drift { 0% { transform: translate3d(0, 0, 0) scale(1.1); } 100% { transform: translate3d(-5px, 5px, 0) scale(1.2); } }
+        @keyframes ambient-drift { 0% { transform: scale(1.1) translate3d(0, 0, 0); } 100% { transform: scale(1.2) translate3d(-5px, 5px, 0); } }
 
         .playing #track-title, .playing #track-artist { text-shadow: 0 2px 10px rgba(0,0,0,0.8); }
         #media-container { transition: transform 0.4s var(--apple-spring); transform: translate3d(0,0,0); } #media-container:active { transform: scale(0.95) translate3d(0,0,0); }
@@ -615,20 +624,20 @@
 
         #modal-overlay { backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); transition: all 0.5s var(--apple-ease); will-change: opacity; }
         
-        /* Scrollbar Fix für Mobile */
+        /* FIX: Scrollbar Fix für Mobile - Zerstört nicht mehr das Layout */
         @media (pointer: fine) {
             ::-webkit-scrollbar { width: 8px; }
             ::-webkit-scrollbar-track { background: transparent; }
             ::-webkit-scrollbar-thumb { background: #3b82f6; border-radius: 10px; }
         }
 
-        /* Smoothed out Impact Animations */
-        .impact-media-out, .impact-text-out, .impact-lyrics-out { animation: quantumCrushOut 0.65s var(--apple-ease) forwards !important; will-change: transform, opacity, filter; transform-origin: center center !important; }
-        .impact-media-in, .impact-text-in, .impact-lyrics-in { animation: quantumBurstIn 0.8s var(--apple-spring) forwards !important; will-change: transform, opacity, filter; transform-origin: center center !important; }
+        /* Smoothed out Impact Animations to avoid clipping */
+        .impact-media-out, .impact-text-out, .impact-lyrics-out { animation: quantumCrushOut 0.65s var(--apple-ease) forwards !important; will-change: transform, opacity, filter, box-shadow; transform-origin: center center !important; }
+        .impact-media-in, .impact-text-in, .impact-lyrics-in { animation: quantumBurstIn 0.8s var(--apple-spring) forwards !important; will-change: transform, opacity, filter, drop-shadow; transform-origin: center center !important; }
         body.is-shaking #main-content, body.is-shaking #ui-controls, body.is-shaking .mesh-gradient { animation: quantumShockwave 0.5s var(--apple-ease) both !important; will-change: transform, filter; transform-origin: center center !important; }
 
-        @keyframes quantumCrushOut { 0% { transform: perspective(1200px) translate3d(0,0,0) scale(1); filter: blur(0) brightness(1) contrast(1); opacity: 1; } 20% { transform: perspective(1200px) translate3d(0,0,80px) scale(1.05); filter: blur(0) brightness(1.5) contrast(1.1); opacity: 1; } 100% { transform: perspective(1200px) translate3d(0,0,-1500px) scale(0.1); filter: blur(10px) brightness(0) contrast(2); opacity: 0; } }
-        @keyframes quantumBurstIn { 0% { transform: perspective(1200px) translate3d(0,0,-1500px) scale(0.1); filter: blur(20px) brightness(4) contrast(2); opacity: 0; } 60% { transform: perspective(1200px) translate3d(0,0,100px) scale(1.05); filter: blur(0px) brightness(1.5) contrast(1.2); opacity: 1; } 100% { transform: perspective(1200px) translate3d(0,0,0) scale(1); filter: blur(0) brightness(1) contrast(1); opacity: 1; } }
+        @keyframes quantumCrushOut { 0% { transform: perspective(1200px) translate3d(0,0,0) scale(1); filter: blur(0) brightness(1) contrast(1); opacity: 1; } 20% { transform: perspective(1200px) translate3d(0,0,80px) scale(1.05); filter: blur(0) brightness(1.5) contrast(1.1); opacity: 1; box-shadow: 0 0 30px rgba(59, 130, 246, 0.4); } 100% { transform: perspective(1200px) translate3d(0,0,-1500px) scale(0.1); filter: blur(10px) brightness(0) contrast(2); opacity: 0; box-shadow: 0 0 0px rgba(0,0,0,0); } }
+        @keyframes quantumBurstIn { 0% { transform: perspective(1200px) translate3d(0,0,-1500px) scale(0.1); filter: blur(20px) brightness(4) contrast(2); opacity: 0; drop-shadow(0 0 50px rgba(255, 255, 255, 1)); } 60% { transform: perspective(1200px) translate3d(0,0,100px) scale(1.05); filter: blur(0px) brightness(1.5) contrast(1.2); opacity: 1; drop-shadow(0 0 30px rgba(6, 182, 212, 0.6)); } 100% { transform: perspective(1200px) translate3d(0,0,0) scale(1); filter: blur(0) brightness(1) contrast(1); opacity: 1; drop-shadow(0 0 0px transparent); } }
         @keyframes quantumShockwave { 0% { transform: translate3d(0, 0, 0) scale(1); filter: blur(0) contrast(1); } 10% { transform: translate3d(-10px, 10px, 0) scale(1.02); filter: blur(1px) contrast(1.3); } 20% { transform: translate3d(15px, -8px, 0) scale(0.98); filter: contrast(1.2); } 30% { transform: translate3d(-15px, 10px, 0) scale(1.01); filter: blur(0.5px) contrast(1.1); } 40% { transform: translate3d(10px, -10px, 0) scale(1); } 50% { transform: translate3d(-5px, 5px, 0); filter: contrast(1); } 60% { transform: translate3d(5px, -5px, 0); } 70% { transform: translate3d(-3px, 3px, 0); } 80% { transform: translate3d(2px, -2px, 0); } 90% { transform: translate3d(-1px, 1px, 0); } 100% { transform: translate3d(0, 0, 0); filter: blur(0) contrast(1); } }
 
         #global-emp-shockwave { position: fixed; top: 0; left: 0; width: 100px; height: 100px; margin-top: -50px; margin-left: -50px; border-radius: 50%; pointer-events: none; opacity: 0; z-index: 99999; will-change: transform, opacity; }
@@ -636,14 +645,14 @@
         .dark .trigger-emp { animation: empDetonationDark 4s var(--apple-ease) forwards !important; mix-blend-mode: screen; }
 
         @keyframes empDetonationLight { 
-            0% { transform: translate3d(0,0,0) scale(0.1); opacity: 1; box-shadow: 0 0 30px 10px rgba(37, 99, 235, 0.6), inset 0 0 30px rgba(37, 99, 235, 0.6); } 
+            0% { transform: scale(0.1) translate3d(0,0,0); opacity: 1; box-shadow: 0 0 30px 10px rgba(37, 99, 235, 0.6), inset 0 0 30px rgba(37, 99, 235, 0.6); } 
             30% { opacity: 0.8; box-shadow: 0 0 60px 20px rgba(147, 51, 234, 0.5), inset 0 0 60px rgba(147, 51, 234, 0.4); } 
-            100% { transform: translate3d(0,0,0) scale(20); opacity: 0; box-shadow: 0 0 10px 2px transparent, inset 0 0 10px transparent; } 
+            100% { transform: scale(20) translate3d(0,0,0); opacity: 0; box-shadow: 0 0 10px 2px transparent, inset 0 0 10px transparent; } 
         }
         @keyframes empDetonationDark { 
-            0% { transform: translate3d(0,0,0) scale(0.1); opacity: 1; box-shadow: 0 0 60px 30px rgba(6, 182, 212, 1), inset 0 0 60px rgba(6, 182, 212, 1); } 
+            0% { transform: scale(0.1) translate3d(0,0,0); opacity: 1; box-shadow: 0 0 60px 30px rgba(6, 182, 212, 1), inset 0 0 60px rgba(6, 182, 212, 1); } 
             30% { opacity: 0.8; box-shadow: 0 0 90px 20px rgba(168, 85, 247, 0.8), inset 0 0 90px rgba(168, 85, 247, 0.5); } 
-            100% { transform: translate3d(0,0,0) scale(20); opacity: 0; box-shadow: 0 0 30px 5px rgba(59, 130, 246, 0), inset 0 0 30px transparent; } 
+            100% { transform: scale(20) translate3d(0,0,0); opacity: 0; box-shadow: 0 0 30px 5px rgba(59, 130, 246, 0), inset 0 0 30px transparent; } 
         }
 
         /* --- TUTORIAL HIGHLIGHTING --- */
@@ -678,6 +687,7 @@
     <div id="global-emp-shockwave"></div>
     
     <!-- UI CONTROLS -->
+    <!-- FIX: Verschachtelten backdrop-blur-sm hier entfernt, da die inneren Buttons schon blur haben. Vermeidet Mobile Glitches -->
     <div id="ui-controls" class="fixed top-2 right-2 xs:top-4 xs:right-4 sm:top-6 sm:right-6 z-[110] flex items-center gap-1.5 sm:gap-3 bg-white/10 dark:bg-black/10 backdrop-blur-sm p-1 rounded-2xl sm:rounded-3xl border border-white/20 dark:border-slate-800/50 shadow-sm">
         <button id="liquid-glass-toggle" aria-label="Liquid Glass umschalten" class="group p-2 sm:p-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-lg rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-700 hover:ring-2 hover:ring-cyan-500 transition-all active:scale-90" title="Apple Liquid Glass Modus">
             <svg id="liquid-glass-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-500 transition-colors group-hover:text-cyan-500 sm:w-6 sm:h-6"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
@@ -752,7 +762,7 @@
             </h2>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5 xxs:gap-3 xs:gap-4 sm:gap-5">
-                <div onclick="openModal('status')" role="button" tabindex="0" class="glass-card rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] p-3 xxs:p-4 xs:p-5 sm:p-6 flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group">
+                <div onclick="openModal('status')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group">
                     <div class="p-1.5 xxs:p-2 sm:p-3 bg-blue-500/10 text-blue-600 dark:text-blue-500 rounded-lg xxs:rounded-xl group-hover:bg-blue-500 group-hover:text-white transition-all shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                     </div>
@@ -762,7 +772,7 @@
                     </div>
                 </div>
 
-                <div onclick="openModal('background')" role="button" tabindex="0" class="glass-card rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] p-3 xxs:p-4 xs:p-5 sm:p-6 flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group">
+                <div onclick="openModal('background')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group">
                     <div class="p-1.5 xxs:p-2 sm:p-3 bg-purple-500/10 text-purple-600 dark:text-purple-500 rounded-lg xxs:rounded-xl group-hover:bg-purple-500 group-hover:text-white transition-all shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                     </div>
@@ -772,7 +782,7 @@
                     </div>
                 </div>
 
-                <div onclick="openModal('freizeit')" role="button" tabindex="0" class="glass-card rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] p-3 xxs:p-4 xs:p-5 sm:p-6 flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group">
+                <div onclick="openModal('freizeit')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group">
                     <div class="p-1.5 xxs:p-2 sm:p-3 bg-orange-500/10 text-orange-600 dark:text-orange-500 rounded-lg xxs:rounded-xl group-hover:bg-orange-500 group-hover:text-white transition-all shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 12h.01M18 12h.01M15 10h.01M15 14h.01"/></svg>
                     </div>
@@ -782,17 +792,17 @@
                     </div>
                 </div>
 
-                <div onclick="openModal('menschen')" role="button" tabindex="0" class="glass-card rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] p-3 xxs:p-4 xs:p-5 sm:p-6 flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group">
+                <div onclick="openModal('menschen')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group">
                     <div class="p-1.5 xxs:p-2 sm:p-3 bg-red-500/10 text-red-600 dark:text-red-500 rounded-lg xxs:rounded-xl group-hover:bg-red-500 group-hover:text-white transition-all shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
                     </div>
                     <div>
                         <h3 class="font-bold text-sm xxs:text-base sm:text-lg mb-0.5 xxs:mb-1">Menschen</h3>
-                        <p class="text-slate-700 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">Tom & Danilo (Anker)...</p>
+                        <p class="text-slate-700 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">Tom, Lukas & Danilo (Anker)...</p>
                     </div>
                 </div>
 
-                <div onclick="openModal('techstack')" role="button" tabindex="0" class="glass-card rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] p-3 xxs:p-4 xs:p-5 sm:p-6 flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group">
+                <div onclick="openModal('techstack')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group">
                     <div class="p-1.5 xxs:p-2 sm:p-3 bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 rounded-lg xxs:rounded-xl group-hover:bg-emerald-500 group-hover:text-white transition-all shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="M20 16V7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v9m16 0H4m16 0 1.28 2.55a1 1 0 0 1-.9 1.45H3.62a1 1 0 0 1-.9-1.45L4 16"/></svg>
                     </div>
@@ -802,7 +812,7 @@
                     </div>
                 </div>
 
-                <div onclick="openModal('setup')" role="button" tabindex="0" class="glass-card rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] p-3 xxs:p-4 xs:p-5 sm:p-6 flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group">
+                <div onclick="openModal('setup')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group">
                     <div class="p-1.5 xxs:p-2 sm:p-3 bg-cyan-500/10 text-cyan-600 dark:text-cyan-500 rounded-lg xxs:rounded-xl group-hover:bg-cyan-500 group-hover:text-white transition-all shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
                     </div>
@@ -812,7 +822,7 @@
                     </div>
                 </div>
 
-                <div onclick="openModal('labor')" role="button" tabindex="0" class="glass-card rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] p-3 xxs:p-4 xs:p-5 sm:p-6 flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group">
+                <div onclick="openModal('labor')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group">
                     <div class="p-1.5 xxs:p-2 sm:p-3 bg-yellow-500/10 text-yellow-600 dark:text-yellow-500 rounded-lg xxs:rounded-xl group-hover:bg-yellow-500 group-hover:text-white transition-all shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="M10 2v7.31"/><path d="M14 9.3V1.99"/><path d="M8.5 2h7"/><path d="M14 9.3a6.5 6.5 0 1 1-4 0"/><path d="M5.52 16h12.96"/></svg>
                     </div>
@@ -822,7 +832,7 @@
                     </div>
                 </div>
 
-                <div onclick="openModal('contact')" role="button" tabindex="0" class="glass-card rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] p-3 xxs:p-4 xs:p-5 sm:p-6 flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group">
+                <div onclick="openModal('contact')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group">
                     <div class="p-1.5 xxs:p-2 sm:p-3 bg-indigo-500/10 text-indigo-600 dark:text-indigo-500 rounded-lg xxs:rounded-xl group-hover:bg-indigo-500 group-hover:text-white transition-all shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
                     </div>
@@ -843,7 +853,7 @@
             </h2>
             <p class="text-[8px] xxs:text-[10px] xs:text-xs text-slate-600 dark:text-slate-400 mb-4 xxs:mb-6 sm:mb-10">*Hinweis: Der Time-Sync ist auf -800ms optimiert.</p>
             
-            <div id="mini-player-toggle" onclick="toggleDashboard()" role="button" tabindex="0" class="glass-card rounded-[1.2rem] xxs:rounded-2xl sm:rounded-[2rem] w-full max-w-[400px] mx-auto p-2 xxs:p-3 sm:p-4 flex items-center justify-between cursor-pointer group mb-3 xxs:mb-4 sm:mb-6 relative z-20 hover:scale-[1.01] transition-all">
+            <div id="mini-player-toggle" onclick="toggleDashboard()" role="button" tabindex="0" class="glass-card w-full max-w-[400px] mx-auto p-2 xxs:p-3 sm:p-4 rounded-[1.2rem] xxs:rounded-2xl sm:rounded-[2rem] flex items-center justify-between cursor-pointer group mb-3 xxs:mb-4 sm:mb-6 relative z-20 hover:scale-[1.01] hover:shadow-xl transition-all">
                 <div class="flex items-center gap-2 xxs:gap-3 sm:gap-4 flex-1 min-w-0">
                     <div id="mini-icon-bg" class="w-8 h-8 xxs:w-10 xxs:h-10 sm:w-12 sm:h-12 shrink-0 rounded-lg xxs:rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-500 flex items-center justify-center transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
@@ -862,7 +872,7 @@
             <div id="music-card-layout-wrapper" class="hidden">
                 <div id="music-card-wrapper" class="relative origin-top flex justify-center w-full">
                     
-                    <div id="main-music-card" class="glass-card rounded-[1.5rem] xxs:rounded-3xl md:rounded-[3rem] offline w-full max-w-[400px] mx-auto p-3 xxs:p-4 xs:p-6 md:p-10 text-center relative z-10 flex flex-col justify-center items-center">
+                    <div id="main-music-card" class="glass-card offline w-full max-w-[400px] mx-auto p-3 xxs:p-4 xs:p-6 md:p-10 rounded-[1.5rem] xxs:rounded-3xl md:rounded-[3rem] text-center relative z-10 flex flex-col justify-center items-center">
                         
                         <div class="absolute inset-0 rounded-[inherit] overflow-hidden z-0 pointer-events-none">
                             <div id="ambient-bg"></div>
@@ -873,21 +883,22 @@
                         <div id="ambilight-glow"></div>
 
                         <div id="particles-container">
-                            <div class="particle p1"></div><div class="particle p2"></div>
-                            <div class="particle p3"></div><div class="particle p4"></div>
-                            <div class="particle p5"></div><div class="particle p6"></div>
-                            <div class="particle p7"></div><div class="particle p8"></div>
-                            <div class="particle p1" style="left:15%; animation-delay:1.2s"></div>
-                            <div class="particle p3" style="left:65%; animation-delay:2.7s"></div>
-                            <div class="particle p5" style="left:85%; animation-delay:0.3s"></div>
-                            <div class="particle p8" style="left:45%; animation-delay:3.1s"></div>
-                        </div>
+                        <div class="particle p1"></div><div class="particle p2"></div>
+                        <div class="particle p3"></div><div class="particle p4"></div>
+                        <div class="particle p5"></div><div class="particle p6"></div>
+                        <div class="particle p7"></div><div class="particle p8"></div>
+                        <div class="particle p1" style="left:15%; animation-delay:1.2s"></div>
+                        <div class="particle p3" style="left:65%; animation-delay:2.7s"></div>
+                        <div class="particle p5" style="left:85%; animation-delay:0.3s"></div>
+                        <div class="particle p8" style="left:45%; animation-delay:3.1s"></div>
+                    </div>
 
-                        <!-- Das Lyrics Fenster -->
-                        <div id="lyrics-overlay" class="absolute inset-0 bg-slate-950/85 backdrop-blur-2xl rounded-[1.5rem] xxs:rounded-3xl md:rounded-[3rem] flex-col p-2 xxs:p-3 xs:p-6 md:p-8 z-40 transition-all duration-500 opacity-0 pointer-events-none flex border border-white/10 invisible">
-                            
-                            <div class="flex items-center justify-between gap-1.5 xxs:gap-2 sm:gap-4 mb-3 xxs:mb-4 sm:mb-6 shrink-0 w-full bg-white/10 p-1.5 xxs:p-2 xs:p-3 sm:p-4 rounded-lg xxs:rounded-xl sm:rounded-2xl border border-white/10 relative z-[100]">
-                                <div class="flex items-center gap-1.5 xxs:gap-2 sm:gap-3 min-w-0 flex-1">
+                    <!-- Das Lyrics Fenster -->
+                    <!-- FIX: bg-black/50 gegen sattes bg-slate-950/85 ausgetauscht und backdrop-blur-2xl hinzugefügt für brutale Lesbarkeit! -->
+                    <div id="lyrics-overlay" class="absolute inset-0 bg-slate-950/85 backdrop-blur-2xl rounded-[1.5rem] xxs:rounded-3xl md:rounded-[3rem] flex-col p-2 xxs:p-3 xs:p-6 md:p-8 z-40 transition-all duration-500 opacity-0 pointer-events-none flex border border-white/10 invisible">
+                        
+                        <div class="flex items-center justify-between gap-1.5 xxs:gap-2 sm:gap-4 mb-3 xxs:mb-4 sm:mb-6 shrink-0 w-full bg-white/10 p-1.5 xxs:p-2 xs:p-3 sm:p-4 rounded-lg xxs:rounded-xl sm:rounded-2xl border border-white/10 relative z-[100]">
+                            <div class="flex items-center gap-1.5 xxs:gap-2 sm:gap-3 min-w-0 flex-1">
                                     <img id="lyrics-mini-art" src="" alt="Album Art" class="w-6 h-6 xxs:w-8 xxs:h-8 sm:w-10 sm:h-10 rounded shadow-md object-cover shrink-0">
                                     <div class="text-left min-w-0">
                                         <p id="lyrics-mini-title" class="text-[10px] xxs:text-xs sm:text-sm font-bold text-white truncate">Titel</p>
@@ -1008,7 +1019,7 @@
 
         <div class="grid grid-cols-1 gap-3 xxs:gap-4 xs:gap-6 sm:gap-8 reveal">
             <!-- Tic-Tac-Toe -->
-            <div class="glass-card rounded-[1rem] xxs:rounded-[1.5rem] sm:rounded-[2.5rem] p-3 xxs:p-5 xs:p-6 sm:p-8 flex items-center justify-between cursor-pointer group relative">
+            <div class="glass-card p-3 xxs:p-5 xs:p-6 sm:p-8 rounded-[1rem] xxs:rounded-[1.5rem] sm:rounded-[2.5rem] group overflow-hidden relative border border-slate-200 dark:border-slate-800">
                 <div class="flex items-center gap-2 xxs:gap-3 sm:gap-5 mb-2 xxs:mb-4 sm:mb-6">
                     <div class="p-1.5 xxs:p-2 sm:p-3 bg-indigo-500/10 text-indigo-600 dark:text-indigo-500 rounded-lg xxs:rounded-xl sm:rounded-2xl group-hover:rotate-12 transition-transform">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-6 xxs:h-6 sm:w-8 sm:h-8"><path d="M3 3h18v18H3zM21 9H3M21 15H3M9 3v18M15 3v18"/></svg>
@@ -1024,7 +1035,7 @@
             </div>
 
             <!-- TikTok -->
-            <div class="glass-card rounded-[1rem] xxs:rounded-[1.5rem] sm:rounded-[2.5rem] p-3 xxs:p-5 xs:p-6 sm:p-8 flex items-center justify-between cursor-pointer group relative">
+            <div class="glass-card p-3 xxs:p-5 xs:p-6 sm:p-8 rounded-[1rem] xxs:rounded-[1.5rem] sm:rounded-[2.5rem] group overflow-hidden relative border border-slate-200 dark:border-slate-800">
                 <div class="flex items-center gap-2 xxs:gap-3 sm:gap-5 mb-2 xxs:mb-4 sm:mb-6">
                     <div class="p-1.5 xxs:p-2 sm:p-3 bg-pink-500/10 text-pink-600 dark:text-pink-500 rounded-lg xxs:rounded-xl sm:rounded-2xl group-hover:rotate-12 transition-transform">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-6 xxs:h-6 sm:w-8 sm:h-8"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/></svg>
@@ -1040,7 +1051,7 @@
             </div>
 
             <!-- YouTube -->
-            <div class="glass-card rounded-[1rem] xxs:rounded-[1.5rem] sm:rounded-[2.5rem] p-3 xxs:p-5 xs:p-6 sm:p-8 flex items-center justify-between cursor-pointer group relative">
+            <div class="glass-card p-3 xxs:p-5 xs:p-6 sm:p-8 rounded-[1rem] xxs:rounded-[1.5rem] sm:rounded-[2.5rem] group overflow-hidden relative border border-slate-200 dark:border-slate-800">
                 <div class="flex items-center gap-2 xxs:gap-3 sm:gap-5 mb-2 xxs:mb-4 sm:mb-6">
                     <div class="p-1.5 xxs:p-2 sm:p-3 bg-red-500/10 text-red-600 dark:text-red-500 rounded-lg xxs:rounded-xl sm:rounded-2xl group-hover:rotate-12 transition-transform">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-6 xxs:h-6 sm:w-8 sm:h-8"><path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 2-2 103.38 103.38 0 0 1 15 0 2 2 0 0 1 2 2 24.12 24.12 0 0 1 0 10 2 2 0 0 1-2 2 103.38 103.38 0 0 1-15 0 2 2 0 0 1-2-2Z"/><path d="m10 15 5-3-5-3z"/></svg>
@@ -1056,7 +1067,7 @@
             </div>
 
             <!-- GitHub -->
-            <div class="glass-card rounded-[1rem] xxs:rounded-[1.5rem] sm:rounded-[2.5rem] p-3 xxs:p-5 xs:p-6 sm:p-8 flex items-center justify-between cursor-pointer group relative">
+            <div class="glass-card p-3 xxs:p-5 xs:p-6 sm:p-8 rounded-[1rem] xxs:rounded-[1.5rem] sm:rounded-[2.5rem] group overflow-hidden relative border border-slate-200 dark:border-slate-800">
                 <div class="flex items-center gap-2 xxs:gap-3 sm:gap-5 mb-2 xxs:mb-4 sm:mb-6">
                     <div class="p-1.5 xxs:p-2 sm:p-3 bg-slate-500/10 text-slate-900 dark:text-white rounded-lg xxs:rounded-xl sm:rounded-2xl group-hover:rotate-12 transition-transform">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-6 xxs:h-6 sm:w-8 sm:h-8"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
@@ -1072,7 +1083,7 @@
             </div>
 
             <!-- Tom's TikTok -->
-            <div class="glass-card rounded-[1rem] xxs:rounded-[1.5rem] sm:rounded-[2.5rem] p-3 xxs:p-5 xs:p-6 sm:p-8 flex items-center justify-between cursor-pointer group relative">
+            <div class="glass-card p-3 xxs:p-5 xs:p-6 sm:p-8 rounded-[1rem] xxs:rounded-[1.5rem] sm:rounded-[2.5rem] group overflow-hidden relative border border-slate-200 dark:border-slate-800">
                 <div class="flex items-center gap-2 xxs:gap-3 sm:gap-5 mb-2 xxs:mb-4 sm:mb-6">
                     <div class="p-1.5 xxs:p-2 sm:p-3 bg-pink-500/10 text-pink-600 dark:text-pink-500 rounded-lg xxs:rounded-xl sm:rounded-2xl group-hover:rotate-12 transition-transform">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-6 xxs:h-6 sm:w-8 sm:h-8"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/></svg>
@@ -1088,7 +1099,7 @@
             </div>
 
             <!-- Lukas' TikTok -->
-            <div class="glass-card rounded-[1rem] xxs:rounded-[1.5rem] sm:rounded-[2.5rem] p-3 xxs:p-5 xs:p-6 sm:p-8 flex items-center justify-between cursor-pointer group relative">
+            <div class="glass-card p-3 xxs:p-5 xs:p-6 sm:p-8 rounded-[1rem] xxs:rounded-[1.5rem] sm:rounded-[2.5rem] group overflow-hidden relative border border-slate-200 dark:border-slate-800">
                 <div class="flex items-center gap-2 xxs:gap-3 sm:gap-5 mb-2 xxs:mb-4 sm:mb-6">
                     <div class="p-1.5 xxs:p-2 sm:p-3 bg-pink-500/10 text-pink-600 dark:text-pink-500 rounded-lg xxs:rounded-xl sm:rounded-2xl group-hover:rotate-12 transition-transform">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-6 xxs:h-6 sm:w-8 sm:h-8"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/></svg>
@@ -1209,7 +1220,7 @@
             status: { title: "Ausbildung & Fokus", content: "Ich absolviere aktuell meine Ausbildung zum Fachinformatiker für Systemintegration. Technik und Systeme sind meine Welt. Ich liebe es, Server aufzusetzen, Netzwerke zu konfigurieren und alles am Laufen zu halten. Mein Hyperfokus hilft mir dabei, tief in komplexe IT-Strukturen einzutauchen und Fehler zu finden, bevor sie zum Problem werden." },
             background: { title: "Hintergrund & Weg", content: "Ich bin 19 Jahre alt und lebe in einer Jugendhilfeeinrichtung. Das hat mich früh gelehrt, unabhängig zu sein und meinen eigenen Weg zu gehen. Ich sehe Herausforderungen nicht als Hindernis, sondern als Chance, zu wachsen und meine eigene Zukunft zu gestalten." },
             freizeit: { title: "Gaming & Content", content: "Wenn die Server laufen, bin ich bei Forza Horizon 5 anzutreffen. Ich streame live auf TikTok und teile meine Leidenschaft für Gaming und Technik mit der Community. Es geht mir um den Vibe, den Austausch und das Meistern neuer Challenges." },
-            menschen: { title: "Meine Wahlfamilie", content: "Da ich ohne Eltern aufgewachsen bin, sind Freunde meine gewählte Familie. Loyalität und Vertrauen stehen für mich an erster Stelle. Mein neuer Anker ist Danilo, aber Tom bleibt es mit ihm gemeinsam – wir gehen den Weg zusammen." },
+            menschen: { title: "Meine Wahlfamilie", content: "Da ich ohne Eltern aufgewachsen bin, sind Freunde meine gewählte Familie. Loyalität und Vertrauen stehen für mich an erster Stelle. Mein neuer Anker ist Danilo, aber Tom und Lukas bleiben es mit ihm gemeinsam – wir gehen den Weg zusammen." },
             techstack: { title: "Tech Stack & Skills", content: "Als angehender Systemintegrator kenne ich mich mit dem Setup und Wartung von IT-Infrastrukturen aus. Dazu gehören Windows Server, Linux-Distributionen, generelle Netzwerkkonfigurationen und intensives Hardware-Troubleshooting. Egal ob Laptops, PCs oder Smartphones – wenn was defekt ist, finde ich den Fehler." },
             setup: { title: "Mein Audio Setup", content: "Guter Sound ist ein absolutes Muss beim Zocken oder Musikhören. An meinem Rechner nutze ich die Beyerdynamic DT 770 Pro (80 Ohm) Studio-Kopfhörer für extrem klaren Klang und geschlossene Isolation. Wenn ich die Bude beschallen will, läuft das über meinen Teufel Rockster Cross Bluetooth-Speaker, der einfach heftig reinhaut." },
             labor: { title: "Labor & Projekte", content: "Meine persönliche Spielwiese. Hier baue ich komplexe Docker-Umgebungen, administriere Webserver und setze eigene APIs auf. Ich teste Netzwerkarchitekturen bis an ihre Grenzen und automatisiere Prozesse, um mein Setup stetig auf das nächste Level zu pushen." },
@@ -1958,13 +1969,9 @@
                 }
             }
 
-            // O(1) PERFORMANCE FIX FÜR DIE GPU-KILLER-SCHLEIFE
-            // Wir iterieren nicht mehr jeden Frame durch den GANZEN Song, 
-            // sondern räumen nur 1x auf, wenn die Zeile wechselt!
             if (newActiveIdx !== currentLyricIndex || forceScroll || forceRefresh) {
                 document.querySelectorAll('.lyric-line.active').forEach(el => el.classList.remove('active'));
                 currentLyricIndex = newActiveIdx;
-                
                 if (currentLyricIndex !== -1) {
                     const activeEl = document.getElementById(`lyric-line-${currentLyricIndex}`);
                     if (activeEl) {
@@ -1972,106 +1979,96 @@
                         if (forceScroll || !isUserScrolling) scrollToLyricElement(activeEl);
                     }
                 }
+            }
 
-                // Bulk-Update für verpasste und zukünftige Zeilen (Nur 1x beim Zeilenwechsel!)
-                if (!document.body.classList.contains('low-end')) {
-                    parsedLyrics.forEach((line, idx) => {
-                        if (idx < currentLyricIndex) {
-                            line.tokens.forEach((tok, wIdx) => {
-                                const wordSpan = document.getElementById(`word-${idx}-${wIdx}`);
-                                if (wordSpan) {
-                                    wordSpan.style.setProperty('--fill-percent', '100%');
-                                    wordSpan.classList.add('word-passed');
-                                    wordSpan.classList.remove('word-active');
+            if (document.body.classList.contains('low-end')) return;
+
+            parsedLyrics.forEach((line, idx) => {
+                if (idx < currentLyricIndex) {
+                    line.tokens.forEach((tok, wIdx) => {
+                        const wordSpan = document.getElementById(`word-${idx}-${wIdx}`);
+                        if (wordSpan) {
+                            wordSpan.style.setProperty('--fill-percent', '100%');
+                            wordSpan.classList.add('word-passed');
+                            wordSpan.classList.remove('word-active');
+                        }
+                        for(let cIdx=0; cIdx<tok.cleanText.length; cIdx++) {
+                            const charSpan = document.getElementById(`char-${idx}-${wIdx}-${cIdx}`);
+                            if(charSpan && !charSpan.classList.contains('char-passed')) {
+                                charSpan.classList.add('char-passed');
+                                charSpan.classList.remove('char-active');
+                            }
+                        }
+                    });
+                } else if (idx === currentLyricIndex) {
+                    line.tokens.forEach((tok, wIdx) => {
+                        const wordSpan = document.getElementById(`word-${idx}-${wIdx}`);
+                        if (!wordSpan) return;
+
+                        let tokProgress = 0;
+                        if (syncMs >= tok.timeMs + tok.duration) {
+                            tokProgress = 1; 
+                        } else if (syncMs > tok.timeMs) {
+                            tokProgress = (syncMs - tok.timeMs) / tok.duration; 
+                        }
+                        
+                        if (tokProgress > 0 && tokProgress < 1) {
+                            wordSpan.classList.add('word-active');
+                            wordSpan.classList.remove('word-passed');
+                        } else if (tokProgress >= 1) {
+                            wordSpan.classList.remove('word-active');
+                            wordSpan.classList.add('word-passed');
+                        } else {
+                            wordSpan.classList.remove('word-active', 'word-passed');
+                        }
+
+                        let tokLen = tok.cleanText.length;
+                        let currentTokWeightPassed = 0;
+                        
+                        for(let cIdx=0; cIdx<tokLen; cIdx++) {
+                            let cChar = tok.cleanText[cIdx];
+                            let cWeight = 0;
+                            if (!/[.,!?]/.test(cChar)) {
+                                cWeight = getCharWeight(cChar, tok.isPhraseEnd, /[aeiouy]/.test(cChar.toLowerCase()));
+                            }
+                            if (cWeight === 0 && tok.rawWeight > 0) cWeight = tok.rawWeight * 0.05; 
+                            
+                            let charStartRatio = tok.rawWeight > 0 ? (currentTokWeightPassed / tok.rawWeight) : 0;
+                            let charEndRatio = tok.rawWeight > 0 ? ((currentTokWeightPassed + cWeight) / tok.rawWeight) : 1;
+                            
+                            const charSpan = document.getElementById(`char-${idx}-${wIdx}-${cIdx}`);
+                            if(charSpan) {
+                                if (tokProgress === 0) {
+                                    charSpan.classList.remove('char-passed', 'char-active');
+                                } else if (tokProgress >= charEndRatio) {
+                                    charSpan.classList.add('char-passed');
+                                    charSpan.classList.remove('char-active');
+                                } else if (tokProgress >= charStartRatio && tokProgress < charEndRatio) {
+                                    charSpan.classList.add('char-active');
+                                    charSpan.classList.remove('char-passed');
+                                } else {
+                                    charSpan.classList.remove('char-passed', 'char-active');
                                 }
-                                for(let cIdx=0; cIdx<tok.cleanText.length; cIdx++) {
-                                    const charSpan = document.getElementById(`char-${idx}-${wIdx}-${cIdx}`);
-                                    if(charSpan && !charSpan.classList.contains('char-passed')) {
-                                        charSpan.classList.add('char-passed');
-                                        charSpan.classList.remove('char-active');
-                                    }
-                                }
-                            });
-                        } else if (idx > currentLyricIndex) {
-                            line.tokens.forEach((tok, wIdx) => {
-                                const wordSpan = document.getElementById(`word-${idx}-${wIdx}`);
-                                if (wordSpan) {
-                                    wordSpan.style.setProperty('--fill-percent', '0%');
-                                    wordSpan.classList.remove('word-active', 'word-passed');
-                                }
-                                for(let cIdx=0; cIdx<tok.cleanText.length; cIdx++) {
-                                    const charSpan = document.getElementById(`char-${idx}-${wIdx}-${cIdx}`);
-                                    if(charSpan) charSpan.classList.remove('char-passed', 'char-active');
-                                }
-                            });
+                            }
+                            currentTokWeightPassed += cWeight;
+                        }
+                        
+                        wordSpan.style.setProperty('--fill-percent', `${tokProgress * 100}%`);
+                    });
+                } else {
+                    line.tokens.forEach((tok, wIdx) => {
+                        const wordSpan = document.getElementById(`word-${idx}-${wIdx}`);
+                        if (wordSpan) {
+                            wordSpan.style.setProperty('--fill-percent', '0%');
+                            wordSpan.classList.remove('word-active', 'word-passed');
+                        }
+                        for(let cIdx=0; cIdx<tok.cleanText.length; cIdx++) {
+                            const charSpan = document.getElementById(`char-${idx}-${wIdx}-${cIdx}`);
+                            if(charSpan) charSpan.classList.remove('char-passed', 'char-active');
                         }
                     });
                 }
-            }
-
-            // IN JEDEM FRAME: Nur die aktuelle Zeile anfassen! (Killt den 94% GPU Bug)
-            if (currentLyricIndex !== -1 && !document.body.classList.contains('low-end')) {
-                const line = parsedLyrics[currentLyricIndex];
-                
-                line.tokens.forEach((tok, wIdx) => {
-                    const wordSpan = document.getElementById(`word-${currentLyricIndex}-${wIdx}`);
-                    if (!wordSpan) return;
-
-                    let tokProgress = 0;
-                    if (syncMs >= tok.timeMs + tok.duration) {
-                        tokProgress = 1; 
-                    } else if (syncMs > tok.timeMs) {
-                        tokProgress = (syncMs - tok.timeMs) / tok.duration; 
-                    }
-                    
-                    if (tokProgress > 0 && tokProgress < 1) {
-                        wordSpan.classList.add('word-active');
-                        wordSpan.classList.remove('word-passed');
-                    } else if (tokProgress >= 1) {
-                        wordSpan.classList.remove('word-active');
-                        wordSpan.classList.add('word-passed');
-                    } else {
-                        wordSpan.classList.remove('word-active', 'word-passed');
-                    }
-
-                    let tokLen = tok.cleanText.length;
-                    let currentTokWeightPassed = 0;
-                    
-                    for(let cIdx=0; cIdx<tokLen; cIdx++) {
-                        let cChar = tok.cleanText[cIdx];
-                        let cWeight = 0;
-                        if (!/[.,!?]/.test(cChar)) {
-                            cWeight = getCharWeight(cChar, tok.isPhraseEnd, /[aeiouy]/.test(cChar.toLowerCase()));
-                        }
-                        if (cWeight === 0 && tok.rawWeight > 0) cWeight = tok.rawWeight * 0.05; 
-                        
-                        let charStartRatio = tok.rawWeight > 0 ? (currentTokWeightPassed / tok.rawWeight) : 0;
-                        let charEndRatio = tok.rawWeight > 0 ? ((currentTokWeightPassed + cWeight) / tok.rawWeight) : 1;
-                        
-                        const charSpan = document.getElementById(`char-${currentLyricIndex}-${wIdx}-${cIdx}`);
-                        if(charSpan) {
-                            if (tokProgress === 0) {
-                                if(charSpan.classList.contains('char-passed') || charSpan.classList.contains('char-active')) {
-                                    charSpan.classList.remove('char-passed', 'char-active');
-                                }
-                            } else if (tokProgress >= charEndRatio) {
-                                if(!charSpan.classList.contains('char-passed')) {
-                                    charSpan.classList.add('char-passed');
-                                    charSpan.classList.remove('char-active');
-                                }
-                            } else if (tokProgress >= charStartRatio && tokProgress < charEndRatio) {
-                                if(!charSpan.classList.contains('char-active')) {
-                                    charSpan.classList.add('char-active');
-                                    charSpan.classList.remove('char-passed');
-                                }
-                            }
-                        }
-                        currentTokWeightPassed += cWeight;
-                    }
-                    
-                    wordSpan.style.setProperty('--fill-percent', `${tokProgress * 100}%`);
-                });
-            }
+            });
         }
 
         function animateLoop(now) {
@@ -2594,58 +2591,43 @@
         // --- 3D LIQUID GLASS MOUSE INTERACTION TRACKING ---------- //
         // ========================================================= //
         document.querySelectorAll('.glass-card').forEach(card => {
+            // Nur das Hover Tracking für das Grid (Main Card soll clean bleiben)
             if (card.id === 'main-music-card' || card.id === 'mini-player-toggle') return; 
 
-            // Caching der Geometrie, um reflows bei mousemove/touchmove zu killen!
-            let cardRectCache = null;
-            let isHovering = false;
-
             const updateSpotlight = (clientX, clientY) => {
-                if (!document.body.classList.contains('liquid-glass-active') || document.body.classList.contains('low-end')) return;
+                if (!document.body.classList.contains('liquid-glass-active') || document.body.classList.contains('low-end')) {
+                    card.style.setProperty('--mouse-x', '50%');
+                    card.style.setProperty('--mouse-y', '50%');
+                    return;
+                }
+                const rect = card.getBoundingClientRect();
+                const x = clientX - rect.left;
+                const y = clientY - rect.top;
                 
-                // Nutze den Cache statt getBoundingClientRect() für ZERO CPU-Lagg
-                if (!cardRectCache) cardRectCache = card.getBoundingClientRect();
-                
-                const x = clientX - cardRectCache.left;
-                const y = clientY - cardRectCache.top;
-                
-                requestAnimationFrame(() => {
-                    card.style.setProperty('--mouse-x', `${x}px`);
-                    card.style.setProperty('--mouse-y', `${y}px`);
-                });
+                card.style.setProperty('--mouse-x', `${x}px`);
+                card.style.setProperty('--mouse-y', `${y}px`);
             };
 
             const resetSpotlight = () => {
-                isHovering = false;
-                cardRectCache = null; // Cache löschen, falls die Karte später scrollt
                 if (!document.body.classList.contains('liquid-glass-active')) return;
                 
+                // Für Mobile: Glare ausblenden
                 if(window.matchMedia("(hover: none)").matches) {
                     card.style.setProperty('--glare-opacity', '0');
                 }
                 
                 setTimeout(() => {
-                    if (!isHovering) {
-                        card.style.setProperty('--mouse-x', '50%');
-                        card.style.setProperty('--mouse-y', '50%');
-                    }
+                    card.style.setProperty('--mouse-x', '50%');
+                    card.style.setProperty('--mouse-y', '50%');
                 }, 400); 
             };
 
-            // Desktop Events
-            card.addEventListener('mouseenter', () => { isHovering = true; cardRectCache = card.getBoundingClientRect(); });
-            card.addEventListener('mousemove', (e) => {
-                if(!isHovering) { isHovering = true; cardRectCache = card.getBoundingClientRect(); }
-                updateSpotlight(e.clientX, e.clientY);
-            });
+            // Mouse Events
+            card.addEventListener('mousemove', (e) => updateSpotlight(e.clientX, e.clientY));
             card.addEventListener('mouseleave', resetSpotlight);
-            card.addEventListener('mousedown', () => card.classList.add('is-squished'));
-            card.addEventListener('mouseup', () => card.classList.remove('is-squished'));
             
-            // Touch Events (Mobile Support)
+            // Touch Events (Mobile Support Fix)
             card.addEventListener('touchstart', (e) => {
-                isHovering = true;
-                cardRectCache = card.getBoundingClientRect();
                 if(window.matchMedia("(hover: none)").matches) {
                     card.style.setProperty('--glare-opacity', '1');
                 }
@@ -2654,7 +2636,7 @@
             }, {passive: true});
             
             card.addEventListener('touchmove', (e) => {
-                card.classList.remove('is-squished'); // FIX SCROLLING
+                card.classList.remove('is-squished'); // FIX SCROLLING: Entfernt den Squish beim Swipen!
                 updateSpotlight(e.touches[0].clientX, e.touches[0].clientY);
             }, {passive: true});
             
@@ -2666,6 +2648,10 @@
                 card.classList.remove('is-squished');
                 resetSpotlight();
             });
+
+            // Desktop active state JS
+            card.addEventListener('mousedown', () => card.classList.add('is-squished'));
+            card.addEventListener('mouseup', () => card.classList.remove('is-squished'));
         });
 
         (async () => {
