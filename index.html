@@ -1608,16 +1608,18 @@
             }
         };
 
+        let lyricsSettingsTimeout;
         window.toggleLyricsSettings = function() {
             isLyricsSettingsOpen = !isLyricsSettingsOpen;
             if (!lyricsSettingsMenu) return;
+            clearTimeout(lyricsSettingsTimeout);
             if (isLyricsSettingsOpen) {
                 lyricsSettingsMenu.classList.remove('hidden', 'settings-closing');
                 lyricsSettingsMenu.classList.add('settings-opening');
             } else {
                 lyricsSettingsMenu.classList.remove('settings-opening');
                 lyricsSettingsMenu.classList.add('settings-closing');
-                setTimeout(() => {
+                lyricsSettingsTimeout = setTimeout(() => {
                     lyricsSettingsMenu.classList.add('hidden');
                     lyricsSettingsMenu.classList.remove('settings-closing');
                 }, 850);
