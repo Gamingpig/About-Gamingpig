@@ -179,7 +179,6 @@
         }
         .dark body.liquid-glass-active .glass-card::before {
             background: radial-gradient(circle 350px at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255,255,255,0.15), transparent 50%);
-            /* mix-blend-mode screen hier gelöscht, da extrem GPU lastig */
         }
 
         @keyframes card-liquid-idle {
@@ -250,7 +249,7 @@
             display: flex !important;
             animation: ext-pop-in 1.2s var(--liquid-fluid) forwards !important;
             transform-origin: center center;
-            will-change: transform, opacity; /* Filter entfernt */
+            will-change: transform, opacity;
         }
         
         body.liquid-glass-active .modal-closing .modal-content,
@@ -260,7 +259,7 @@
         body.liquid-glass-active .tutorial-closing {
             animation: ext-pop-out 0.9s var(--liquid-fluid) forwards !important;
             transform-origin: center center;
-            will-change: transform, opacity; /* Filter entfernt */
+            will-change: transform, opacity;
         }
 
         body.liquid-glass-active .dashboard-opening #main-music-card { animation: ext-dashboard-in 1.2s var(--liquid-fluid) forwards !important; transform-origin: top center; will-change: transform, opacity; }
@@ -297,52 +296,6 @@
             0% { transform: scale(1); }
             50% { transform: scale(0.95); opacity: 0.7; }
             100% { transform: scale(1); }
-        }
-        
-        body.liquid-glass-active .modal-closing .modal-content,
-        body.liquid-glass-active .lyrics-closing-state #lyrics-overlay,
-        body.liquid-glass-active .settings-closing,
-        body.liquid-glass-active .picker-closing,
-        body.liquid-glass-active .tutorial-closing {
-            animation: ext-pop-out 0.9s var(--liquid-fluid) forwards !important;
-            transform-origin: center center;
-            will-change: transform, opacity, filter;
-        }
-
-        body.liquid-glass-active .dashboard-opening #main-music-card { animation: ext-dashboard-in 1.2s var(--liquid-fluid) forwards !important; transform-origin: top center; will-change: transform, opacity, filter; }
-        body.liquid-glass-active .dashboard-closing #main-music-card { animation: ext-dashboard-out 0.9s var(--liquid-fluid) forwards !important; transform-origin: top center; will-change: transform, opacity, filter; }
-
-        @keyframes ext-pop-in {
-            0% { transform: translate3d(0, 120px, 0) scale(0.4, 1.7); opacity: 0; border-radius: 100px; filter: blur(30px); }
-            45% { transform: translate3d(0, -30px, 0) scale(1.15, 0.85); opacity: 1; border-radius: 20px; filter: blur(0px); }
-            75% { transform: translate3d(0, 15px, 0) scale(0.92, 1.08); border-radius: 50px; }
-            100% { transform: translate3d(0, 0, 0) scale(1, 1); border-radius: 2.5rem; opacity: 1; }
-        }
-
-        @keyframes ext-pop-out {
-            0% { transform: translate3d(0, 0, 0) scale(1, 1); opacity: 1; filter: blur(0px); }
-            35% { transform: translate3d(0, -20px, 0) scale(1.1, 0.9); opacity: 1; border-radius: 30px; }
-            100% { transform: translate3d(0, 200px, 0) scale(0.3, 2.0); opacity: 0; border-radius: 100px; filter: blur(30px); }
-        }
-
-        @keyframes ext-dashboard-in {
-            0% { transform: translate3d(0, -100px, 0) scale(0.4, 1.8); opacity: 0; border-radius: 100px; filter: blur(30px); }
-            45% { transform: translate3d(0, 35px, 0) scale(1.15, 0.85); opacity: 1; border-radius: 15px; filter: blur(0px); }
-            75% { transform: translate3d(0, -15px, 0) scale(0.9, 1.1); border-radius: 50px; }
-            100% { transform: translate3d(0, 0, 0) scale(1, 1); border-radius: 3rem; opacity: 1; }
-        }
-
-        @keyframes ext-dashboard-out {
-            0% { transform: translate3d(0, 0, 0) scale(1, 1); opacity: 1; filter: blur(0px); }
-            35% { transform: translate3d(0, 20px, 0) scale(1.1, 0.9); opacity: 1; border-radius: 40px; }
-            100% { transform: translate3d(0, -150px, 0) scale(0.3, 2.0); opacity: 0; filter: blur(30px); }
-        }
-
-        /* --- TUTORIAL MORPHING --- */
-        @keyframes tutorial-morph {
-            0% { transform: scale(1); filter: blur(0px); }
-            50% { transform: scale(0.95); filter: blur(8px); }
-            100% { transform: scale(1); filter: blur(0px); }
         }
         body.liquid-glass-active .tutorial-morphing { animation: tutorial-morph 0.5s var(--liquid-fluid) !important; }
 
@@ -501,14 +454,14 @@
             ::-webkit-scrollbar-thumb { background: #3b82f6; border-radius: 10px; }
         }
 
-        /* DIE IMPACT ANIMATIONEN SIND ZURÜCK - OHNE BLUR FILTER IN KEYFRAMES! */
-        .impact-media-out, .impact-text-out, .impact-lyrics-out { animation: quantumCrushOut 0.65s var(--apple-ease) forwards !important; will-change: transform, opacity, box-shadow; transform-origin: center center !important; }
-        .impact-media-in, .impact-text-in, .impact-lyrics-in { animation: quantumBurstIn 0.8s var(--apple-spring) forwards !important; will-change: transform, opacity, drop-shadow; transform-origin: center center !important; }
-        body.is-shaking #main-content, body.is-shaking #ui-controls, body.is-shaking .mesh-gradient { animation: quantumShockwave 0.5s var(--apple-ease) both !important; will-change: transform; transform-origin: center center !important; }
+        /* DIE IMPACT ANIMATIONEN SIND ZURÜCK MIT BLUR UND BOX-SHADOW! */
+        .impact-media-out, .impact-text-out, .impact-lyrics-out { animation: quantumCrushOut 0.65s var(--apple-ease) forwards !important; will-change: transform, opacity, filter, box-shadow; transform-origin: center center !important; }
+        .impact-media-in, .impact-text-in, .impact-lyrics-in { animation: quantumBurstIn 0.8s var(--apple-spring) forwards !important; will-change: transform, opacity, filter, drop-shadow; transform-origin: center center !important; }
+        body.is-shaking #main-content, body.is-shaking #ui-controls, body.is-shaking .mesh-gradient { animation: quantumShockwave 0.5s var(--apple-ease) both !important; will-change: transform, filter; transform-origin: center center !important; }
 
-        @keyframes quantumCrushOut { 0% { transform: perspective(1200px) translate3d(0,0,0) scale(1); opacity: 1; } 20% { transform: perspective(1200px) translate3d(0,0,80px) scale(1.05); opacity: 1; box-shadow: 0 0 30px rgba(59, 130, 246, 0.4); } 100% { transform: perspective(1200px) translate3d(0,0,-1500px) scale(0.1); opacity: 0; box-shadow: 0 0 0px rgba(0,0,0,0); } }
-        @keyframes quantumBurstIn { 0% { transform: perspective(1200px) translate3d(0,0,-1500px) scale(0.1); opacity: 0; drop-shadow(0 0 50px rgba(255, 255, 255, 1)); } 60% { transform: perspective(1200px) translate3d(0,0,100px) scale(1.05); opacity: 1; drop-shadow(0 0 30px rgba(6, 182, 212, 0.6)); } 100% { transform: perspective(1200px) translate3d(0,0,0) scale(1); opacity: 1; drop-shadow(0 0 0px transparent); } }
-        @keyframes quantumShockwave { 0% { transform: translate3d(0, 0, 0) scale(1); } 10% { transform: translate3d(-10px, 10px, 0) scale(1.02); } 20% { transform: translate3d(15px, -8px, 0) scale(0.98); } 30% { transform: translate3d(-15px, 10px, 0) scale(1.01); } 40% { transform: translate3d(10px, -10px, 0) scale(1); } 50% { transform: translate3d(-5px, 5px, 0); } 60% { transform: translate3d(5px, -5px, 0); } 70% { transform: translate3d(-3px, 3px, 0); } 80% { transform: translate3d(2px, -2px, 0); } 90% { transform: translate3d(-1px, 1px, 0); } 100% { transform: translate3d(0, 0, 0); } }
+        @keyframes quantumCrushOut { 0% { transform: perspective(1200px) translate3d(0,0,0) scale(1); filter: blur(0) brightness(1) contrast(1); opacity: 1; } 20% { transform: perspective(1200px) translate3d(0,0,80px) scale(1.05); filter: blur(0) brightness(1.5) contrast(1.1); opacity: 1; box-shadow: 0 0 30px rgba(59, 130, 246, 0.4); } 100% { transform: perspective(1200px) translate3d(0,0,-1500px) scale(0.1); filter: blur(10px) brightness(0) contrast(2); opacity: 0; box-shadow: 0 0 0px rgba(0,0,0,0); } }
+        @keyframes quantumBurstIn { 0% { transform: perspective(1200px) translate3d(0,0,-1500px) scale(0.1); filter: blur(20px) brightness(4) contrast(2); opacity: 0; drop-shadow(0 0 50px rgba(255, 255, 255, 1)); } 60% { transform: perspective(1200px) translate3d(0,0,100px) scale(1.05); filter: blur(0px) brightness(1.5) contrast(1.2); opacity: 1; drop-shadow(0 0 30px rgba(6, 182, 212, 0.6)); } 100% { transform: perspective(1200px) translate3d(0,0,0) scale(1); filter: blur(0) brightness(1) contrast(1); opacity: 1; drop-shadow(0 0 0px transparent); } }
+        @keyframes quantumShockwave { 0% { transform: translate3d(0, 0, 0) scale(1); filter: blur(0) contrast(1); } 10% { transform: translate3d(-10px, 10px, 0) scale(1.02); filter: blur(1px) contrast(1.3); } 20% { transform: translate3d(15px, -8px, 0) scale(0.98); filter: contrast(1.2); } 30% { transform: translate3d(-15px, 10px, 0) scale(1.01); filter: blur(0.5px) contrast(1.1); } 40% { transform: translate3d(10px, -10px, 0) scale(1); } 50% { transform: translate3d(-5px, 5px, 0); filter: contrast(1); } 60% { transform: translate3d(5px, -5px, 0); } 70% { transform: translate3d(-3px, 3px, 0); } 80% { transform: translate3d(2px, -2px, 0); } 90% { transform: translate3d(-1px, 1px, 0); } 100% { transform: translate3d(0, 0, 0); filter: blur(0) contrast(1); } }
 
         #global-emp-shockwave { position: fixed; top: 0; left: 0; width: 100px; height: 100px; margin-top: -50px; margin-left: -50px; border-radius: 50%; pointer-events: none; opacity: 0; z-index: 99999; will-change: transform, opacity; }
         .trigger-emp { animation: empDetonationLight 4s var(--apple-ease) forwards !important; }
@@ -876,7 +829,8 @@
             </div>
         </section>
 
-        <div class="grid grid-cols-2 gap-3 xxs:gap-4 xs:gap-6 sm:gap-8 reveal">
+        <!-- HIER IST DEIN EINSPALTIGES GRID FÜR GAMES UND SOCIALS -->
+        <div class="grid grid-cols-1 gap-3 xxs:gap-4 xs:gap-6 sm:gap-8 reveal">
             <!-- Tic-Tac-Toe -->
             <div class="glass-card p-3 xxs:p-5 xs:p-6 sm:p-8 rounded-[1rem] xxs:rounded-[1.5rem] sm:rounded-[2.5rem] group overflow-hidden relative border border-slate-200 dark:border-slate-800">
                 <div class="flex items-center gap-2 xxs:gap-3 sm:gap-5 mb-2 xxs:mb-4 sm:mb-6">
