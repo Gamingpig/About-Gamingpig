@@ -30,11 +30,8 @@
             --apple-spring: cubic-bezier(0.32, 0.72, 0, 1);
             --apple-ease: cubic-bezier(0.25, 0.1, 0.25, 1);
             --apple-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
-            --liquid-flow: cubic-bezier(0.4, 0, 0.2, 1);
-            --crazy-wobble: cubic-bezier(0.68, -0.55, 0.265, 1.55);
-            /* Ultra extreme Curve für die rein/raus Pop-Animationen */
-            --ultra-wobble: cubic-bezier(0.68, -0.85, 0.265, 2.5);
-            /* Extrem smoothe, viskose Liquid-Curve */
+            
+            /* Viskose Liquid-Curve für die deepen Morph-Animationen */
             --liquid-fluid: cubic-bezier(0.25, 1, 0.35, 1.2);
             
             /* Liquid Glass Dynamic Shadows */
@@ -52,12 +49,13 @@
         html, body {
             width: 100%;
             max-width: 100vw;
-            overflow-x: hidden; /* FIX: 'clip' verursacht auf vielen Mobile-Browsern schwere Darstellungsfehler */
-            -webkit-overflow-scrolling: touch; /* Mobile Scroll Fix */
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
         }
 
         body {
             font-family: 'Inter', sans-serif;
+            text-rendering: optimizeSpeed; /* Performance Hack */
             transition: background-color 0.5s var(--apple-ease), color 0.5s var(--apple-ease);
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
@@ -76,51 +74,20 @@
         body.low-end .glass-card:not(#main-music-card):not(#mini-player-toggle):hover { transform: none !important; box-shadow: none !important; border-radius: inherit !important; }
         
         body.low-end #main-music-card.lyrics-open { background: #0f172a !important; border-color: #1e293b !important; box-shadow: none !important; }
-        body.low-end .lyrics-open #lyrics-overlay { background: #1e293b !important; }
+        body.low-end .lyrics-open #lyrics-overlay { background: #020617 !important; opacity: 1 !important; visibility: visible !important; transform: none !important; }
         
         body.low-end .lyric-word, 
         body.low-end .lyric-char {
-            color: inherit !important;
-            background: none !important;
-            -webkit-text-fill-color: inherit !important;
-            text-shadow: none !important;
-            opacity: 1 !important;
-            filter: none !important;
-            transform: none !important;
+            color: inherit !important; background: none !important; -webkit-text-fill-color: inherit !important; text-shadow: none !important; opacity: 1 !important; filter: none !important; transform: none !important;
         }
-        body.low-end .lyric-line {
-            color: rgba(255, 255, 255, 0.4) !important;
-            opacity: 1 !important;
-        }
-        body.low-end .lyric-line.active {
-            color: #ffffff !important;
-            text-shadow: 0 0 15px rgba(255, 255, 255, 0.5) !important;
-            font-size: 1.05em !important;
+        body.low-end .lyric-line { color: rgba(255, 255, 255, 0.4) !important; opacity: 1 !important; }
+        body.low-end .lyric-line.active { color: #ffffff !important; text-shadow: 0 0 15px rgba(255, 255, 255, 0.5) !important; font-size: 1.05em !important; }
+        #status-dot { display: none; } body.low-end #status-dot { display: block !important; } body.low-end .eq-bars { display: none !important; }
+
+        body.low-end .modal-opening .modal-content, body.low-end .picker-opening, body.low-end .settings-opening, body.low-end .tutorial-opening, body.low-end .dashboard-opening #main-music-card {
+            opacity: 1 !important; visibility: visible !important; transform: none !important;
         }
 
-        #status-dot { display: none; }
-        body.low-end #status-dot { display: block !important; }
-        body.low-end .eq-bars { display: none !important; }
-
-        /* FIX FÜR LOW-END MODUS: Da Animationen deaktiviert sind, blieben die Fenster unsichtbar (opacity: 0). 
-           Hier erzwingen wir knallhart die Sichtbarkeit für alle Popups! */
-        body.low-end .lyrics-open #lyrics-overlay,
-        body.low-end .modal-opening .modal-content,
-        body.low-end .picker-opening,
-        body.low-end .settings-opening,
-        body.low-end .tutorial-opening,
-        body.low-end .dashboard-opening #main-music-card {
-            opacity: 1 !important;
-            visibility: visible !important;
-            transform: none !important;
-        }
-
-        /* Im Performance Mode nehmen wir massives Schwarz/Slate, da Blur deaktiviert ist */
-        body.low-end .lyrics-open #lyrics-overlay {
-            background-color: #020617 !important; 
-        }
-
-        /* FIX: Sanfter Text Shadow im Light Mode, damit sich der Text vom Glas abhebt */
         html:not(.dark) body.liquid-glass-active main p,
         html:not(.dark) body.liquid-glass-active main h1,
         html:not(.dark) body.liquid-glass-active main h2,
@@ -129,7 +96,6 @@
         html:not(.dark) body.liquid-glass-active main div {
             text-shadow: 0 1px 2px rgba(255, 255, 255, 0.7);
         }
-        /* Music Card behält seine eigenen Schatten */
         html:not(.dark) body.liquid-glass-active #main-music-card * {
             text-shadow: none !important;
         }
@@ -146,76 +112,74 @@
         }
 
         /* ========================================================= */
-        /* --- TRUE LIQUID GLASS MODE (APPLE VISION OS STYLE) ------ */
+        /* --- TRUE LIQUID GLASS MODE (FULL EFFECTS RESTORED) ------ */
         /* ========================================================= */
         
         body.liquid-glass-active .mesh-gradient { display: none !important; } 
 
-        /* IDLE ZUSTAND - Milchglas im Light Mode für perfekten Kontrast */
+        /* IDLE ZUSTAND - GPU Beschleunigung forciert */
         body.liquid-glass-active .glass-card {
             position: relative;
             overflow: hidden; 
-            background: linear-gradient(120deg, 
-                rgba(255, 255, 255, 0.5) 0%, 
-                rgba(255, 255, 255, 0.15) 35%, 
-                rgba(255, 255, 255, 0.6) 50%, /* Sharp Glare */
-                rgba(255, 255, 255, 0.15) 65%, 
-                rgba(255, 255, 255, 0.4) 100%
-            ) !important;
+            background: linear-gradient(120deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.15) 35%, rgba(255, 255, 255, 0.6) 50%, rgba(255, 255, 255, 0.15) 65%, rgba(255, 255, 255, 0.4) 100%) !important;
             background-size: 250% 250% !important;
             border: 1px solid rgba(255, 255, 255, 0.6) !important;
-            border-top: 1px solid rgba(255, 255, 255, 0.9) !important; /* Extreme Lichtkante oben */
+            border-top: 1px solid rgba(255, 255, 255, 0.9) !important;
             border-left: 1px solid rgba(255, 255, 255, 0.7) !important;
-            -webkit-backdrop-filter: blur(40px) saturate(120%) !important;
-            backdrop-filter: blur(40px) saturate(120%) !important;
-            animation: card-liquid-idle 6s ease-in-out infinite alternate !important;
-            transform: scale(1) translateY(0);
-            will-change: transform, border-radius; /* FIX: filter und box-shadow entfernt, um Mobile-VRAM-Exhaustion zu verhindern */
-            transition: transform 0.8s var(--apple-spring), box-shadow 0.8s var(--apple-spring), border-radius 0.6s var(--apple-ease), filter 0.6s var(--apple-ease), background-color 0.4s ease, min-height 1s var(--liquid-fluid), max-width 1s var(--liquid-fluid), padding 1s var(--liquid-fluid) !important;
+            
+            /* GPU SAVER: Blur massiv reduziert für die vielen kleinen Karten im Idle */
+            -webkit-backdrop-filter: blur(8px) saturate(120%) !important;
+            backdrop-filter: blur(8px) saturate(120%) !important;
+            
+            /* Idle Animation für kleine Karten deaktiviert um VRAM zu sparen */
+            border-radius: 24px !important;
+            box-shadow: var(--gl-shadow-idle) !important;
+            
+            /* HARDWARE ACCELERATION HACKS */
+            transform: translate3d(0,0,0);
+            backface-visibility: hidden;
+            will-change: transform; 
+            transition: transform 0.6s var(--apple-spring), box-shadow 0.6s var(--apple-spring), border-radius 0.4s var(--apple-ease), background-color 0.4s ease, backdrop-filter 0.4s ease !important;
         }
         
         .dark body.liquid-glass-active .glass-card {
-            background: linear-gradient(120deg, 
-                rgba(15, 23, 42, 0.3) 0%, 
-                rgba(255, 255, 255, 0.01) 35%, 
-                rgba(255, 255, 255, 0.12) 50%, 
-                rgba(255, 255, 255, 0.01) 65%, 
-                rgba(15, 23, 42, 0.2) 100%
-            ) !important;
+            background: linear-gradient(120deg, rgba(15, 23, 42, 0.3) 0%, rgba(255, 255, 255, 0.01) 35%, rgba(255, 255, 255, 0.12) 50%, rgba(255, 255, 255, 0.01) 65%, rgba(15, 23, 42, 0.2) 100%) !important;
             border-top: 1px solid rgba(255, 255, 255, 0.25) !important;
             border-left: 1px solid rgba(255, 255, 255, 0.1) !important;
             border-color: rgba(255, 255, 255, 0.08) !important;
-            -webkit-backdrop-filter: blur(40px) saturate(200%) brightness(1.15) !important;
-            backdrop-filter: blur(40px) saturate(200%) brightness(1.15) !important;
+            /* GPU SAVER */
+            -webkit-backdrop-filter: blur(8px) saturate(150%) brightness(1.1) !important;
+            backdrop-filter: blur(8px) saturate(150%) brightness(1.1) !important;
         }
 
-        /* MOBILE GPU LAGG FIX FÜR ANDROID CHROMIUM (Pixel 8 Pro) */
-        @media (max-width: 768px) {
-            body.liquid-glass-active .glass-card {
-                -webkit-backdrop-filter: blur(25px) saturate(120%) !important;
-                backdrop-filter: blur(25px) saturate(120%) !important;
-            }
-            .dark body.liquid-glass-active .glass-card {
-                -webkit-backdrop-filter: blur(25px) saturate(200%) brightness(1.15) !important;
-                backdrop-filter: blur(25px) saturate(200%) brightness(1.15) !important;
-            }
+        /* Voller Blur und fette Idle-Animation NUR für die großen/wichtigen Container */
+        body.liquid-glass-active #main-music-card,
+        body.liquid-glass-active #mini-player-toggle,
+        body.liquid-glass-active .modal-content {
+            -webkit-backdrop-filter: blur(30px) saturate(150%) !important;
+            backdrop-filter: blur(30px) saturate(150%) !important;
+            animation: card-liquid-idle 8s ease-in-out infinite alternate !important;
+        }
+        .dark body.liquid-glass-active #main-music-card,
+        .dark body.liquid-glass-active #mini-player-toggle,
+        .dark body.liquid-glass-active .modal-content {
+            -webkit-backdrop-filter: blur(30px) saturate(200%) brightness(1.15) !important;
+            backdrop-filter: blur(30px) saturate(200%) brightness(1.15) !important;
         }
 
-        /* Dynamisches Spotlight (Glare), das der Maus/dem Finger folgt */
         body.liquid-glass-active .glass-card::before {
             content: '';
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: radial-gradient(circle 350px at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255,255,255,0.6), transparent 50%);
             z-index: -1;
-            opacity: var(--glare-opacity, 0); /* Dynamisch für Mobile und Desktop */
+            opacity: var(--glare-opacity, 0);
             transition: opacity 0.4s var(--apple-ease);
             pointer-events: none;
             mix-blend-mode: overlay;
         }
         .dark body.liquid-glass-active .glass-card::before {
-            background: radial-gradient(circle 350px at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255,255,255,0.25), transparent 50%);
-            mix-blend-mode: screen;
+            background: radial-gradient(circle 350px at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255,255,255,0.15), transparent 50%);
+            /* mix-blend-mode screen hier gelöscht, da extrem GPU lastig */
         }
 
         @keyframes card-liquid-idle {
@@ -224,280 +188,207 @@
             100% { border-radius: 22px 26px 20px 28px; box-shadow: var(--gl-shadow-idle-3); }
         }
 
-        /* MOBIL-FIX: Verhindert Sticky-Hovers auf Touch-Geräten! */
         @media (hover: hover) and (pointer: fine) {
-            body.liquid-glass-active .glass-card:hover::before {
-                opacity: 1;
-            }
+            body.liquid-glass-active .glass-card:hover::before { opacity: 1; }
 
-            /* HOVER: Apple-Style massive Scaling, Extreme Blurs & Brightness, dicker innerer Glow */
             body.liquid-glass-active .glass-card:not(#main-music-card):not(#mini-player-toggle):hover {
-                transform: scale(1.12) translateY(-8px) !important; 
+                transform: scale(1.12) translateY(-8px) translate3d(0,0,0) !important; 
                 border-color: rgba(255, 255, 255, 0.9) !important;
                 border-top: 1px solid rgba(255, 255, 255, 1) !important; 
-                background-color: rgba(255, 255, 255, 0.3) !important; /* FIX: Mehr Milchglas beim Hovern */
-                box-shadow: 0 50px 80px -20px rgba(0, 0, 0, 0.2), 
-                            inset 0 1px 2px rgba(255, 255, 255, 1), 
-                            inset 0 0 20px rgba(255, 255, 255, 0.8), /* Hellerer innerer Glow */
-                            inset 10px 0 40px rgba(6, 182, 212, 0.15), 
-                            inset -10px 0 40px rgba(168, 85, 247, 0.15) !important;
-                -webkit-backdrop-filter: blur(60px) saturate(150%) brightness(1.05) !important; /* Saturate reduziert */
-                backdrop-filter: blur(60px) saturate(150%) brightness(1.05) !important;
+                background-color: rgba(255, 255, 255, 0.4) !important;
+                box-shadow: 0 50px 80px -20px rgba(0, 0, 0, 0.2), inset 0 1px 2px rgba(255, 255, 255, 1), inset 0 0 20px rgba(255, 255, 255, 0.8), inset 10px 0 40px rgba(6, 182, 212, 0.15), inset -10px 0 40px rgba(168, 85, 247, 0.15) !important;
+                /* VOLLER BLUR BEIM HOVER! */
+                -webkit-backdrop-filter: blur(30px) saturate(150%) brightness(1.05) !important; 
+                backdrop-filter: blur(30px) saturate(150%) brightness(1.05) !important;
                 border-radius: 32px !important;
                 z-index: 50;
             }
 
             .dark body.liquid-glass-active .glass-card:not(#main-music-card):not(#mini-player-toggle):hover {
-                background-color: rgba(25, 30, 45, 0.4) !important;
-                border-top: 1px solid rgba(255, 255, 255, 0.4) !important;
+                background-color: rgba(25, 30, 45, 0.5) !important;
                 border-color: rgba(6, 182, 212, 0.5) !important;
-                box-shadow: 0 50px 80px -20px rgba(0, 0, 0, 0.8), 
-                            inset 0 1px 2px rgba(255, 255, 255, 0.4), 
-                            inset 0 0 20px rgba(255, 255, 255, 0.1),
-                            inset 10px 0 40px rgba(6, 182, 212, 0.3), 
-                            inset -10px 0 40px rgba(168, 85, 247, 0.3) !important;
-                -webkit-backdrop-filter: blur(60px) saturate(250%) brightness(1.25) !important;
-                backdrop-filter: blur(60px) saturate(250%) brightness(1.25) !important;
+                border-top: 1px solid rgba(255, 255, 255, 0.4) !important;
+                box-shadow: 0 50px 80px -20px rgba(0, 0, 0, 0.8), inset 0 1px 2px rgba(255, 255, 255, 0.4), inset 0 0 20px rgba(255, 255, 255, 0.1), inset 10px 0 40px rgba(6, 182, 212, 0.3), inset -10px 0 40px rgba(168, 85, 247, 0.3) !important;
+                /* VOLLER BLUR BEIM HOVER! */
+                -webkit-backdrop-filter: blur(30px) saturate(250%) brightness(1.25) !important;
+                backdrop-filter: blur(30px) saturate(250%) brightness(1.25) !important;
             }
 
-            /* Standard Hover, wenn Liquid Glass aus ist */
             body:not(.liquid-glass-active) .glass-card:not(#main-music-card):not(#mini-player-toggle):hover {
                 transform: translateY(-6px) scale(1.02) translate3d(0,0,0);
                 border-color: #3b82f6; box-shadow: 0 15px 30px -10px rgba(59, 130, 246, 0.15);
             }
         }
 
-        /* 🎈 APPLE SQUISH AUF KLICK (JS Gesteuert für Mobile-Scroll-Fix) 🎈 */
+        /* APPLE SQUISH */
         body.liquid-glass-active .glass-card.is-squished:not(#main-music-card):not(#mini-player-toggle) {
-            transform: scale(0.92) translateY(4px) !important;
+            transform: scale(0.92) translateY(4px) translate3d(0,0,0) !important;
             border-radius: 40px !important;
             transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-radius 0.2s !important;
             box-shadow: 0 5px 15px rgba(0,0,0,0.3), inset 0 0 30px rgba(255,255,255,0.6) !important;
             filter: brightness(0.9) !important;
         }
 
-
         /* ========================================================= */
-        /* --- CRAZY FANCY WINDOW OPEN/CLOSE ANIMATIONS (ÜBERALL) -- */
+        /* --- CRAZY FANCY WINDOW OPEN/CLOSE ANIMATIONS (RESTORED) - */
         /* ========================================================= */
 
-        /* --- LAYOUT SHIFT FIX FÜR DAS DASHBOARD --- */
         #music-card-layout-wrapper {
-            display: grid;
-            grid-template-rows: 0fr;
+            display: grid; grid-template-rows: 0fr; width: 100%; padding-top: 0;
             transition: grid-template-rows 0.6s var(--apple-spring), padding 0.6s var(--apple-spring);
-            padding-top: 0;
-            width: 100%;
         }
-        /* FIX: Die ID ist im CSS extrem stark. Deswegen zwingen wir hier display: none für .hidden, damit keine 0px Linien im Renderbug bleiben! */
-        #music-card-layout-wrapper.hidden {
-            display: none !important;
-        }
-        body.liquid-glass-active #music-card-layout-wrapper {
-            transition: grid-template-rows 1.2s var(--liquid-fluid), padding 1.2s var(--liquid-fluid);
-        }
-        #music-card-layout-wrapper.is-open {
-            grid-template-rows: 1fr;
-            padding-top: 1.5rem;
-        }
-        #music-card-wrapper {
-            min-height: 0;
-            width: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: flex-start; /* FIX: Verhindert, dass die Hauptkarte vertikal zusammengedrückt wird beim Grid-Collapse */
-            overflow: visible; /* Damit die fetten Glows von Main-Music-Card nicht abgeschnitten werden! */
-        }
+        #music-card-layout-wrapper.hidden { display: none !important; }
+        body.liquid-glass-active #music-card-layout-wrapper { transition: grid-template-rows 1.2s var(--liquid-fluid), padding 1.2s var(--liquid-fluid); }
+        #music-card-layout-wrapper.is-open { grid-template-rows: 1fr; padding-top: 1.5rem; }
+        #music-card-wrapper { min-height: 0; width: 100%; display: flex; justify-content: center; align-items: flex-start; overflow: visible; }
 
-        /* 1. Modal (Info-Karten) */
-        body.liquid-glass-active .modal-opening .modal-content {
-            animation: ext-pop-in 1.2s var(--liquid-fluid) forwards !important;
-            transform-origin: center center;
-        }
-        body.liquid-glass-active .modal-closing .modal-content {
-            animation: ext-pop-out 0.9s var(--liquid-fluid) forwards !important;
-            transform-origin: center center;
-        }
-
-        /* 2. Lyrics Overlay */
-        body.liquid-glass-active .lyrics-open #lyrics-overlay {
-            animation: ext-pop-in 1.2s var(--liquid-fluid) forwards !important;
-            transform-origin: bottom center;
-        }
-        body.liquid-glass-active .lyrics-closing-state #lyrics-overlay {
-            animation: ext-pop-out 0.9s var(--liquid-fluid) forwards !important;
-            transform-origin: bottom center;
-        }
-
-        /* 3. Settings Menü (Zahnrad im Music Player) */
-        body.liquid-glass-active .settings-opening {
-            display: flex !important;
-            animation: ext-pop-in 1.2s var(--liquid-fluid) forwards !important;
-            transform-origin: top right;
-        }
-        body.liquid-glass-active .settings-closing {
-            animation: ext-pop-out 0.9s var(--liquid-fluid) forwards !important;
-            transform-origin: top right;
-        }
-
-        /* 4. Music Picker (Link-Auswahl) */
-        body.liquid-glass-active .picker-opening {
-            display: flex !important;
-            animation: ext-pop-in 1.2s var(--liquid-fluid) forwards !important;
-            transform-origin: center center;
-        }
-        body.liquid-glass-active .picker-closing {
-            animation: ext-pop-out 0.9s var(--liquid-fluid) forwards !important;
-            transform-origin: center center;
-        }
-
-        /* 5. Tutorial Box */
+        body.liquid-glass-active .modal-opening .modal-content,
+        body.liquid-glass-active .lyrics-open #lyrics-overlay,
+        body.liquid-glass-active .settings-opening,
+        body.liquid-glass-active .picker-opening,
         body.liquid-glass-active .tutorial-opening {
+            display: flex !important;
             animation: ext-pop-in 1.2s var(--liquid-fluid) forwards !important;
             transform-origin: center center;
+            will-change: transform, opacity; /* Filter entfernt */
         }
+        
+        body.liquid-glass-active .modal-closing .modal-content,
+        body.liquid-glass-active .lyrics-closing-state #lyrics-overlay,
+        body.liquid-glass-active .settings-closing,
+        body.liquid-glass-active .picker-closing,
         body.liquid-glass-active .tutorial-closing {
             animation: ext-pop-out 0.9s var(--liquid-fluid) forwards !important;
             transform-origin: center center;
+            will-change: transform, opacity; /* Filter entfernt */
         }
 
-        /* 6. Dashboard selbst (Die Pop-Animation liegt direkt auf der Karte) */
-        body.liquid-glass-active .dashboard-opening #main-music-card {
-            animation: ext-dashboard-in 1.2s var(--liquid-fluid) forwards !important;
-            transform-origin: top center;
-        }
-        body.liquid-glass-active .dashboard-closing #main-music-card {
-            animation: ext-dashboard-out 0.9s var(--liquid-fluid) forwards !important;
-            transform-origin: top center;
-        }
+        body.liquid-glass-active .dashboard-opening #main-music-card { animation: ext-dashboard-in 1.2s var(--liquid-fluid) forwards !important; transform-origin: top center; will-change: transform, opacity; }
+        body.liquid-glass-active .dashboard-closing #main-music-card { animation: ext-dashboard-out 0.9s var(--liquid-fluid) forwards !important; transform-origin: top center; will-change: transform, opacity; }
 
-        /* DIE EXTREMEN KEYFRAMES (Viskoses Liquid Glass) */
         @keyframes ext-pop-in {
-            0% { transform: translateY(120px) scale(0.4, 1.7); opacity: 0; border-radius: 100px; filter: blur(30px); }
-            45% { transform: translateY(-30px) scale(1.15, 0.85); opacity: 1; border-radius: 20px; filter: blur(0px); }
-            75% { transform: translateY(15px) scale(0.92, 1.08); border-radius: 50px; }
-            100% { transform: translateY(0) scale(1, 1); border-radius: 2.5rem; opacity: 1; }
+            0% { transform: translate3d(0, 120px, 0) scale(0.4, 1.7); opacity: 0; border-radius: 100px; }
+            45% { transform: translate3d(0, -30px, 0) scale(1.15, 0.85); opacity: 1; border-radius: 20px; }
+            75% { transform: translate3d(0, 15px, 0) scale(0.92, 1.08); border-radius: 50px; }
+            100% { transform: translate3d(0, 0, 0) scale(1, 1); border-radius: 2.5rem; opacity: 1; }
         }
 
         @keyframes ext-pop-out {
-            0% { transform: translateY(0) scale(1, 1); opacity: 1; filter: blur(0px); }
-            35% { transform: translateY(-20px) scale(1.1, 0.9); opacity: 1; border-radius: 30px; }
-            100% { transform: translateY(200px) scale(0.3, 2.0); opacity: 0; border-radius: 100px; filter: blur(30px); }
+            0% { transform: translate3d(0, 0, 0) scale(1, 1); opacity: 1; }
+            35% { transform: translate3d(0, -20px, 0) scale(1.1, 0.9); opacity: 1; border-radius: 30px; }
+            100% { transform: translate3d(0, 200px, 0) scale(0.3, 2.0); opacity: 0; border-radius: 100px; }
         }
 
         @keyframes ext-dashboard-in {
-            0% { transform: translateY(-100px) scale(0.4, 1.8); opacity: 0; border-radius: 100px; filter: blur(30px); }
-            45% { transform: translateY(35px) scale(1.15, 0.85); opacity: 1; border-radius: 15px; filter: blur(0px); }
-            75% { transform: translateY(-15px) scale(0.9, 1.1); border-radius: 50px; }
-            100% { transform: translateY(0) scale(1, 1); border-radius: 3rem; opacity: 1; }
+            0% { transform: translate3d(0, -100px, 0) scale(0.4, 1.8); opacity: 0; border-radius: 100px; }
+            45% { transform: translate3d(0, 35px, 0) scale(1.15, 0.85); opacity: 1; border-radius: 15px; }
+            75% { transform: translate3d(0, -15px, 0) scale(0.9, 1.1); border-radius: 50px; }
+            100% { transform: translate3d(0, 0, 0) scale(1, 1); border-radius: 3rem; opacity: 1; }
         }
 
         @keyframes ext-dashboard-out {
-            0% { transform: translateY(0) scale(1, 1); opacity: 1; filter: blur(0px); }
-            35% { transform: translateY(20px) scale(1.1, 0.9); opacity: 1; border-radius: 40px; }
-            100% { transform: translateY(-150px) scale(0.3, 2.0); opacity: 0; filter: blur(30px); }
+            0% { transform: translate3d(0, 0, 0) scale(1, 1); opacity: 1; }
+            35% { transform: translate3d(0, 20px, 0) scale(1.1, 0.9); opacity: 1; border-radius: 40px; }
+            100% { transform: translate3d(0, -150px, 0) scale(0.3, 2.0); opacity: 0; }
         }
 
-        /* --- TUTORIAL MORPHING BEIM WEITER-KLICKEN --- */
+        /* --- TUTORIAL MORPHING --- */
+        @keyframes tutorial-morph {
+            0% { transform: scale(1); }
+            50% { transform: scale(0.95); opacity: 0.7; }
+            100% { transform: scale(1); }
+        }
+        
+        body.liquid-glass-active .modal-closing .modal-content,
+        body.liquid-glass-active .lyrics-closing-state #lyrics-overlay,
+        body.liquid-glass-active .settings-closing,
+        body.liquid-glass-active .picker-closing,
+        body.liquid-glass-active .tutorial-closing {
+            animation: ext-pop-out 0.9s var(--liquid-fluid) forwards !important;
+            transform-origin: center center;
+            will-change: transform, opacity, filter;
+        }
+
+        body.liquid-glass-active .dashboard-opening #main-music-card { animation: ext-dashboard-in 1.2s var(--liquid-fluid) forwards !important; transform-origin: top center; will-change: transform, opacity, filter; }
+        body.liquid-glass-active .dashboard-closing #main-music-card { animation: ext-dashboard-out 0.9s var(--liquid-fluid) forwards !important; transform-origin: top center; will-change: transform, opacity, filter; }
+
+        @keyframes ext-pop-in {
+            0% { transform: translate3d(0, 120px, 0) scale(0.4, 1.7); opacity: 0; border-radius: 100px; filter: blur(30px); }
+            45% { transform: translate3d(0, -30px, 0) scale(1.15, 0.85); opacity: 1; border-radius: 20px; filter: blur(0px); }
+            75% { transform: translate3d(0, 15px, 0) scale(0.92, 1.08); border-radius: 50px; }
+            100% { transform: translate3d(0, 0, 0) scale(1, 1); border-radius: 2.5rem; opacity: 1; }
+        }
+
+        @keyframes ext-pop-out {
+            0% { transform: translate3d(0, 0, 0) scale(1, 1); opacity: 1; filter: blur(0px); }
+            35% { transform: translate3d(0, -20px, 0) scale(1.1, 0.9); opacity: 1; border-radius: 30px; }
+            100% { transform: translate3d(0, 200px, 0) scale(0.3, 2.0); opacity: 0; border-radius: 100px; filter: blur(30px); }
+        }
+
+        @keyframes ext-dashboard-in {
+            0% { transform: translate3d(0, -100px, 0) scale(0.4, 1.8); opacity: 0; border-radius: 100px; filter: blur(30px); }
+            45% { transform: translate3d(0, 35px, 0) scale(1.15, 0.85); opacity: 1; border-radius: 15px; filter: blur(0px); }
+            75% { transform: translate3d(0, -15px, 0) scale(0.9, 1.1); border-radius: 50px; }
+            100% { transform: translate3d(0, 0, 0) scale(1, 1); border-radius: 3rem; opacity: 1; }
+        }
+
+        @keyframes ext-dashboard-out {
+            0% { transform: translate3d(0, 0, 0) scale(1, 1); opacity: 1; filter: blur(0px); }
+            35% { transform: translate3d(0, 20px, 0) scale(1.1, 0.9); opacity: 1; border-radius: 40px; }
+            100% { transform: translate3d(0, -150px, 0) scale(0.3, 2.0); opacity: 0; filter: blur(30px); }
+        }
+
+        /* --- TUTORIAL MORPHING --- */
         @keyframes tutorial-morph {
             0% { transform: scale(1); filter: blur(0px); }
             50% { transform: scale(0.95); filter: blur(8px); }
             100% { transform: scale(1); filter: blur(0px); }
         }
-        body.liquid-glass-active .tutorial-morphing {
-            animation: tutorial-morph 0.5s var(--liquid-fluid) !important;
-        }
+        body.liquid-glass-active .tutorial-morphing { animation: tutorial-morph 0.5s var(--liquid-fluid) !important; }
 
-        /* --- STANDARD FALLBACKS (Wenn Liquid Glass OFF ist) --- */
-        .modal-opening .modal-content, .picker-opening, .tutorial-opening, .settings-opening {
-            animation: std-pop-in 0.5s var(--apple-spring) forwards;
-        }
-        .modal-closing .modal-content, .picker-closing, .tutorial-closing, .settings-closing {
-            animation: std-pop-out 0.4s var(--apple-ease) forwards;
-        }
-        
+        /* --- STANDARD FALLBACKS --- */
+        .modal-opening .modal-content, .picker-opening, .tutorial-opening, .settings-opening { animation: std-pop-in 0.5s var(--apple-spring) forwards; }
+        .modal-closing .modal-content, .picker-closing, .tutorial-closing, .settings-closing { animation: std-pop-out 0.4s var(--apple-ease) forwards; }
         .dashboard-opening #main-music-card { animation: std-pop-in 0.5s var(--apple-spring) forwards; transform-origin: top center; }
         .dashboard-closing #main-music-card { animation: std-pop-out 0.4s var(--apple-ease) forwards; transform-origin: top center; }
-        
         .lyrics-open #lyrics-overlay { animation: std-pop-in 0.5s var(--apple-spring) forwards; }
         .lyrics-closing-state #lyrics-overlay { animation: std-pop-out 0.4s var(--apple-ease) forwards; }
 
-        @keyframes std-pop-in {
-            0% { opacity: 0; transform: scale(0.8) translateY(-20px); }
-            100% { opacity: 1; transform: scale(1) translateY(0); }
-        }
-        @keyframes std-pop-out {
-            0% { opacity: 1; transform: scale(1) translateY(0); }
-            100% { opacity: 0; transform: scale(0.8) translateY(20px); }
-        }
+        @keyframes std-pop-in { 0% { opacity: 0; transform: scale(0.8) translate3d(0, -20px, 0); } 100% { opacity: 1; transform: scale(1) translate3d(0, 0, 0); } }
+        @keyframes std-pop-out { 0% { opacity: 1; transform: scale(1) translate3d(0, 0, 0); } 100% { opacity: 0; transform: scale(0.8) translate3d(0, 20px, 0); } }
 
-
-        /* Apple Aura Background - EXTREME FARBVERMISCHUNG OHNE VRAM LAG! */
+        /* Apple Aura Background */
         #liquid-blobs {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; overflow: hidden; pointer-events: none;
-            opacity: 0; transition: opacity 1.5s var(--apple-ease); display: none;
-            background: #f8fafc;
+            opacity: 0; transition: opacity 1.5s var(--apple-ease); display: none; background: #f8fafc;
         }
         .dark #liquid-blobs { background: #020617; }
         body.liquid-glass-active:not(.low-end) #liquid-blobs { display: block; opacity: 1; }
         
         .blob-container {
-            position: absolute; width: 100%; height: 100%;
-            opacity: 0.4; /* Stark reduziert, damit der Text lesbar bleibt */
-            transform: translate3d(0,0,0);
-            backface-visibility: hidden; /* FIX: Erzwingt GPU und verhindert WebKit-Flackern */
-            will-change: transform; /* Hardware Acceleration Override für Mobile GPUs */
-            /* Langsame Rotation des gesamten Containers für ständigen Farbwechsel */
+            position: absolute; width: 100%; height: 100%; opacity: 0.4;
+            transform: translate3d(0,0,0); backface-visibility: hidden; will-change: transform;
             animation: container-rotate 40s linear infinite;
         }
-        .dark .blob-container { 
-            opacity: 0.35; /* Im Darkmode noch weiter runter für starken Kontrast */
-        }
+        .dark .blob-container { opacity: 0.35; }
+        .blob { position: absolute; will-change: transform; animation: blob-morph 20s ease-in-out infinite alternate; }
         
-        /* ABSOLUTER GAMECHANGER GEGEN LAGG:
-           Wir benutzen keine "echten" HTML Kreise mit filter: blur() mehr!
-           Blur frisst auf Android die GPU auf.
-           Wir erzeugen den unscharfen Kreis direkt als nativen CSS Farbverlauf.
-           Das kostet 0% Rechenleistung und sieht exakt gleich flüssig aus.
-        */
-        .blob {
-            position: absolute; 
-            will-change: transform;
-            animation: blob-morph 20s ease-in-out infinite alternate;
-        }
-        
-        /* Hochgesättigte, lebendige Apple-Farben als softe Verläufe (Zero-Lag Blur) */
-        .blob-1 { top: -10%; left: -10%; width: 70vw; height: 70vw; background: radial-gradient(circle, rgba(255,0,128,1) 0%, rgba(255,0,128,0) 70%); animation-delay: 0s; animation-duration: 25s; }
+        .blob-1 { top: -10%; left: -10%; width: 70vw; height: 70vw; background: radial-gradient(circle, rgba(255,0,128,1) 0%, rgba(255,0,128,0) 70%); animation-duration: 25s; }
         .blob-2 { top: 20%; right: -20%; width: 80vw; height: 80vw; background: radial-gradient(circle, rgba(121,40,202,1) 0%, rgba(121,40,202,0) 70%); animation-delay: -5s; animation-duration: 30s; animation-direction: alternate-reverse; }
         .blob-3 { bottom: -20%; left: 10%; width: 70vw; height: 70vw; background: radial-gradient(circle, rgba(0,210,255,1) 0%, rgba(0,210,255,0) 70%); animation-delay: -10s; animation-duration: 22s; }
         .blob-4 { top: 30%; left: 30%; width: 60vw; height: 60vw; background: radial-gradient(circle, rgba(255,77,77,1) 0%, rgba(255,77,77,0) 70%); animation-delay: -15s; animation-duration: 28s; animation-direction: alternate-reverse; }
         
-        @keyframes container-rotate {
-            from { transform: rotate(0deg) scale(1.2); }
-            to { transform: rotate(360deg) scale(1.2); }
-        }
-
-        @keyframes blob-morph {
-            0% { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
-            50% { transform: translate3d(10vw, 8vh, 0) rotate(90deg) scale(1.15); }
-            100% { transform: translate3d(-8vw, 12vh, 0) rotate(180deg) scale(0.9); }
-        }
-
-        body.low-end #liquid-blobs { display: none !important; animation: none !important; }
-
-        /* ========================================================= */
-        /* --- ENDE LIQUID Glass MODE --- */
-        /* ========================================================= */
+        @keyframes container-rotate { from { transform: rotate(0deg) scale(1.2); } to { transform: rotate(360deg) scale(1.2); } }
+        @keyframes blob-morph { 0% { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); } 50% { transform: translate3d(10vw, 8vh, 0) rotate(90deg) scale(1.15); } 100% { transform: translate3d(-8vw, 12vh, 0) rotate(180deg) scale(0.9); } }
 
         /* --- STANDARD V17 GLASS CARD --- */
-        /* FIX: Reveal Start-Wert entschärft, um Mobile Clipping beim Laden zu verhindern */
-        .reveal { opacity: 0; transform: translateY(40px) scale(0.96); transition: opacity 0.8s var(--apple-ease), transform 1s var(--apple-spring); will-change: opacity, transform; }
-        .reveal.active { opacity: 1; transform: translateY(0) scale(1); }
+        .reveal { opacity: 0; transform: translate3d(0, 40px, 0) scale(0.96); transition: opacity 0.8s var(--apple-ease), transform 1s var(--apple-spring); will-change: opacity, transform; }
+        .reveal.active { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
 
         .glass-card {
             background: rgba(255, 255, 255, 0.9); border: 1px solid rgba(0, 0, 0, 0.05);
             transition: transform 0.4s var(--apple-spring), border-color 0.4s ease, box-shadow 0.4s ease, border-radius 0.4s ease;
-            transform: translate3d(0,0,0); will-change: transform;
+            transform: translate3d(0,0,0); will-change: transform; backface-visibility: hidden;
         }
         .dark .glass-card { background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255, 255, 255, 0.05); }
         @supports (backdrop-filter: blur(12px)) or (-webkit-backdrop-filter: blur(12px)) {
@@ -516,26 +407,17 @@
 
         /* --- AMBILIGHT GLOW EFFEKT --- */
         #ambilight-glow {
-            position: absolute; 
-            inset: -15px; 
-            z-index: -1;
-            background-size: cover; background-position: center;
-            filter: blur(35px) saturate(2.0) brightness(1.2); opacity: 0;
-            transition: opacity 1.5s ease, transform 1s ease;
-            pointer-events: none; will-change: transform, opacity; border-radius: inherit;
+            position: absolute; inset: -15px; z-index: -1; background-size: cover; background-position: center;
+            filter: blur(35px) saturate(2.0) brightness(1.2); opacity: 0; transition: opacity 1.5s ease, transform 1s ease;
+            pointer-events: none; will-change: transform, opacity; border-radius: inherit; transform: translate3d(0,0,0);
         }
-        @media (min-width: 640px) {
-            #ambilight-glow { inset: -60px; filter: blur(75px) saturate(2.5) brightness(1.2); }
-        }
+        @media (min-width: 640px) { #ambilight-glow { inset: -60px; filter: blur(75px) saturate(2.5) brightness(1.2); } }
         .playing #ambilight-glow { animation: ambilight-pulse 6s infinite alternate ease-in-out; opacity: 0.8; }
         .dark .playing #ambilight-glow { opacity: 0.6; }
-        @keyframes ambilight-pulse {
-            0% { transform: scale(1) translate3d(0,0,0); opacity: 0.6; }
-            100% { transform: scale(1.05) translate3d(0,0,0); opacity: 0.9; }
-        }
+        @keyframes ambilight-pulse { 0% { transform: scale(1) translate3d(0,0,0); opacity: 0.6; } 100% { transform: scale(1.05) translate3d(0,0,0); opacity: 0.9; } }
 
         /* --- PARTICLES --- */
-        #particles-container { position: absolute; inset: -100px; z-index: -1; overflow: hidden; pointer-events: none; opacity: 0; transition: opacity 1s ease; }
+        #particles-container { position: absolute; inset: -100px; z-index: -1; overflow: hidden; pointer-events: none; opacity: 0; transition: opacity 1s ease; transform: translate3d(0,0,0); }
         .playing #particles-container { opacity: 1; }
         .particle { position: absolute; bottom: 0; width: 4px; height: 4px; background: rgba(255, 255, 255, 0.4); border-radius: 50%; box-shadow: 0 0 10px rgba(255, 255, 255, 0.8); animation: float-up linear infinite; opacity: 0; transform: translate3d(0,0,0); }
         @keyframes float-up { 0% { transform: translate3d(0,0,0) scale(1); opacity: 0; } 50% { opacity: 1; } 100% { transform: translate3d(0, -300px, 0) scale(0); opacity: 0; } }
@@ -564,57 +446,46 @@
         .eq-bar:nth-child(3) { height: 6px; animation-duration: 0.5s; } .eq-bar:nth-child(4) { height: 10px; animation-duration: 0.7s; }
         @keyframes eq-bounce { 0% { transform: scaleY(0.2); } 100% { transform: scaleY(1); } }
 
-        /* FIXED NESTED BACKDROP FILTER RENDER BUG */
         .lyrics-open #lyrics-overlay { pointer-events: auto; visibility: visible; }
         .lyric-line { display: block; margin: 4vh 0; line-height: 1.25; transition: opacity 0.4s ease, filter 0.4s ease, transform 0.5s var(--apple-bounce); transform-origin: left center; overflow-wrap: break-word; word-wrap: break-word; white-space: pre-wrap; padding-right: 1rem; will-change: opacity, transform; transform: translate3d(0,0,0); }
         .lyrics-open .lyric-line { opacity: 0.25; filter: blur(1px); transform: scale(0.95) translate3d(0,0,0); }
         .lyrics-open .lyric-line.active { opacity: 1; filter: blur(0px) drop-shadow(0 0 8px rgba(255,255,255,0.1)); transform: scale(1.05) translate3d(0,0,0); }
 
-        /* --- LYRICS ANIMATION STYLES --- */
-        .lyric-word { position: relative; display: inline-block; margin-right: 0; white-space: nowrap; will-change: background-size, transform, color, filter, opacity; font-size: 14px; font-size: clamp(0.75rem, 4vw, 2.2rem); font-weight: 800; letter-spacing: -0.02em; transition: color 0.1s linear, transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), text-shadow 0.1s linear, filter 0.1s linear, opacity 0.1s linear; }
+        .lyric-word { position: relative; display: inline-block; margin-right: 0; white-space: nowrap; will-change: background-size, transform, color, opacity; font-size: 14px; font-size: clamp(0.75rem, 4vw, 2.2rem); font-weight: 800; letter-spacing: -0.02em; transition: color 0.1s linear, transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), text-shadow 0.1s linear, filter 0.1s linear, opacity 0.1s linear; }
 
         .lyrics-style-fill .lyric-word { background: linear-gradient(to right, #ffffff var(--fill-percent, 0%), rgba(255,255,255,0.2) var(--fill-percent, 0%)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-        .lyrics-style-bounce .lyric-word { color: rgba(255, 255, 255, 0.3); } .lyrics-style-bounce .lyric-word.word-passed { color: rgba(255, 255, 255, 0.7); } .lyrics-style-bounce .lyric-word.word-active { color: #ffffff; transform: scale(1.15) translateY(-4px); text-shadow: 0 4px 15px rgba(255, 255, 255, 0.6); z-index: 10; }
+        .lyrics-style-bounce .lyric-word { color: rgba(255, 255, 255, 0.3); } .lyrics-style-bounce .lyric-word.word-passed { color: rgba(255, 255, 255, 0.7); } .lyrics-style-bounce .lyric-word.word-active { color: #ffffff; transform: scale(1.15) translate3d(0,-4px,0); text-shadow: 0 4px 15px rgba(255, 255, 255, 0.6); z-index: 10; }
         .lyrics-style-fade .lyric-word { color: rgba(255, 255, 255, 0.2); } .lyrics-style-fade .lyric-word.word-passed, .lyrics-style-fade .lyric-word.word-active { color: #ffffff; text-shadow: 0 0 10px rgba(255, 255, 255, 0.4); }
         .lyrics-style-blur .lyric-word { color: rgba(255, 255, 255, 0.15); filter: blur(4px); } .lyrics-style-blur .lyric-word.word-passed { color: rgba(255, 255, 255, 0.6); filter: blur(0px); text-shadow: none; } .lyrics-style-blur .lyric-word.word-active { color: #ffffff; filter: blur(0px); text-shadow: 0 0 12px rgba(255,255,255,0.8); transform: scale(1.02); }
-        .lyrics-style-wave .lyric-word { color: rgba(255, 255, 255, 0.2); transform: translateY(8px); } .lyrics-style-wave .lyric-word.word-passed { color: rgba(255, 255, 255, 0.6); transform: translateY(0); } .lyrics-style-wave .lyric-word.word-active { color: #ffffff; transform: translateY(-6px); text-shadow: 0 4px 12px rgba(59, 130, 246, 0.6); }
+        .lyrics-style-wave .lyric-word { color: rgba(255, 255, 255, 0.2); transform: translate3d(0,8px,0); } .lyrics-style-wave .lyric-word.word-passed { color: rgba(255, 255, 255, 0.6); transform: translate3d(0,0,0); } .lyrics-style-wave .lyric-word.word-active { color: #ffffff; transform: translate3d(0,-6px,0); text-shadow: 0 4px 12px rgba(59, 130, 246, 0.6); }
         .lyrics-style-neon .lyric-word { color: rgba(255, 255, 255, 0.15); } .lyrics-style-neon .lyric-word.word-passed { color: rgba(255, 255, 255, 0.8); text-shadow: 0 0 5px rgba(6, 182, 212, 0.5); } .lyrics-style-neon .lyric-word.word-active { color: #ffffff; text-shadow: 0 0 10px #06b6d4, 0 0 20px #06b6d4, 0 0 30px #3b82f6; transform: scale(1.05); }
         .lyrics-style-pop .lyric-word { color: rgba(255, 255, 255, 0.2); transform: scale(0.8); opacity: 0.5; } .lyrics-style-pop .lyric-word.word-passed { color: rgba(255, 255, 255, 0.7); transform: scale(1); opacity: 1; } .lyrics-style-pop .lyric-word.word-active { color: #ffffff; transform: scale(1.2); opacity: 1; text-shadow: 0 5px 15px rgba(255,255,255,0.5); transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
-        
         .lyrics-style-karaoke .lyric-word { color: rgba(255, 255, 255, 0.4); padding: 0 0.1em; position: relative; z-index: 1; background: none; -webkit-text-fill-color: currentcolor; }
         .lyrics-style-karaoke .lyric-word::before { content: ''; position: absolute; top: 0; left: 0; bottom: 0; width: var(--fill-percent, 0%); background-color: #3b82f6; border-radius: 4px; z-index: -1; transition: width 0.1s linear; opacity: 0; }
         .lyrics-style-karaoke .lyric-word.word-passed { color: #ffffff; } 
         .lyrics-style-karaoke .lyric-word.word-passed::before { width: 100%; opacity: 0; transition: opacity 0.3s; } 
         .lyrics-style-karaoke .lyric-word.word-active { color: #ffffff; text-shadow: 0 0 10px rgba(59, 130, 246, 0.8); }
         .lyrics-style-karaoke .lyric-word.word-active::before { opacity: 1; box-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
-
         .lyrics-style-glitch .lyric-word { color: rgba(255, 255, 255, 0.3); opacity: 0.5; } .lyrics-style-glitch .lyric-word.word-passed { color: #ffffff; opacity: 1; } .lyrics-style-glitch .lyric-word.word-active { color: #ffffff; opacity: 1; animation: glitch-anim 0.3s cubic-bezier(.25, .46, .45, .94) both infinite; text-shadow: 2px 0 #ff00c1, -2px 0 #00fff9; } @keyframes glitch-anim { 0% { transform: translate(0) } 20% { transform: translate(-2px, 1px) } 40% { transform: translate(-1px, -1px) } 60% { transform: translate(2px, 1px) } 80% { transform: translate(1px, -1px) } 100% { transform: translate(0) } }
         .lyrics-style-flip .lyric-word { color: rgba(255, 255, 255, 0.2); transform: perspective(400px) rotateX(-90deg); transform-origin: bottom; opacity: 0; } .lyrics-style-flip .lyric-word.word-passed { color: rgba(255, 255, 255, 0.7); transform: perspective(400px) rotateX(0deg); opacity: 1; } .lyrics-style-flip .lyric-word.word-active { color: #ffffff; transform: perspective(400px) rotateX(0deg); opacity: 1; text-shadow: 0 0 15px rgba(255,255,255,0.6); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        .lyrics-style-zoom .lyric-word { color: rgba(255, 255, 255, 0.1); transform: scale(2) translateY(-10px); opacity: 0; } .lyrics-style-zoom .lyric-word.word-passed { color: rgba(255, 255, 255, 0.6); transform: scale(1) translateY(0); opacity: 1; } .lyrics-style-zoom .lyric-word.word-active { color: #ffffff; transform: scale(1) translateY(0); opacity: 1; text-shadow: 0 0 10px #3b82f6; transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s; }
-        
+        .lyrics-style-zoom .lyric-word { color: rgba(255, 255, 255, 0.1); transform: scale(2) translate3d(0,-10px,0); opacity: 0; } .lyrics-style-zoom .lyric-word.word-passed { color: rgba(255, 255, 255, 0.6); transform: scale(1) translate3d(0,0,0); opacity: 1; } .lyrics-style-zoom .lyric-word.word-active { color: #ffffff; transform: scale(1) translate3d(0,0,0); opacity: 1; text-shadow: 0 0 10px #3b82f6; transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s; }
         .lyrics-style-kinetic .lyric-word { color: rgba(255,255,255,0.1); transform: scale(1.5) translate3d(0,0,0); filter: blur(8px); opacity: 0; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); } .lyrics-style-kinetic .lyric-word.word-passed { color: rgba(255,255,255,0.5); transform: scale(1) translate3d(0,0,0); filter: blur(0); opacity: 1; } .lyrics-style-kinetic .lyric-word.word-active { color: #ffffff; transform: scale(1.1) translate3d(0,0,0); filter: blur(0); opacity: 1; text-shadow: 0 10px 20px rgba(59,130,246,0.6); }
         .lyrics-style-hellfire .lyric-word { color: rgba(255,255,255,0.2); transition: all 0.3s; } .lyrics-style-hellfire .lyric-word.word-passed { color: #ff9a9e; opacity: 0.6; } .lyrics-style-hellfire .lyric-word.word-active { background: linear-gradient(90deg, #ff9a9e, #fecfef, #ff9a9e); background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: hellfire-burn 1s linear infinite; transform: scale(1.05); text-shadow: 0 0 15px rgba(255,0,0,0.5); } @keyframes hellfire-burn { to { background-position: 200% center; } }
         .lyrics-style-hologram .lyric-word { color: rgba(255,255,255,0.2); } .lyrics-style-hologram .lyric-word.word-passed { color: rgba(255,255,255,0.6); } .lyrics-style-hologram .lyric-word.word-active { color: #ffffff; animation: holo-flicker 0.15s infinite; text-shadow: -2px 0 red, 2px 0 cyan; } @keyframes holo-flicker { 0%, 100% { opacity: 1; transform: skewX(0deg); } 50% { opacity: 0.8; transform: skewX(2deg); } }
-        
         .lyrics-style-wave-char .lyric-word { background: none; -webkit-text-fill-color: currentcolor; } 
-        .lyrics-style-wave-char .lyric-char { display: inline-block; color: rgba(255, 255, 255, 0.2); transform: translateY(8px); transition: color 0.15s ease, transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275), text-shadow 0.15s ease; } 
-        .lyrics-style-wave-char .lyric-char.char-passed { color: rgba(255, 255, 255, 0.6); transform: translateY(0); } 
-        .lyrics-style-wave-char .lyric-char.char-active { color: #ffffff; transform: translateY(-6px); text-shadow: 0 4px 12px rgba(59, 130, 246, 0.8); position: relative; z-index: 10; }
-
+        .lyrics-style-wave-char .lyric-char { display: inline-block; color: rgba(255, 255, 255, 0.2); transform: translate3d(0,8px,0); transition: color 0.15s ease, transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275), text-shadow 0.15s ease; } 
+        .lyrics-style-wave-char .lyric-char.char-passed { color: rgba(255, 255, 255, 0.6); transform: translate3d(0,0,0); } 
+        .lyrics-style-wave-char .lyric-char.char-active { color: #ffffff; transform: translate3d(0,-6px,0); text-shadow: 0 4px 12px rgba(59, 130, 246, 0.8); position: relative; z-index: 10; }
         .lyrics-style-typewriter .lyric-word { background: none; -webkit-text-fill-color: currentcolor; } 
-        .lyrics-style-typewriter .lyric-char { display: inline-block; opacity: 0.2; transform: translateY(2px); transition: opacity 0.05s linear, color 0.05s linear, text-shadow 0.05s linear, transform 0.05s; } 
-        .lyrics-style-typewriter .lyric-char.char-passed { opacity: 1; color: #ffffff; transform: translateY(0); text-shadow: 0 0 8px rgba(255, 255, 255, 0.8); } 
-        .lyrics-style-typewriter .lyric-char.char-active { opacity: 1; color: #3b82f6; transform: translateY(0); text-shadow: 0 0 15px rgba(59, 130, 246, 0.8); position: relative; z-index: 10; }
-
+        .lyrics-style-typewriter .lyric-char { display: inline-block; opacity: 0.2; transform: translate3d(0,2px,0); transition: opacity 0.05s linear, color 0.05s linear, text-shadow 0.05s linear, transform 0.05s; } 
+        .lyrics-style-typewriter .lyric-char.char-passed { opacity: 1; color: #ffffff; transform: translate3d(0,0,0); text-shadow: 0 0 8px rgba(255, 255, 255, 0.8); } 
+        .lyrics-style-typewriter .lyric-char.char-active { opacity: 1; color: #3b82f6; transform: translate3d(0,0,0); text-shadow: 0 0 15px rgba(59, 130, 246, 0.8); position: relative; z-index: 10; }
         .lyrics-style-matrix .lyric-word { font-family: 'JetBrains Mono', monospace; background: none; -webkit-text-fill-color: currentcolor; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; } 
         .lyrics-style-matrix .lyric-char { display: inline-block; color: rgba(0, 255, 65, 0.15); transition: color 0.05s, text-shadow 0.05s, transform 0.05s; } 
         .lyrics-style-matrix .lyric-char.char-passed { color: rgba(0, 255, 65, 0.8); text-shadow: 0 0 8px rgba(0, 255, 65, 0.4); } 
-        .lyrics-style-matrix .lyric-char.char-active { color: #ffffff; text-shadow: 0 0 10px #ffffff, 0 0 20px #00ff41, 0 0 40px #00ff41, 0 0 80px #00ff41; transform: translateY(-2px); z-index: 10; position: relative; }
+        .lyrics-style-matrix .lyric-char.char-active { color: #ffffff; text-shadow: 0 0 10px #ffffff, 0 0 20px #00ff41, 0 0 40px #00ff41, 0 0 80px #00ff41; transform: translate3d(0,-2px,0); z-index: 10; position: relative; }
 
-        .mask-image-gradient {
-            -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
-            mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
-        }
+        .mask-image-gradient { -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%); mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%); }
 
         #lyrics-overlay, #lyrics-container { overflow: hidden; will-change: transform, opacity; }
         #lyrics-container { overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
@@ -624,21 +495,20 @@
 
         #modal-overlay { backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); transition: all 0.5s var(--apple-ease); will-change: opacity; }
         
-        /* FIX: Scrollbar Fix für Mobile - Zerstört nicht mehr das Layout */
         @media (pointer: fine) {
             ::-webkit-scrollbar { width: 8px; }
             ::-webkit-scrollbar-track { background: transparent; }
             ::-webkit-scrollbar-thumb { background: #3b82f6; border-radius: 10px; }
         }
 
-        /* Smoothed out Impact Animations to avoid clipping */
-        .impact-media-out, .impact-text-out, .impact-lyrics-out { animation: quantumCrushOut 0.65s var(--apple-ease) forwards !important; will-change: transform, opacity, filter, box-shadow; transform-origin: center center !important; }
-        .impact-media-in, .impact-text-in, .impact-lyrics-in { animation: quantumBurstIn 0.8s var(--apple-spring) forwards !important; will-change: transform, opacity, filter, drop-shadow; transform-origin: center center !important; }
-        body.is-shaking #main-content, body.is-shaking #ui-controls, body.is-shaking .mesh-gradient { animation: quantumShockwave 0.5s var(--apple-ease) both !important; will-change: transform, filter; transform-origin: center center !important; }
+        /* DIE IMPACT ANIMATIONEN SIND ZURÜCK - OHNE BLUR FILTER IN KEYFRAMES! */
+        .impact-media-out, .impact-text-out, .impact-lyrics-out { animation: quantumCrushOut 0.65s var(--apple-ease) forwards !important; will-change: transform, opacity, box-shadow; transform-origin: center center !important; }
+        .impact-media-in, .impact-text-in, .impact-lyrics-in { animation: quantumBurstIn 0.8s var(--apple-spring) forwards !important; will-change: transform, opacity, drop-shadow; transform-origin: center center !important; }
+        body.is-shaking #main-content, body.is-shaking #ui-controls, body.is-shaking .mesh-gradient { animation: quantumShockwave 0.5s var(--apple-ease) both !important; will-change: transform; transform-origin: center center !important; }
 
-        @keyframes quantumCrushOut { 0% { transform: perspective(1200px) translate3d(0,0,0) scale(1); filter: blur(0) brightness(1) contrast(1); opacity: 1; } 20% { transform: perspective(1200px) translate3d(0,0,80px) scale(1.05); filter: blur(0) brightness(1.5) contrast(1.1); opacity: 1; box-shadow: 0 0 30px rgba(59, 130, 246, 0.4); } 100% { transform: perspective(1200px) translate3d(0,0,-1500px) scale(0.1); filter: blur(10px) brightness(0) contrast(2); opacity: 0; box-shadow: 0 0 0px rgba(0,0,0,0); } }
-        @keyframes quantumBurstIn { 0% { transform: perspective(1200px) translate3d(0,0,-1500px) scale(0.1); filter: blur(20px) brightness(4) contrast(2); opacity: 0; drop-shadow(0 0 50px rgba(255, 255, 255, 1)); } 60% { transform: perspective(1200px) translate3d(0,0,100px) scale(1.05); filter: blur(0px) brightness(1.5) contrast(1.2); opacity: 1; drop-shadow(0 0 30px rgba(6, 182, 212, 0.6)); } 100% { transform: perspective(1200px) translate3d(0,0,0) scale(1); filter: blur(0) brightness(1) contrast(1); opacity: 1; drop-shadow(0 0 0px transparent); } }
-        @keyframes quantumShockwave { 0% { transform: translate3d(0, 0, 0) scale(1); filter: blur(0) contrast(1); } 10% { transform: translate3d(-10px, 10px, 0) scale(1.02); filter: blur(1px) contrast(1.3); } 20% { transform: translate3d(15px, -8px, 0) scale(0.98); filter: contrast(1.2); } 30% { transform: translate3d(-15px, 10px, 0) scale(1.01); filter: blur(0.5px) contrast(1.1); } 40% { transform: translate3d(10px, -10px, 0) scale(1); } 50% { transform: translate3d(-5px, 5px, 0); filter: contrast(1); } 60% { transform: translate3d(5px, -5px, 0); } 70% { transform: translate3d(-3px, 3px, 0); } 80% { transform: translate3d(2px, -2px, 0); } 90% { transform: translate3d(-1px, 1px, 0); } 100% { transform: translate3d(0, 0, 0); filter: blur(0) contrast(1); } }
+        @keyframes quantumCrushOut { 0% { transform: perspective(1200px) translate3d(0,0,0) scale(1); opacity: 1; } 20% { transform: perspective(1200px) translate3d(0,0,80px) scale(1.05); opacity: 1; box-shadow: 0 0 30px rgba(59, 130, 246, 0.4); } 100% { transform: perspective(1200px) translate3d(0,0,-1500px) scale(0.1); opacity: 0; box-shadow: 0 0 0px rgba(0,0,0,0); } }
+        @keyframes quantumBurstIn { 0% { transform: perspective(1200px) translate3d(0,0,-1500px) scale(0.1); opacity: 0; drop-shadow(0 0 50px rgba(255, 255, 255, 1)); } 60% { transform: perspective(1200px) translate3d(0,0,100px) scale(1.05); opacity: 1; drop-shadow(0 0 30px rgba(6, 182, 212, 0.6)); } 100% { transform: perspective(1200px) translate3d(0,0,0) scale(1); opacity: 1; drop-shadow(0 0 0px transparent); } }
+        @keyframes quantumShockwave { 0% { transform: translate3d(0, 0, 0) scale(1); } 10% { transform: translate3d(-10px, 10px, 0) scale(1.02); } 20% { transform: translate3d(15px, -8px, 0) scale(0.98); } 30% { transform: translate3d(-15px, 10px, 0) scale(1.01); } 40% { transform: translate3d(10px, -10px, 0) scale(1); } 50% { transform: translate3d(-5px, 5px, 0); } 60% { transform: translate3d(5px, -5px, 0); } 70% { transform: translate3d(-3px, 3px, 0); } 80% { transform: translate3d(2px, -2px, 0); } 90% { transform: translate3d(-1px, 1px, 0); } 100% { transform: translate3d(0, 0, 0); } }
 
         #global-emp-shockwave { position: fixed; top: 0; left: 0; width: 100px; height: 100px; margin-top: -50px; margin-left: -50px; border-radius: 50%; pointer-events: none; opacity: 0; z-index: 99999; will-change: transform, opacity; }
         .trigger-emp { animation: empDetonationLight 4s var(--apple-ease) forwards !important; }
@@ -655,14 +525,7 @@
             100% { transform: scale(20) translate3d(0,0,0); opacity: 0; box-shadow: 0 0 30px 5px rgba(59, 130, 246, 0), inset 0 0 30px transparent; } 
         }
 
-        /* --- TUTORIAL HIGHLIGHTING --- */
-        .tutorial-active-element {
-            z-index: 300 !important;
-            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7), 0 0 50px 15px rgba(59, 130, 246, 0.5) !important;
-            border-radius: inherit;
-            pointer-events: none;
-            transition: box-shadow 0.8s var(--liquid-fluid) !important;
-        }
+        .tutorial-active-element { z-index: 300 !important; box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7), 0 0 50px 15px rgba(59, 130, 246, 0.5) !important; border-radius: inherit; pointer-events: none; transition: box-shadow 0.8s var(--liquid-fluid) !important; }
         .tutorial-active-element:not(#ui-controls) { position: relative !important; background: white; }
         .dark .tutorial-active-element:not(#ui-controls) { background: #0f172a; }
         #ui-controls.tutorial-active-element { position: fixed !important; background: transparent !important; border-radius: 1rem; }
@@ -687,7 +550,6 @@
     <div id="global-emp-shockwave"></div>
     
     <!-- UI CONTROLS -->
-    <!-- FIX: Verschachtelten backdrop-blur-sm hier entfernt, da die inneren Buttons schon blur haben. Vermeidet Mobile Glitches -->
     <div id="ui-controls" class="fixed top-2 right-2 xs:top-4 xs:right-4 sm:top-6 sm:right-6 z-[110] flex items-center gap-1.5 sm:gap-3 bg-white/10 dark:bg-black/10 backdrop-blur-sm p-1 rounded-2xl sm:rounded-3xl border border-white/20 dark:border-slate-800/50 shadow-sm">
         <button id="liquid-glass-toggle" aria-label="Liquid Glass umschalten" class="group p-2 sm:p-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-lg rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-700 hover:ring-2 hover:ring-cyan-500 transition-all active:scale-90" title="Apple Liquid Glass Modus">
             <svg id="liquid-glass-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-500 transition-colors group-hover:text-cyan-500 sm:w-6 sm:h-6"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
@@ -734,7 +596,6 @@
         </div>
     </div>
 
-    <!-- FIX: Padding top massiv erhöht, damit UI Controls auf Mobile nicht blockieren -->
     <main id="main-content" class="max-w-4xl mx-auto px-4 xs:px-6 sm:px-8 pt-28 xs:pt-36 sm:pt-40 pb-16 xxs:pb-20 sm:pb-32">
         
         <header id="header-section" class="mb-10 xxs:mb-12 xs:mb-16 sm:mb-20 reveal mt-4 xs:mt-0 rounded-2xl relative z-10">
@@ -761,7 +622,7 @@
                 Real Talk: Ausbildung & Alltag
             </h2>
             
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5 xxs:gap-3 xs:gap-4 sm:gap-5">
+            <div class="grid grid-cols-2 gap-2.5 xxs:gap-3 xs:gap-4 sm:gap-5">
                 <div onclick="openModal('status')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group">
                     <div class="p-1.5 xxs:p-2 sm:p-3 bg-blue-500/10 text-blue-600 dark:text-blue-500 rounded-lg xxs:rounded-xl group-hover:bg-blue-500 group-hover:text-white transition-all shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -798,7 +659,7 @@
                     </div>
                     <div>
                         <h3 class="font-bold text-sm xxs:text-base sm:text-lg mb-0.5 xxs:mb-1">Menschen</h3>
-                        <p class="text-slate-700 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">Tom, Danilo & Jakob (Anker)...</p>
+                        <p class="text-slate-700 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">Tom, Danilo, Jakob & Lukas...</p>
                     </div>
                 </div>
 
@@ -853,7 +714,7 @@
             </h2>
             <p class="text-[8px] xxs:text-[10px] xs:text-xs text-slate-600 dark:text-slate-400 mb-4 xxs:mb-6 sm:mb-10">*Hinweis: Der Time-Sync ist auf -800ms optimiert.</p>
             
-            <div id="mini-player-toggle" onclick="toggleDashboard()" role="button" tabindex="0" class="glass-card w-full max-w-[400px] mx-auto p-2 xxs:p-3 sm:p-4 rounded-[1.2rem] xxs:rounded-2xl sm:rounded-[2rem] flex items-center justify-between cursor-pointer group mb-3 xxs:mb-4 sm:mb-6 relative z-20 hover:scale-[1.01] hover:shadow-xl transition-all">
+            <div id="mini-player-toggle" onclick="toggleDashboard()" role="button" tabindex="0" class="glass-card w-full max-w-[400px] mx-auto p-2 xxs:p-3 sm:p-4 rounded-[1.2rem] xxs:rounded-2xl sm:rounded-[2rem] flex items-center justify-between cursor-pointer group mb-3 xxs:mb-4 sm:mb-6 relative z-20 hover:scale-[1.01] transition-all">
                 <div class="flex items-center gap-2 xxs:gap-3 sm:gap-4 flex-1 min-w-0">
                     <div id="mini-icon-bg" class="w-8 h-8 xxs:w-10 xxs:h-10 sm:w-12 sm:h-12 shrink-0 rounded-lg xxs:rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-500 flex items-center justify-center transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
@@ -868,7 +729,6 @@
                 </div>
             </div>
 
-            <!-- Das Dashboard Fenster (Layout-Shift Wrapper) -->
             <div id="music-card-layout-wrapper" class="hidden">
                 <div id="music-card-wrapper" class="relative origin-top flex justify-center w-full">
                     
@@ -894,7 +754,6 @@
                     </div>
 
                     <!-- Das Lyrics Fenster -->
-                    <!-- FIX: bg-black/50 gegen sattes bg-slate-950/85 ausgetauscht und backdrop-blur-2xl hinzugefügt für brutale Lesbarkeit! -->
                     <div id="lyrics-overlay" class="absolute inset-0 bg-slate-950/85 backdrop-blur-2xl rounded-[1.5rem] xxs:rounded-3xl md:rounded-[3rem] flex-col p-2 xxs:p-3 xs:p-6 md:p-8 z-40 transition-all duration-500 opacity-0 pointer-events-none flex border border-white/10 invisible">
                         
                         <div class="flex items-center justify-between gap-1.5 xxs:gap-2 sm:gap-4 mb-3 xxs:mb-4 sm:mb-6 shrink-0 w-full bg-white/10 p-1.5 xxs:p-2 xs:p-3 sm:p-4 rounded-lg xxs:rounded-xl sm:rounded-2xl border border-white/10 relative z-[100]">
@@ -1017,7 +876,7 @@
             </div>
         </section>
 
-        <div class="grid grid-cols-1 gap-3 xxs:gap-4 xs:gap-6 sm:gap-8 reveal">
+        <div class="grid grid-cols-2 gap-3 xxs:gap-4 xs:gap-6 sm:gap-8 reveal">
             <!-- Tic-Tac-Toe -->
             <div class="glass-card p-3 xxs:p-5 xs:p-6 sm:p-8 rounded-[1rem] xxs:rounded-[1.5rem] sm:rounded-[2.5rem] group overflow-hidden relative border border-slate-200 dark:border-slate-800">
                 <div class="flex items-center gap-2 xxs:gap-3 sm:gap-5 mb-2 xxs:mb-4 sm:mb-6">
@@ -1114,7 +973,22 @@
                 </a>
             </div>
 
-        </div> <!-- MISSING DIV FIXED HERE -->
+            <!-- Lukas' TikTok -->
+            <div class="glass-card p-3 xxs:p-5 xs:p-6 sm:p-8 rounded-[1rem] xxs:rounded-[1.5rem] sm:rounded-[2.5rem] group overflow-hidden relative border border-slate-200 dark:border-slate-800">
+                <div class="flex items-center gap-2 xxs:gap-3 sm:gap-5 mb-2 xxs:mb-4 sm:mb-6">
+                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-pink-500/10 text-pink-600 dark:text-pink-500 rounded-lg xxs:rounded-xl sm:rounded-2xl group-hover:rotate-12 transition-transform">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-6 xxs:h-6 sm:w-8 sm:h-8"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/></svg>
+                    </div>
+                    <h2 class="text-base xxs:text-xl xs:text-2xl sm:text-3xl font-bold">Lukas' TikTok</h2>
+                </div>
+                <a href="https://www.tiktok.com/@lukas_1838?_r=1&_t=ZG-95Q77G17ixE" target="_blank" rel="noopener noreferrer" class="group/link inline-flex items-center gap-1.5 xxs:gap-2 sm:gap-3 text-sm xxs:text-base sm:text-xl text-blue-500 hover:text-blue-600 font-bold transition-all">
+                    Hier geht's zu Lukas' Kanal
+                    <div class="p-0.5 xxs:p-1 sm:p-1.5 bg-blue-500/10 rounded xxs:rounded-md sm:rounded-lg group-hover/link:translate-x-1 transition-transform">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-4 xxs:h-4 sm:w-5 sm:h-5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    </div>
+                </a>
+            </div>
+        </div> 
 
         <footer class="mt-12 xxs:mt-20 sm:mt-40 text-center reveal">
             <div class="inline-flex items-center gap-1.5 xxs:gap-2 sm:gap-4 py-1.5 px-3 xxs:py-2 xxs:px-4 sm:px-6 bg-slate-200/50 dark:bg-slate-900/50 rounded-full border border-slate-300 dark:border-slate-800 flex-wrap justify-center">
@@ -1221,7 +1095,7 @@
             status: { title: "Ausbildung & Fokus", content: "Ich absolviere aktuell meine Ausbildung zum Fachinformatiker für Systemintegration. Technik und Systeme sind meine Welt. Ich liebe es, Server aufzusetzen, Netzwerke zu konfigurieren und alles am Laufen zu halten. Mein Hyperfokus hilft mir dabei, tief in komplexe IT-Strukturen einzutauchen und Fehler zu finden, bevor sie zum Problem werden." },
             background: { title: "Hintergrund & Weg", content: "Ich bin 19 Jahre alt und lebe in einer Jugendhilfeeinrichtung. Das hat mich früh gelehrt, unabhängig zu sein und meinen eigenen Weg zu gehen. Ich sehe Herausforderungen nicht als Hindernis, sondern als Chance, zu wachsen und meine eigene Zukunft zu gestalten." },
             freizeit: { title: "Gaming & Content", content: "Wenn die Server laufen, bin ich bei Forza Horizon 5 anzutreffen. Ich streame live auf TikTok und teile meine Leidenschaft für Gaming und Technik mit der Community. Es geht mir um den Vibe, den Austausch und das Meistern neuer Challenges." },
-            menschen: { title: "Meine Wahlfamilie", content: "Da ich ohne Eltern aufgewachsen bin, sind Freunde meine gewählte Familie. Loyalität und Vertrauen stehen für mich an erster Stelle. Meine neuen Anker sind Danilo und Jakob, aber Tom bleibt es mit ihnen gemeinsam – wir gehen den Weg zusammen." },
+            menschen: { title: "Meine Wahlfamilie", content: "Da ich ohne Eltern aufgewachsen bin, sind Freunde meine gewählte Familie. Loyalität und Vertrauen stehen für mich an erster Stelle. Meine neuen Anker sind Danilo, Jakob und Lukas, aber Tom bleibt es mit ihnen gemeinsam – wir gehen den Weg zusammen." },
             techstack: { title: "Tech Stack & Skills", content: "Als angehender Systemintegrator kenne ich mich mit dem Setup und Wartung von IT-Infrastrukturen aus. Dazu gehören Windows Server, Linux-Distributionen, generelle Netzwerkkonfigurationen und intensives Hardware-Troubleshooting. Egal ob Laptops, PCs oder Smartphones – wenn was defekt ist, finde ich den Fehler." },
             setup: { title: "Mein Audio Setup", content: "Guter Sound ist ein absolutes Muss beim Zocken oder Musikhören. An meinem Rechner nutze ich die Beyerdynamic DT 770 Pro (80 Ohm) Studio-Kopfhörer für extrem klaren Klang und geschlossene Isolation. Wenn ich die Bude beschallen will, läuft das über meinen Teufel Rockster Cross Bluetooth-Speaker, der einfach heftig reinhaut." },
             labor: { title: "Labor & Projekte", content: "Meine persönliche Spielwiese. Hier baue ich komplexe Docker-Umgebungen, administriere Webserver und setze eigene APIs auf. Ich teste Netzwerkarchitekturen bis an ihre Grenzen und automatisiere Prozesse, um mein Setup stetig auf das nächste Level zu pushen." },
@@ -1435,7 +1309,7 @@
                 setTimeout(() => {
                     currentStepIndex++;
                     showTutorialStep(currentStepIndex);
-                }, 200); // Tauscht den Text aus, wenn der Blur am stärksten ist
+                }, 200); 
             });
         }
 
@@ -1472,8 +1346,8 @@
                     setTimeout(() => {
                         modalOverlay.classList.add('hidden');
                         modalOverlay.classList.remove('flex', 'modal-closing');
-                        document.body.style.overflow = ''; // FIX: Stellt Scrollen komplett wieder her
-                    }, 850); 
+                        document.body.style.overflow = ''; 
+                    }, 600); 
                 }
             });
         }
@@ -1508,13 +1382,11 @@
         let dashboardTimeout;
         window.toggleDashboard = function() {
             isDashboardOpen = !isDashboardOpen;
-            clearTimeout(dashboardTimeout); // Verhindert, dass alte Timeouts den State zerstören
+            clearTimeout(dashboardTimeout); 
             
             if (isDashboardOpen) {
                 if (musicCardLayoutWrapper) musicCardLayoutWrapper.classList.remove('hidden');
                 
-                // Kurze Verzögerung, damit display:grid vom Browser gerendert wird, 
-                // bevor die Transition zu 1fr startet. Das fixt das harte Snappen.
                 setTimeout(() => {
                     if (musicCardWrapper) {
                         musicCardWrapper.classList.remove('dashboard-closing');
@@ -1539,7 +1411,7 @@
                         if (musicCardLayoutWrapper) musicCardLayoutWrapper.classList.add('hidden');
                         if (musicCardWrapper) musicCardWrapper.classList.remove('dashboard-closing');
                     }
-                }, 900); // Exakt synchronisiert mit der 0.9s Out-Animation!
+                }, 900); // FIX: Zurück auf 900ms für die krasse ext-dashboard-out Animation
                 
                 if (mainMusicCard && mainMusicCard.classList.contains('offline')) {
                     if (miniStatus) miniStatus.innerText = "Klicken zum Öffnen";
@@ -1561,7 +1433,7 @@
                     setTimeout(() => {
                         mPicker.classList.add('hidden');
                         mPicker.classList.remove('flex', 'picker-closing');
-                    }, 850);
+                    }, 900); // FIX: Zurück auf 900ms
                 }
             }
         };
@@ -1622,7 +1494,7 @@
                 lyricsSettingsTimeout = setTimeout(() => {
                     lyricsSettingsMenu.classList.add('hidden');
                     lyricsSettingsMenu.classList.remove('settings-closing');
-                }, 850);
+                }, 900); // FIX: Zurück auf 900ms
             }
         };
 
@@ -1687,7 +1559,7 @@
                 mainMusicCard.classList.add('lyrics-closing-state');
                 setTimeout(() => {
                     mainMusicCard.classList.remove('lyrics-open', 'lyrics-closing-state');
-                }, 850);
+                }, 900); // FIX: Zurück auf 900ms
             }
         };
 
@@ -2587,15 +2459,12 @@
                 
                 if (mediaCont && infoCont && lyricsCont) {
                     mediaCont.classList.add('impact-media-out'); infoCont.classList.add('impact-text-out'); lyricsCont.classList.add('impact-lyrics-out');
-                    infoCont.style.animationDelay = '0.05s'; lyricsCont.style.animationDelay = '0.1s';
 
                     setTimeout(() => {
-                        applyDataChanges(650); 
-                        mediaCont.classList.remove('impact-media-out'); infoCont.classList.remove('impact-text-out'); lyricsCont.classList.remove('impact-lyrics-out');
-                        infoCont.style.animationDelay = '0s'; lyricsCont.style.animationDelay = '0s';
+                        applyDataChanges(500); 
+                        mediaCont.classList.remove('impact-media-out'); infoCont.classList.remove('impact-text-out'); lyricsCont.classList.add('impact-lyrics-out');
                         void mediaCont.offsetWidth;
                         mediaCont.classList.add('impact-media-in'); infoCont.classList.add('impact-text-in'); lyricsCont.classList.add('impact-lyrics-in');
-                        infoCont.style.animationDelay = '0.05s'; lyricsCont.style.animationDelay = '0.1s';
                         
                         setTimeout(() => {
                             document.body.classList.add('is-shaking');
@@ -2608,15 +2477,14 @@
                                 shockwave.style.left = `${centerX}px`; shockwave.style.top = `${centerY}px`;
                                 shockwave.classList.remove('trigger-emp'); void shockwave.offsetWidth; shockwave.classList.add('trigger-emp');
                             }
-                            setTimeout(() => document.body.classList.remove('is-shaking'), 800);
-                            setTimeout(() => { if (shockwave) shockwave.classList.remove('trigger-emp'); }, 4000);
-                        }, 400); 
+                            setTimeout(() => document.body.classList.remove('is-shaking'), 500);
+                            setTimeout(() => { if (shockwave) shockwave.classList.remove('trigger-emp'); }, 3000);
+                        }, 300); 
                         
                         setTimeout(() => {
                             mediaCont.classList.remove('impact-media-in'); infoCont.classList.remove('impact-text-in'); lyricsCont.classList.remove('impact-lyrics-in');
-                            infoCont.style.animationDelay = '0s'; lyricsCont.style.animationDelay = '0s';
-                        }, 900); 
-                    }, 650); 
+                        }, 600); 
+                    }, 500); 
                 } else {
                     applyDataChanges(0);
                 }
@@ -2665,30 +2533,37 @@
         });
 
         // ========================================================= //
-        // --- 3D LIQUID GLASS MOUSE INTERACTION TRACKING ---------- //
+        // --- 3D LIQUID Glass MOUSE INTERACTION TRACKING ---------- //
         // ========================================================= //
+        let isSpotlightUpdating = false;
+
         document.querySelectorAll('.glass-card').forEach(card => {
-            // Nur das Hover Tracking für das Grid (Main Card soll clean bleiben)
             if (card.id === 'main-music-card' || card.id === 'mini-player-toggle') return; 
 
             const updateSpotlight = (clientX, clientY) => {
-                if (!document.body.classList.contains('liquid-glass-active') || document.body.classList.contains('low-end')) {
-                    card.style.setProperty('--mouse-x', '50%');
-                    card.style.setProperty('--mouse-y', '50%');
-                    return;
-                }
-                const rect = card.getBoundingClientRect();
-                const x = clientX - rect.left;
-                const y = clientY - rect.top;
-                
-                card.style.setProperty('--mouse-x', `${x}px`);
-                card.style.setProperty('--mouse-y', `${y}px`);
+                if (isSpotlightUpdating) return;
+                isSpotlightUpdating = true;
+
+                requestAnimationFrame(() => {
+                    if (!document.body.classList.contains('liquid-glass-active') || document.body.classList.contains('low-end')) {
+                        card.style.setProperty('--mouse-x', '50%');
+                        card.style.setProperty('--mouse-y', '50%');
+                        isSpotlightUpdating = false;
+                        return;
+                    }
+                    const rect = card.getBoundingClientRect();
+                    const x = clientX - rect.left;
+                    const y = clientY - rect.top;
+                    
+                    card.style.setProperty('--mouse-x', `${x}px`);
+                    card.style.setProperty('--mouse-y', `${y}px`);
+                    isSpotlightUpdating = false;
+                });
             };
 
             const resetSpotlight = () => {
                 if (!document.body.classList.contains('liquid-glass-active')) return;
                 
-                // Für Mobile: Glare ausblenden
                 if(window.matchMedia("(hover: none)").matches) {
                     card.style.setProperty('--glare-opacity', '0');
                 }
@@ -2700,10 +2575,10 @@
             };
 
             // Mouse Events
-            card.addEventListener('mousemove', (e) => updateSpotlight(e.clientX, e.clientY));
-            card.addEventListener('mouseleave', resetSpotlight);
+            card.addEventListener('mousemove', (e) => updateSpotlight(e.clientX, e.clientY), {passive: true});
+            card.addEventListener('mouseleave', resetSpotlight, {passive: true});
             
-            // Touch Events (Mobile Support Fix)
+            // Touch Events
             card.addEventListener('touchstart', (e) => {
                 if(window.matchMedia("(hover: none)").matches) {
                     card.style.setProperty('--glare-opacity', '1');
@@ -2713,22 +2588,22 @@
             }, {passive: true});
             
             card.addEventListener('touchmove', (e) => {
-                card.classList.remove('is-squished'); // FIX SCROLLING: Entfernt den Squish beim Swipen!
+                card.classList.remove('is-squished'); 
                 updateSpotlight(e.touches[0].clientX, e.touches[0].clientY);
             }, {passive: true});
             
             card.addEventListener('touchend', (e) => {
                 card.classList.remove('is-squished');
                 resetSpotlight();
-            });
+            }, {passive: true});
             card.addEventListener('touchcancel', (e) => {
                 card.classList.remove('is-squished');
                 resetSpotlight();
-            });
+            }, {passive: true});
 
-            // Desktop active state JS
-            card.addEventListener('mousedown', () => card.classList.add('is-squished'));
-            card.addEventListener('mouseup', () => card.classList.remove('is-squished'));
+            // Desktop active state
+            card.addEventListener('mousedown', () => card.classList.add('is-squished'), {passive: true});
+            card.addEventListener('mouseup', () => card.classList.remove('is-squished'), {passive: true});
         });
 
         (async () => {
