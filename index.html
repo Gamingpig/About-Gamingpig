@@ -570,6 +570,7 @@
             </p>
         </header>
 
+        <!-- AUSBILDUNG & ALLTAG: Gequetschtes Grid, 2 Spalten -->
         <section id="cards-section" class="mb-12 xxs:mb-16 xs:mb-20 sm:mb-24 reveal rounded-3xl relative z-10">
             <h2 class="text-lg xxs:text-xl xs:text-2xl sm:text-3xl font-bold mb-4 xxs:mb-6 sm:mb-10 text-blue-600 dark:text-blue-500 border-b-2 sm:border-b-4 border-blue-600 dark:border-blue-500 pb-1.5 xxs:pb-2 sm:pb-3 inline-block break-words">
                 Real Talk: Ausbildung & Alltag
@@ -829,7 +830,7 @@
             </div>
         </section>
 
-        <!-- HIER IST DEIN EINSPALTIGES GRID FÜR GAMES UND SOCIALS -->
+        <!-- EINSPALTIGES GRID FÜR GAMES UND SOCIALS -->
         <div class="grid grid-cols-1 gap-3 xxs:gap-4 xs:gap-6 sm:gap-8 reveal">
             <!-- Tic-Tac-Toe -->
             <div class="glass-card p-3 xxs:p-5 xs:p-6 sm:p-8 rounded-[1rem] xxs:rounded-[1.5rem] sm:rounded-[2.5rem] group overflow-hidden relative border border-slate-200 dark:border-slate-800">
@@ -2185,6 +2186,11 @@
             const isNewTrack = (newTrackId !== currentTrackId);
             const isFirstLoad = (currentTrackId === "");
 
+            // FIX: Prevent avalanche of delayed impact animations triggering fetch calls
+            if (isNewTrack) {
+                currentTrackId = newTrackId;
+            }
+
             let currentApiProgress = data.progress_ms !== undefined ? data.progress_ms : (data.track && data.track.progress_ms) || 0;
 
             if (currentApiProgress === lastSeenProgressMs && trackIsPlaying === isPlaying && !isNewTrack) {
@@ -2280,7 +2286,6 @@
                 if (mText) mText.innerText = data.provider || "Streaming";
 
                 if (isNewTrack) {
-                    currentTrackId = newTrackId;
                     totalMs = trackDuration;
                     if (timeTotalEl) timeTotalEl.innerText = formatTime(totalMs);
                     
@@ -2416,7 +2421,7 @@
 
                     setTimeout(() => {
                         applyDataChanges(500); 
-                        mediaCont.classList.remove('impact-media-out'); infoCont.classList.remove('impact-text-out'); lyricsCont.classList.add('impact-lyrics-out');
+                        mediaCont.classList.remove('impact-media-out'); infoCont.classList.remove('impact-text-out'); lyricsCont.classList.remove('impact-lyrics-out');
                         void mediaCont.offsetWidth;
                         mediaCont.classList.add('impact-media-in'); infoCont.classList.add('impact-text-in'); lyricsCont.classList.add('impact-lyrics-in');
                         
@@ -2453,9 +2458,12 @@
             musicSocket.onopen = () => {
                 let pStart = performance.now();
                 fetch('https://npc-api.aikins.xyz/v1/users/gamingpig/now')
-                    .then(r => r.text())
+                    .then(r => {
+                        if (!r.ok) throw new Error("Fetch failed");
+                        return r.text();
+                    })
                     .then(text => text ? updateMusicUI(JSON.parse(text), (performance.now() - pStart) / 2) : null)
-                    .catch(err => console.error("Socket fetch error:", err));
+                    .catch(() => {});
             };
             musicSocket.onmessage = (e) => {
                 try {
@@ -2470,7 +2478,10 @@
             if (musicSocket && musicSocket.readyState === WebSocket.OPEN) return;
             let pStart = performance.now();
             fetch('https://npc-api.aikins.xyz/v1/users/gamingpig/now')
-                .then(r => r.text())
+                .then(r => {
+                    if (!r.ok) throw new Error("Fetch failed");
+                    return r.text();
+                })
                 .then(text => text ? updateMusicUI(JSON.parse(text), (performance.now() - pStart) / 2) : null)
                 .catch(() => {});
         }, 5000);
@@ -2479,9 +2490,12 @@
             if (document.visibilityState === "visible") {
                 let pStart = performance.now();
                 fetch('https://npc-api.aikins.xyz/v1/users/gamingpig/now')
-                    .then(r => r.text())
+                    .then(r => {
+                        if (!r.ok) throw new Error("Fetch failed");
+                        return r.text();
+                    })
                     .then(text => text ? updateMusicUI(JSON.parse(text), (performance.now() - pStart) / 2) : null)
-                    .catch(err => console.error("Visibility fetch error:", err));
+                    .catch(() => {});
                 if (!musicSocket || musicSocket.readyState === WebSocket.CLOSED) connectMusicSocket();
             }
         });
