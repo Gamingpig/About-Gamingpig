@@ -167,6 +167,11 @@
             backdrop-filter: blur(30px) saturate(200%) brightness(1.15) !important;
         }
 
+        /* FIX: Liquid Glass Mode Transition Update für die Music Card (Damit Dimensionen mit animiert werden) */
+        body.liquid-glass-active #main-music-card {
+            transition: max-width 1.2s var(--liquid-fluid), min-height 1.2s var(--liquid-fluid), transform 0.6s var(--apple-spring), box-shadow 0.6s var(--apple-spring), border-radius 0.4s var(--apple-ease), background-color 0.4s ease, backdrop-filter 0.4s ease !important;
+        }
+
         body.liquid-glass-active .glass-card::before {
             content: '';
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -260,6 +265,7 @@
             animation: ext-pop-out 0.9s var(--liquid-fluid) forwards !important;
             transform-origin: center center;
             will-change: transform, opacity;
+            display: flex !important; /* Sicherstellen, dass es sichtbar bleibt während Animation */
         }
 
         body.liquid-glass-active .dashboard-opening #main-music-card { animation: ext-dashboard-in 1.2s var(--liquid-fluid) forwards !important; transform-origin: top center; will-change: transform, opacity; }
@@ -352,7 +358,9 @@
         #main-music-card {
             background: rgba(15, 23, 42, 0.4) !important; border-color: rgba(255, 255, 255, 0.15) !important;
             -webkit-backdrop-filter: blur(25px) saturate(1.5); backdrop-filter: blur(25px) saturate(1.5);
-            transition: box-shadow 0.4s ease, max-width 0.5s var(--apple-spring), min-height 0.4s var(--apple-spring);
+            /* FIX: Butterweiche Animationen für Dimensionen hinzufügen! */
+            transition: max-width 0.8s var(--apple-spring), min-height 0.8s var(--apple-spring), box-shadow 0.4s ease, border-radius 0.6s var(--apple-spring), transform 0.6s var(--apple-spring) !important;
+            will-change: max-width, min-height, transform;
         }
         #main-music-card.lyrics-open { max-width: 800px !important; min-height: 80vh !important; }
         #main-music-card #track-title { color: #ffffff !important; }
@@ -399,7 +407,16 @@
         .eq-bar:nth-child(3) { height: 6px; animation-duration: 0.5s; } .eq-bar:nth-child(4) { height: 10px; animation-duration: 0.7s; }
         @keyframes eq-bounce { 0% { transform: scaleY(0.2); } 100% { transform: scaleY(1); } }
 
-        .lyrics-open #lyrics-overlay { pointer-events: auto; visibility: visible; }
+        .lyrics-open #lyrics-overlay { pointer-events: auto; visibility: visible; opacity: 1; }
+        
+        /* FIX: Overlay Sichtbarkeit beim Schließen erzwingen */
+        .lyrics-closing-state #lyrics-overlay { 
+            pointer-events: none; 
+            visibility: visible !important; 
+            display: flex !important;
+            opacity: 1;
+        }
+
         .lyric-line { display: block; margin: 4vh 0; line-height: 1.25; transition: opacity 0.4s ease, filter 0.4s ease, transform 0.5s var(--apple-bounce); transform-origin: left center; overflow-wrap: break-word; word-wrap: break-word; white-space: pre-wrap; padding-right: 1rem; will-change: opacity, transform; transform: translate3d(0,0,0); }
         .lyrics-open .lyric-line { opacity: 0.25; filter: blur(1px); transform: scale(0.95) translate3d(0,0,0); }
         .lyrics-open .lyric-line.active { opacity: 1; filter: blur(0px) drop-shadow(0 0 8px rgba(255,255,255,0.1)); transform: scale(1.05) translate3d(0,0,0); }
@@ -1095,7 +1112,6 @@
         let userScrollTimeout = null;
         let currentFetchId = 0;
         let offlineTimeout = null;
-        let musicSocket = null;
         let lastLowEndUpdate = 0;
 
         // --- 3. LOGIC & EVENT LISTENERS ---
@@ -1504,17 +1520,21 @@
             }
         };
 
+        // FIX: Re-Add Smooth Transitions for Size changes
         window.toggleLyrics = function(show) {
             if (!mainMusicCard) return;
             if(show) {
                 mainMusicCard.classList.remove('lyrics-closing-state');
+                void mainMusicCard.offsetWidth; // Reflow erzwingen
                 mainMusicCard.classList.add('lyrics-open');
                 setTimeout(() => syncLyricsUI(true), 100); 
             } else {
                 mainMusicCard.classList.add('lyrics-closing-state');
+                // Wichtig: Um die Transition zurück auf Standard-Größe zu starten, direkt entfernen!
+                mainMusicCard.classList.remove('lyrics-open');
                 setTimeout(() => {
-                    mainMusicCard.classList.remove('lyrics-open', 'lyrics-closing-state');
-                }, 900); // FIX: Zurück auf 900ms
+                    mainMusicCard.classList.remove('lyrics-closing-state');
+                }, 900); // Overlay Pop-Out Animation abwarten
             }
         };
 
@@ -2186,7 +2206,6 @@
             const isNewTrack = (newTrackId !== currentTrackId);
             const isFirstLoad = (currentTrackId === "");
 
-            // FIX: Prevent avalanche of delayed impact animations triggering fetch calls
             if (isNewTrack) {
                 currentTrackId = newTrackId;
             }
@@ -2452,30 +2471,7 @@
             }
         }
 
-        function connectMusicSocket() {
-            if (musicSocket && musicSocket.readyState === WebSocket.OPEN) return; 
-            musicSocket = new WebSocket('wss://npc-api.aikins.xyz/v1/users/gamingpig/ws');
-            musicSocket.onopen = () => {
-                let pStart = performance.now();
-                fetch('https://npc-api.aikins.xyz/v1/users/gamingpig/now')
-                    .then(r => {
-                        if (!r.ok) throw new Error("Fetch failed");
-                        return r.text();
-                    })
-                    .then(text => text ? updateMusicUI(JSON.parse(text), (performance.now() - pStart) / 2) : null)
-                    .catch(() => {});
-            };
-            musicSocket.onmessage = (e) => {
-                try {
-                    const msg = JSON.parse(e.data);
-                    if (msg.event === "update") updateMusicUI(msg.data, 20);
-                } catch(err) {}
-            };
-            musicSocket.onclose = () => setTimeout(connectMusicSocket, 3000); 
-        }
-
-        setInterval(() => {
-            if (musicSocket && musicSocket.readyState === WebSocket.OPEN) return;
+        function fetchMusicData() {
             let pStart = performance.now();
             fetch('https://npc-api.aikins.xyz/v1/users/gamingpig/now')
                 .then(r => {
@@ -2484,19 +2480,13 @@
                 })
                 .then(text => text ? updateMusicUI(JSON.parse(text), (performance.now() - pStart) / 2) : null)
                 .catch(() => {});
-        }, 5000);
+        }
+
+        setInterval(fetchMusicData, 5000);
 
         document.addEventListener("visibilitychange", () => {
             if (document.visibilityState === "visible") {
-                let pStart = performance.now();
-                fetch('https://npc-api.aikins.xyz/v1/users/gamingpig/now')
-                    .then(r => {
-                        if (!r.ok) throw new Error("Fetch failed");
-                        return r.text();
-                    })
-                    .then(text => text ? updateMusicUI(JSON.parse(text), (performance.now() - pStart) / 2) : null)
-                    .catch(() => {});
-                if (!musicSocket || musicSocket.readyState === WebSocket.CLOSED) connectMusicSocket();
+                fetchMusicData();
             }
         });
 
@@ -2581,7 +2571,7 @@
                 isAnimating = true;
                 requestAnimationFrame(animateLoop);
             }
-            connectMusicSocket();
+            fetchMusicData();
             setInterval(syncWorldwideTime, 600000);
         })();
     </script>
