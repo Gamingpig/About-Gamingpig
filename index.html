@@ -272,29 +272,29 @@
         body.liquid-glass-active .dashboard-closing #main-music-card { animation: ext-dashboard-out 0.9s var(--liquid-fluid) forwards !important; transform-origin: top center; will-change: transform, opacity; }
 
         @keyframes ext-pop-in {
-            0% { transform: translate3d(0, 120px, 0) scale(0.4, 1.7); opacity: 0; border-radius: 100px; }
-            45% { transform: translate3d(0, -30px, 0) scale(1.15, 0.85); opacity: 1; border-radius: 20px; }
-            75% { transform: translate3d(0, 15px, 0) scale(0.92, 1.08); border-radius: 50px; }
-            100% { transform: translate3d(0, 0, 0) scale(1, 1); border-radius: 2.5rem; opacity: 1; }
+            0% { transform: translate3d(0, 120px, 0) scale(0.4, 1.7); opacity: 0; border-radius: 100px; box-shadow: none; }
+            45% { transform: translate3d(0, -30px, 0) scale(1.15, 0.85); opacity: 1; border-radius: 20px; box-shadow: var(--gl-shadow-idle); }
+            75% { transform: translate3d(0, 15px, 0) scale(0.92, 1.08); border-radius: 50px; box-shadow: var(--gl-shadow-idle-2); }
+            100% { transform: translate3d(0, 0, 0) scale(1, 1); border-radius: 24px; opacity: 1; box-shadow: var(--gl-shadow-idle); }
         }
 
         @keyframes ext-pop-out {
-            0% { transform: translate3d(0, 0, 0) scale(1, 1); opacity: 1; }
-            35% { transform: translate3d(0, -20px, 0) scale(1.1, 0.9); opacity: 1; border-radius: 30px; }
-            100% { transform: translate3d(0, 200px, 0) scale(0.3, 2.0); opacity: 0; border-radius: 100px; }
+            0% { transform: translate3d(0, 0, 0) scale(1, 1); opacity: 1; border-radius: 24px; box-shadow: var(--gl-shadow-idle); }
+            35% { transform: translate3d(0, -20px, 0) scale(1.1, 0.9); opacity: 1; border-radius: 30px; box-shadow: var(--gl-shadow-idle-2); }
+            100% { transform: translate3d(0, 200px, 0) scale(0.3, 2.0); opacity: 0; border-radius: 100px; box-shadow: none; }
         }
 
         @keyframes ext-dashboard-in {
-            0% { transform: translate3d(0, -100px, 0) scale(0.4, 1.8); opacity: 0; border-radius: 100px; }
-            45% { transform: translate3d(0, 35px, 0) scale(1.15, 0.85); opacity: 1; border-radius: 15px; }
-            75% { transform: translate3d(0, -15px, 0) scale(0.9, 1.1); border-radius: 50px; }
-            100% { transform: translate3d(0, 0, 0) scale(1, 1); border-radius: 3rem; opacity: 1; }
+            0% { transform: translate3d(0, -100px, 0) scale(0.4, 1.8); opacity: 0; border-radius: 100px; box-shadow: none; }
+            45% { transform: translate3d(0, 35px, 0) scale(1.15, 0.85); opacity: 1; border-radius: 15px; box-shadow: var(--gl-shadow-idle); }
+            75% { transform: translate3d(0, -15px, 0) scale(0.9, 1.1); border-radius: 50px; box-shadow: var(--gl-shadow-idle-2); }
+            100% { transform: translate3d(0, 0, 0) scale(1, 1); border-radius: 24px; opacity: 1; box-shadow: var(--gl-shadow-idle); }
         }
 
         @keyframes ext-dashboard-out {
-            0% { transform: translate3d(0, 0, 0) scale(1, 1); opacity: 1; }
-            35% { transform: translate3d(0, 20px, 0) scale(1.1, 0.9); opacity: 1; border-radius: 40px; }
-            100% { transform: translate3d(0, -150px, 0) scale(0.3, 2.0); opacity: 0; }
+            0% { transform: translate3d(0, 0, 0) scale(1, 1); opacity: 1; border-radius: 24px; box-shadow: var(--gl-shadow-idle); }
+            35% { transform: translate3d(0, 20px, 0) scale(1.1, 0.9); opacity: 1; border-radius: 40px; box-shadow: var(--gl-shadow-idle-2); }
+            100% { transform: translate3d(0, -150px, 0) scale(0.3, 2.0); opacity: 0; box-shadow: none; }
         }
 
         /* --- TUTORIAL MORPHING --- */
@@ -463,8 +463,25 @@
         #lyrics-container::-webkit-scrollbar-track { background: transparent; }
         #lyrics-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
 
-        #modal-overlay { backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); transition: all 0.5s var(--apple-ease); will-change: opacity; }
+        #modal-overlay { backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); transition: opacity 0.5s var(--apple-ease); will-change: opacity; opacity: 0; }
+        #modal-overlay.flex { opacity: 1; }
+        #modal-overlay.modal-closing { opacity: 0; }
         
+        #music-picker { transition: opacity 0.5s var(--apple-ease); opacity: 0; }
+        #music-picker.flex { opacity: 1; }
+        #music-picker.picker-closing { opacity: 0; }
+        
+        #tutorial-wrapper { transition: opacity 0.5s var(--apple-ease); opacity: 0; }
+        #tutorial-wrapper.flex { opacity: 1; }
+        #tutorial-wrapper.tutorial-closing { opacity: 0; }
+
+        /* FIX: Overlay Fade-Zeiten im Liquid Glass Mode perfekt an die Karten-Animationen anpassen */
+        body.liquid-glass-active #modal-overlay,
+        body.liquid-glass-active #music-picker,
+        body.liquid-glass-active #tutorial-wrapper {
+            transition: opacity 0.9s var(--liquid-fluid);
+        }
+
         @media (pointer: fine) {
             ::-webkit-scrollbar { width: 8px; }
             ::-webkit-scrollbar-track { background: transparent; }
@@ -1197,14 +1214,18 @@
 
         function endTutorial() {
             if (tutorialBox) {
+                clearTimeout(tutorialTimeout);
                 tutorialBox.classList.remove('tutorial-opening');
                 tutorialBox.classList.add('tutorial-closing');
+            }
+            if (tutorialWrapper) {
+                tutorialWrapper.classList.add('tutorial-closing');
             }
             
             setTimeout(() => {
                 if (tutorialWrapper) {
                     tutorialWrapper.classList.add('hidden');
-                    tutorialWrapper.classList.remove('flex');
+                    tutorialWrapper.classList.remove('flex', 'tutorial-closing');
                 }
                 if (tutorialBox) {
                     tutorialBox.classList.remove('tutorial-closing');
@@ -1252,6 +1273,7 @@
             }
         }
 
+        let tutorialTimeout;
         function startTutorial() {
             currentStepIndex = 0;
             originalPerfModeState = localStorage.getItem('perfMode');
@@ -1259,12 +1281,17 @@
             applyPerformanceMode(true);
             
             if (tutorialWrapper) {
-                tutorialWrapper.classList.remove('hidden');
+                tutorialWrapper.classList.remove('hidden', 'tutorial-closing');
+                void tutorialWrapper.offsetWidth;
                 tutorialWrapper.classList.add('flex');
             }
             if (tutorialBox) {
+                clearTimeout(tutorialTimeout);
                 tutorialBox.classList.remove('tutorial-closing');
                 tutorialBox.classList.add('tutorial-opening');
+                tutorialTimeout = setTimeout(() => {
+                    tutorialBox.classList.remove('tutorial-opening');
+                }, 1200);
             }
             showTutorialStep(currentStepIndex);
         }
@@ -1291,6 +1318,7 @@
             setTimeout(startTutorial, 500);
         }
 
+        let modalTimeout;
         window.openModal = function(key) {
             const data = details[key];
             if(!data) return;
@@ -1303,8 +1331,14 @@
                 `;
             }
             if (modalOverlay) {
+                clearTimeout(modalTimeout);
                 modalOverlay.classList.remove('hidden', 'modal-closing');
+                void modalOverlay.offsetWidth;
                 modalOverlay.classList.add('flex', 'modal-opening');
+                
+                modalTimeout = setTimeout(() => {
+                    modalOverlay.classList.remove('modal-opening');
+                }, 1200);
             }
             document.body.style.overflow = 'hidden';
         };
@@ -1312,13 +1346,14 @@
         if (closeModal) {
             closeModal.addEventListener('click', () => {
                 if (modalOverlay) {
+                    clearTimeout(modalTimeout);
                     modalOverlay.classList.remove('modal-opening');
                     modalOverlay.classList.add('modal-closing');
                     setTimeout(() => {
                         modalOverlay.classList.add('hidden');
                         modalOverlay.classList.remove('flex', 'modal-closing');
                         document.body.style.overflow = ''; 
-                    }, 600); 
+                    }, 900); 
                 }
             });
         }
@@ -1351,9 +1386,11 @@
 
         // --- DASHBOARD LOGIC FIX ---
         let dashboardTimeout;
+        let dashboardOpenTimeout;
         window.toggleDashboard = function() {
             isDashboardOpen = !isDashboardOpen;
             clearTimeout(dashboardTimeout); 
+            clearTimeout(dashboardOpenTimeout);
             
             if (isDashboardOpen) {
                 if (musicCardLayoutWrapper) musicCardLayoutWrapper.classList.remove('hidden');
@@ -1365,6 +1402,10 @@
                     }
                     if (musicCardLayoutWrapper) musicCardLayoutWrapper.classList.add('is-open');
                 }, 20);
+                
+                dashboardOpenTimeout = setTimeout(() => {
+                    if (musicCardWrapper) musicCardWrapper.classList.remove('dashboard-opening');
+                }, 1200);
                 
                 if (musicChevron) musicChevron.style.transform = 'rotate(180deg)';
                 if (miniStatus) miniStatus.innerText = "Klicken zum Schließen";
@@ -1382,7 +1423,7 @@
                         if (musicCardLayoutWrapper) musicCardLayoutWrapper.classList.add('hidden');
                         if (musicCardWrapper) musicCardWrapper.classList.remove('dashboard-closing');
                     }
-                }, 900); // FIX: Zurück auf 900ms für die krasse ext-dashboard-out Animation
+                }, 900); 
                 
                 if (mainMusicCard && mainMusicCard.classList.contains('offline')) {
                     if (miniStatus) miniStatus.innerText = "Klicken zum Öffnen";
@@ -1393,18 +1434,25 @@
             }
         };
 
+        let pickerTimeout;
         window.toggleMusicPicker = function(show) {
             if (mainMusicCard && !mainMusicCard.classList.contains('offline') && mPicker) {
+                clearTimeout(pickerTimeout);
                 if(show) {
                     mPicker.classList.remove('hidden', 'picker-closing');
+                    void mPicker.offsetWidth;
                     mPicker.classList.add('flex', 'picker-opening');
+                    
+                    pickerTimeout = setTimeout(() => {
+                        mPicker.classList.remove('picker-opening');
+                    }, 1200);
                 } else {
                     mPicker.classList.remove('picker-opening');
                     mPicker.classList.add('picker-closing');
                     setTimeout(() => {
                         mPicker.classList.add('hidden');
                         mPicker.classList.remove('flex', 'picker-closing');
-                    }, 900); // FIX: Zurück auf 900ms
+                    }, 900); 
                 }
             }
         };
