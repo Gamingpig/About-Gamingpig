@@ -2282,11 +2282,31 @@
                 mainMusicCard.classList.remove('offline');
                 mainMusicCard.classList.add('playing');
             }
+
+                     
             if (mHeader) mHeader.innerText = "Gamingpig is listening to";
             if (mDot) mDot.className = "h-1 w-1 xxs:h-1.5 xxs:w-1.5 xs:h-2 xs:w-2 rounded-full bg-green-500 active-dot";
-            const imgUrl = data.track.artwork_url;
+            
+            // FIX: Integriertes Platzhalter-Bild (Dunkles Quadrat mit Noten-Icon), falls kein Artwork existiert
+            const fallbackImg = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 400 400'%3E%3Crect width='400' height='400' fill='%230f172a'/%3E%3Cpath d='M250 120v100c0 33.1-26.9 60-60 60s-60-26.9-60-60 26.9-60 60-60c7.1 0 13.7 1.2 20 3.5V120h40z' fill='%23334155'/%3E%3C/svg%3E";
+            
+            let imgUrl = data.track.artwork_url;
+            if (!imgUrl || imgUrl.trim() === "") {
+                imgUrl = fallbackImg;
+            }
+
+            // Error-Handler: Greift ein, wenn der Link da ist, das Bild aber vom Server nicht geladen werden kann (z.B. 404)
+            if (mArtwork && !mArtwork.onerror) {
+                mArtwork.onerror = function() {
+                    this.src = fallbackImg;
+                    if (mAmbient) mAmbient.style.backgroundImage = `url('${fallbackImg}')`;
+                    if (mGlow) mGlow.style.backgroundImage = `url('${fallbackImg}')`;
+                    if (lyricsMiniArt) lyricsMiniArt.src = fallbackImg;
+                };
+            }
             
             const rawArtist = data.track.artist || "Unknown";
+            
             const cleanArtist = rawArtist.replace(/\s*•\s*From Smart Shuffle/gi, '').trim();
             
             const newTrackId = data.track.title + "-" + cleanArtist;
