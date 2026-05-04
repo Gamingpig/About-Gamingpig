@@ -2295,16 +2295,6 @@
                 imgUrl = fallbackImg;
             }
 
-            // Error-Handler: Greift ein, wenn der Link da ist, das Bild aber vom Server nicht geladen werden kann (z.B. 404)
-            if (mArtwork && !mArtwork.onerror) {
-                mArtwork.onerror = function() {
-                    this.src = fallbackImg;
-                    if (mAmbient) mAmbient.style.backgroundImage = `url('${fallbackImg}')`;
-                    if (mGlow) mGlow.style.backgroundImage = `url('${fallbackImg}')`;
-                    if (lyricsMiniArt) lyricsMiniArt.src = fallbackImg;
-                };
-            }
-            
             const rawArtist = data.track.artist || "Unknown";
             
             const cleanArtist = rawArtist.replace(/\s*•\s*From Smart Shuffle/gi, '').trim();
@@ -2356,16 +2346,39 @@
                 apiProgress = trackDuration;
             }
 
-            const applyDataChanges = (addedDelay = 0) => {
-                if(mArtwork && mAmbient && mGlow && (mArtwork.getAttribute('src') !== imgUrl || mAmbient.style.backgroundImage === "none" || mAmbient.style.backgroundImage === "")) {
-                    mArtwork.src = imgUrl; 
-                    mAmbient.style.backgroundImage = `url('${imgUrl}')`;
-                    mGlow.style.backgroundImage = `url('${imgUrl}')`;
+                const applyDataChanges = (addedDelay = 0) => {
+                // RICHTIG GEILER FIX: Image Preloader mit Cache-Buster
+                if (mArtwork && mArtwork.dataset.currentSrc !== imgUrl) {
+                    mArtwork.dataset.currentSrc = imgUrl; // URL merken, damit wir nicht sinnlos loopen
+                    
+                    const tempImg = new Image();
+                    
+                    tempImg.onload = () => {
+                        // Sobald das Bild WIRKLICH im Hintergrund geladen wurde, tauschen wir es aus
+                        mArtwork.src = imgUrl; 
+                        if (mAmbient) mAmbient.style.backgroundImage = `url('${imgUrl}')`;
+                        if (mGlow) mGlow.style.backgroundImage = `url('${imgUrl}')`;
+                        if (lyricsMiniArt) lyricsMiniArt.src = imgUrl;
+                    };
+                    
+                    tempImg.onerror = () => {
+                        // Bild kaputt? Fallback reinballern!
+                        mArtwork.src = fallbackImg;
+                        if (mAmbient) mAmbient.style.backgroundImage = `url('${fallbackImg}')`;
+                        if (mGlow) mGlow.style.backgroundImage = `url('${fallbackImg}')`;
+                        if (lyricsMiniArt) lyricsMiniArt.src = fallbackImg;
+                        
+                        // Das Wichtigste: Status zurücksetzen, damit der nächste 5-Sekunden-Fetch 
+                        // es ZWINGEND nochmal probiert und nicht denkt "hab ich schon".
+                        mArtwork.dataset.currentSrc = "error"; 
+                    };
+                    
+                    // Der Cache-Buster Trick:
+                    const bypassCacheUrl = imgUrl.includes('?') ? `${imgUrl}&retry=${Date.now()}` : `${imgUrl}?retry=${Date.now()}`;
+                    tempImg.src = imgUrl.startsWith('data:') ? imgUrl : bypassCacheUrl;
                 }
                 
-                if(lyricsMiniArt && lyricsMiniArt.getAttribute('src') !== imgUrl) {
-                    lyricsMiniArt.src = imgUrl; 
-                }
+                const canvasUrl = data.track.canvas_url || data.track.canvasUrl || null;
                 
                 const canvasUrl = data.track.canvas_url || data.track.canvasUrl || null;
                 if(canvasUrl !== currentCanvasUrl) {
