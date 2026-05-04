@@ -2347,35 +2347,14 @@
             }
 
                 const applyDataChanges = (addedDelay = 0) => {
-                if (mArtwork && mArtwork.dataset.currentSrc !== imgUrl) {
-                    mArtwork.dataset.currentSrc = imgUrl; 
-                    
-                    const tempImg = new Image();
-                    
-                    tempImg.onload = () => {
-                        mArtwork.src = imgUrl; 
-                        if (mAmbient) mAmbient.style.backgroundImage = `url('${imgUrl}')`;
-                        if (mGlow) mGlow.style.backgroundImage = `url('${imgUrl}')`;
-                        if (lyricsMiniArt) lyricsMiniArt.src = imgUrl;
-                    };
-                    
-                    tempImg.onerror = () => {
-                        mArtwork.src = fallbackImg;
-                        if (mAmbient) mAmbient.style.backgroundImage = `url('${fallbackImg}')`;
-                        if (mGlow) mGlow.style.backgroundImage = `url('${fallbackImg}')`;
-                        if (lyricsMiniArt) lyricsMiniArt.src = fallbackImg;
-                        mArtwork.dataset.currentSrc = "error"; 
-                    };
-                    
-                    // NEUER FIX: Keine URL-Verfälschung mehr! Wir nutzen fetch(), 
-                    // um den Cache im Hintergrund heimlich zu umgehen und das echte Bild zu laden.
-                    if (!imgUrl.startsWith('data:')) {
-                        fetch(imgUrl, { cache: 'reload', mode: 'no-cors' })
-                            .then(() => { tempImg.src = imgUrl; })
-                            .catch(() => { tempImg.src = imgUrl; });
-                    } else {
-                        tempImg.src = imgUrl;
-                    }
+                if(mArtwork && mAmbient && mGlow && (mArtwork.getAttribute('src') !== imgUrl || mAmbient.style.backgroundImage === "none" || mAmbient.style.backgroundImage === "")) {
+                    mArtwork.src = imgUrl; 
+                    mAmbient.style.backgroundImage = `url('${imgUrl}')`;
+                    mGlow.style.backgroundImage = `url('${imgUrl}')`;
+                }
+                
+                if(lyricsMiniArt && lyricsMiniArt.getAttribute('src') !== imgUrl) {
+                    lyricsMiniArt.src = imgUrl; 
                 }
                 
                 const canvasUrl = data.track.canvas_url || data.track.canvasUrl || null;
