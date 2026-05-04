@@ -2347,6 +2347,16 @@
             }
 
                 const applyDataChanges = (addedDelay = 0) => {
+                // Der native Error-Handler: Feuert WIRKLICH NUR, wenn der Link kaputt ist (z.B. 404 Fehler vom CDN)
+                if (mArtwork && !mArtwork.onerror) {
+                    mArtwork.onerror = function() {
+                        this.src = fallbackImg;
+                        if (mAmbient) mAmbient.style.backgroundImage = `url('${fallbackImg}')`;
+                        if (mGlow) mGlow.style.backgroundImage = `url('${fallbackImg}')`;
+                        if (lyricsMiniArt) lyricsMiniArt.src = fallbackImg;
+                    };
+                }
+
                 if(mArtwork && mAmbient && mGlow && (mArtwork.getAttribute('src') !== imgUrl || mAmbient.style.backgroundImage === "none" || mAmbient.style.backgroundImage === "")) {
                     mArtwork.src = imgUrl; 
                     mAmbient.style.backgroundImage = `url('${imgUrl}')`;
