@@ -1402,14 +1402,18 @@
         document.querySelectorAll('.reveal').forEach(el => {
             revealObserver.observe(el);
         });
+        
 
-        // --- DASHBOARD LOGIC FIX ---
+    // --- DASHBOARD LOGIC FIX ---
         let dashboardTimeout;
         let dashboardOpenTimeout;
+        let statusTextTimeout;
+
         window.toggleDashboard = function() {
             isDashboardOpen = !isDashboardOpen;
             clearTimeout(dashboardTimeout); 
             clearTimeout(dashboardOpenTimeout);
+            clearTimeout(statusTextTimeout);
             
             if (isDashboardOpen) {
                 if (musicCardLayoutWrapper) musicCardLayoutWrapper.classList.remove('hidden');
@@ -1450,7 +1454,13 @@
                     if (miniStatus) miniStatus.innerText = "Klicken zum Schließen";
                     setTimeout(() => { 
                         if(!isDashboardOpen && miniStatus) {
-                            miniStatus.innerText = mArtist && mArtist.innerText !== "Genieße die Stille" ? mArtist.innerText : "Klicken zum Öffnen";
+                            miniStatus.innerText = "Klicken zum Öffnen";
+                            
+                            statusTextTimeout = setTimeout(() => {
+                                if(!isDashboardOpen && miniStatus) {
+                                    miniStatus.innerText = mArtist && mArtist.innerText !== "Genieße die Stille" ? mArtist.innerText : "Klicken zum Öffnen";
+                                }
+                            }, 5000);
                         } 
                     }, 300);
                 }
