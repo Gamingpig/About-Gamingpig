@@ -2347,14 +2347,12 @@
             }
 
                 const applyDataChanges = (addedDelay = 0) => {
-                // RICHTIG GEILER FIX: Image Preloader mit Cache-Buster
                 if (mArtwork && mArtwork.dataset.currentSrc !== imgUrl) {
-                    mArtwork.dataset.currentSrc = imgUrl; // URL merken, damit wir nicht sinnlos loopen
+                    mArtwork.dataset.currentSrc = imgUrl; 
                     
                     const tempImg = new Image();
                     
                     tempImg.onload = () => {
-                        // Sobald das Bild WIRKLICH im Hintergrund geladen wurde, tauschen wir es aus
                         mArtwork.src = imgUrl; 
                         if (mAmbient) mAmbient.style.backgroundImage = `url('${imgUrl}')`;
                         if (mGlow) mGlow.style.backgroundImage = `url('${imgUrl}')`;
@@ -2362,20 +2360,22 @@
                     };
                     
                     tempImg.onerror = () => {
-                        // Bild kaputt? Fallback reinballern!
                         mArtwork.src = fallbackImg;
                         if (mAmbient) mAmbient.style.backgroundImage = `url('${fallbackImg}')`;
                         if (mGlow) mGlow.style.backgroundImage = `url('${fallbackImg}')`;
                         if (lyricsMiniArt) lyricsMiniArt.src = fallbackImg;
-                        
-                        // Das Wichtigste: Status zurücksetzen, damit der nächste 5-Sekunden-Fetch 
-                        // es ZWINGEND nochmal probiert und nicht denkt "hab ich schon".
                         mArtwork.dataset.currentSrc = "error"; 
                     };
                     
-                    // Der Cache-Buster Trick:
-                    const bypassCacheUrl = imgUrl.includes('?') ? `${imgUrl}&retry=${Date.now()}` : `${imgUrl}?retry=${Date.now()}`;
-                    tempImg.src = imgUrl.startsWith('data:') ? imgUrl : bypassCacheUrl;
+                    // NEUER FIX: Keine URL-Verfälschung mehr! Wir nutzen fetch(), 
+                    // um den Cache im Hintergrund heimlich zu umgehen und das echte Bild zu laden.
+                    if (!imgUrl.startsWith('data:')) {
+                        fetch(imgUrl, { cache: 'reload', mode: 'no-cors' })
+                            .then(() => { tempImg.src = imgUrl; })
+                            .catch(() => { tempImg.src = imgUrl; });
+                    } else {
+                        tempImg.src = imgUrl;
+                    }
                 }
                 
                 const canvasUrl = data.track.canvas_url || data.track.canvasUrl || null;
