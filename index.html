@@ -2129,7 +2129,7 @@
             return trackMatch && hasCommonArtistWord;
         }
 
-        async function fetchExternalLyrics(title, artist, searchDurationMs = 0) {
+            async function fetchExternalLyrics(title, artist, searchDurationMs = 0) {
             const fetchId = ++currentFetchId; 
             
             if (lyricsContent) {
@@ -2178,6 +2178,9 @@
             const cleanT = cleanStringForAPI(title);
             let cleanA = cleanStringForAPI(artist);
 
+            // ==========================================
+            // QUELLE 1: LRCLIB (Primär)
+            // ==========================================
             try {
                 let res = await fetch(`https://lrclib.net/api/get?` + new URLSearchParams({ track_name: title, artist_name: artist }));
                 if (fetchId !== currentFetchId) return;
@@ -2214,10 +2217,50 @@
                     }
                 }
 
-                throw new Error("LRCLIB completely failed - No valid strict match found");
+                throw new Error("LRCLIB failed");
             } catch (err) {
                 if (fetchId !== currentFetchId) return; 
-                renderLyrics(currentNoLyricsMessage);
+
+                // ==========================================
+                // QUELLE 2: NETEASE CLOUD MUSIC FALLBACK
+                // ==========================================
+                try {
+                    // 1. Song ID über Netease Proxy suchen
+                    const searchUrl = `https://neteasecloudmusicapi.vercel.app/search?keywords=${encodeURIComponent(cleanT + ' ' + cleanA)}`;
+                    let neteaseSearch = await fetch(searchUrl);
+                    if (fetchId !== currentFetchId) return;
+                    
+                    if (neteaseSearch.ok) {
+                        const searchData = await neteaseSearch.json();
+                        const songs = searchData.result?.songs;
+                        
+                        if (songs && songs.length > 0) {
+                            const songId = songs[0].id;
+                            
+                            // 2. Lyrics mit der gefundenen ID abrufen
+                            const lyricUrl = `https://neteasecloudmusicapi.vercel.app/lyric?id=${songId}`;
+                            let neteaseLyric = await fetch(lyricUrl);
+                            if (fetchId !== currentFetchId) return;
+                            
+                            if (neteaseLyric.ok) {
+                                const lyricData = await neteaseLyric.json();
+                                const lrcText = lyricData.lrc?.lyric;
+                                
+                                if (lrcText && !isDummyLyrics(lrcText)) {
+                                    parseLrc(lrcText);
+                                    renderLyrics();
+                                    syncLyricsUI(true);
+                                    return; // Erfolgreich aus Netease geladen!
+                                }
+                            }
+                        }
+                    }
+                    throw new Error("Netease failed");
+                } catch (neteaseErr) {
+                    if (fetchId !== currentFetchId) return;
+                    // Wenn BEIDE APIs versagen, zeigen wir den Fallback an
+                    renderLyrics(currentNoLyricsMessage);
+                }
             }
         }
 
