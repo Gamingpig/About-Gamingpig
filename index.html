@@ -2176,6 +2176,59 @@
         const cleanT = cleanStringForAPI(title);
         let cleanA = cleanStringForAPI(artist);
 
+// ==========================================
+        // NEUE QUELLE 0: Apple Music TTML (Syllable-Sync à la Spicy Lyrics)
+        // ==========================================
+        try {
+            // Wir nutzen eine offene Instanz, die Apples MusicKit API spiegelt/reverse-engineert
+            // (Hinweis: Dies simuliert exakt das Verhalten von Spicy Lyrics)
+            let appleRes = await fetch(`https://beautiful-lyrics.socalifornian.live/lyrics/${encodeURIComponent(cleanA)}/${encodeURIComponent(cleanT)}`); 
+            if (fetchId !== currentFetchId) return;
+            
+            if (appleRes.ok) {
+                const appleData = await appleRes.json();
+                
+                // Apple Music liefert oft ein detailliertes JSON Array für Silben (Type: "Syllable")
+                if (appleData && appleData.Type === "Syllable" && appleData.Content) {
+                    let lrcString = "";
+                    
+                    appleData.Content.forEach(line => {
+                        let timeMs = line.StartTime * 1000; // Apple gibt Sekunden als Float aus
+                        let min = Math.floor(timeMs / 60000).toString().padStart(2, '0');
+                        let sec = Math.floor((timeMs % 60000) / 1000).toString().padStart(2, '0');
+                        let ms = Math.floor((timeMs % 1000) / 10).toString().padStart(2, '0');
+                        lrcString += `[${min}:${sec}.${ms}]`;
+
+                        if (line.Syllables && line.Syllables.length > 0) {
+                            line.Syllables.forEach(syl => {
+                                let wTime = syl.StartTime * 1000;
+                                let wMin = Math.floor(wTime / 60000).toString().padStart(2, '0');
+                                let wSec = Math.floor((wTime % 60000) / 1000).toString().padStart(2, '0');
+                                let wMs = Math.floor((wTime % 1000) / 10).toString().padStart(2, '0');
+                                
+                                // Wir übersetzen Apples TTML-Timings in das erweiterte LRC-Format für deine parseLrc Funktion
+                                lrcString += `<${wMin}:${wSec}.${wMs}>${syl.Text} `;
+                            });
+                        } else {
+                            lrcString += line.Text || "";
+                        }
+                        lrcString += "\n";
+                    });
+
+                    // Wir verarbeiten das nur, wenn wir den formatierten Apple Music Text haben
+                    if (lrcString && !isDummyLyrics(lrcString)) {
+                        parseLrc(lrcString);
+                        renderLyrics();
+                        syncLyricsUI(true);
+                        return; // Beendet die Funktion knallhart und erfolgreich!
+                    }
+                }
+            }
+        } catch (e) {
+            // Wenn der Apple Music Hack ins Leere läuft, fängt das Skript den Fehler ab 
+            // und läuft stumm in LRCLIB weiter, ohne dass die Seite crasht.
+        }
+            
         // ==========================================
         // QUELLE 1: Spotify / Musixmatch Proxy (Für Apple Music Syllable-Sync Feeling)
         // ==========================================
