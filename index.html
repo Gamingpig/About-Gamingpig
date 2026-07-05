@@ -2129,140 +2129,185 @@
             return trackMatch && hasCommonArtistWord;
         }
 
-            async function fetchExternalLyrics(title, artist, searchDurationMs = 0) {
-            const fetchId = ++currentFetchId; 
-            
-            if (lyricsContent) {
-                lyricsContent.innerHTML = `
-                    <div class="w-full flex-1 flex flex-col justify-center min-h-full py-16 px-2 sm:px-4 md:px-8">
-                        <h2 class="text-xl sm:text-3xl md:text-4xl font-extrabold text-white/30 tracking-tight leading-tight text-left animate-pulse">
-                            Suche Lyrics...
-                        </h2>
-                    </div>`;
-            }
-            parsedLyrics = [];
-            currentLyricIndex = -1;
+        async function fetchExternalLyrics(title, artist, searchDurationMs = 0) {
+        const fetchId = ++currentFetchId; 
+        
+        if (lyricsContent) {
+            lyricsContent.innerHTML = `
+                <div class="w-full flex-1 flex flex-col justify-center min-h-full py-16 px-2 sm:px-4 md:px-8">
+                    <h2 class="text-xl sm:text-3xl md:text-4xl font-extrabold text-white/30 tracking-tight leading-tight text-left animate-pulse">
+                        Zapfe Premium APIs an...
+                    </h2>
+                </div>`;
+        }
+        parsedLyrics = [];
+        currentLyricIndex = -1;
 
-            const checkAndRenderStrict = (data, searchT, searchA, searchDurMs) => {
-                if (!data) return false;
-
-                if (Array.isArray(data)) {
-                    const validMatches = data.filter(d => isStrictMatch(d.trackName, d.artistName, d.duration, searchT, searchA, searchDurMs));
-                    
-                    if (validMatches.length > 0) {
-                        const best = validMatches.find(d => d.syncedLyrics) || validMatches[0];
-                        if (best.syncedLyrics && !isDummyLyrics(best.syncedLyrics)) {
-                            parseLrc(best.syncedLyrics);
-                            renderLyrics();
-                            syncLyricsUI(true);
-                            return true;
-                        } else if (best.plainLyrics && !isDummyLyrics(best.plainLyrics)) {
-                            renderLyrics(best.plainLyrics, true);
-                            return true;
-                        }
-                    }
-                } else {
-                    if (data.syncedLyrics && !isDummyLyrics(data.syncedLyrics)) {
-                        parseLrc(data.syncedLyrics);
+        const checkAndRenderStrict = (data, searchT, searchA, searchDurMs) => {
+            if (!data) return false;
+            if (Array.isArray(data)) {
+                const validMatches = data.filter(d => isStrictMatch(d.trackName, d.artistName, d.duration, searchT, searchA, searchDurMs));
+                if (validMatches.length > 0) {
+                    const best = validMatches.find(d => d.syncedLyrics) || validMatches[0];
+                    if (best.syncedLyrics && !isDummyLyrics(best.syncedLyrics)) {
+                        parseLrc(best.syncedLyrics);
                         renderLyrics();
                         syncLyricsUI(true);
                         return true;
-                    } else if (data.plainLyrics && !isDummyLyrics(data.plainLyrics)) {
-                        renderLyrics(data.plainLyrics, true);
+                    } else if (best.plainLyrics && !isDummyLyrics(best.plainLyrics)) {
+                        renderLyrics(best.plainLyrics, true);
                         return true;
                     }
                 }
-                return false;
-            };
-
-            const cleanT = cleanStringForAPI(title);
-            let cleanA = cleanStringForAPI(artist);
-
-            // ==========================================
-            // QUELLE 1: LRCLIB (Primär)
-            // ==========================================
-            try {
-                let res = await fetch(`https://lrclib.net/api/get?` + new URLSearchParams({ track_name: title, artist_name: artist }));
-                if (fetchId !== currentFetchId) return;
-                
-                if (res.ok) {
-                    const data = await res.json();
-                    if (checkAndRenderStrict(data, title, artist, searchDurationMs)) return;
+            } else {
+                if (data.syncedLyrics && !isDummyLyrics(data.syncedLyrics)) {
+                    parseLrc(data.syncedLyrics);
+                    renderLyrics();
+                    syncLyricsUI(true);
+                    return true;
+                } else if (data.plainLyrics && !isDummyLyrics(data.plainLyrics)) {
+                    renderLyrics(data.plainLyrics, true);
+                    return true;
                 }
+            }
+            return false;
+        };
 
-                if (cleanT !== title || cleanA !== artist) {
-                    let resClean = await fetch(`https://lrclib.net/api/get?` + new URLSearchParams({ track_name: cleanT, artist_name: cleanA }));
-                    if (fetchId !== currentFetchId) return;
-                    if (resClean.ok) {
-                        const dataClean = await resClean.json();
-                        if (checkAndRenderStrict(dataClean, cleanT, cleanA, searchDurationMs)) return;
+        const cleanT = cleanStringForAPI(title);
+        let cleanA = cleanStringForAPI(artist);
+
+        // ==========================================
+        // QUELLE 1: Spotify / Musixmatch Proxy (Für Apple Music Syllable-Sync Feeling)
+        // ==========================================
+        try {
+            // Nutzt eine offene Instanz der Spotify Lyrics API (oft in Spicetify verwendet)
+            let spotRes = await fetch(`https://spotify-lyric-api-984e7b3fee0c.herokuapp.com/?trackid=${encodeURIComponent(cleanT)}&artist=${encodeURIComponent(cleanA)}`);
+            if (fetchId !== currentFetchId) return;
+            
+            if (spotRes.ok) {
+                const spotData = await spotRes.json();
+                
+                // Wir erzwingen hier die Verarbeitung von silbensynchronen Daten
+                if (spotData.error === false && spotData.lines && spotData.lines.length > 0) {
+                    let lrcString = "";
+                    let isSyllableSynced = false;
+                    
+                    spotData.lines.forEach(line => {
+                        let timeMs = parseInt(line.startTimeMs);
+                        let min = Math.floor(timeMs / 60000).toString().padStart(2, '0');
+                        let sec = Math.floor((timeMs % 60000) / 1000).toString().padStart(2, '0');
+                        let ms = Math.floor((timeMs % 1000) / 10).toString().padStart(2, '0');
+                        lrcString += `[${min}:${sec}.${ms}]`;
+
+                        if (line.words && line.words.length > 0) {
+                            isSyllableSynced = true;
+                            line.words.forEach(w => {
+                                let wTime = parseInt(w.startTimeMs) || timeMs;
+                                let wMin = Math.floor(wTime / 60000).toString().padStart(2, '0');
+                                let wSec = Math.floor((wTime % 60000) / 1000).toString().padStart(2, '0');
+                                let wMs = Math.floor((wTime % 1000) / 10).toString().padStart(2, '0');
+                                lrcString += `<${wMin}:${wSec}.${wMs}>${w.string} `;
+                            });
+                        } else {
+                            lrcString += line.words || line.string || "";
+                        }
+                        lrcString += "\\n";
+                    });
+
+                    // Nur verwenden, wenn es wirklich Syllable-Synced ist (sonst Fallback zu LRCLIB)
+                    if (isSyllableSynced && lrcString && !isDummyLyrics(lrcString)) {
+                        parseLrc(lrcString);
+                        renderLyrics();
+                        syncLyricsUI(true);
+                        return; // Erfolgreich aus Spotify Proxy geladen!
                     }
                 }
+            }
+        } catch (e) {
+            // Proxy down oder kein Syllable-Sync gefunden -> Weiter zu LRCLIB
+        }
 
-                let searchRes = await fetch(`https://lrclib.net/api/search?q=` + encodeURIComponent(`${title} ${artist}`));
+        // ==========================================
+        // QUELLE 2: LRCLIB (Primärer Fallback)
+        // ==========================================
+        try {
+            let res = await fetch(`https://lrclib.net/api/get?` + new URLSearchParams({ track_name: title, artist_name: artist }));
+            if (fetchId !== currentFetchId) return;
+            
+            if (res.ok) {
+                const data = await res.json();
+                if (checkAndRenderStrict(data, title, artist, searchDurationMs)) return;
+            }
+
+            if (cleanT !== title || cleanA !== artist) {
+                let resClean = await fetch(`https://lrclib.net/api/get?` + new URLSearchParams({ track_name: cleanT, artist_name: cleanA }));
+                if (fetchId !== currentFetchId) return;
+                if (resClean.ok) {
+                    const dataClean = await resClean.json();
+                    if (checkAndRenderStrict(dataClean, cleanT, cleanA, searchDurationMs)) return;
+                }
+            }
+
+            let searchRes = await fetch(`https://lrclib.net/api/search?q=` + encodeURIComponent(`${title} ${artist}`));
+            if (fetchId !== currentFetchId) return;
+            
+            if (searchRes.ok) {
+                const searchData = await searchRes.json();
+                if (checkAndRenderStrict(searchData, title, artist, searchDurationMs)) return;
+            }
+
+            if (cleanT !== title || cleanA !== artist) {
+                searchRes = await fetch(`https://lrclib.net/api/search?q=` + encodeURIComponent(`${cleanT} ${cleanA}`));
                 if (fetchId !== currentFetchId) return;
                 
                 if (searchRes.ok) {
                     const searchData = await searchRes.json();
-                    if (checkAndRenderStrict(searchData, title, artist, searchDurationMs)) return;
+                    if (checkAndRenderStrict(searchData, cleanT, cleanA, searchDurationMs)) return;
                 }
+            }
 
-                if (cleanT !== title || cleanA !== artist) {
-                    searchRes = await fetch(`https://lrclib.net/api/search?q=` + encodeURIComponent(`${cleanT} ${cleanA}`));
-                    if (fetchId !== currentFetchId) return;
+            throw new Error("LRCLIB failed");
+        } catch (err) {
+            if (fetchId !== currentFetchId) return; 
+
+            // ==========================================
+            // QUELLE 3: NETEASE CLOUD MUSIC FALLBACK
+            // ==========================================
+            try {
+                const searchUrl = `https://neteasecloudmusicapi.vercel.app/search?keywords=${encodeURIComponent(cleanT + ' ' + cleanA)}`;
+                let neteaseSearch = await fetch(searchUrl);
+                if (fetchId !== currentFetchId) return;
+                
+                if (neteaseSearch.ok) {
+                    const searchData = await neteaseSearch.json();
+                    const songs = searchData.result?.songs;
                     
-                    if (searchRes.ok) {
-                        const searchData = await searchRes.json();
-                        if (checkAndRenderStrict(searchData, cleanT, cleanA, searchDurationMs)) return;
-                    }
-                }
-
-                throw new Error("LRCLIB failed");
-            } catch (err) {
-                if (fetchId !== currentFetchId) return; 
-
-                // ==========================================
-                // QUELLE 2: NETEASE CLOUD MUSIC FALLBACK
-                // ==========================================
-                try {
-                    // 1. Song ID über Netease Proxy suchen
-                    const searchUrl = `https://neteasecloudmusicapi.vercel.app/search?keywords=${encodeURIComponent(cleanT + ' ' + cleanA)}`;
-                    let neteaseSearch = await fetch(searchUrl);
-                    if (fetchId !== currentFetchId) return;
-                    
-                    if (neteaseSearch.ok) {
-                        const searchData = await neteaseSearch.json();
-                        const songs = searchData.result?.songs;
+                    if (songs && songs.length > 0) {
+                        const songId = songs[0].id;
+                        const lyricUrl = `https://neteasecloudmusicapi.vercel.app/lyric?id=${songId}`;
+                        let neteaseLyric = await fetch(lyricUrl);
+                        if (fetchId !== currentFetchId) return;
                         
-                        if (songs && songs.length > 0) {
-                            const songId = songs[0].id;
+                        if (neteaseLyric.ok) {
+                            const lyricData = await neteaseLyric.json();
+                            const lrcText = lyricData.lrc?.lyric;
                             
-                            // 2. Lyrics mit der gefundenen ID abrufen
-                            const lyricUrl = `https://neteasecloudmusicapi.vercel.app/lyric?id=${songId}`;
-                            let neteaseLyric = await fetch(lyricUrl);
-                            if (fetchId !== currentFetchId) return;
-                            
-                            if (neteaseLyric.ok) {
-                                const lyricData = await neteaseLyric.json();
-                                const lrcText = lyricData.lrc?.lyric;
-                                
-                                if (lrcText && !isDummyLyrics(lrcText)) {
-                                    parseLrc(lrcText);
-                                    renderLyrics();
-                                    syncLyricsUI(true);
-                                    return; // Erfolgreich aus Netease geladen!
-                                }
+                            if (lrcText && !isDummyLyrics(lrcText)) {
+                                parseLrc(lrcText);
+                                renderLyrics();
+                                syncLyricsUI(true);
+                                return;
                             }
                         }
                     }
-                    throw new Error("Netease failed");
-                } catch (neteaseErr) {
-                    if (fetchId !== currentFetchId) return;
-                    // Wenn BEIDE APIs versagen, zeigen wir den Fallback an
-                    renderLyrics(currentNoLyricsMessage);
                 }
+                throw new Error("Netease failed");
+            } catch (neteaseErr) {
+                if (fetchId !== currentFetchId) return;
+                renderLyrics(currentNoLyricsMessage);
             }
         }
+    }
 
         function updateMusicUI(data, dynamicLatency = 50) {
             const hasTrack = data && data.track;
