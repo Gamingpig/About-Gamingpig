@@ -472,6 +472,115 @@
         .lyrics-style-matrix .lyric-char { display: inline-block; color: rgba(0, 255, 65, 0.15); transition: color 0.05s, text-shadow 0.05s, transform 0.05s; } 
         .lyrics-style-matrix .lyric-char.char-passed { color: rgba(0, 255, 65, 0.8); text-shadow: 0 0 8px rgba(0, 255, 65, 0.4); } 
         .lyrics-style-matrix .lyric-char.char-active { color: #ffffff; text-shadow: 0 0 10px #ffffff, 0 0 20px #00ff41, 0 0 40px #00ff41, 0 0 80px #00ff41; transform: translate3d(0,-2px,0); z-index: 10; position: relative; }
+        /* NEUE STYLES */
+        .lyrics-style-liquid .lyric-word { color: rgba(255, 255, 255, 0.1); filter: blur(8px); transform: scale(0.85); transition: all 0.6s var(--liquid-fluid); }
+        .lyrics-style-liquid .lyric-word.word-passed { color: rgba(255, 255, 255, 0.6); filter: blur(1px); transform: scale(1); }
+        .lyrics-style-liquid .lyric-word.word-active { color: #ffffff; filter: blur(0px); transform: scale(1.15) translateY(-5px); text-shadow: 0 15px 25px rgba(6, 182, 212, 0.8), 0 0 10px rgba(255, 255, 255, 0.5); z-index: 10; }
+
+        .lyrics-style-cyberpunk .lyric-word { color: rgba(255, 255, 255, 0.15); font-family: 'JetBrains Mono', monospace; text-transform: uppercase; transition: color 0.1s; }
+        .lyrics-style-cyberpunk .lyric-word.word-passed { color: #fce205; text-shadow: 2px 2px 0px #00ffcc; opacity: 0.8; }
+        .lyrics-style-cyberpunk .lyric-word.word-active { color: #ff00ff; text-shadow: -3px -3px 0px #00ffcc, 3px 3px 0px #fce205; transform: scale(1.1) skewX(-10deg); opacity: 1; z-index: 10; animation: cyber-jitter 0.15s infinite; }
+        @keyframes cyber-jitter { 0% { transform: scale(1.1) skewX(-10deg) translate(1px, 1px); } 50% { transform: scale(1.1) skewX(10deg) translate(-1px, -1px); } 100% { transform: scale(1.1) skewX(-10deg) translate(1px, -1px); } }
+
+        .lyrics-style-ghost .lyric-word { color: transparent; text-shadow: 0 5px 15px rgba(255, 255, 255, 0.1); transform: scale(1.2) translateY(15px); transition: all 0.9s cubic-bezier(0.25, 1, 0.5, 1); }
+        .lyrics-style-ghost .lyric-word.word-passed { color: rgba(255, 255, 255, 0.4); text-shadow: 0 0 5px rgba(255, 255, 255, 0.3); transform: scale(1) translateY(0); }
+        .lyrics-style-ghost .lyric-word.word-active { color: #ffffff; text-shadow: 0 0 25px rgba(255, 255, 255, 1), 0 -10px 40px rgba(168, 85, 247, 0.7); transform: scale(1.05) translateY(-8px); z-index: 10; }
+
+        .lyrics-style-rainbow .lyric-word { color: rgba(255, 255, 255, 0.2); background: none; -webkit-text-fill-color: currentcolor; transition: color 0.2s; }
+        .lyrics-style-rainbow .lyric-word.word-passed { color: rgba(255, 255, 255, 0.7); }
+        .lyrics-style-rainbow .lyric-word.word-active { background: linear-gradient(90deg, #ff0066, #ff9900, #ffee00, #33ff00, #00ffee, #0066ff, #cc00ff, #ff0066); background-size: 400% 100%; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; animation: rainbow-cycle 1.4s linear infinite; transform: scale(1.08); z-index: 10; }
+        @keyframes rainbow-cycle { to { background-position: 400% center; } }
+
+        .lyrics-style-shake .lyric-word { color: rgba(255, 255, 255, 0.25); }
+        .lyrics-style-shake .lyric-word.word-passed { color: rgba(255, 255, 255, 0.7); }
+        .lyrics-style-shake .lyric-word.word-active { color: #ffffff; text-shadow: 0 0 12px rgba(59, 130, 246, 0.8); transform: scale(1.05); animation: word-shake 0.35s ease-in-out; z-index: 10; }
+        @keyframes word-shake { 0%, 100% { transform: translateX(0) scale(1.05); } 20% { transform: translateX(-3px) scale(1.05); } 40% { transform: translateX(3px) scale(1.05); } 60% { transform: translateX(-2px) scale(1.05); } 80% { transform: translateX(2px) scale(1.05); } }
+
+        .lyrics-style-underline .lyric-word { color: rgba(255, 255, 255, 0.3); position: relative; }
+        .lyrics-style-underline .lyric-word.word-passed { color: rgba(255, 255, 255, 0.75); }
+        .lyrics-style-underline .lyric-word.word-active { color: #ffffff; z-index: 10; }
+        .lyrics-style-underline .lyric-word.word-active::after { content: ''; position: absolute; left: 0; bottom: -4px; height: 3px; width: 100%; background: linear-gradient(90deg, #3b82f6, #06b6d4); border-radius: 2px; box-shadow: 0 0 8px rgba(59, 130, 246, 0.8); animation: underline-grow 0.3s ease forwards; transform-origin: left center; }
+        @keyframes underline-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+        /* --- 10 NEUE LYRICS-STYLES --- */
+
+        /* 1. Ember - glühende Glut */
+        .lyrics-style-ember .lyric-word { color: rgba(255, 100, 50, 0.15); }
+        .lyrics-style-ember .lyric-word.word-passed { color: rgba(255, 140, 60, 0.55); }
+        .lyrics-style-ember .lyric-word.word-active { color: #ffb347; text-shadow: 0 0 10px #ff5500, 0 0 20px #ff8800, 0 -8px 15px rgba(255,120,0,0.6); animation: ember-flicker 0.8s ease-in-out infinite; z-index: 10; }
+        @keyframes ember-flicker { 0%, 100% { text-shadow: 0 0 10px #ff5500, 0 0 20px #ff8800, 0 -8px 15px rgba(255,120,0,0.6); } 50% { text-shadow: 0 0 16px #ff7700, 0 0 30px #ffaa00, 0 -12px 20px rgba(255,150,0,0.8); } }
+
+        /* 2. Ice Crystal - Frost */
+        .lyrics-style-ice .lyric-word { color: rgba(180, 220, 255, 0.15); }
+        .lyrics-style-ice .lyric-word.word-passed { color: rgba(200, 230, 255, 0.6); }
+        .lyrics-style-ice .lyric-word.word-active { color: #eaf6ff; text-shadow: 0 0 8px #7dd3fc, 0 0 16px #38bdf8, 0 0 24px #0ea5e9; transform: scale(1.05); animation: ice-shimmer 1.2s ease-in-out infinite alternate; z-index: 10; }
+        @keyframes ice-shimmer { 0% { filter: brightness(1); } 100% { filter: brightness(1.3); } }
+
+        /* 3. Chromatic - RGB-Kanal-Versatz */
+        .lyrics-style-chromatic .lyric-word { color: rgba(255,255,255,0.2); }
+        .lyrics-style-chromatic .lyric-word.word-passed { color: rgba(255,255,255,0.7); }
+        .lyrics-style-chromatic .lyric-word.word-active { color: #fff; text-shadow: -2px 0 rgba(255,0,80,0.8), 2px 0 rgba(0,200,255,0.8); animation: chroma-shift 0.6s ease-in-out infinite; z-index: 10; }
+        @keyframes chroma-shift { 0%, 100% { text-shadow: -2px 0 rgba(255,0,80,0.8), 2px 0 rgba(0,200,255,0.8); } 50% { text-shadow: 2px 0 rgba(255,0,80,0.8), -2px 0 rgba(0,200,255,0.8); } }
+
+        /* 4. Bubble Pop */
+        .lyrics-style-bubble .lyric-word { color: rgba(255,255,255,0.2); display: inline-block; transform: scale(0.7); transition: transform 0.2s ease; }
+        .lyrics-style-bubble .lyric-word.word-passed { color: rgba(255,255,255,0.7); transform: scale(1); }
+        .lyrics-style-bubble .lyric-word.word-active { color: #fff; text-shadow: 0 4px 10px rgba(59,130,246,0.6); animation: bubble-pop 0.4s cubic-bezier(0.68,-0.55,0.265,1.55); z-index: 10; }
+        @keyframes bubble-pop { 0% { transform: scale(0.5); } 60% { transform: scale(1.25); } 100% { transform: scale(1.1); } }
+
+        /* 5. Flag Wave (pro Buchstabe) */
+        .lyrics-style-flagwave .lyric-word { background: none; -webkit-text-fill-color: currentcolor; }
+        .lyrics-style-flagwave .lyric-char { display: inline-block; color: rgba(255,255,255,0.2); transition: color 0.15s; }
+        .lyrics-style-flagwave .lyric-char.char-passed { color: rgba(255,255,255,0.65); }
+        .lyrics-style-flagwave .lyric-char.char-active { color: #fff; text-shadow: 0 0 10px rgba(59,130,246,0.7); animation: flag-flap 0.6s ease-in-out infinite; }
+        @keyframes flag-flap { 0%, 100% { transform: rotateZ(-6deg) translateY(0); } 50% { transform: rotateZ(6deg) translateY(-3px); } }
+
+        /* 6. Spotlight Sweep */
+        .lyrics-style-spotlight .lyric-word { color: rgba(255,255,255,0.25); }
+        .lyrics-style-spotlight .lyric-word.word-passed { color: rgba(255,255,255,0.7); }
+        .lyrics-style-spotlight .lyric-word.word-active { color: transparent; background: linear-gradient(100deg, rgba(255,255,255,0.3) 20%, #fff 50%, rgba(255,255,255,0.3) 80%); background-size: 250% 100%; -webkit-background-clip: text; background-clip: text; animation: spotlight-sweep 1s linear infinite; text-shadow: 0 0 12px rgba(255,255,255,0.5); z-index: 10; }
+        @keyframes spotlight-sweep { 0% { background-position: 200% center; } 100% { background-position: -200% center; } }
+
+        /* 7. Binary Decode (pro Buchstabe) */
+        .lyrics-style-binary .lyric-word { background: none; -webkit-text-fill-color: currentcolor; font-family: 'JetBrains Mono', monospace; }
+        .lyrics-style-binary .lyric-char { display: inline-block; color: rgba(34, 197, 94, 0.2); }
+        .lyrics-style-binary .lyric-char.char-passed { color: rgba(34, 197, 94, 0.7); }
+        .lyrics-style-binary .lyric-char.char-active { color: #4ade80; text-shadow: 0 0 8px #22c55e; animation: binary-decode 0.3s steps(2); }
+        @keyframes binary-decode { 0% { opacity: 0.2; transform: translateY(-4px); } 100% { opacity: 1; transform: translateY(0); } }
+
+        /* 8. Paint Stroke */
+        .lyrics-style-paint .lyric-word { color: rgba(255,255,255,0.2); position: relative; }
+        .lyrics-style-paint .lyric-word.word-passed { color: rgba(255,255,255,0.7); }
+        .lyrics-style-paint .lyric-word.word-active { color: #fff; z-index: 10; text-shadow: 0 0 10px rgba(168,85,247,0.6); }
+        .lyrics-style-paint .lyric-word.word-active::before { content: ''; position: absolute; left: -4%; right: -4%; top: 10%; bottom: 10%; background: linear-gradient(90deg, #a855f7, #3b82f6); z-index: -1; border-radius: 4px; animation: paint-reveal 0.4s ease forwards; transform-origin: left; opacity: 0.35; }
+        @keyframes paint-reveal { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+        /* 9. Vinyl Retro */
+        .lyrics-style-vinyl .lyric-word { color: rgba(214, 190, 150, 0.25); font-family: Georgia, serif; }
+        .lyrics-style-vinyl .lyric-word.word-passed { color: rgba(214, 190, 150, 0.7); }
+        .lyrics-style-vinyl .lyric-word.word-active { color: #f4e8d0; text-shadow: 1px 1px 0 rgba(0,0,0,0.5), 0 0 10px rgba(214,160,80,0.5); animation: vinyl-wobble 2s ease-in-out infinite; z-index: 10; }
+        @keyframes vinyl-wobble { 0%, 100% { transform: rotate(-1deg); } 50% { transform: rotate(1deg); } }
+
+        /* 10. Starlight */
+        .lyrics-style-starlight .lyric-word { color: rgba(255,255,255,0.15); }
+        .lyrics-style-starlight .lyric-word.word-passed { color: rgba(255,255,255,0.6); }
+        .lyrics-style-starlight .lyric-word.word-active { color: #fff; text-shadow: 0 0 6px #fff, 0 0 12px #a5b4fc, 0 0 20px #818cf8; animation: star-twinkle 1s ease-in-out infinite, star-drift 2s ease-out forwards; z-index: 10; }
+        @keyframes star-twinkle { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+        @keyframes star-drift { from { transform: translateY(0); } to { transform: translateY(-6px); } }
+
+        /* 11. Apple Music (Silben-genau, sanfter Übergang wie im Referenzvideo) */
+        .lyrics-style-applemusic .lyric-word { background: none; -webkit-text-fill-color: currentcolor; }
+        .lyrics-style-applemusic .lyric-char {
+            display: inline-block;
+            color: rgba(255, 255, 255, 0.35);
+            text-shadow: none;
+            transition: color 0.18s cubic-bezier(0.4, 0, 0.2, 1), text-shadow 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .lyrics-style-applemusic .lyric-char.char-passed { color: #ffffff; text-shadow: none; }
+        .lyrics-style-applemusic .lyric-char.char-active {
+            color: #ffffff;
+            text-shadow: 0 0 6px rgba(255, 255, 255, 0.45);
+        }
 
         .mask-image-gradient { -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%); mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%); }
 
@@ -489,7 +598,7 @@
         #music-picker.flex { opacity: 1; }
         #music-picker.picker-closing { opacity: 0; }
         
-        #tutorial-wrapper { transition: opacity 0.5s var(--apple-ease); opacity: 0; }
+        #tutorial-wrapper { transition: opacity 0.5s var(--apple-ease); opacity: 0; z-index: 99999 !important; }
         #tutorial-wrapper.flex { opacity: 1; }
         #tutorial-wrapper.tutorial-closing { opacity: 0; }
 
@@ -534,6 +643,98 @@
         .tutorial-active-element:not(#ui-controls) { position: relative !important; background: white; }
         .dark .tutorial-active-element:not(#ui-controls) { background: #0f172a; }
         #ui-controls.tutorial-active-element { position: fixed !important; background: transparent !important; border-radius: 1rem; }
+
+        /* ========================================================= */
+        /* --- NEUE FEATURES: Back-to-Top, Easter Eggs -------------- */
+        /* ========================================================= */
+
+        /* Back-to-Top Button */
+        #back-to-top {
+            position: fixed; bottom: 1.25rem; right: 1.25rem; z-index: 90;
+            width: 2.75rem; height: 2.75rem;
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; visibility: hidden; transform: translateY(20px) scale(0.8);
+            transition: opacity 0.4s var(--apple-ease), transform 0.4s var(--apple-spring), visibility 0.4s;
+        }
+        @media (min-width: 640px) { #back-to-top { bottom: 2rem; right: 2rem; width: 3.25rem; height: 3.25rem; } }
+        #back-to-top.visible { opacity: 1; visibility: visible; transform: translateY(0) scale(1); }
+        #back-to-top:active { transform: scale(0.9); }
+
+        /* Toast-Benachrichtigungen (z.B. für Easter Egg) */
+        #toast-container {
+            position: fixed; bottom: 5.5rem; left: 50%; transform: translateX(-50%);
+            z-index: 9997; display: flex; flex-direction: column; gap: 0.5rem;
+            align-items: center; pointer-events: none; width: 90%; max-width: 380px;
+        }
+        .toast {
+            background: rgba(15, 23, 42, 0.92); color: white; border: 1px solid rgba(255,255,255,0.15);
+            padding: 0.75rem 1.25rem; border-radius: 1rem; font-size: 0.8rem; font-weight: 700;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4), 0 0 0 1px rgba(59,130,246,0.1);
+            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            display: flex; align-items: center; gap: 0.5rem; text-align: center;
+            animation: toast-in 0.5s var(--apple-spring) forwards;
+            max-width: 100%;
+        }
+        .toast.toast-out { animation: toast-out 0.4s var(--apple-ease) forwards; }
+        @keyframes toast-in { 0% { opacity: 0; transform: translateY(20px) scale(0.9); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
+        @keyframes toast-out { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(10px) scale(0.9); } }
+
+        /* Konami-Code Konfetti Easter Egg */
+        #confetti-container {
+            position: fixed; inset: 0; z-index: 9996; pointer-events: none; overflow: hidden;
+        }
+        .confetti-piece {
+            position: absolute; top: -20px; width: 8px; height: 14px; opacity: 0.9;
+            animation: confetti-fall linear forwards;
+            will-change: transform, opacity;
+        }
+        .confetti-piece.confetti-emoji {
+            width: auto; height: auto; font-size: 1.6rem; line-height: 1; background: none !important;
+        }
+        @keyframes confetti-fall {
+            0% { transform: translate3d(0,0,0) rotate(0deg); opacity: 1; }
+            100% { transform: translate3d(var(--drift, 0px), 105vh, 0) rotate(var(--spin, 720deg)); opacity: 0.3; }
+        }
+
+        /* Disco-Modus Easter Egg (5x auf die Überschrift klicken) */
+        body.disco-mode #main-content, body.disco-mode #ui-controls {
+            animation: disco-hue 0.6s linear infinite;
+        }
+        @keyframes disco-hue {
+            0% { filter: hue-rotate(0deg) saturate(1.6); }
+            100% { filter: hue-rotate(360deg) saturate(1.6); }
+        }
+
+        /* "forza" tippen -> Auto rast über den Bildschirm */
+        #forza-car {
+            position: fixed; top: 40%; left: -150px; z-index: 9995; font-size: 3rem;
+            pointer-events: none; animation: forza-drive-by 1.6s cubic-bezier(0.4, 0, 0.6, 1) forwards;
+            filter: drop-shadow(0 10px 15px rgba(0,0,0,0.4));
+        }
+        @keyframes forza-drive-by {
+            0% { transform: translateX(0) scaleX(-1); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateX(calc(100vw + 200px)) scaleX(-1); opacity: 0; }
+        }
+
+        /* "fokus"/"hyperfokus" tippen -> Spotlight-Effekt auf den ganzen Content */
+        body.hyperfokus-mode #main-content {
+            animation: hyperfokus-pulse 1.8s ease-in-out 2;
+        }
+        body.hyperfokus-mode::before {
+            content: ''; position: fixed; inset: 0; z-index: 9990; pointer-events: none;
+            background: radial-gradient(circle at 50% 45%, transparent 0%, transparent 25%, rgba(2, 6, 23, 0.85) 70%);
+            animation: hyperfokus-vignette 3.6s ease-in-out forwards;
+        }
+        @keyframes hyperfokus-pulse {
+            0%, 100% { filter: brightness(1) saturate(1); }
+            50% { filter: brightness(1.15) saturate(1.4); }
+        }
+        @keyframes hyperfokus-vignette {
+            0% { opacity: 0; } 15% { opacity: 1; } 85% { opacity: 1; } 100% { opacity: 0; }
+        }
+
     </style>
     
     <script>
@@ -541,6 +742,13 @@
     </script>
 </head>
 <body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen selection:bg-blue-500/30 overflow-x-hidden">
+
+    <div id="toast-container"></div>
+    <div id="confetti-container"></div>
+
+    <button id="back-to-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" aria-label="Nach oben scrollen" class="glass-card rounded-full shadow-xl border border-slate-200 dark:border-slate-700 text-blue-600 dark:text-blue-400 hover:ring-2 hover:ring-blue-500">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+    </button>
 
     <div class="mesh-gradient"></div>
     <div id="liquid-blobs">
@@ -731,7 +939,7 @@
                     </div>
                 </div>
                 <div class="p-1 xxs:p-1.5 sm:p-2 shrink-0 bg-slate-200/50 dark:bg-white/5 text-slate-700 dark:text-slate-400 rounded-full group-hover:bg-blue-500/10 group-hover:text-blue-500 transition-colors ml-1 xxs:ml-2">
-                    <svg id="music-chevron" class="transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-4 xxs:h-4 sm:w-5 sm:h-5"><path d="m6 9 6 6 6-6"/></svg>
+                    <svg id="music-chevron" class="transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] xxs:w-4 xxs:h-4 sm:w-5 sm:h-5" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
                 </div>
             </div>
 
@@ -804,6 +1012,26 @@
                                         <button onclick="setLyricsStyle('hellfire')" id="btn-style-hellfire" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Hellfire Burn</button>
                                         <button onclick="setLyricsStyle('hologram')" id="btn-style-hologram" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Hologram Jitter</button>
                                         <button onclick="setLyricsStyle('matrix')" id="btn-style-matrix" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Matrix Rain</button>
+                                        <button onclick="setLyricsStyle('liquid')" id="btn-style-liquid" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Viscous Liquid</button>
+                                        <button onclick="setLyricsStyle('cyberpunk')" id="btn-style-cyberpunk" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Cyberpunk Glitch</button>
+                                        <button onclick="setLyricsStyle('ghost')" id="btn-style-ghost" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Ghost Trail</button>
+                                        <button onclick="setLyricsStyle('rainbow')" id="btn-style-rainbow" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Rainbow Cycle</button>
+                                        <button onclick="setLyricsStyle('shake')" id="btn-style-shake" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Word Shake</button>
+                                        <button onclick="setLyricsStyle('underline')" id="btn-style-underline" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Underline Sweep</button>
+
+                                        <div class="h-px w-full bg-slate-700 my-1"></div>
+                                        <p class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-emerald-400 mb-1 px-1">Brandneu</p>
+                                        <button onclick="setLyricsStyle('ember')" id="btn-style-ember" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Ember Glow</button>
+                                        <button onclick="setLyricsStyle('ice')" id="btn-style-ice" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Ice Crystal</button>
+                                        <button onclick="setLyricsStyle('chromatic')" id="btn-style-chromatic" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Chromatic Split</button>
+                                        <button onclick="setLyricsStyle('bubble')" id="btn-style-bubble" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Bubble Pop</button>
+                                        <button onclick="setLyricsStyle('flagwave')" id="btn-style-flagwave" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Flag Wave</button>
+                                        <button onclick="setLyricsStyle('spotlight')" id="btn-style-spotlight" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Spotlight Sweep</button>
+                                        <button onclick="setLyricsStyle('binary')" id="btn-style-binary" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Binary Decode</button>
+                                        <button onclick="setLyricsStyle('paint')" id="btn-style-paint" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Paint Stroke</button>
+                                        <button onclick="setLyricsStyle('vinyl')" id="btn-style-vinyl" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Vinyl Retro</button>
+                                        <button onclick="setLyricsStyle('starlight')" id="btn-style-starlight" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Starlight</button>
+                                        <button onclick="setLyricsStyle('applemusic')" id="btn-style-applemusic" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">🍎 Apple Music</button>
 
                                         <div class="h-px w-full bg-slate-700 my-1"></div>
                                         <p class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1 px-1">Features</p>
@@ -907,7 +1135,7 @@
                     <div class="p-1.5 xxs:p-2 sm:p-3 bg-pink-500/10 text-pink-600 dark:text-pink-500 rounded-lg xxs:rounded-xl sm:rounded-2xl group-hover:rotate-12 transition-transform">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-6 xxs:h-6 sm:w-8 sm:h-8"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/></svg>
                     </div>
-                    <h2 class="text-base xxs:text-xl xs:text-2xl sm:text-3xl font-bold" target="_blank" rel="noopener noreferrer" class="group/link inline-flex items-center gap-1.5 xxs:gap-2 sm:gap-3 text-sm xxs:text-base sm:text-xl text-blue-500 hover:text-blue-600 font-bold transition-all">Gamingpig‘s TikTok</h2>
+                    <h2 class="text-base xxs:text-xl xs:text-2xl sm:text-3xl font-bold">Gamingpig‘s TikTok</h2>
                 </div>
                 <a href="https://www.tiktok.com/@gamingpig900" target="_blank" rel="noopener noreferrer" class="group/link inline-flex items-center gap-1.5 xxs:gap-2 sm:gap-3 text-sm xxs:text-base sm:text-xl text-blue-500 hover:text-blue-600 font-bold transition-all">
                     Hier geht's zu meinem Kanal
@@ -998,7 +1226,7 @@
             </div>
         </div> 
 
-        <footer class="mt-12 xxs:mt-20 sm:mt-40 text-center reveal">
+        <footer id="footer-section" class="mt-12 xxs:mt-20 sm:mt-40 text-center reveal">
             <div class="inline-flex items-center gap-1.5 xxs:gap-2 sm:gap-4 py-1.5 px-3 xxs:py-2 xxs:px-4 sm:px-6 bg-slate-200/50 dark:bg-slate-900/50 rounded-full border border-slate-300 dark:border-slate-800 flex-wrap justify-center">
                 <span class="text-[8px] xxs:text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-400">Established 2026</span>
                 <div class="hidden sm:block h-4 w-px bg-slate-300 dark:bg-slate-700"></div>
@@ -1096,6 +1324,11 @@
                 targetId: 'music-section',
                 title: 'Echtzeit Musik Integration',
                 text: 'Der wildeste Part: Das Dashboard zeigt in Echtzeit, was ich gerade höre! Klicke darauf, um die synchronisierten Lyrics mit verrückten Shadern zu sehen oder dir die Links zu Spotify & Co. zu holen.'
+            },
+            {
+                targetId: 'footer-section',
+                title: 'Psst... 🤫 Ein Geheimnis',
+                text: 'Diese Seite hat ein paar versteckte Easter Eggs. Tipp: Alte Cheat-Codes aus Videospielen, ein paar Tastatur-Wörter, oder einfach mal wild auf Sachen rumklicken. Viel Spaß beim Suchen!'
             }
         ];
 
@@ -1134,6 +1367,8 @@
         let currentTrackId = ""; 
         let parsedLyrics = [];
         let currentLyricIndex = -1;
+        let currentLyricsProvider = "";
+        let currentLyricsWriter = "";
         
         let localStartTime = 0;
         let serverBaseProgress = 0;
@@ -1402,7 +1637,206 @@
         document.querySelectorAll('.reveal').forEach(el => {
             revealObserver.observe(el);
         });
-        
+
+        // ========================================================= //
+        // --- NEUES FEATURE: Back-to-Top-Button -------------------- //
+        // ========================================================= //
+        const backToTopBtn = document.getElementById('back-to-top');
+        let scrollTicking = false;
+
+        function updateScrollUI() {
+            const scrollTop = window.scrollY || document.documentElement.scrollTop;
+            if (backToTopBtn) {
+                if (scrollTop > 500) backToTopBtn.classList.add('visible');
+                else backToTopBtn.classList.remove('visible');
+            }
+            scrollTicking = false;
+        }
+
+        window.addEventListener('scroll', () => {
+            if (!scrollTicking) {
+                requestAnimationFrame(updateScrollUI);
+                scrollTicking = true;
+            }
+        }, { passive: true });
+        updateScrollUI();
+
+        // ========================================================= //
+        // --- NEUES FEATURE: Toast-Benachrichtigungen -------------- //
+        // ========================================================= //
+        const toastContainer = document.getElementById('toast-container');
+        window.showToast = function(message, duration = 3200) {
+            if (!toastContainer) return;
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerText = message;
+            toastContainer.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.add('toast-out');
+                setTimeout(() => toast.remove(), 450);
+            }, duration);
+        };
+
+        // ========================================================= //
+        // --- NEUES FEATURE: Easter Eggs (Konami, Tippen, Klicks) -- //
+        // ========================================================= //
+        const KONAMI_SEQUENCE = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
+        let konamiProgress = 0;
+        const confettiColors = ['#3b82f6', '#06b6d4', '#a855f7', '#22c55e', '#f97316', '#ec4899'];
+
+        function launchConfetti() {
+            const container = document.getElementById('confetti-container');
+            if (!container) return;
+            const isLowEnd = document.body.classList.contains('low-end');
+            const pieceCount = isLowEnd ? 30 : 90;
+
+            for (let i = 0; i < pieceCount; i++) {
+                const piece = document.createElement('div');
+                piece.className = 'confetti-piece';
+                const color = confettiColors[Math.floor(Math.random() * confettiColors.length)];
+                const left = Math.random() * 100;
+                const duration = 2.2 + Math.random() * 1.8;
+                const delay = Math.random() * 0.6;
+                const drift = (Math.random() - 0.5) * 200;
+                const spin = 360 + Math.random() * 720;
+                piece.style.left = left + 'vw';
+                piece.style.background = color;
+                piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+                piece.style.animationDuration = duration + 's';
+                piece.style.animationDelay = delay + 's';
+                piece.style.setProperty('--drift', drift + 'px');
+                piece.style.setProperty('--spin', spin + 'deg');
+                container.appendChild(piece);
+                setTimeout(() => piece.remove(), (duration + delay) * 1000 + 200);
+            }
+        }
+
+        // Regen aus Emojis statt bunter Konfetti-Schnipsel (fürs "oink"-Easter-Egg u.a.)
+        function launchEmojiRain(emojis, count = 40) {
+            const container = document.getElementById('confetti-container');
+            if (!container) return;
+            const isLowEnd = document.body.classList.contains('low-end');
+            const pieceCount = isLowEnd ? Math.min(15, count) : count;
+
+            for (let i = 0; i < pieceCount; i++) {
+                const piece = document.createElement('div');
+                piece.className = 'confetti-piece confetti-emoji';
+                piece.innerText = emojis[Math.floor(Math.random() * emojis.length)];
+                const left = Math.random() * 100;
+                const duration = 2.5 + Math.random() * 2;
+                const delay = Math.random() * 0.8;
+                const drift = (Math.random() - 0.5) * 150;
+                const spin = (Math.random() - 0.5) * 360;
+                piece.style.left = left + 'vw';
+                piece.style.animationDuration = duration + 's';
+                piece.style.animationDelay = delay + 's';
+                piece.style.setProperty('--drift', drift + 'px');
+                piece.style.setProperty('--spin', spin + 'deg');
+                container.appendChild(piece);
+                setTimeout(() => piece.remove(), (duration + delay) * 1000 + 200);
+            }
+        }
+
+        // --- Egg 1: Konami-Code -> Konfetti-Regen ---
+        document.addEventListener('keydown', (e) => {
+            const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+            if (key === KONAMI_SEQUENCE[konamiProgress]) {
+                konamiProgress++;
+                if (konamiProgress === KONAMI_SEQUENCE.length) {
+                    konamiProgress = 0;
+                    launchConfetti();
+                    showToast('🎉 Konami-Code erkannt! Hyperfokus aktiviert!');
+                }
+            } else {
+                konamiProgress = (key === KONAMI_SEQUENCE[0]) ? 1 : 0;
+            }
+        });
+
+        // --- Egg 2-4: Wörter tippen -> "oink", "forza", "fokus"/"hyperfokus" ---
+        let typedBuffer = '';
+        document.addEventListener('keydown', (e) => {
+            if (e.key.length !== 1) return;
+            typedBuffer = (typedBuffer + e.key.toLowerCase()).slice(-14);
+
+            if (typedBuffer.endsWith('oink')) {
+                typedBuffer = '';
+                launchEmojiRain(['🐷', '🐽'], 45);
+                showToast('🐷 Oink oink! Wer hat da gerufen?');
+                return;
+            }
+
+            if (typedBuffer.endsWith('forza')) {
+                typedBuffer = '';
+                if (!document.getElementById('forza-car')) {
+                    const car = document.createElement('div');
+                    car.id = 'forza-car';
+                    car.innerText = '🏎️';
+                    document.body.appendChild(car);
+                    setTimeout(() => car.remove(), 1700);
+                }
+                showToast('🏎️ Vroooom! Forza Horizon 5 Modus!');
+                return;
+            }
+
+            if (typedBuffer.endsWith('fokus') || typedBuffer.endsWith('hyperfokus')) {
+                typedBuffer = '';
+                if (!document.body.classList.contains('low-end')) {
+                    document.body.classList.add('hyperfokus-mode');
+                    setTimeout(() => document.body.classList.remove('hyperfokus-mode'), 3600);
+                }
+                showToast('🧠⚡ Hyperfokus aktiviert! Jetzt geht nichts mehr verloren.');
+                return;
+            }
+        });
+
+        // --- Egg 5: 5x schnell auf die Überschrift klicken -> Disco-Modus ---
+        let headerClickCount = 0;
+        let headerClickTimer = null;
+        const headerTitleEl = document.querySelector('#header-section h1');
+        if (headerTitleEl) {
+            headerTitleEl.style.cursor = 'pointer';
+            headerTitleEl.addEventListener('click', () => {
+                headerClickCount++;
+                clearTimeout(headerClickTimer);
+                headerClickTimer = setTimeout(() => { headerClickCount = 0; }, 1200);
+
+                if (headerClickCount >= 5) {
+                    headerClickCount = 0;
+                    if (!document.body.classList.contains('low-end')) {
+                        document.body.classList.add('disco-mode');
+                        setTimeout(() => document.body.classList.remove('disco-mode'), 2500);
+                    }
+                    launchEmojiRain(['✨', '🎮', '⚡', '🐷'], 35);
+                    showToast('👀 Du hast fünfmal geklickt... Disco-Modus!');
+                }
+            });
+        }
+
+        // --- Egg 6: 3x auf den Footer-Badge klicken -> geheime Botschaft ---
+        let footerClickCount = 0;
+        let footerClickTimer = null;
+        const footerBadgeEl = document.querySelector('footer .inline-flex');
+        const secretMessages = [
+            '🔧 Nächstes Projekt: noch mehr Homelab-Chaos im Docker-Stack.',
+            '🎮 Aktueller Highscore in Forza Horizon 5: geheim. Frag nicht.',
+            '☕ Diese Seite wurde mit sehr viel Hyperfokus und noch mehr Kaffee gebaut.',
+            '🐛 Bugs sind einfach ungeplante Features. Punkt.',
+            '💙 Danke fürs Neugierig-Sein und Herumklicken!'
+        ];
+        if (footerBadgeEl) {
+            footerBadgeEl.style.cursor = 'pointer';
+            footerBadgeEl.addEventListener('click', () => {
+                footerClickCount++;
+                clearTimeout(footerClickTimer);
+                footerClickTimer = setTimeout(() => { footerClickCount = 0; }, 1000);
+
+                if (footerClickCount >= 3) {
+                    footerClickCount = 0;
+                    const msg = secretMessages[Math.floor(Math.random() * secretMessages.length)];
+                    showToast(msg, 4200);
+                }
+            });
+        }
 
     // --- DASHBOARD LOGIC FIX ---
         let dashboardTimeout;
@@ -1570,8 +2004,8 @@
                 lyricsContainer.className = `absolute inset-0 overflow-y-auto overflow-x-hidden text-left w-full h-full lyrics-style-${style}`;
             }
             
-            ['fill', 'bounce', 'fade', 'blur', 'wave', 'wave-char', 'neon', 'typewriter', 'pop', 'karaoke', 'glitch', 'flip', 'zoom', 'zoom-char', 'kinetic', 'hellfire', 'hologram', 'matrix'].forEach(s => {
-                const btn = document.getElementById(`btn-style-${s}`);
+            ['fill', 'bounce', 'fade', 'blur', 'wave', 'wave-char', 'neon', 'typewriter', 'pop', 'karaoke', 'glitch', 'flip', 'zoom', 'zoom-char', 'kinetic', 'hellfire', 'hologram', 'matrix', 'liquid', 'cyberpunk', 'ghost', 'rainbow', 'shake', 'underline', 'ember', 'ice', 'chromatic', 'bubble', 'flagwave', 'spotlight', 'binary', 'paint', 'vinyl', 'starlight', 'applemusic'].forEach(s => {
+            const btn = document.getElementById(`btn-style-${s}`);
                 if(btn) {
                     if (s === style) {
                         btn.classList.add('bg-blue-500/20', 'text-blue-400', 'font-bold');
@@ -1907,6 +2341,15 @@
             }
             
             const isLowEnd = document.body.classList.contains('low-end');
+
+            // NEU: Footer HTML für Writer und Provider dynamisch zusammenbauen
+            let footerHtml = '';
+            if (currentLyricsProvider || currentLyricsWriter) {
+                footerHtml = `<div class="mt-20 border-t border-white/10 pt-6 pb-20 w-full text-left">
+                    ${currentLyricsWriter ? `<p class="text-[10px] xxs:text-xs sm:text-sm text-white/40 font-medium mb-1.5">Written by: ${escapeHTML(currentLyricsWriter)}</p>` : ''}
+                    ${currentLyricsProvider ? `<p class="text-[8px] xxs:text-[10px] sm:text-xs text-blue-400/80 font-black uppercase tracking-widest">Provided by ${escapeHTML(currentLyricsProvider)}</p>` : ''}
+                </div>`;
+            }
             
             lyricsContent.innerHTML = '<div class="w-full pt-[40vh] pb-[40vh] px-2 sm:px-4">' + parsedLyrics.map((line, idx) => {
                 if (isLowEnd) {
@@ -1925,7 +2368,7 @@
                         return `<span id="word-${idx}-${wIdx}" class="lyric-word">${chars}</span>${tok.trailingSpace}`;
                     }).join('') +
                 `</div>`;
-            }).join('') + '</div>';
+            }).join('') + footerHtml + '</div>';
         }
 
         function scrollToLyricElement(el) {
@@ -2129,141 +2572,128 @@
             return trackMatch && hasCommonArtistWord;
         }
 
-            async function fetchExternalLyrics(title, artist, searchDurationMs = 0) {
-            const fetchId = ++currentFetchId; 
-            
-            if (lyricsContent) {
-                lyricsContent.innerHTML = `
-                    <div class="w-full flex-1 flex flex-col justify-center min-h-full py-16 px-2 sm:px-4 md:px-8">
-                        <h2 class="text-xl sm:text-3xl md:text-4xl font-extrabold text-white/30 tracking-tight leading-tight text-left animate-pulse">
-                            Suche Lyrics...
-                        </h2>
-                    </div>`;
-            }
-            parsedLyrics = [];
-            currentLyricIndex = -1;
+        async function fetchExternalLyrics(title, artist, searchDurationMs = 0) {
+        const fetchId = ++currentFetchId; 
+        
+        if (lyricsContent) {
+            lyricsContent.innerHTML = `
+                <div class="w-full flex-1 flex flex-col justify-center min-h-full py-16 px-2 sm:px-4 md:px-8">
+                    <h2 class="text-xl sm:text-3xl md:text-4xl font-extrabold text-white/30 tracking-tight leading-tight text-left animate-pulse">
+                        Suche Songtext...
+                    </h2>
+                </div>`;
+        }
+        parsedLyrics = [];
+        currentLyricIndex = -1;
+        currentLyricsProvider = "";
+        currentLyricsWriter = "";
 
-            const checkAndRenderStrict = (data, searchT, searchA, searchDurMs) => {
-                if (!data) return false;
-
-                if (Array.isArray(data)) {
-                    const validMatches = data.filter(d => isStrictMatch(d.trackName, d.artistName, d.duration, searchT, searchA, searchDurMs));
-                    
-                    if (validMatches.length > 0) {
-                        const best = validMatches.find(d => d.syncedLyrics) || validMatches[0];
-                        if (best.syncedLyrics && !isDummyLyrics(best.syncedLyrics)) {
-                            parseLrc(best.syncedLyrics);
-                            renderLyrics();
-                            syncLyricsUI(true);
-                            return true;
-                        } else if (best.plainLyrics && !isDummyLyrics(best.plainLyrics)) {
-                            renderLyrics(best.plainLyrics, true);
-                            return true;
-                        }
-                    }
-                } else {
-                    if (data.syncedLyrics && !isDummyLyrics(data.syncedLyrics)) {
-                        parseLrc(data.syncedLyrics);
+        const checkAndRenderStrict = (data, searchT, searchA, searchDurMs) => {
+            if (!data) return false;
+            if (Array.isArray(data)) {
+                const validMatches = data.filter(d => isStrictMatch(d.trackName, d.artistName, d.duration, searchT, searchA, searchDurMs));
+                if (validMatches.length > 0) {
+                    const best = validMatches.find(d => d.syncedLyrics) || validMatches[0];
+                    if (best.syncedLyrics && !isDummyLyrics(best.syncedLyrics)) {
+                        currentLyricsProvider = "LRCLIB";
+                        parseLrc(best.syncedLyrics);
                         renderLyrics();
                         syncLyricsUI(true);
                         return true;
-                    } else if (data.plainLyrics && !isDummyLyrics(data.plainLyrics)) {
-                        renderLyrics(data.plainLyrics, true);
+                    } else if (best.plainLyrics && !isDummyLyrics(best.plainLyrics)) {
+                        currentLyricsProvider = "LRCLIB";
+                        renderLyrics(best.plainLyrics, true);
                         return true;
                     }
                 }
-                return false;
-            };
-
-            const cleanT = cleanStringForAPI(title);
-            let cleanA = cleanStringForAPI(artist);
-
-            // ==========================================
-            // QUELLE 1: LRCLIB (Primär)
-            // ==========================================
-            try {
-                let res = await fetch(`https://lrclib.net/api/get?` + new URLSearchParams({ track_name: title, artist_name: artist }));
-                if (fetchId !== currentFetchId) return;
-                
-                if (res.ok) {
-                    const data = await res.json();
-                    if (checkAndRenderStrict(data, title, artist, searchDurationMs)) return;
-                }
-
-                if (cleanT !== title || cleanA !== artist) {
-                    let resClean = await fetch(`https://lrclib.net/api/get?` + new URLSearchParams({ track_name: cleanT, artist_name: cleanA }));
-                    if (fetchId !== currentFetchId) return;
-                    if (resClean.ok) {
-                        const dataClean = await resClean.json();
-                        if (checkAndRenderStrict(dataClean, cleanT, cleanA, searchDurationMs)) return;
-                    }
-                }
-
-                let searchRes = await fetch(`https://lrclib.net/api/search?q=` + encodeURIComponent(`${title} ${artist}`));
-                if (fetchId !== currentFetchId) return;
-                
-                if (searchRes.ok) {
-                    const searchData = await searchRes.json();
-                    if (checkAndRenderStrict(searchData, title, artist, searchDurationMs)) return;
-                }
-
-                if (cleanT !== title || cleanA !== artist) {
-                    searchRes = await fetch(`https://lrclib.net/api/search?q=` + encodeURIComponent(`${cleanT} ${cleanA}`));
-                    if (fetchId !== currentFetchId) return;
-                    
-                    if (searchRes.ok) {
-                        const searchData = await searchRes.json();
-                        if (checkAndRenderStrict(searchData, cleanT, cleanA, searchDurationMs)) return;
-                    }
-                }
-
-                throw new Error("LRCLIB failed");
-            } catch (err) {
-                if (fetchId !== currentFetchId) return; 
-
-                // ==========================================
-                // QUELLE 2: NETEASE CLOUD MUSIC FALLBACK
-                // ==========================================
-                try {
-                    // 1. Song ID über Netease Proxy suchen
-                    const searchUrl = `https://neteasecloudmusicapi.vercel.app/search?keywords=${encodeURIComponent(cleanT + ' ' + cleanA)}`;
-                    let neteaseSearch = await fetch(searchUrl);
-                    if (fetchId !== currentFetchId) return;
-                    
-                    if (neteaseSearch.ok) {
-                        const searchData = await neteaseSearch.json();
-                        const songs = searchData.result?.songs;
-                        
-                        if (songs && songs.length > 0) {
-                            const songId = songs[0].id;
-                            
-                            // 2. Lyrics mit der gefundenen ID abrufen
-                            const lyricUrl = `https://neteasecloudmusicapi.vercel.app/lyric?id=${songId}`;
-                            let neteaseLyric = await fetch(lyricUrl);
-                            if (fetchId !== currentFetchId) return;
-                            
-                            if (neteaseLyric.ok) {
-                                const lyricData = await neteaseLyric.json();
-                                const lrcText = lyricData.lrc?.lyric;
-                                
-                                if (lrcText && !isDummyLyrics(lrcText)) {
-                                    parseLrc(lrcText);
-                                    renderLyrics();
-                                    syncLyricsUI(true);
-                                    return; // Erfolgreich aus Netease geladen!
-                                }
-                            }
-                        }
-                    }
-                    throw new Error("Netease failed");
-                } catch (neteaseErr) {
-                    if (fetchId !== currentFetchId) return;
-                    // Wenn BEIDE APIs versagen, zeigen wir den Fallback an
-                    renderLyrics(currentNoLyricsMessage);
+            } else {
+                if (data.syncedLyrics && !isDummyLyrics(data.syncedLyrics)) {
+                    currentLyricsProvider = "LRCLIB";
+                    parseLrc(data.syncedLyrics);
+                    renderLyrics();
+                    syncLyricsUI(true);
+                    return true;
+                } else if (data.plainLyrics && !isDummyLyrics(data.plainLyrics)) {
+                    currentLyricsProvider = "LRCLIB";
+                    renderLyrics(data.plainLyrics, true);
+                    return true;
                 }
             }
-        }
+            return false;
+        };
 
+        const cleanT = cleanStringForAPI(title);
+        let cleanA = cleanStringForAPI(artist);
+
+        // ==========================================
+        // QUELLE 0: LRCLIB (zuverlässigste öffentliche Quelle, zeilensynchron)
+        // ==========================================
+        try {
+            let res = await fetch(`https://lrclib.net/api/get?` + new URLSearchParams({ track_name: title, artist_name: artist }));
+            if (fetchId !== currentFetchId) return;
+            
+            if (res.ok) {
+                const data = await res.json();
+                if (checkAndRenderStrict(data, title, artist, searchDurationMs)) return;
+            }
+
+            if (cleanT !== title || cleanA !== artist) {
+                let resClean = await fetch(`https://lrclib.net/api/get?` + new URLSearchParams({ track_name: cleanT, artist_name: cleanA }));
+                if (fetchId !== currentFetchId) return;
+                if (resClean.ok) {
+                    const dataClean = await resClean.json();
+                    if (checkAndRenderStrict(dataClean, cleanT, cleanA, searchDurationMs)) return;
+                }
+            }
+
+            let searchRes = await fetch(`https://lrclib.net/api/search?q=` + encodeURIComponent(`${title} ${artist}`));
+            if (fetchId !== currentFetchId) return;
+            
+            if (searchRes.ok) {
+                const searchData = await searchRes.json();
+                if (checkAndRenderStrict(searchData, title, artist, searchDurationMs)) return;
+            }
+        } catch (err) {}
+
+        // ==========================================
+        // QUELLE 1: NETEASE CLOUD MUSIC (Fallback, zeilensynchron)
+        // ==========================================
+        try {
+            if (fetchId !== currentFetchId) return;
+            const searchUrl = `https://neteasecloudmusicapi.vercel.app/search?keywords=${encodeURIComponent(cleanT + ' ' + cleanA)}`;
+            let neteaseSearch = await fetch(searchUrl);
+            
+            if (neteaseSearch.ok) {
+                const searchData = await neteaseSearch.json();
+                const songs = searchData.result?.songs;
+                
+                if (songs && songs.length > 0) {
+                    const songId = songs[0].id;
+                    const lyricUrl = `https://neteasecloudmusicapi.vercel.app/lyric?id=${songId}`;
+                    let neteaseLyric = await fetch(lyricUrl);
+                    if (fetchId !== currentFetchId) return;
+                    
+                    if (neteaseLyric.ok) {
+                        const lyricData = await neteaseLyric.json();
+                        const lrcText = lyricData.lrc?.lyric;
+                        if (lrcText && !isDummyLyrics(lrcText)) {
+                            currentLyricsProvider = "NetEase Cloud Music";
+                            currentLyricsWriter = "";
+                            parseLrc(lrcText);
+                            renderLyrics();
+                            syncLyricsUI(true);
+                            return;
+                        }
+                    }
+                }
+            }
+        } catch (neteaseErr) {}
+
+        // Alle Quellen ohne Treffer -> Fallback-Hinweistext anzeigen
+        if (fetchId !== currentFetchId) return;
+        renderLyrics(currentNoLyricsMessage);
+    }
+            
         function updateMusicUI(data, dynamicLatency = 50) {
             const hasTrack = data && data.track;
             const isPlaying = data && data.status === "playing";
