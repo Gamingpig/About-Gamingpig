@@ -704,9 +704,14 @@
         }
 
         .tutorial-active-element { z-index: 300 !important; box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7), 0 0 50px 15px rgba(59, 130, 246, 0.5) !important; border-radius: inherit; pointer-events: none; transition: box-shadow 0.8s var(--liquid-fluid) !important; }
-        .tutorial-active-element:not(#ui-controls) { position: relative !important; background: white; }
-        .dark .tutorial-active-element:not(#ui-controls) { background: #0f172a; }
+        .tutorial-active-element:not(#ui-controls):not(#cp-trigger):not(#pwa-install-btn):not(#standby-toggle) { position: relative !important; background: white; }
+        .dark .tutorial-active-element:not(#ui-controls):not(#cp-trigger):not(#pwa-install-btn):not(#standby-toggle) { background: #0f172a; }
         #ui-controls.tutorial-active-element { position: fixed !important; background: transparent !important; border-radius: 1rem; }
+        /* NEW: cp-trigger und pwa-install-btn sind selbst position:fixed (keine ui-controls-Kinder) -
+           müssen das während des Tutorials bleiben, sonst werden sie aus ihrer Position gerissen. */
+        #cp-trigger.tutorial-active-element, #pwa-install-btn.tutorial-active-element {
+            position: fixed !important; background: transparent !important;
+        }
 
         /* ========================================================= */
         /* --- NEUE FEATURES: Back-to-Top, Easter Eggs -------------- */
@@ -831,9 +836,13 @@
             background: #000; box-shadow: 0 6px 20px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.1);
             overflow: hidden; display: flex; flex-direction: column; justify-content: center;
             padding: 0; opacity: 0; pointer-events: none; cursor: pointer; touch-action: none;
+            -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
+            -webkit-tap-highlight-color: transparent;
             transition: width 0.7s var(--liquid-fluid), height 0.7s var(--liquid-fluid), border-radius 0.6s var(--liquid-fluid), opacity 0.4s ease, padding 0.7s var(--liquid-fluid), box-shadow 0.4s ease;
         }
         #dynamic-island.di-visible { opacity: 1; pointer-events: auto; }
+        /* NEW: Im StandBy-Modus soll die Insel nicht zu sehen sein (überlagert sonst den Lockscreen) */
+        #dynamic-island.di-hidden-by-standby { opacity: 0 !important; pointer-events: none !important; }
         /* Sanfter Puls-Ring im eingeklappten (persistenten) Zustand: eigenes, nicht
            geclipptes Wrapper-Element (die Insel selbst hat overflow:hidden für den
            Inhalt), animiert nur über transform/opacity statt box-shadow (günstiger
@@ -884,6 +893,16 @@
             transition: opacity 0.6s var(--apple-ease), visibility 0.6s;
         }
         #standby-overlay.standby-active { opacity: 1; visibility: visible; pointer-events: auto; }
+        /* NEW: Anti-Burn-in - der gesamte Inhalt verschiebt sich alle ~45s minimal (paar Pixel),
+           damit bei langem Stehenlassen (z.B. Handy an der Ladestation) kein Einbrennen
+           auf OLED-Screens passiert. Layout/Abstände bleiben dabei unverändert, nur eine
+           dezente transform-Verschiebung. */
+        #standby-shift-wrapper {
+            display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+            flex: 1; width: 100%; min-height: 0;
+            transform: translate(var(--standby-shift-x, 0px), var(--standby-shift-y, 0px));
+            transition: transform 2.5s ease-in-out;
+        }
         #standby-bg {
             position: absolute; inset: -30px; background-size: cover; background-position: center;
             filter: blur(50px) brightness(0.4) saturate(160%); transform: scale(1.2);
@@ -898,13 +917,13 @@
 
         /* --- Große Now-Playing Lockscreen-Karte --- */
         #standby-nowplaying {
-            position: relative; z-index: 2; width: min(94vw, 480px); margin-bottom: 40px;
+            position: relative; z-index: 2; width: min(94vw, 520px); margin-bottom: 40px;
             background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14);
             backdrop-filter: blur(30px) saturate(150%); -webkit-backdrop-filter: blur(30px) saturate(150%);
             border-radius: 32px; padding: 26px; box-shadow: 0 20px 60px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.15);
         }
         #standby-track { display: flex; align-items: center; gap: 20px; }
-        #standby-track-art-wrap { position: relative; width: clamp(84px, 22vw, 130px); height: clamp(84px, 22vw, 130px); flex-shrink: 0; border-radius: 24px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.6); }
+        #standby-track-art-wrap { position: relative; width: clamp(120px, 34vw, 190px); height: clamp(120px, 34vw, 190px); flex-shrink: 0; border-radius: 28px; overflow: hidden; box-shadow: 0 14px 40px rgba(0,0,0,0.65); }
         #standby-track-art { width: 100%; height: 100%; object-fit: cover; display: block; }
         #standby-eq { position: absolute; bottom: 8px; left: 8px; display: flex; align-items: flex-end; gap: 3.5px; height: 20px; background: rgba(0,0,0,0.4); padding: 4px 7px; border-radius: 8px; }
         #standby-eq span { width: 4px; background: #fff; border-radius: 2px; animation: di-eq-bounce 0.9s ease-in-out infinite; }
@@ -917,7 +936,11 @@
         #standby-progress-track { width: 100%; height: 6px; background: rgba(255,255,255,0.15); border-radius: 999px; overflow: hidden; }
         #standby-progress-bar { height: 100%; width: 0%; background: #fff; border-radius: 999px; transition: width 0.3s linear; }
         #standby-progress-times { display: flex; justify-content: space-between; margin-top: 9px; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.5); }
-        #standby-hint { position: relative; z-index: 2; color: rgba(255,255,255,0.3); font-size: 10px; text-transform: uppercase; letter-spacing: 2px; font-weight: 700; padding-bottom: 24px; }
+        #standby-hint {
+            position: relative; z-index: 2; color: rgba(255,255,255,0.3); font-size: 10px; text-transform: uppercase; letter-spacing: 2px; font-weight: 700; padding-bottom: 24px;
+            transform: translate(var(--standby-shift-x, 0px), var(--standby-shift-y, 0px));
+            transition: transform 2.5s ease-in-out;
+        }
 
         /* ========================================================= */
         /* --- NEW: COMMAND PALETTE (⌘K Spotlight) ------------------- */
@@ -949,6 +972,19 @@
         #pwa-install-btn:hover { transform: translateX(-50%) translateY(-2px) scale(1.03); }
         #pwa-install-btn.hidden { display: none; }
         @media (max-width: 380px) { #pwa-install-btn { padding: 8px 14px; font-size: 11px; } }
+
+        /* NEW: Einmaliger dezenter Hinweis-Bubble (Easter-Egg-Tipp), verschwindet von selbst */
+        #search-hint-bubble {
+            position: fixed; bottom: 62px; left: 16px; z-index: 301; max-width: 240px;
+            background: rgba(15,23,42,0.92); color: #fff; border: 1px solid rgba(255,255,255,0.14);
+            border-radius: 14px; padding: 10px 14px; font-size: 12px; font-weight: 600; line-height: 1.4;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.35); cursor: pointer;
+            opacity: 0; transform: translateY(8px) scale(0.96); pointer-events: none;
+            transition: opacity 0.5s ease, transform 0.5s var(--apple-bounce);
+        }
+        #search-hint-bubble.hint-visible { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+        #search-hint-arrow { position: absolute; bottom: -6px; left: 20px; width: 12px; height: 12px; background: rgba(15,23,42,0.92); border-right: 1px solid rgba(255,255,255,0.14); border-bottom: 1px solid rgba(255,255,255,0.14); transform: rotate(45deg); }
+        @media (max-width: 640px) { #search-hint-bubble { bottom: 58px; } }
 
         #command-palette-overlay {
             position: fixed; inset: 0; z-index: 900; background: rgba(0,0,0,0.5);
@@ -1063,7 +1099,7 @@
     <div id="dynamic-island-ring" aria-hidden="true"></div>
     <div id="dynamic-island" role="button" tabindex="0" aria-label="Song-Details öffnen, nach oben wischen zum Ausblenden">
         <div id="dynamic-island-row">
-            <img id="di-art" src="" alt="">
+            <img id="di-art" src="" alt="" draggable="false" oncontextmenu="return false;">
             <div class="di-text">
                 <p class="di-title" id="di-title"></p>
                 <p class="di-artist" id="di-artist"></p>
@@ -1076,26 +1112,28 @@
     <!-- NEW: StandBy / Ambient Mode (Lockscreen-Style) -->
     <div id="standby-overlay" onclick="toggleStandBy(false)" role="button" tabindex="0" aria-label="StandBy Modus verlassen">
         <div id="standby-bg"></div>
-        <div id="standby-clockzone">
-            <div id="standby-clock">00:00</div>
-            <div id="standby-date"></div>
-        </div>
-        <div id="standby-nowplaying" class="standby-idle">
-            <div id="standby-track">
-                <div id="standby-track-art-wrap">
-                    <img id="standby-track-art" alt="">
-                    <div id="standby-eq"><span></span><span></span><span></span></div>
-                </div>
-                <div id="standby-track-text">
-                    <p id="standby-track-title">Aktuell ist es ruhig...</p>
-                    <p id="standby-track-artist">Genieße die Stille</p>
-                </div>
+        <div id="standby-shift-wrapper">
+            <div id="standby-clockzone">
+                <div id="standby-clock">00:00</div>
+                <div id="standby-date"></div>
             </div>
-            <div id="standby-progress-wrap">
-                <div id="standby-progress-track"><div id="standby-progress-bar"></div></div>
-                <div id="standby-progress-times">
-                    <span id="standby-time-current">0:00</span>
-                    <span id="standby-time-total">0:00</span>
+            <div id="standby-nowplaying" class="standby-idle">
+                <div id="standby-track">
+                    <div id="standby-track-art-wrap">
+                        <img id="standby-track-art" alt="">
+                        <div id="standby-eq"><span></span><span></span><span></span></div>
+                    </div>
+                    <div id="standby-track-text">
+                        <p id="standby-track-title">Aktuell ist es ruhig...</p>
+                        <p id="standby-track-artist">Genieße die Stille</p>
+                    </div>
+                </div>
+                <div id="standby-progress-wrap">
+                    <div id="standby-progress-track"><div id="standby-progress-bar"></div></div>
+                    <div id="standby-progress-times">
+                        <span id="standby-time-current">0:00</span>
+                        <span id="standby-time-total">0:00</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1117,6 +1155,12 @@
     <button id="cp-trigger" onclick="openCommandPalette()" aria-label="Befehlspalette öffnen" title="Spotlight-Suche (⌘K)">
         <span>⌘</span><span>K</span>
     </button>
+
+    <!-- NEW: Einmaliger, dezenter Hinweis auf die Suche/versteckte Interaktionen -->
+    <div id="search-hint-bubble" onclick="dismissSearchHint()">
+        <p>💡 Tipp: Tippe hier Wörter ein - manche lösen Überraschungen aus...</p>
+        <span id="search-hint-arrow"></span>
+    </div>
 
     <button id="pwa-install-btn" onclick="triggerInstallPrompt()" class="hidden" aria-label="Als App installieren" title="Zum Home-Bildschirm hinzufügen">
         📲 App installieren
@@ -1559,7 +1603,7 @@
                     </div>
                     <h2 class="text-base xxs:text-xl xs:text-2xl sm:text-3xl font-bold">Tom's TikTok</h2>
                 </div>
-                <a href="https://www.tiktok.com/@crxy_tom_?is_from_webapp=1&sender_device=pc" target="_blank" rel="noopener noreferrer" class="group/link inline-flex items-center gap-1.5 xxs:gap-2 sm:gap-3 text-sm xxs:text-base sm:text-xl text-blue-500 hover:text-blue-600 font-bold transition-all">
+                <a href="https://www.tiktok.com/@squizey_tt?_r=1&_t=ZG-97oplSDT9Dl" target="_blank" rel="noopener noreferrer" class="group/link inline-flex items-center gap-1.5 xxs:gap-2 sm:gap-3 text-sm xxs:text-base sm:text-xl text-blue-500 hover:text-blue-600 font-bold transition-all">
                     Hier geht's zu Tom's Kanal
                     <div class="p-0.5 xxs:p-1 sm:p-1.5 bg-blue-500/10 rounded xxs:rounded-md sm:rounded-lg group-hover/link:translate-x-1 transition-transform">
                         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-4 xxs:h-4 sm:w-5 sm:h-5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
@@ -1710,14 +1754,14 @@
                 text: 'Drück Strg+K (oder Cmd+K auf dem Mac) und eine echte Befehlspalette öffnet sich - genau wie auf dem Mac! Tippe einfach, was du suchst: "Dark Mode", "Lyrics", "StandBy"... Pfeiltasten zum Navigieren, Enter zum Ausführen.'
             },
             {
-                targetId: 'footer-section',
+                targetId: 'pwa-install-btn',
                 title: 'Installier mich als App!',
                 text: 'Diese Seite erzeugt sich ihr eigenes App-Icon und lässt sich auf Android/Chrome per Klick als richtige App installieren (kein Store nötig) - auf dem iPhone geht das manuell über "Zum Home-Bildschirm" im Teilen-Menü. Fühlt sich danach an wie eine native App, ganz ohne Browserleiste.'
             },
             {
                 targetId: 'footer-section',
                 title: 'Psst... 🤫 Ein Geheimnis',
-                text: 'Diese Seite hat ein paar versteckte Easter Eggs. Tipp: Alte Cheat-Codes aus Videospielen, ein paar Tastatur-Wörter, oder einfach mal wild auf Sachen rumklicken. Viel Spaß beim Suchen!'
+                text: 'Diese Seite hat ein paar versteckte Easter Eggs. Tipp: Alte Cheat-Codes aus Videospielen, ein paar Tastatur-Wörter, oder einfach mal wild auf Sachen rumklicken. Kein Keyboard zur Hand (z.B. am Handy)? Die getippten Wörter funktionieren auch, wenn du sie ins Spotlight-Suchfeld (⌘K-Button) eintippst. Viel Spaß beim Suchen!'
             }
         ];
 
@@ -1785,6 +1829,7 @@
         let tiltEnabled = localStorage.getItem('tiltEnabled') !== 'false';
         let standByActive = false;
         let standByInterval = null;
+        let standByShiftInterval = null;
         let diHideTimeout = null;
         let lastAmbientArtUrl = null;
         let tiltPermissionRequested = false;
@@ -2070,7 +2115,7 @@
             const ring = document.getElementById('dynamic-island-ring');
             const island = document.getElementById('dynamic-island');
             if (!ring || !island) return;
-            const shouldPulse = island.classList.contains('di-visible') && !island.classList.contains('di-expanded') && !document.body.classList.contains('low-end');
+            const shouldPulse = island.classList.contains('di-visible') && !island.classList.contains('di-expanded') && !island.classList.contains('di-hidden-by-standby') && !document.body.classList.contains('low-end');
             ring.classList.toggle('di-ring-active', shouldPulse);
         }
 
@@ -2187,6 +2232,7 @@
             island.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleIslandTap(); }
             });
+            island.addEventListener('contextmenu', (e) => e.preventDefault());
         })();
 
         // --- NEW: SHARE CARD GENERATOR ---
@@ -2337,7 +2383,7 @@
                 { icon: '🪞', label: 'Spatial Tilt umschalten', keywords: 'tilt gyroskop 3d parallax neigen', action: () => toggleTilt() },
                 { icon: '🎴', label: 'Share Card erstellen & herunterladen', keywords: 'share card teilen bild download', action: () => generateShareCard() },
                 { icon: '🧭', label: 'Tutorial starten', keywords: 'tutorial hilfe guide anleitung', action: () => btnStartTutorial && btnStartTutorial.click() },
-                { icon: '🐷', label: 'Tom\'s TikTok öffnen', keywords: 'tiktok tom social', action: () => window.open('https://www.tiktok.com/@gamingpig', '_blank') },
+                { icon: '🐷', label: 'Mein TikTok öffnen', keywords: 'tiktok social gamingpig', action: () => window.open('https://www.tiktok.com/@gamingpig900', '_blank') },
                 { icon: '🏝️', label: 'Dynamic Island wieder einblenden', keywords: 'dynamic island zeigen einblenden reset ausgeblendet wisch', action: () => {
                     islandDismissed = false;
                     localStorage.setItem('islandDismissed', 'false');
@@ -2385,6 +2431,10 @@
             const action = cpFilteredActions[index];
             if (!action) return;
             haptic(12);
+            if (action.keepOpen) {
+                action.action();
+                return;
+            }
             closeCommandPalette();
             setTimeout(() => action.action(), 150);
         }
@@ -2405,6 +2455,7 @@
             pushOverlayHistory();
             overlay.classList.add('cp-active');
             input.value = '';
+            input.placeholder = 'Befehl suchen oder Seite durchsuchen...';
             renderCommandPalette('');
             setTimeout(() => input.focus(), 50);
         };
@@ -2495,10 +2546,47 @@
                 updateStandByClock();
                 clearInterval(standByInterval);
                 standByInterval = setInterval(updateStandByClock, 1000 * 15);
+                // NEW: Anti-Burn-in Pixel-Shift starten (echter Positions-Zyklus, siehe unten)
+                standByShiftIndex = Math.floor(Math.random() * (AOD_SHIFT_POSITIONS.length - 1)) + 1; // nie bei Index 0 (Mitte) starten
+                shiftStandbyContent();
+                clearInterval(standByShiftInterval);
+                standByShiftInterval = setInterval(shiftStandbyContent, AOD_SHIFT_INTERVAL_MS);
+                // NEW: Dynamic Island im StandBy-Modus ausblenden (nicht dauerhaft dismissed, kommt danach zurück)
+                const island = document.getElementById('dynamic-island');
+                if (island) island.classList.add('di-hidden-by-standby');
+                updateIslandRing();
             } else {
                 clearInterval(standByInterval);
+                clearInterval(standByShiftInterval);
+                document.documentElement.style.setProperty('--standby-shift-x', '0px');
+                document.documentElement.style.setProperty('--standby-shift-y', '0px');
+                // NEW: Dynamic Island nach Verlassen von StandBy wieder zulassen
+                const island = document.getElementById('dynamic-island');
+                if (island) island.classList.remove('di-hidden-by-standby');
+                updateIslandRing();
             }
         };
+
+        // NEW: Anti-Burn-in nach echtem AOD-Vorbild (Pixel/iPhone Always-on-Display):
+        // kein reiner Zufall (der auch mal fast 0px ergeben könnte), sondern ein fester
+        // Zyklus von Positionen mit garantiertem Mindestversatz, alle 10 Minuten - genau
+        // wie echte Hardware-Displays das machen, damit wirklich andere Pixel angesteuert werden.
+        const AOD_SHIFT_INTERVAL_MS = 10 * 60 * 1000; // 10 Minuten, wie bei echten AOD-Systemen
+        const AOD_SHIFT_POSITIONS = [
+            { x: 0, y: 0 },
+            { x: 10, y: 7 }, { x: -10, y: -7 },
+            { x: 9, y: -8 }, { x: -9, y: 8 },
+            { x: 7, y: 0 }, { x: -7, y: 0 },
+            { x: 0, y: 8 }, { x: 0, y: -8 },
+            { x: 6, y: 6 }, { x: -6, y: -6 }
+        ];
+        let standByShiftIndex = 0;
+        function shiftStandbyContent() {
+            standByShiftIndex = (standByShiftIndex + 1) % AOD_SHIFT_POSITIONS.length;
+            const pos = AOD_SHIFT_POSITIONS[standByShiftIndex];
+            document.documentElement.style.setProperty('--standby-shift-x', pos.x + 'px');
+            document.documentElement.style.setProperty('--standby-shift-y', pos.y + 'px');
+        }
 
         function syncStandByTrackInfo(title, artist, artUrl) {
             const t = document.getElementById('standby-track-title');
@@ -2926,21 +3014,18 @@
             }
         });
 
-        // --- Egg 2-4: Wörter tippen -> "oink", "forza", "fokus"/"hyperfokus" ---
-        let typedBuffer = '';
-        document.addEventListener('keydown', (e) => {
-            if (e.key.length !== 1) return;
-            typedBuffer = (typedBuffer + e.key.toLowerCase()).slice(-14);
-
-            if (typedBuffer.endsWith('oink')) {
-                typedBuffer = '';
+        // --- Egg 2-4: Wörter tippen -> "oink", "forza", "fokus"/"hyperfokus", "matrix" ---
+        // NEW: Ausgelagert in eine wiederverwendbare Funktion, damit sie sowohl von normaler
+        // Tastatur (Desktop) als auch vom Spotlight-Suchfeld (⌘K-Button, per Tap auf Mobile
+        // erreichbar - ohne die brauchen Handy-Nutzer ohne Dauer-Tastatur keine Chance,
+        // diese Eggs auszulösen) gefüttert werden kann.
+        function checkSecretWordBuffer(buffer) {
+            if (buffer.endsWith('oink')) {
                 launchEmojiRain(['🐷', '🐽'], 45);
                 showToast('🐷 Oink oink! Wer hat da gerufen?');
-                return;
+                return true;
             }
-
-            if (typedBuffer.endsWith('forza')) {
-                typedBuffer = '';
+            if (buffer.endsWith('forza')) {
                 if (!document.getElementById('forza-car')) {
                     const car = document.createElement('div');
                     car.id = 'forza-car';
@@ -2949,26 +3034,63 @@
                     setTimeout(() => car.remove(), 1700);
                 }
                 showToast('🏎️ Vroooom! Forza Horizon 5 Modus!');
-                return;
+                return true;
             }
-
-            if (typedBuffer.endsWith('fokus') || typedBuffer.endsWith('hyperfokus')) {
-                typedBuffer = '';
+            if (buffer.endsWith('fokus') || buffer.endsWith('hyperfokus')) {
                 if (!document.body.classList.contains('low-end')) {
                     document.body.classList.add('hyperfokus-mode');
                     setTimeout(() => document.body.classList.remove('hyperfokus-mode'), 3600);
                 }
                 showToast('🧠⚡ Hyperfokus aktiviert! Jetzt geht nichts mehr verloren.');
-                return;
+                return true;
             }
-
-            if (typedBuffer.endsWith('matrix')) {
-                typedBuffer = '';
+            if (buffer.endsWith('matrix')) {
                 launchMatrixRain();
                 showToast('💻 Wake up, Neo...');
-                return;
+                return true;
             }
+            return false;
+        }
+
+        let typedBuffer = '';
+        document.addEventListener('keydown', (e) => {
+            if (e.key.length !== 1) return;
+            typedBuffer = (typedBuffer + e.key.toLowerCase()).slice(-14);
+            if (checkSecretWordBuffer(typedBuffer)) typedBuffer = '';
         });
+
+        // NEW: Gleiche Wörter auch übers Spotlight-Suchfeld erkennbar (mobile-freundlich!)
+        if (cpInputEl) {
+            cpInputEl.addEventListener('input', (e) => {
+                const val = e.target.value.toLowerCase();
+                if (checkSecretWordBuffer(val)) {
+                    e.target.value = '';
+                    renderCommandPalette('');
+                    setTimeout(() => closeCommandPalette(), 900);
+                }
+            });
+        }
+
+        // ========================================================= //
+        // --- NEW: EINMALIGER HINWEIS AUF VERSTECKTE INTERAKTIONEN - //
+        // ========================================================= //
+        // Dezent, taucht einmal pro Browser für ~9s auf, verschwindet dann für immer
+        // (localStorage-Flag) - zeigt Handy-Nutzern ohne Dauer-Tastatur, dass die
+        // Spotlight-Suche der Weg ist, um Easter Eggs auszulösen.
+        window.dismissSearchHint = function() {
+            const bubble = document.getElementById('search-hint-bubble');
+            if (bubble) bubble.classList.remove('hint-visible');
+            localStorage.setItem('seenSearchHint', 'true');
+        };
+        (function initSearchHint() {
+            if (localStorage.getItem('seenSearchHint') === 'true') return;
+            setTimeout(() => {
+                const bubble = document.getElementById('search-hint-bubble');
+                if (!bubble || document.body.classList.contains('low-end')) return;
+                bubble.classList.add('hint-visible');
+                setTimeout(() => { dismissSearchHint(); }, 9000);
+            }, 7000);
+        })();
 
         // --- Egg 5: 5x schnell auf die Überschrift klicken -> Disco-Modus ---
         let headerClickCount = 0;
