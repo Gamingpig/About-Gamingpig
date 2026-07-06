@@ -2,7 +2,7 @@
 <html lang="de" id="html-root">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title> Gamingpig | Portfolio</title>
 
     <!-- NEW: PWA / "Add to Home Screen" Support -->
@@ -823,16 +823,36 @@
         /* --- NEW: DYNAMIC ISLAND 2.0 ------------------------------ */
         /* ========================================================= */
         #dynamic-island {
-            position: fixed; top: 10px; left: 50%; transform: translateX(-50%) translateZ(0);
-            z-index: 500; width: 34px; height: 34px; border-radius: 999px;
+            /* Sitzt bewusst UNTER echten Kamera-Ausschnitten/Notches/der echten iPhone
+               Dynamic Island (safe-area-inset-top + Puffer), nicht direkt am oberen Rand. */
+            position: fixed; top: calc(env(safe-area-inset-top, 12px) + 40px); left: 50%;
+            transform: translateX(-50%) translateZ(0);
+            z-index: 500; width: 38px; height: 38px; border-radius: 999px;
             background: #000; box-shadow: 0 6px 20px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.1);
             overflow: hidden; display: flex; flex-direction: column; justify-content: center;
-            padding: 0; opacity: 0; pointer-events: none; cursor: pointer;
-            transition: width 0.7s var(--liquid-fluid), height 0.7s var(--liquid-fluid), border-radius 0.6s var(--liquid-fluid), opacity 0.4s ease, padding 0.7s var(--liquid-fluid);
+            padding: 0; opacity: 0; pointer-events: none; cursor: pointer; touch-action: none;
+            transition: width 0.7s var(--liquid-fluid), height 0.7s var(--liquid-fluid), border-radius 0.6s var(--liquid-fluid), opacity 0.4s ease, padding 0.7s var(--liquid-fluid), box-shadow 0.4s ease;
         }
-        #dynamic-island.di-visible { opacity: 1; }
+        #dynamic-island.di-visible { opacity: 1; pointer-events: auto; }
+        /* Sanfter Puls-Ring im eingeklappten (persistenten) Zustand: eigenes, nicht
+           geclipptes Wrapper-Element (die Insel selbst hat overflow:hidden für den
+           Inhalt), animiert nur über transform/opacity statt box-shadow (günstiger
+           fürs Compositing, wichtig für ältere Android-Geräte). */
+        #dynamic-island-ring {
+            position: fixed; top: calc(env(safe-area-inset-top, 12px) + 40px); left: 50%;
+            width: 38px; height: 38px; border-radius: 999px; transform: translateX(-50%) scale(1);
+            border: 1.5px solid rgba(59,130,246,0.6); opacity: 0; pointer-events: none;
+            z-index: 499; will-change: transform, opacity;
+        }
+        #dynamic-island-ring.di-ring-active { animation: di-idle-pulse 3.2s ease-out infinite; }
+        @keyframes di-idle-pulse {
+            0% { opacity: 0.55; transform: translateX(-50%) scale(1); }
+            70% { opacity: 0; transform: translateX(-50%) scale(1.6); }
+            100% { opacity: 0; transform: translateX(-50%) scale(1.6); }
+        }
         #dynamic-island.di-expanded {
-            width: min(320px, 86vw); height: 62px; border-radius: 28px; padding: 6px 14px 8px 6px; pointer-events: auto;
+            width: min(320px, 86vw); height: 62px; border-radius: 28px; padding: 6px 14px 8px 6px;
+            animation: none;
         }
         #dynamic-island.di-expanded:active { transform: translateX(-50%) scale(0.97); }
         #dynamic-island-row { display: flex; align-items: center; gap: 8px; width: 100%; }
@@ -852,7 +872,7 @@
         #dynamic-island.di-expanded #di-progress-track { opacity: 1; }
         #dynamic-island #di-progress-bar { height: 100%; width: 0%; background: #3b82f6; border-radius: 999px; transition: width 0.3s linear; }
         @keyframes di-eq-bounce { 0%, 100% { height: 3px; } 50% { height: 13px; } }
-        body.low-end #dynamic-island { transition: none !important; }
+        body.low-end #dynamic-island { transition: none !important; animation: none !important; }
 
         /* ========================================================= */
         /* --- NEW: STANDBY / AMBIENT MODE (Lockscreen-Style) ------- */
@@ -1040,7 +1060,8 @@
     <div id="global-emp-shockwave"></div>
 
     <!-- NEW: Dynamic Island 2.0 -->
-    <div id="dynamic-island" onclick="handleIslandTap()" role="button" tabindex="0" aria-label="Song-Details öffnen">
+    <div id="dynamic-island-ring" aria-hidden="true"></div>
+    <div id="dynamic-island" role="button" tabindex="0" aria-label="Song-Details öffnen, nach oben wischen zum Ausblenden">
         <div id="dynamic-island-row">
             <img id="di-art" src="" alt="">
             <div class="di-text">
@@ -1676,7 +1697,7 @@
             {
                 targetId: 'music-section',
                 title: 'Echtzeit Musik Integration',
-                text: 'Der wildeste Part: Das Dashboard zeigt in Echtzeit, was ich gerade höre! Wechselt der Song, poppt oben eine Dynamic Island auf. Klicke auf die Karte für synchronisierte Lyrics mit über 30 verrückten Shader-Stilen. Über das Zahnrad-Icon in den Lyrics findest du außerdem Ambient Color, Spatial Tilt und den Share-Card-Generator.'
+                text: 'Der wildeste Part: Das Dashboard zeigt in Echtzeit, was ich gerade höre! Oben bleibt dabei immer eine kleine Dynamic Island sichtbar - antippen klappt sie auf, nochmal antippen klappt sie wieder zu, nach oben wischen blendet sie ganz aus. Klicke auf die Karte für synchronisierte Lyrics mit über 30 verrückten Shader-Stilen. Über das Zahnrad-Icon in den Lyrics findest du außerdem Ambient Color, Spatial Tilt und den Share-Card-Generator.'
             },
             {
                 targetId: 'standby-toggle',
@@ -1724,6 +1745,10 @@
         let activeTutorialTarget = null;
         let currentNoLyricsMessage = fallbackMessages[0];
         let isDashboardOpen = false;
+        // NEW: Android-Back-Button-Fix - trackt offene Overlays, damit "Zurück" sie sauber schließt
+        // statt die Seite in einen kaputten Zwischenzustand zu bringen.
+        let overlayHistoryDepth = 0;
+        let suppressPopHandling = false;
         let isLyricsSettingsOpen = false;
         let currentLyricsStyle = localStorage.getItem('lyricsStyle') || 'fill';
         let canvasEnabled = localStorage.getItem('canvasEnabled') !== 'false';
@@ -1763,6 +1788,11 @@
         let diHideTimeout = null;
         let lastAmbientArtUrl = null;
         let tiltPermissionRequested = false;
+        let islandDismissed = localStorage.getItem('islandDismissed') === 'true';
+        let islandDragStartY = null;
+        let islandDragCurrentY = 0;
+        let islandDragging = false;
+        let islandDragMoved = false;
 
         // --- 3. LOGIC & EVENT LISTENERS ---
 
@@ -1886,25 +1916,40 @@
             }
         }
 
+        let deviceTiltRafPending = false;
         function handleDeviceTilt(e) {
             if (!tiltEnabled || document.body.classList.contains('low-end')) return;
-            const gamma = Math.max(-24, Math.min(24, e.gamma || 0));
-            const beta = Math.max(-24, Math.min(24, (e.beta || 0) - 45));
-            document.documentElement.style.setProperty('--tilt-x', (gamma / 24 * 14).toFixed(2));
-            document.documentElement.style.setProperty('--tilt-y', (beta / 24 * 14).toFixed(2));
+            if (deviceTiltRafPending) return;
+            deviceTiltRafPending = true;
+            requestAnimationFrame(() => {
+                deviceTiltRafPending = false;
+                const gamma = Math.max(-24, Math.min(24, e.gamma || 0));
+                const beta = Math.max(-24, Math.min(24, (e.beta || 0) - 45));
+                document.documentElement.style.setProperty('--tilt-x', (gamma / 24 * 14).toFixed(2));
+                document.documentElement.style.setProperty('--tilt-y', (beta / 24 * 14).toFixed(2));
+            });
         }
 
         (() => {
             const mc = document.getElementById('media-container');
             if (!mc) return;
+            let tiltRafPending = false;
+            let tiltLastEvent = null;
             mc.addEventListener('mousemove', (e) => {
                 if (!tiltEnabled || document.body.classList.contains('low-end') || window.matchMedia('(hover: none)').matches) return;
-                const rect = mc.getBoundingClientRect();
-                const x = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
-                const y = ((e.clientY - rect.top) / rect.height - 0.5) * 2;
-                document.documentElement.style.setProperty('--tilt-x', (x * 12).toFixed(2));
-                document.documentElement.style.setProperty('--tilt-y', (y * 12).toFixed(2));
-                document.documentElement.style.setProperty('--tilt-glare', Math.round(Math.abs(x) * 50 + Math.abs(y) * 50));
+                tiltLastEvent = e;
+                if (tiltRafPending) return;
+                tiltRafPending = true;
+                requestAnimationFrame(() => {
+                    tiltRafPending = false;
+                    if (!tiltLastEvent) return;
+                    const rect = mc.getBoundingClientRect();
+                    const x = ((tiltLastEvent.clientX - rect.left) / rect.width - 0.5) * 2;
+                    const y = ((tiltLastEvent.clientY - rect.top) / rect.height - 0.5) * 2;
+                    document.documentElement.style.setProperty('--tilt-x', (x * 12).toFixed(2));
+                    document.documentElement.style.setProperty('--tilt-y', (y * 12).toFixed(2));
+                    document.documentElement.style.setProperty('--tilt-glare', Math.round(Math.abs(x) * 50 + Math.abs(y) * 50));
+                });
             }, { passive: true });
             mc.addEventListener('mouseleave', () => {
                 document.documentElement.style.setProperty('--tilt-x', 0);
@@ -2017,36 +2062,132 @@
             if (typeof showToast === 'function') showToast('Als App installiert! 🎉');
         });
 
-        // --- NEW: DYNAMIC ISLAND 2.0 LOGIC ---
-        function triggerDynamicIsland(title, artist, artUrl) {
+        // --- NEW: DYNAMIC ISLAND 2.0 LOGIC (persistent, tap-to-expand, swipe-to-dismiss) ---
+
+        // Aktualisiert Inhalt + zeigt die Insel dauerhaft (klein) an, solange ein Track aktiv ist.
+        // Wird bei JEDEM Musik-Update aufgerufen, nicht nur bei Songwechsel.
+        function updateIslandRing() {
+            const ring = document.getElementById('dynamic-island-ring');
+            const island = document.getElementById('dynamic-island');
+            if (!ring || !island) return;
+            const shouldPulse = island.classList.contains('di-visible') && !island.classList.contains('di-expanded') && !document.body.classList.contains('low-end');
+            ring.classList.toggle('di-ring-active', shouldPulse);
+        }
+
+        function showIslandPersistent(title, artist, artUrl) {
+            if (islandDismissed) return;
             const island = document.getElementById('dynamic-island');
             if (!island || document.body.classList.contains('low-end')) return;
-            document.getElementById('di-title').textContent = title || '';
-            document.getElementById('di-artist').textContent = artist || '';
+            const titleEl = document.getElementById('di-title');
+            const artistEl = document.getElementById('di-artist');
             const artEl = document.getElementById('di-art');
-            if (artUrl) artEl.src = artUrl;
-            clearTimeout(diHideTimeout);
+            if (titleEl) titleEl.textContent = title || '';
+            if (artistEl) artistEl.textContent = artist || '';
+            if (artEl && artUrl) artEl.src = artUrl;
             island.classList.add('di-visible');
+            updateIslandRing();
+        }
+
+        // Kein Track mehr aktiv (offline) - Insel komplett verstecken, bis wieder Musik da ist.
+        function hideIslandCompletely() {
+            const island = document.getElementById('dynamic-island');
+            if (island) island.classList.remove('di-visible', 'di-expanded');
+            clearTimeout(diHideTimeout);
+            updateIslandRing();
+        }
+
+        // Kurzes Aufpoppen bei echtem Songwechsel: expandiert kurz, fällt danach auf die
+        // kleine, persistente Pille zurück (verschwindet NICHT mehr komplett wie vorher -
+        // das war der Bug, durch den sie nach einem Songwechsel manchmal nicht wiederkam).
+        function triggerDynamicIsland(title, artist, artUrl) {
+            if (islandDismissed) return;
+            const island = document.getElementById('dynamic-island');
+            if (!island || document.body.classList.contains('low-end')) return;
+            showIslandPersistent(title, artist, artUrl);
+            clearTimeout(diHideTimeout);
             requestAnimationFrame(() => {
-                requestAnimationFrame(() => island.classList.add('di-expanded'));
+                requestAnimationFrame(() => { island.classList.add('di-expanded'); updateIslandRing(); });
             });
             diHideTimeout = setTimeout(() => {
-                island.classList.remove('di-expanded');
-                setTimeout(() => island.classList.remove('di-visible'), 700);
+                island.classList.remove('di-expanded'); // fällt zurück auf die kleine Pille, bleibt sichtbar
+                updateIslandRing();
             }, 3800);
         }
 
+        // Tap auf die (sichtbare) Insel: expandiert <-> kollabiert, öffnet NICHT mehr automatisch
+        // das Dashboard (das war zu aufdringlich in Kombination mit dem neuen Dauer-Zustand).
         function handleIslandTap() {
             const island = document.getElementById('dynamic-island');
-            if (!island || !island.classList.contains('di-expanded')) return; // nur im expandierten Zustand tappbar
-            haptic(12);
+            if (!island || !island.classList.contains('di-visible')) return;
+            haptic(10);
             clearTimeout(diHideTimeout);
-            island.classList.remove('di-expanded');
-            setTimeout(() => island.classList.remove('di-visible'), 700);
-            const section = document.getElementById('music-section');
-            if (section) section.scrollIntoView({ behavior: document.body.classList.contains('low-end') ? 'auto' : 'smooth', block: 'center' });
-            if (!isDashboardOpen) setTimeout(() => toggleDashboard(), 350);
+            island.classList.toggle('di-expanded');
+            updateIslandRing();
         }
+
+        // Nutzer wischt die Insel nach oben weg - dauerhaft ausgeblendet, bis er sie über
+        // die Spotlight-Suche ("Dynamic Island wieder einblenden") reaktiviert.
+        function dismissIslandPermanently() {
+            const island = document.getElementById('dynamic-island');
+            if (island) island.classList.remove('di-visible', 'di-expanded');
+            islandDismissed = true;
+            localStorage.setItem('islandDismissed', 'true');
+            haptic([10, 20, 10]);
+            updateIslandRing();
+            if (typeof showToast === 'function') showToast('Dynamic Island ausgeblendet – über ⌘K wieder einblendbar');
+        }
+
+        // --- Swipe-/Tap-Erkennung (Touch + Maus) ---
+        (function initIslandGestures() {
+            const island = document.getElementById('dynamic-island');
+            if (!island) return;
+            const DISMISS_THRESHOLD = 34; // px nach oben, um als "Wegwisch-Geste" zu zählen
+            const TAP_TOLERANCE = 8; // px Toleranz, ab der es als Wisch statt Tap zählt
+
+            function dragStart(clientY) {
+                islandDragStartY = clientY;
+                islandDragCurrentY = clientY;
+                islandDragging = true;
+                islandDragMoved = false;
+                island.style.transition = 'none';
+            }
+            function dragMove(clientY) {
+                if (!islandDragging || islandDragStartY === null) return;
+                islandDragCurrentY = clientY;
+                const delta = clientY - islandDragStartY;
+                if (Math.abs(delta) > TAP_TOLERANCE) islandDragMoved = true;
+                const upward = Math.min(0, delta);
+                island.style.transform = `translateX(-50%) translateY(${upward}px)`;
+                island.style.opacity = String(Math.max(0.25, 1 + upward / 110));
+            }
+            function dragEnd() {
+                if (!islandDragging) return;
+                islandDragging = false;
+                island.style.transition = '';
+                island.style.transform = '';
+                island.style.opacity = '';
+                const delta = islandDragCurrentY - islandDragStartY;
+                if (delta < -DISMISS_THRESHOLD) {
+                    dismissIslandPermanently();
+                } else if (!islandDragMoved) {
+                    handleIslandTap();
+                }
+                islandDragStartY = null;
+            }
+
+            island.addEventListener('touchstart', (e) => dragStart(e.touches[0].clientY), { passive: true });
+            island.addEventListener('touchmove', (e) => dragMove(e.touches[0].clientY), { passive: true });
+            island.addEventListener('touchend', dragEnd, { passive: true });
+            island.addEventListener('touchcancel', dragEnd, { passive: true });
+
+            island.addEventListener('mousedown', (e) => { e.preventDefault(); dragStart(e.clientY); });
+            window.addEventListener('mousemove', (e) => { if (islandDragging) dragMove(e.clientY); });
+            window.addEventListener('mouseup', () => { if (islandDragging) dragEnd(); });
+
+            island.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleIslandTap(); }
+            });
+        })();
 
         // --- NEW: SHARE CARD GENERATOR ---
         window.generateShareCard = function() {
@@ -2197,6 +2338,17 @@
                 { icon: '🎴', label: 'Share Card erstellen & herunterladen', keywords: 'share card teilen bild download', action: () => generateShareCard() },
                 { icon: '🧭', label: 'Tutorial starten', keywords: 'tutorial hilfe guide anleitung', action: () => btnStartTutorial && btnStartTutorial.click() },
                 { icon: '🐷', label: 'Tom\'s TikTok öffnen', keywords: 'tiktok tom social', action: () => window.open('https://www.tiktok.com/@gamingpig', '_blank') },
+                { icon: '🏝️', label: 'Dynamic Island wieder einblenden', keywords: 'dynamic island zeigen einblenden reset ausgeblendet wisch', action: () => {
+                    islandDismissed = false;
+                    localStorage.setItem('islandDismissed', 'false');
+                    const t = document.getElementById('track-title');
+                    const a = document.getElementById('track-artist');
+                    const art = document.getElementById('artwork');
+                    showIslandPersistent(t ? t.innerText : '', a ? a.innerText : '', art ? art.getAttribute('src') : null);
+                    if (typeof showToast === 'function') showToast('Dynamic Island ist wieder da 🏝️');
+                } },
+                { icon: '📋', label: 'Link zur Seite kopieren', keywords: 'copy link teilen share url', action: () => { if (typeof copyPageLink === 'function') copyPageLink(); } },
+                { icon: '🔄', label: 'Seite neu laden', keywords: 'reload refresh neu laden', action: () => window.location.reload() },
             ];
         }
 
@@ -2250,6 +2402,7 @@
             const input = document.getElementById('cp-input');
             if (!overlay) return;
             haptic(10);
+            pushOverlayHistory();
             overlay.classList.add('cp-active');
             input.value = '';
             renderCommandPalette('');
@@ -2258,6 +2411,7 @@
 
         window.closeCommandPalette = function() {
             const overlay = document.getElementById('command-palette-overlay');
+            if (overlay && overlay.classList.contains('cp-active')) popOverlayHistory();
             if (overlay) overlay.classList.remove('cp-active');
         };
 
@@ -2278,6 +2432,44 @@
         const cpInputEl = document.getElementById('cp-input');
         if (cpInputEl) cpInputEl.addEventListener('input', (e) => renderCommandPalette(e.target.value));
 
+        // ========================================================= //
+        // --- NEW: ANDROID BACK-BUTTON FIX FÜR OVERLAYS ------------- //
+        // ========================================================= //
+        // Ohne das hier reagiert der Zurück-Button des Handys (bzw. die Geste) auf gar
+        // nichts, was auf manchen Android-Geräten dazu führt, dass Overlays/Animationen
+        // in einem kaputten Zwischenzustand hängen bleiben. Jedes Overlay (Dashboard,
+        // Lyrics, StandBy, Command Palette) schiebt beim Öffnen einen History-Eintrag,
+        // und "Zurück" schließt sauber das oberste offene Overlay statt die Seite zu verlassen.
+        function pushOverlayHistory() {
+            overlayHistoryDepth++;
+            try { history.pushState({ gpOverlayDepth: overlayHistoryDepth }, ''); } catch (e) {}
+        }
+        function popOverlayHistory() {
+            if (overlayHistoryDepth > 0) {
+                overlayHistoryDepth--;
+                if (!suppressPopHandling) {
+                    try { history.back(); } catch (e) {}
+                }
+            }
+        }
+        window.addEventListener('popstate', () => {
+            if (overlayHistoryDepth <= 0) return;
+            suppressPopHandling = true;
+            overlayHistoryDepth--;
+            closeTopmostOverlay();
+            // Kurze Verzögerung, bevor wir wieder auf normale Klicks reagieren, damit
+            // ein zeitgleicher Tap nicht versehentlich nochmal popOverlayHistory() auslöst.
+            setTimeout(() => { suppressPopHandling = false; }, 50);
+        });
+        function closeTopmostOverlay() {
+            const cpOverlayEl = document.getElementById('command-palette-overlay');
+            if (cpOverlayEl && cpOverlayEl.classList.contains('cp-active')) { closeCommandPalette(); return; }
+            const standbyOverlayEl = document.getElementById('standby-overlay');
+            if (standbyOverlayEl && standbyOverlayEl.classList.contains('standby-active')) { toggleStandBy(false); return; }
+            if (mainMusicCard && mainMusicCard.classList.contains('lyrics-open')) { toggleLyrics(false); return; }
+            if (isDashboardOpen) { toggleDashboard(); return; }
+        }
+
         // --- NEW: STANDBY / AMBIENT MODE LOGIC ---
         function updateStandByClock() {
             const now = typeof getTrueDateNow === 'function' ? new Date(getTrueDateNow()) : new Date();
@@ -2294,7 +2486,10 @@
             if (!overlay) return;
             const wasActive = standByActive;
             standByActive = (typeof force === 'boolean') ? force : !standByActive;
-            if (standByActive !== wasActive) haptic(standByActive ? [10, 30, 10] : 10);
+            if (standByActive !== wasActive) {
+                haptic(standByActive ? [10, 30, 10] : 10);
+                if (standByActive) { pushOverlayHistory(); } else { popOverlayHistory(); }
+            }
             overlay.classList.toggle('standby-active', standByActive);
             if (standByActive) {
                 updateStandByClock();
@@ -2831,6 +3026,7 @@
 
         window.toggleDashboard = function() {
             isDashboardOpen = !isDashboardOpen;
+            if (isDashboardOpen) { pushOverlayHistory(); } else { popOverlayHistory(); }
             clearTimeout(dashboardTimeout); 
             clearTimeout(dashboardOpenTimeout);
             clearTimeout(statusTextTimeout);
@@ -3041,6 +3237,7 @@
         // FIX: Re-Add Smooth Transitions for Size changes
         window.toggleLyrics = function(show) {
             if (!mainMusicCard) return;
+            if (show) { pushOverlayHistory(); } else { popOverlayHistory(); }
             if(show) {
                 mainMusicCard.classList.remove('lyrics-closing-state');
                 void mainMusicCard.offsetWidth; // Reflow erzwingen
@@ -3767,6 +3964,7 @@
                         updateProgressUI();
                         offlineTimeout = null;
                         syncStandByTrackInfo(null, null, null); // NEW: StandBy-Anzeige zurücksetzen
+                        hideIslandCompletely(); // NEW: Dynamic Island ausblenden, kein Track mehr aktiv
                     }, 2500);
                 }
                 return;
@@ -3916,9 +4114,11 @@
                 // NEW: StandBy-Overlay & Ambient-Color immer mit dem aktuellen Track synchron halten
                 syncStandByTrackInfo(data.track.title, rawArtist, imgUrl);
                 extractDominantColor(imgUrl);
+                // NEW: Dynamic Island bleibt bei jedem Update aktuell (persistent, solange Musik läuft)
+                if (isPlaying) showIslandPersistent(data.track.title, rawArtist, imgUrl);
 
                 if (isNewTrack) {
-                    // NEW: Dynamic Island 2.0 - kurzes Pop-up bei Songwechsel
+                    // NEW: Dynamic Island 2.0 - kurzes Aufpoppen bei echtem Songwechsel
                     if (!isFirstLoad && isPlaying) {
                         triggerDynamicIsland(data.track.title, rawArtist, imgUrl);
                     }
