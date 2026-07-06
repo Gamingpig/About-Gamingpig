@@ -4,6 +4,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title> Gamingpig | Portfolio</title>
+
+    <!-- NEW: PWA / "Add to Home Screen" Support -->
+    <meta name="theme-color" content="#020617">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Gamingpig">
+    <!--
+        manifest.json, sw.js, icon-192.png und icon-512.png müssen im selben Ordner
+        wie diese HTML-Datei liegen (gleiches GitHub-Repo, gleiche Ebene) - siehe
+        Anleitung. Nur echte, per HTTP(S) abrufbare Dateien machen die Seite in
+        Chrome wirklich installierbar (data:/blob:-URIs werden dafür nicht zuverlässig
+        erkannt - das war der Grund, warum "App installieren" vorher nirgends auftauchte).
+    -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-512.png">
+    <link rel="icon" type="image/png" href="icon-512.png">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -101,22 +119,23 @@
         }
 
         /* --- MESH GRADIENT (GPU OPTIMIZED) --- */
+        :root { --time-r: 59; --time-g: 130; --time-b: 246; --time-r2: 168; --time-g2: 85; --time-b2: 247; }
         .mesh-gradient {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; overflow: hidden;
             transform: translateZ(0); will-change: transform;
             pointer-events: none;
         }
         .mesh-gradient::before, .mesh-gradient::after {
-            content: ''; position: absolute; inset: 0; transition: opacity 0.8s var(--apple-ease);
+            content: ''; position: absolute; inset: 0; transition: opacity 0.8s var(--apple-ease), background 3s ease;
             will-change: opacity;
         }
         .mesh-gradient::before {
-            background: radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.05) 0%, transparent 50%);
+            background: radial-gradient(circle at 50% 50%, rgba(var(--time-r), var(--time-g), var(--time-b), 0.05) 0%, transparent 50%);
             opacity: 1;
         }
         .mesh-gradient::after {
-            background: radial-gradient(circle at 20% 30%, rgba(59, 130, 246, 0.1) 0%, transparent 40%),
-                        radial-gradient(circle at 80% 70%, rgba(168, 85, 247, 0.08) 0%, transparent 40%);
+            background: radial-gradient(circle at 20% 30%, rgba(var(--time-r), var(--time-g), var(--time-b), 0.1) 0%, transparent 40%),
+                        radial-gradient(circle at 80% 70%, rgba(var(--time-r2), var(--time-g2), var(--time-b2), 0.08) 0%, transparent 40%);
             opacity: 0;
         }
         .dark .mesh-gradient::before { opacity: 0; }
@@ -400,6 +419,32 @@
         .p7 { left: 80%; animation-duration: 4s; animation-delay: 2.5s; width: 5px; height: 5px; } .p8 { left: 40%; animation-duration: 6.5s; animation-delay: 0.8s; }
 
         #ambient-bg { position: absolute; inset: -50px; z-index: 0; background-size: cover; background-position: center; filter: blur(35px) brightness(0.75) saturate(1.8); opacity: 0; transition: opacity 1s ease; transform: scale(1.1) translate3d(0,0,0); pointer-events: none; will-change: transform, opacity; }
+
+        /* Apple Music-Feeling: unscharfer, treibender Album-Cover-Hintergrund hinter den Lyrics */
+        #lyrics-ambient-bg {
+            position: absolute; inset: -25px; z-index: -1;
+            background-size: cover; background-position: center;
+            filter: blur(50px) saturate(2.3) brightness(0.5);
+            opacity: 0; transform: scale(1.2);
+            transition: opacity 1.2s ease, background-image 0.6s ease;
+            pointer-events: none; will-change: transform, opacity;
+        }
+        #lyrics-ambient-tint {
+            position: absolute; inset: 0; z-index: -1;
+            background: radial-gradient(circle at 50% 30%, rgba(2, 6, 23, 0.3) 0%, rgba(2, 6, 23, 0.75) 75%);
+            opacity: 0; transition: opacity 1.2s ease;
+            pointer-events: none;
+        }
+        #lyrics-overlay.apple-ambient-active #lyrics-ambient-bg {
+            opacity: 0.95;
+            animation: lyrics-ambient-drift 16s ease-in-out infinite alternate;
+        }
+        #lyrics-overlay.apple-ambient-active #lyrics-ambient-tint { opacity: 1; }
+        @keyframes lyrics-ambient-drift {
+            0% { transform: scale(1.2) translate3d(0, 0, 0); }
+            100% { transform: scale(1.32) translate3d(-3%, 2%, 0); }
+        }
+        body.low-end #lyrics-ambient-bg, body.low-end #lyrics-ambient-tint { display: none !important; }
         .playing #ambient-bg { opacity: 1; animation: ambient-drift 15s infinite alternate ease-in-out; }
         @keyframes ambient-drift { 0% { transform: scale(1.1) translate3d(0, 0, 0); } 100% { transform: scale(1.2) translate3d(-5px, 5px, 0); } }
 
@@ -429,7 +474,7 @@
             opacity: 1;
         }
 
-        .lyric-line { display: block; margin: 4vh 0; line-height: 1.25; transition: opacity 0.4s ease, filter 0.4s ease, transform 0.5s var(--apple-bounce); transform-origin: left center; overflow-wrap: break-word; word-wrap: break-word; white-space: pre-wrap; padding-right: 1rem; will-change: opacity, transform; transform: translate3d(0,0,0); }
+        .lyric-line { display: block; max-width: 94%; margin: 4vh 0; line-height: 1.25; transition: opacity 0.4s ease, filter 0.4s ease, transform 0.5s var(--apple-bounce); transform-origin: left center; overflow-wrap: break-word; word-wrap: break-word; white-space: pre-wrap; padding-right: 1rem; will-change: opacity, transform; transform: translate3d(0,0,0); }
         .lyrics-open .lyric-line { opacity: 0.25; filter: blur(1px); transform: scale(0.95) translate3d(0,0,0); }
         .lyrics-open .lyric-line.active { opacity: 1; filter: blur(0px) drop-shadow(0 0 8px rgba(255,255,255,0.1)); transform: scale(1.05) translate3d(0,0,0); }
 
@@ -582,9 +627,28 @@
             text-shadow: 0 0 6px rgba(255, 255, 255, 0.45);
         }
 
+        /* 12. Apple Music PRO (Silben-Highlight + Shine-Sweep + geschärfte aktive Zeile) */
+        .lyrics-style-applemusicpro .lyric-word { background: none; -webkit-text-fill-color: currentcolor; }
+        .lyrics-style-applemusicpro .lyric-char {
+            display: inline-block;
+            color: rgba(255, 255, 255, 0.32);
+            text-shadow: none;
+            transition: color 0.2s cubic-bezier(0.4, 0, 0.2, 1), text-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .lyrics-style-applemusicpro .lyric-char.char-passed { color: #ffffff; text-shadow: none; transform: translateY(0); }
+        .lyrics-style-applemusicpro .lyric-char.char-active {
+            color: #ffffff;
+            text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+            transform: translateY(-1px);
+        }
+        #main-music-card.lyrics-open .lyrics-style-applemusicpro .lyric-line.active {
+            transform: scale(1.08);
+            filter: blur(0) drop-shadow(0 0 14px rgba(255, 255, 255, 0.12));
+        }
+
         .mask-image-gradient { -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%); mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%); }
 
-        #lyrics-overlay, #lyrics-container { overflow: hidden; will-change: transform, opacity; }
+        #lyrics-overlay, #lyrics-container { overflow: hidden; will-change: transform, opacity; border-radius: inherit; }
         #lyrics-container { overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
         #lyrics-container::-webkit-scrollbar { width: 4px; }
         #lyrics-container::-webkit-scrollbar-track { background: transparent; }
@@ -735,6 +799,219 @@
             0% { opacity: 0; } 15% { opacity: 1; } 85% { opacity: 1; } 100% { opacity: 0; }
         }
 
+        /* "matrix" tippen -> grüner Digital-Regen */
+        .matrix-rain-col {
+            position: fixed; top: -220px; z-index: 9994; pointer-events: none;
+            font-family: 'JetBrains Mono', monospace; font-size: 1rem; line-height: 1.3;
+            color: #00ff41; text-shadow: 0 0 8px #00ff41, 0 0 2px #ffffff;
+            opacity: 0.85; white-space: pre;
+            animation: matrix-fall linear forwards;
+        }
+        @keyframes matrix-fall { to { transform: translateY(115vh); opacity: 0.15; } }
+
+        /* Barrierefreiheit: reduzierte Bewegung respektieren (Systemeinstellung) */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.001ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.001ms !important;
+                scroll-behavior: auto !important;
+            }
+        }
+
+        /* ========================================================= */
+        /* --- NEW: DYNAMIC ISLAND 2.0 ------------------------------ */
+        /* ========================================================= */
+        #dynamic-island {
+            position: fixed; top: 10px; left: 50%; transform: translateX(-50%) translateZ(0);
+            z-index: 500; width: 34px; height: 34px; border-radius: 999px;
+            background: #000; box-shadow: 0 6px 20px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.1);
+            overflow: hidden; display: flex; flex-direction: column; justify-content: center;
+            padding: 0; opacity: 0; pointer-events: none; cursor: pointer;
+            transition: width 0.7s var(--liquid-fluid), height 0.7s var(--liquid-fluid), border-radius 0.6s var(--liquid-fluid), opacity 0.4s ease, padding 0.7s var(--liquid-fluid);
+        }
+        #dynamic-island.di-visible { opacity: 1; }
+        #dynamic-island.di-expanded {
+            width: min(320px, 86vw); height: 62px; border-radius: 28px; padding: 6px 14px 8px 6px; pointer-events: auto;
+        }
+        #dynamic-island.di-expanded:active { transform: translateX(-50%) scale(0.97); }
+        #dynamic-island-row { display: flex; align-items: center; gap: 8px; width: 100%; }
+        #dynamic-island img { width: 44px; height: 44px; border-radius: 12px; object-fit: cover; flex-shrink: 0; opacity: 0; transform: scale(0.6); transition: opacity 0.4s ease 0.25s, transform 0.5s var(--apple-bounce) 0.25s; }
+        #dynamic-island.di-expanded img { opacity: 1; transform: scale(1); }
+        #dynamic-island .di-text { min-width: 0; flex: 1; opacity: 0; transform: translateX(6px); transition: opacity 0.35s ease 0.3s, transform 0.4s var(--apple-ease) 0.3s; }
+        #dynamic-island.di-expanded .di-text { opacity: 1; transform: translateX(0); }
+        #dynamic-island .di-title { color: #fff; font-size: 12px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        #dynamic-island .di-artist { color: rgba(255,255,255,0.6); font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        #dynamic-island .di-eq { display: flex; align-items: flex-end; gap: 2px; height: 14px; flex-shrink: 0; opacity: 0; transition: opacity 0.3s ease 0.3s; }
+        #dynamic-island.di-expanded .di-eq { opacity: 1; }
+        #dynamic-island .di-eq span { width: 2.5px; background: #3b82f6; border-radius: 2px; animation: di-eq-bounce 0.9s ease-in-out infinite; }
+        #dynamic-island .di-eq span:nth-child(1) { animation-delay: -0.6s; }
+        #dynamic-island .di-eq span:nth-child(2) { animation-delay: -0.3s; }
+        #dynamic-island .di-eq span:nth-child(3) { animation-delay: -0.9s; }
+        #dynamic-island #di-progress-track { width: 100%; height: 2.5px; background: rgba(255,255,255,0.18); border-radius: 999px; margin-top: 7px; overflow: hidden; opacity: 0; transition: opacity 0.3s ease 0.3s; }
+        #dynamic-island.di-expanded #di-progress-track { opacity: 1; }
+        #dynamic-island #di-progress-bar { height: 100%; width: 0%; background: #3b82f6; border-radius: 999px; transition: width 0.3s linear; }
+        @keyframes di-eq-bounce { 0%, 100% { height: 3px; } 50% { height: 13px; } }
+        body.low-end #dynamic-island { transition: none !important; }
+
+        /* ========================================================= */
+        /* --- NEW: STANDBY / AMBIENT MODE (Lockscreen-Style) ------- */
+        /* ========================================================= */
+        #standby-overlay {
+            position: fixed; inset: 0; z-index: 400; background: #000;
+            display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+            opacity: 0; visibility: hidden; pointer-events: none; cursor: pointer;
+            transition: opacity 0.6s var(--apple-ease), visibility 0.6s;
+        }
+        #standby-overlay.standby-active { opacity: 1; visibility: visible; pointer-events: auto; }
+        #standby-bg {
+            position: absolute; inset: -30px; background-size: cover; background-position: center;
+            filter: blur(50px) brightness(0.4) saturate(160%); transform: scale(1.2);
+            transition: background-image 0.8s ease; animation: standby-kenburns 20s ease-in-out infinite alternate;
+        }
+        body.low-end #standby-bg { filter: brightness(0.35); animation: none; }
+        @keyframes standby-kenburns { 0% { transform: scale(1.2) translate(0,0); } 100% { transform: scale(1.32) translate(-1.5%, -1.5%); } }
+
+        #standby-clockzone { position: relative; z-index: 2; text-align: center; padding: 48px 20px 0; }
+        #standby-clock { font-family: 'JetBrains Mono', monospace; font-weight: 800; color: #fff; font-size: clamp(2.6rem, 13vw, 6rem); line-height: 1; letter-spacing: -2px; text-shadow: 0 0 60px rgba(255,255,255,0.25); }
+        #standby-date { color: rgba(255,255,255,0.6); font-size: clamp(0.75rem, 2.8vw, 1rem); font-weight: 600; margin-top: 6px; text-transform: capitalize; }
+
+        /* --- Große Now-Playing Lockscreen-Karte --- */
+        #standby-nowplaying {
+            position: relative; z-index: 2; width: min(92vw, 380px); margin-bottom: 40px;
+            background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14);
+            backdrop-filter: blur(30px) saturate(150%); -webkit-backdrop-filter: blur(30px) saturate(150%);
+            border-radius: 28px; padding: 18px; box-shadow: 0 20px 60px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.15);
+        }
+        #standby-track { display: flex; align-items: center; gap: 14px; }
+        #standby-track-art-wrap { position: relative; width: 84px; height: 84px; flex-shrink: 0; border-radius: 18px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.6); }
+        #standby-track-art { width: 100%; height: 100%; object-fit: cover; display: block; }
+        #standby-eq { position: absolute; bottom: 6px; left: 6px; display: flex; align-items: flex-end; gap: 2.5px; height: 14px; background: rgba(0,0,0,0.4); padding: 3px 5px; border-radius: 6px; }
+        #standby-eq span { width: 3px; background: #fff; border-radius: 2px; animation: di-eq-bounce 0.9s ease-in-out infinite; }
+        #standby-eq span:nth-child(1) { animation-delay: -0.6s; } #standby-eq span:nth-child(2) { animation-delay: -0.3s; } #standby-eq span:nth-child(3) { animation-delay: -0.9s; }
+        body.low-end #standby-eq { display: none; }
+        #standby-track-text { min-width: 0; flex: 1; }
+        #standby-track-title { color: #fff; font-size: clamp(15px, 4.2vw, 19px); font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; letter-spacing: -0.2px; }
+        #standby-track-artist { color: rgba(255,255,255,0.6); font-size: clamp(11px, 3.2vw, 13px); font-weight: 600; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        #standby-progress-wrap { margin-top: 16px; }
+        #standby-progress-track { width: 100%; height: 4px; background: rgba(255,255,255,0.15); border-radius: 999px; overflow: hidden; }
+        #standby-progress-bar { height: 100%; width: 0%; background: #fff; border-radius: 999px; transition: width 0.3s linear; }
+        #standby-progress-times { display: flex; justify-content: space-between; margin-top: 6px; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.45); }
+        #standby-hint { position: relative; z-index: 2; color: rgba(255,255,255,0.3); font-size: 10px; text-transform: uppercase; letter-spacing: 2px; font-weight: 700; padding-bottom: 24px; }
+
+        /* ========================================================= */
+        /* --- NEW: COMMAND PALETTE (⌘K Spotlight) ------------------- */
+        /* ========================================================= */
+        #cp-trigger {
+            position: fixed; bottom: 16px; left: 16px; z-index: 300;
+            display: flex; align-items: center; gap: 4px; padding: 8px 12px;
+            background: rgba(15, 23, 42, 0.65); border: 1px solid rgba(255,255,255,0.12);
+            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+            border-radius: 10px; color: rgba(255,255,255,0.7); font-family: 'JetBrains Mono', monospace;
+            font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.25s var(--apple-ease);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+        }
+        #cp-trigger:hover { color: #fff; border-color: rgba(59,130,246,0.5); transform: translateY(-2px); }
+        html:not(.dark) #cp-trigger { background: rgba(255,255,255,0.7); color: rgba(15,23,42,0.7); border-color: rgba(0,0,0,0.08); }
+        html:not(.dark) #cp-trigger:hover { color: #0f172a; }
+        @media (max-width: 640px) {
+            #cp-trigger { padding: 7px 10px; font-size: 11px; bottom: 12px; left: 12px; }
+        }
+
+        #pwa-install-btn {
+            position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); z-index: 300;
+            display: flex; align-items: center; gap: 6px; padding: 10px 18px;
+            background: linear-gradient(120deg, #3b82f6, #8b5cf6); color: #fff;
+            border-radius: 999px; font-size: 12px; font-weight: 800; cursor: pointer;
+            box-shadow: 0 10px 30px rgba(59,130,246,0.4); border: none;
+            transition: transform 0.25s var(--apple-bounce), opacity 0.3s ease;
+        }
+        #pwa-install-btn:hover { transform: translateX(-50%) translateY(-2px) scale(1.03); }
+        #pwa-install-btn.hidden { display: none; }
+        @media (max-width: 380px) { #pwa-install-btn { padding: 8px 14px; font-size: 11px; } }
+
+        #command-palette-overlay {
+            position: fixed; inset: 0; z-index: 900; background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px); display: flex; align-items: flex-start; justify-content: center;
+            padding-top: 12vh; opacity: 0; visibility: hidden; pointer-events: none;
+            transition: opacity 0.25s ease, visibility 0.25s;
+        }
+        #command-palette-overlay.cp-active { opacity: 1; visibility: visible; pointer-events: auto; }
+        #command-palette {
+            width: min(560px, 90vw); max-height: 60vh; display: flex; flex-direction: column;
+            background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255,255,255,0.12);
+            backdrop-filter: blur(30px) saturate(160%); -webkit-backdrop-filter: blur(30px) saturate(160%);
+            border-radius: 20px; box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+            transform: translateY(-16px) scale(0.97); opacity: 0; transition: transform 0.3s var(--apple-bounce), opacity 0.25s ease;
+            overflow: hidden;
+        }
+        #command-palette-overlay.cp-active #command-palette { transform: translateY(0) scale(1); opacity: 1; }
+        #cp-input-row { display: flex; align-items: center; gap: 10px; padding: 16px 18px; border-bottom: 1px solid rgba(255,255,255,0.08); color: rgba(255,255,255,0.4); flex-shrink: 0; }
+        #cp-input { flex: 1; background: transparent; border: none; outline: none; color: #fff; font-size: 16px; font-weight: 600; }
+        #cp-input::placeholder { color: rgba(255,255,255,0.35); }
+        #cp-input-row kbd { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.4); border: 1px solid rgba(255,255,255,0.15); border-radius: 5px; padding: 2px 6px; font-family: 'JetBrains Mono', monospace; }
+        #cp-results { overflow-y: auto; padding: 8px; }
+        .cp-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; cursor: pointer; color: rgba(255,255,255,0.85); transition: background 0.12s ease; }
+        .cp-item .cp-icon { font-size: 17px; width: 22px; text-align: center; flex-shrink: 0; }
+        .cp-item .cp-label { flex: 1; font-size: 13.5px; font-weight: 600; }
+        .cp-item .cp-hint { font-size: 10px; color: rgba(255,255,255,0.35); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .cp-item.cp-selected { background: rgba(59,130,246,0.25); color: #fff; }
+        .cp-empty { padding: 24px 12px; text-align: center; color: rgba(255,255,255,0.35); font-size: 13px; font-weight: 600; }
+
+        /* --- StandBy: Idle-Zustand (keine Musik) - Cover, EQ & Timeline ausblenden --- */
+        #standby-nowplaying.standby-idle #standby-track-art-wrap,
+        #standby-nowplaying.standby-idle #standby-progress-wrap {
+            display: none;
+        }
+        #standby-nowplaying.standby-idle #standby-track {
+            justify-content: center;
+        }
+        #standby-nowplaying.standby-idle #standby-track-text {
+            text-align: center;
+            flex: none;
+        }
+        #standby-nowplaying.standby-idle #standby-track-title,
+        #standby-nowplaying.standby-idle #standby-track-artist {
+            white-space: normal;
+            overflow: visible;
+            text-overflow: clip;
+        }
+
+        /* ========================================================= */
+        /* --- NEW: ADAPTIVE AMBIENT COLOR --------------------------- */
+        /* ========================================================= */
+        :root { --ambient-r: 59; --ambient-g: 130; --ambient-b: 246; --ambient-r2: 168; --ambient-g2: 85; --ambient-b2: 247; }
+        body.ambient-color-active .mesh-gradient::before {
+            background: radial-gradient(circle at 50% 50%, rgba(var(--ambient-r), var(--ambient-g), var(--ambient-b), 0.08) 0%, transparent 55%) !important;
+            transition: background 1.2s ease;
+        }
+        body.ambient-color-active .mesh-gradient::after {
+            background: radial-gradient(circle at 20% 30%, rgba(var(--ambient-r), var(--ambient-g), var(--ambient-b), 0.14) 0%, transparent 45%),
+                        radial-gradient(circle at 80% 70%, rgba(var(--ambient-r2), var(--ambient-g2), var(--ambient-b2), 0.1) 0%, transparent 45%) !important;
+            transition: background 1.2s ease;
+        }
+
+        /* ========================================================= */
+        /* --- NEW: SPATIAL TILT (3D Parallax) ----------------------- */
+        /* ========================================================= */
+        #media-container { perspective: 800px; }
+        body.tilt-active #media-container img#artwork,
+        body.tilt-active #media-container #offline-icon {
+            transform: rotateX(calc(var(--tilt-y, 0) * 1deg)) rotateY(calc(var(--tilt-x, 0) * -1deg)) translateZ(10px);
+            transition: transform 0.15s ease-out;
+            transform-style: preserve-3d;
+        }
+        body.tilt-active:not(.low-end) #media-container {
+            transform: rotateX(calc(var(--tilt-y, 0) * 0.6deg)) rotateY(calc(var(--tilt-x, 0) * -0.6deg));
+            transition: transform 0.15s ease-out;
+        }
+        body.tilt-active #media-container::after {
+            content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+            background: linear-gradient(calc(var(--tilt-x, 0) * 1deg + 120deg), rgba(255,255,255,0.25), transparent 60%);
+            opacity: calc(0.15 + var(--tilt-glare, 0) * 0.01);
+            transition: opacity 0.2s ease;
+        }
+        body.low-end #media-container, body.low-end #media-container * { transform: none !important; }
     </style>
     
     <script>
@@ -761,7 +1038,69 @@
     </div>
     
     <div id="global-emp-shockwave"></div>
+
+    <!-- NEW: Dynamic Island 2.0 -->
+    <div id="dynamic-island" onclick="handleIslandTap()" role="button" tabindex="0" aria-label="Song-Details öffnen">
+        <div id="dynamic-island-row">
+            <img id="di-art" src="" alt="">
+            <div class="di-text">
+                <p class="di-title" id="di-title"></p>
+                <p class="di-artist" id="di-artist"></p>
+            </div>
+            <div class="di-eq"><span></span><span></span><span></span></div>
+        </div>
+        <div id="di-progress-track"><div id="di-progress-bar"></div></div>
+    </div>
+
+    <!-- NEW: StandBy / Ambient Mode (Lockscreen-Style) -->
+    <div id="standby-overlay" onclick="toggleStandBy(false)" role="button" tabindex="0" aria-label="StandBy Modus verlassen">
+        <div id="standby-bg"></div>
+        <div id="standby-clockzone">
+            <div id="standby-clock">00:00</div>
+            <div id="standby-date"></div>
+        </div>
+        <div id="standby-nowplaying" class="standby-idle">
+            <div id="standby-track">
+                <div id="standby-track-art-wrap">
+                    <img id="standby-track-art" alt="">
+                    <div id="standby-eq"><span></span><span></span><span></span></div>
+                </div>
+                <div id="standby-track-text">
+                    <p id="standby-track-title">Aktuell ist es ruhig...</p>
+                    <p id="standby-track-artist">Genieße die Stille</p>
+                </div>
+            </div>
+            <div id="standby-progress-wrap">
+                <div id="standby-progress-track"><div id="standby-progress-bar"></div></div>
+                <div id="standby-progress-times">
+                    <span id="standby-time-current">0:00</span>
+                    <span id="standby-time-total">0:00</span>
+                </div>
+            </div>
+        </div>
+        <p id="standby-hint">Zum Verlassen tippen</p>
+    </div>
     
+    <!-- NEW: Command Palette (⌘K Spotlight-Suche) -->
+    <div id="command-palette-overlay" onclick="if(event.target===this) closeCommandPalette()">
+        <div id="command-palette">
+            <div id="cp-input-row">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <input id="cp-input" type="text" placeholder="Befehl suchen oder Seite durchsuchen..." autocomplete="off" spellcheck="false">
+                <kbd>ESC</kbd>
+            </div>
+            <div id="cp-results"></div>
+        </div>
+    </div>
+
+    <button id="cp-trigger" onclick="openCommandPalette()" aria-label="Befehlspalette öffnen" title="Spotlight-Suche (⌘K)">
+        <span>⌘</span><span>K</span>
+    </button>
+
+    <button id="pwa-install-btn" onclick="triggerInstallPrompt()" class="hidden" aria-label="Als App installieren" title="Zum Home-Bildschirm hinzufügen">
+        📲 App installieren
+    </button>
+
     <!-- UI CONTROLS -->
     <div id="ui-controls" class="fixed top-2 right-2 xs:top-4 xs:right-4 sm:top-6 sm:right-6 z-[110] flex items-center gap-1.5 sm:gap-3 bg-white/10 dark:bg-black/10 backdrop-blur-sm p-1 rounded-2xl sm:rounded-3xl border border-white/20 dark:border-slate-800/50 shadow-sm">
         <button id="liquid-glass-toggle" aria-label="Liquid Glass umschalten" class="group p-2 sm:p-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-lg rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-700 hover:ring-2 hover:ring-cyan-500 transition-all active:scale-90" title="Apple Liquid Glass Modus">
@@ -770,6 +1109,10 @@
 
         <button id="tutorial-start-btn" aria-label="Tutorial starten" class="group p-2 sm:p-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-lg rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-700 hover:ring-2 hover:ring-purple-500 transition-all active:scale-90" title="Tutorial starten">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-500 transition-colors group-hover:text-purple-500 sm:w-6 sm:h-6"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+        </button>
+
+        <button id="standby-toggle" onclick="toggleStandBy()" aria-label="StandBy Modus" class="group p-2 sm:p-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-lg rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-700 hover:ring-2 hover:ring-orange-500 transition-all active:scale-90" title="StandBy Modus (Ambient Display)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-500 transition-colors group-hover:text-orange-500 sm:w-6 sm:h-6"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M7 20h10"/><path d="M9 16v4"/><path d="M15 16v4"/></svg>
         </button>
 
         <button id="perf-toggle" aria-label="Performance Modus" class="group p-2 sm:p-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-lg rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-700 hover:ring-2 hover:ring-green-500 transition-all active:scale-90" title="Low-End Modus (Deaktiviert Animationen)">
@@ -819,6 +1162,7 @@
                 </span>
                 Systems Integration
             </div>
+            <p id="time-greeting" class="text-xs xxs:text-sm sm:text-base font-bold text-blue-600 dark:text-blue-400 mb-2 xxs:mb-3"></p>
             <h1 class="text-2xl xxs:text-3xl xs:text-4xl sm:text-5xl md:text-7xl font-extrabold mb-3 xxs:mb-4 sm:mb-8 py-1 sm:py-2 tracking-tighter bg-gradient-to-br from-slate-900 via-slate-800 to-slate-600 dark:from-white dark:via-slate-200 dark:to-slate-400 bg-clip-text text-transparent leading-tight break-words drop-shadow-md">
                 Über Gamingpig
             </h1>
@@ -968,7 +1312,9 @@
                     </div>
 
                     <!-- Das Lyrics Fenster -->
-                    <div id="lyrics-overlay" class="absolute inset-0 bg-slate-950/85 backdrop-blur-2xl rounded-[1.5rem] xxs:rounded-3xl md:rounded-[3rem] flex-col p-2 xxs:p-3 xs:p-6 md:p-8 z-40 transition-all duration-500 opacity-0 pointer-events-none flex border border-white/10 invisible">
+                    <div id="lyrics-overlay" class="absolute inset-0 bg-slate-950/85 backdrop-blur-2xl rounded-[1.5rem] xxs:rounded-3xl md:rounded-[3rem] flex-col p-2 xxs:p-3 xs:p-6 md:p-8 z-40 transition-all duration-500 opacity-0 pointer-events-none flex border border-white/10 invisible overflow-hidden">
+                        <div id="lyrics-ambient-bg"></div>
+                        <div id="lyrics-ambient-tint"></div>
                         
                         <div class="flex items-center justify-between gap-1.5 xxs:gap-2 sm:gap-4 mb-3 xxs:mb-4 sm:mb-6 shrink-0 w-full bg-white/10 p-1.5 xxs:p-2 xs:p-3 sm:p-4 rounded-lg xxs:rounded-xl sm:rounded-2xl border border-white/10 relative z-[100]">
                             <div class="flex items-center gap-1.5 xxs:gap-2 sm:gap-3 min-w-0 flex-1">
@@ -980,6 +1326,9 @@
                                 </div>
                                 
                                 <div class="relative flex items-center">
+                                    <div id="apple-style-badge" class="px-1.5 xxs:px-2 py-1 mr-1 xxs:mr-2 bg-gradient-to-r from-pink-500/20 to-red-500/20 text-pink-300 text-[8px] xxs:text-[10px] sm:text-xs rounded font-bold shrink-0 whitespace-nowrap hidden items-center gap-1">
+                                        🍎 Apple Music Style
+                                    </div>
                                     <div id="sync-status-badge" class="px-1.5 xxs:px-2 py-1 mr-1 xxs:mr-2 bg-blue-500/20 text-blue-400 text-[8px] xxs:text-[10px] sm:text-xs rounded font-bold shrink-0 whitespace-nowrap hidden">
                                         Lyrics: Synced
                                     </div>
@@ -1032,10 +1381,14 @@
                                         <button onclick="setLyricsStyle('vinyl')" id="btn-style-vinyl" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Vinyl Retro</button>
                                         <button onclick="setLyricsStyle('starlight')" id="btn-style-starlight" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Starlight</button>
                                         <button onclick="setLyricsStyle('applemusic')" id="btn-style-applemusic" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">🍎 Apple Music</button>
+                                        <button onclick="setLyricsStyle('applemusicpro')" id="btn-style-applemusicpro" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">🍏 Apple Music Pro</button>
 
                                         <div class="h-px w-full bg-slate-700 my-1"></div>
                                         <p class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1 px-1">Features</p>
                                         <button onclick="toggleCanvasVideo()" id="btn-toggle-canvas" class="text-left text-[10px] xxs:text-xs sm:text-sm text-green-400 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">Canvas: AN</button>
+                                        <button onclick="toggleAmbientColor()" id="btn-toggle-ambient" class="text-left text-[10px] xxs:text-xs sm:text-sm text-cyan-400 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">Ambient Color: AN</button>
+                                        <button onclick="toggleTilt()" id="btn-toggle-tilt" class="text-left text-[10px] xxs:text-xs sm:text-sm text-purple-400 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">Spatial Tilt: AN</button>
+                                        <button onclick="generateShareCard()" id="btn-share-card" class="text-left text-[10px] xxs:text-xs sm:text-sm text-pink-400 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">🎴 Share Card erstellen</button>
                                         
                                         <div class="h-px w-full bg-slate-700 my-1"></div>
                                         <div class="flex justify-between items-center px-1 mb-1">
@@ -1313,7 +1666,7 @@
             {
                 targetId: 'ui-controls',
                 title: 'Dein Kontrollzentrum',
-                text: 'Oben rechts hast du die volle Macht: Aktiviere den krassen "Apple Liquid Glass" Modus (Achtung: frisst Leistung!), wechsle in den Darkmode, schalte den Low-End-Modus ein, falls dein Gerät laggt, oder starte dieses Tutorial neu.'
+                text: 'Oben rechts hast du die volle Macht: Aktiviere den krassen "Apple Liquid Glass" Modus (Achtung: frisst Leistung!), wechsle in den Darkmode, schalte den Low-End-Modus ein, falls dein Gerät laggt, aktiviere den StandBy-Modus, oder starte dieses Tutorial neu.'
             },
             {
                 targetId: 'cards-section',
@@ -1323,7 +1676,22 @@
             {
                 targetId: 'music-section',
                 title: 'Echtzeit Musik Integration',
-                text: 'Der wildeste Part: Das Dashboard zeigt in Echtzeit, was ich gerade höre! Klicke darauf, um die synchronisierten Lyrics mit verrückten Shadern zu sehen oder dir die Links zu Spotify & Co. zu holen.'
+                text: 'Der wildeste Part: Das Dashboard zeigt in Echtzeit, was ich gerade höre! Wechselt der Song, poppt oben eine Dynamic Island auf. Klicke auf die Karte für synchronisierte Lyrics mit über 30 verrückten Shader-Stilen. Über das Zahnrad-Icon in den Lyrics findest du außerdem Ambient Color, Spatial Tilt und den Share-Card-Generator.'
+            },
+            {
+                targetId: 'standby-toggle',
+                title: 'StandBy: Dein Lockscreen',
+                text: 'Dieser Button verwandelt die Seite in einen echten Lockscreen: große Uhrzeit, Datum und eine große Now-Playing-Karte mit Cover, Live-EQ und Fortschrittsbalken vor einem sanft animierten, geblurten Hintergrund. Perfekt fürs Nachttischhandy beim Laden.'
+            },
+            {
+                targetId: 'cp-trigger',
+                title: 'Spotlight-Suche (⌘K)',
+                text: 'Drück Strg+K (oder Cmd+K auf dem Mac) und eine echte Befehlspalette öffnet sich - genau wie auf dem Mac! Tippe einfach, was du suchst: "Dark Mode", "Lyrics", "StandBy"... Pfeiltasten zum Navigieren, Enter zum Ausführen.'
+            },
+            {
+                targetId: 'footer-section',
+                title: 'Installier mich als App!',
+                text: 'Diese Seite erzeugt sich ihr eigenes App-Icon und lässt sich auf Android/Chrome per Klick als richtige App installieren (kein Store nötig) - auf dem iPhone geht das manuell über "Zum Home-Bildschirm" im Teilen-Menü. Fühlt sich danach an wie eine native App, ganz ohne Browserleiste.'
             },
             {
                 targetId: 'footer-section',
@@ -1379,11 +1747,22 @@
         let lastSeenProgressMs = -1;
         let localClockOffset = 0;
         let isTimeSynced = false;
+        let recentFetchLatencies = [];
+        let lastTimeSyncQualityMs = null;
         let isUserScrolling = false;
         let userScrollTimeout = null;
         let currentFetchId = 0;
         let offlineTimeout = null;
         let lastLowEndUpdate = 0;
+
+        // --- NEW FEATURE STATE ---
+        let ambientColorEnabled = localStorage.getItem('ambientColor') !== 'false';
+        let tiltEnabled = localStorage.getItem('tiltEnabled') !== 'false';
+        let standByActive = false;
+        let standByInterval = null;
+        let diHideTimeout = null;
+        let lastAmbientArtUrl = null;
+        let tiltPermissionRequested = false;
 
         // --- 3. LOGIC & EVENT LISTENERS ---
 
@@ -1416,11 +1795,545 @@
 
         if (perfToggle) {
             perfToggle.addEventListener('click', () => {
+                haptic(10);
                 const isActive = document.body.classList.toggle('low-end');
                 localStorage.setItem('perfMode', isActive);
                 applyPerformanceMode(isActive);
             });
         }
+
+        // --- NEW: ADAPTIVE AMBIENT COLOR LOGIC ---
+        function applyAmbientColorMode(isActive) {
+            ambientColorEnabled = isActive;
+            document.body.classList.toggle('ambient-color-active', isActive);
+            const btn = document.getElementById('btn-toggle-ambient');
+            if (btn) btn.textContent = 'Ambient Color: ' + (isActive ? 'AN' : 'AUS');
+            if (isActive && lastAmbientArtUrl) extractDominantColor(lastAmbientArtUrl);
+        }
+        window.toggleAmbientColor = function() {
+            haptic(10);
+            const next = !ambientColorEnabled;
+            localStorage.setItem('ambientColor', next);
+            applyAmbientColorMode(next);
+        };
+        applyAmbientColorMode(ambientColorEnabled);
+
+        function extractDominantColor(imgUrl) {
+            if (!ambientColorEnabled || !imgUrl) return;
+            lastAmbientArtUrl = imgUrl;
+            try {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = () => {
+                    try {
+                        const canvas = document.createElement('canvas');
+                        const size = 24;
+                        canvas.width = size; canvas.height = size;
+                        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+                        ctx.drawImage(img, 0, 0, size, size);
+                        const data = ctx.getImageData(0, 0, size, size).data;
+                        let r = 0, g = 0, b = 0, n = 0;
+                        let r2 = 0, g2 = 0, b2 = 0, n2 = 0;
+                        for (let i = 0; i < data.length; i += 4) {
+                            const px = i / 4;
+                            const x = px % size;
+                            const sat = Math.max(data[i], data[i+1], data[i+2]) - Math.min(data[i], data[i+1], data[i+2]);
+                            if (sat < 12 && (data[i] > 235 || data[i] < 15)) continue; // skip near white/black, low-info pixels
+                            if (x < size / 2) { r += data[i]; g += data[i+1]; b += data[i+2]; n++; }
+                            else { r2 += data[i]; g2 += data[i+1]; b2 += data[i+2]; n2++; }
+                        }
+                        if (n === 0) { n = 1; r = data[0]; g = data[1]; b = data[2]; }
+                        if (n2 === 0) { n2 = n; r2 = r; g2 = g; b2 = b; }
+                        const root = document.documentElement.style;
+                        root.setProperty('--ambient-r', Math.round(r / n));
+                        root.setProperty('--ambient-g', Math.round(g / n));
+                        root.setProperty('--ambient-b', Math.round(b / n));
+                        root.setProperty('--ambient-r2', Math.round(r2 / n2));
+                        root.setProperty('--ambient-g2', Math.round(g2 / n2));
+                        root.setProperty('--ambient-b2', Math.round(b2 / n2));
+                    } catch (e) { /* Canvas getainted (CORS) - stille Ignorierung */ }
+                };
+                img.src = imgUrl;
+            } catch (e) {}
+        }
+
+        // --- NEW: SPATIAL TILT (3D PARALLAX) LOGIC ---
+        function applyTiltMode(isActive) {
+            tiltEnabled = isActive;
+            document.body.classList.toggle('tilt-active', isActive);
+            const btn = document.getElementById('btn-toggle-tilt');
+            if (btn) btn.textContent = 'Spatial Tilt: ' + (isActive ? 'AN' : 'AUS');
+            if (isActive) requestTiltPermissionIfNeeded();
+        }
+        window.toggleTilt = function() {
+            haptic(10);
+            const next = !tiltEnabled;
+            localStorage.setItem('tiltEnabled', next);
+            applyTiltMode(next);
+        };
+        applyTiltMode(tiltEnabled);
+
+        function requestTiltPermissionIfNeeded() {
+            if (tiltPermissionRequested) return;
+            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                tiltPermissionRequested = true;
+                DeviceOrientationEvent.requestPermission().then(state => {
+                    if (state === 'granted') window.addEventListener('deviceorientation', handleDeviceTilt);
+                }).catch(() => {});
+            } else {
+                tiltPermissionRequested = true;
+                window.addEventListener('deviceorientation', handleDeviceTilt);
+            }
+        }
+
+        function handleDeviceTilt(e) {
+            if (!tiltEnabled || document.body.classList.contains('low-end')) return;
+            const gamma = Math.max(-24, Math.min(24, e.gamma || 0));
+            const beta = Math.max(-24, Math.min(24, (e.beta || 0) - 45));
+            document.documentElement.style.setProperty('--tilt-x', (gamma / 24 * 14).toFixed(2));
+            document.documentElement.style.setProperty('--tilt-y', (beta / 24 * 14).toFixed(2));
+        }
+
+        (() => {
+            const mc = document.getElementById('media-container');
+            if (!mc) return;
+            mc.addEventListener('mousemove', (e) => {
+                if (!tiltEnabled || document.body.classList.contains('low-end') || window.matchMedia('(hover: none)').matches) return;
+                const rect = mc.getBoundingClientRect();
+                const x = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
+                const y = ((e.clientY - rect.top) / rect.height - 0.5) * 2;
+                document.documentElement.style.setProperty('--tilt-x', (x * 12).toFixed(2));
+                document.documentElement.style.setProperty('--tilt-y', (y * 12).toFixed(2));
+                document.documentElement.style.setProperty('--tilt-glare', Math.round(Math.abs(x) * 50 + Math.abs(y) * 50));
+            }, { passive: true });
+            mc.addEventListener('mouseleave', () => {
+                document.documentElement.style.setProperty('--tilt-x', 0);
+                document.documentElement.style.setProperty('--tilt-y', 0);
+                document.documentElement.style.setProperty('--tilt-glare', 0);
+            }, { passive: true });
+            mc.addEventListener('touchstart', () => requestTiltPermissionIfNeeded(), { passive: true });
+        })();
+
+        // --- NEW: HAPTIC FEEDBACK (Vibration API) ---
+        // Hinweis: iOS Safari unterstützt die Vibration API grundsätzlich nicht (bewusste Einschränkung von Apple).
+        // Auf Android/Chrome gibt's dafür echtes Hardware-Feedback bei jedem Tap - etwas, das iOS-Nutzer im Web nie bekommen.
+        function haptic(pattern = 10) {
+            try { if (navigator.vibrate) navigator.vibrate(pattern); } catch (e) {}
+        }
+
+        // --- NEW: DYNAMIC TIME-OF-DAY WALLPAPER ---
+        const TIME_OF_DAY_STOPS = [
+            { h: 0,  c1: [30, 41, 90],   c2: [88, 28, 135] },   // Tiefe Nacht
+            { h: 5,  c1: [30, 41, 90],   c2: [88, 28, 135] },   // Tiefe Nacht (Ende)
+            { h: 7,  c1: [251, 146, 60], c2: [244, 114, 182] }, // Morgendämmerung
+            { h: 11, c1: [59, 130, 246], c2: [6, 182, 212] },   // Heller Tag
+            { h: 16, c1: [59, 130, 246], c2: [6, 182, 212] },   // Heller Tag (Ende)
+            { h: 18, c1: [249, 115, 22], c2: [219, 39, 119] },  // Sonnenuntergang
+            { h: 20, c1: [99, 102, 241], c2: [168, 85, 247] },  // Abend
+            { h: 24, c1: [30, 41, 90],   c2: [88, 28, 135] }    // zurück zur Nacht
+        ];
+        function lerp(a, b, t) { return a + (b - a) * t; }
+        function lerpColor(c1, c2, t) { return [Math.round(lerp(c1[0], c2[0], t)), Math.round(lerp(c1[1], c2[1], t)), Math.round(lerp(c1[2], c2[2], t))]; }
+
+        function updateTimeOfDayColors() {
+            const now = typeof getTrueDateNow === 'function' ? new Date(getTrueDateNow()) : new Date();
+            const hourFrac = now.getHours() + now.getMinutes() / 60;
+            let stopA = TIME_OF_DAY_STOPS[0], stopB = TIME_OF_DAY_STOPS[TIME_OF_DAY_STOPS.length - 1];
+            for (let i = 0; i < TIME_OF_DAY_STOPS.length - 1; i++) {
+                if (hourFrac >= TIME_OF_DAY_STOPS[i].h && hourFrac <= TIME_OF_DAY_STOPS[i + 1].h) {
+                    stopA = TIME_OF_DAY_STOPS[i]; stopB = TIME_OF_DAY_STOPS[i + 1];
+                    break;
+                }
+            }
+            const span = (stopB.h - stopA.h) || 1;
+            const t = Math.max(0, Math.min(1, (hourFrac - stopA.h) / span));
+            const c1 = lerpColor(stopA.c1, stopB.c1, t);
+            const c2 = lerpColor(stopA.c2, stopB.c2, t);
+            const root = document.documentElement.style;
+            root.setProperty('--time-r', c1[0]); root.setProperty('--time-g', c1[1]); root.setProperty('--time-b', c1[2]);
+            root.setProperty('--time-r2', c2[0]); root.setProperty('--time-g2', c2[1]); root.setProperty('--time-b2', c2[2]);
+        }
+        updateTimeOfDayColors();
+        setInterval(updateTimeOfDayColors, 5 * 60 * 1000);
+
+        // ========================================================= //
+        // --- NEW: INSTALLIERBARE PWA (echte Dateien) --------------- //
+        // ========================================================= //
+        // manifest.json, sw.js, icon-192.png und icon-512.png sind echte Dateien im
+        // selben Ordner (siehe <head> und Upload-Anleitung) - nötig, damit Chrome die
+        // Seite überhaupt als installierbar erkennt und "App installieren" anbietet.
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch((err) => {
+                    console.warn('Service Worker Registrierung fehlgeschlagen (PWA-Installation evtl. nicht möglich):', err);
+                });
+            });
+        }
+
+        // --- "Zum Home-Bildschirm hinzufügen" Prompt (Android/Chrome) ---
+        let deferredInstallPrompt = null;
+        const isStandaloneApp = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+        const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+        (function initInstallButton() {
+            const btn = document.getElementById('pwa-install-btn');
+            if (!btn) return;
+            // Nur verstecken, wenn die Seite bereits als installierte App läuft - sonst IMMER sichtbar,
+            // unabhängig davon, ob der Browser das native beforeinstallprompt-Event überhaupt unterstützt
+            // (z.B. iOS Safari feuert dieses Event nie, soll den Button aber trotzdem zeigen).
+            if (isStandaloneApp) btn.classList.add('hidden');
+            else btn.classList.remove('hidden');
+        })();
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredInstallPrompt = e;
+            const btn = document.getElementById('pwa-install-btn');
+            if (btn) btn.classList.remove('hidden');
+        });
+
+        window.triggerInstallPrompt = async function() {
+            haptic(10);
+            if (deferredInstallPrompt) {
+                // Chromium-Pfad: nativer Installations-Dialog
+                deferredInstallPrompt.prompt();
+                await deferredInstallPrompt.userChoice;
+                deferredInstallPrompt = null;
+                const btn = document.getElementById('pwa-install-btn');
+                if (btn) btn.classList.add('hidden');
+                return;
+            }
+            // Kein natives Prompt verfügbar - manuelle Anleitung zeigen (zuverlässigster Weg ohne Service Worker)
+            if (typeof showToast !== 'function') return;
+            if (isIOSDevice) {
+                showToast('📲 Tippe unten auf "Teilen" ⬆️ und dann auf "Zum Home-Bildschirm"', 6000);
+            } else if (window.innerWidth < 768) {
+                showToast('📲 Tippe oben rechts auf die drei Punkte ⋮ und wähle "App installieren" bzw. "Zum Startbildschirm hinzufügen"', 6500);
+            } else {
+                showToast('📲 Klicke oben rechts in der Adressleiste auf das Installieren-Symbol, oder öffne das Menü ⋮ → "Gamingpig installieren..."', 6500);
+            }
+        };
+        window.addEventListener('appinstalled', () => {
+            if (typeof showToast === 'function') showToast('Als App installiert! 🎉');
+        });
+
+        // --- NEW: DYNAMIC ISLAND 2.0 LOGIC ---
+        function triggerDynamicIsland(title, artist, artUrl) {
+            const island = document.getElementById('dynamic-island');
+            if (!island || document.body.classList.contains('low-end')) return;
+            document.getElementById('di-title').textContent = title || '';
+            document.getElementById('di-artist').textContent = artist || '';
+            const artEl = document.getElementById('di-art');
+            if (artUrl) artEl.src = artUrl;
+            clearTimeout(diHideTimeout);
+            island.classList.add('di-visible');
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => island.classList.add('di-expanded'));
+            });
+            diHideTimeout = setTimeout(() => {
+                island.classList.remove('di-expanded');
+                setTimeout(() => island.classList.remove('di-visible'), 700);
+            }, 3800);
+        }
+
+        function handleIslandTap() {
+            const island = document.getElementById('dynamic-island');
+            if (!island || !island.classList.contains('di-expanded')) return; // nur im expandierten Zustand tappbar
+            haptic(12);
+            clearTimeout(diHideTimeout);
+            island.classList.remove('di-expanded');
+            setTimeout(() => island.classList.remove('di-visible'), 700);
+            const section = document.getElementById('music-section');
+            if (section) section.scrollIntoView({ behavior: document.body.classList.contains('low-end') ? 'auto' : 'smooth', block: 'center' });
+            if (!isDashboardOpen) setTimeout(() => toggleDashboard(), 350);
+        }
+
+        // --- NEW: SHARE CARD GENERATOR ---
+        window.generateShareCard = function() {
+            const titleEl = document.getElementById('track-title');
+            const artistEl = document.getElementById('track-artist');
+            const artworkEl = document.getElementById('artwork');
+            const title = (titleEl && titleEl.innerText) ? titleEl.innerText : 'Aktuell ist es ruhig...';
+            const artist = (artistEl && artistEl.innerText) ? artistEl.innerText : 'Genieße die Stille';
+            const artSrc = artworkEl ? artworkEl.getAttribute('src') : null;
+
+            if (typeof showToast === 'function') showToast('Share Card wird erstellt...');
+
+            const draw = (artImg) => {
+                try {
+                    const W = 720, H = 960;
+                    const canvas = document.createElement('canvas');
+                    canvas.width = W; canvas.height = H;
+                    const ctx = canvas.getContext('2d');
+
+                    // Hintergrund: geblurtes Cover (falls vorhanden), sonst dunkler Verlauf
+                    ctx.fillStyle = '#05060a';
+                    ctx.fillRect(0, 0, W, H);
+                    if (artImg) {
+                        try {
+                            ctx.filter = 'blur(38px) brightness(0.45) saturate(150%)';
+                            ctx.drawImage(artImg, -60, -60, W + 120, H + 120);
+                            ctx.filter = 'none';
+                        } catch (e) {}
+                    }
+                    const grad = ctx.createLinearGradient(0, 0, 0, H);
+                    grad.addColorStop(0, 'rgba(0,0,0,0.15)');
+                    grad.addColorStop(1, 'rgba(0,0,0,0.55)');
+                    ctx.fillStyle = grad;
+                    ctx.fillRect(0, 0, W, H);
+
+                    // Album-Art quadratisch, zentriert
+                    const artSize = 460;
+                    const artX = (W - artSize) / 2;
+                    const artY = 170;
+                    ctx.save();
+                    ctx.shadowColor = 'rgba(0,0,0,0.6)';
+                    ctx.shadowBlur = 60;
+                    ctx.shadowOffsetY = 20;
+                    roundRectPath(ctx, artX, artY, artSize, artSize, 28);
+                    ctx.fillStyle = '#111';
+                    ctx.fill();
+                    ctx.restore();
+                    ctx.save();
+                    roundRectPath(ctx, artX, artY, artSize, artSize, 28);
+                    ctx.clip();
+                    if (artImg) ctx.drawImage(artImg, artX, artY, artSize, artSize);
+                    ctx.restore();
+
+                    // Titel & Artist
+                    ctx.textAlign = 'center';
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = '800 40px Inter, sans-serif';
+                    wrapText(ctx, title, W / 2, artY + artSize + 70, W - 100, 46);
+                    ctx.fillStyle = 'rgba(255,255,255,0.65)';
+                    ctx.font = '600 26px Inter, sans-serif';
+                    ctx.fillText(artist, W / 2, artY + artSize + 118);
+
+                    // EQ-Deko
+                    const eqY = artY + artSize + 160;
+                    const barW = 6, gap = 6, barsN = 5, heights = [18, 30, 14, 26, 20];
+                    const totalW = barsN * barW + (barsN - 1) * gap;
+                    let bx = (W - totalW) / 2;
+                    ctx.fillStyle = 'rgba(59,130,246,0.9)';
+                    heights.forEach(h => { ctx.fillRect(bx, eqY - h, barW, h); bx += barW + gap; });
+
+                    // Wasserzeichen
+                    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+                    ctx.font = '700 20px Inter, sans-serif';
+                    ctx.fillText('gamingpig · now playing', W / 2, H - 50);
+
+                    const dataUrl = canvas.toDataURL('image/png');
+                    const a = document.createElement('a');
+                    a.href = dataUrl;
+                    a.download = 'now-playing-gamingpig.png';
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    if (typeof showToast === 'function') showToast('Share Card gespeichert! 🎴');
+                } catch (err) {
+                    if (typeof showToast === 'function') showToast('Konnte kein Bild vom Cover laden (CORS) – Card ohne Artwork erzeugt.');
+                }
+            };
+
+            if (artSrc && !artSrc.startsWith('data:')) {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = () => draw(img);
+                img.onerror = () => draw(null);
+                img.src = artSrc;
+            } else {
+                draw(null);
+            }
+        };
+
+        function roundRectPath(ctx, x, y, w, h, r) {
+            ctx.beginPath();
+            ctx.moveTo(x + r, y);
+            ctx.arcTo(x + w, y, x + w, y + h, r);
+            ctx.arcTo(x + w, y + h, x, y + h, r);
+            ctx.arcTo(x, y + h, x, y, r);
+            ctx.arcTo(x, y, x + w, y, r);
+            ctx.closePath();
+        }
+
+        function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+            const words = text.split(' ');
+            let line = '';
+            const lines = [];
+            for (let n = 0; n < words.length; n++) {
+                const testLine = line + words[n] + ' ';
+                if (ctx.measureText(testLine).width > maxWidth && n > 0) {
+                    lines.push(line.trim());
+                    line = words[n] + ' ';
+                } else {
+                    line = testLine;
+                }
+            }
+            lines.push(line.trim());
+            const startY = y - ((lines.length - 1) * lineHeight) / 2;
+            lines.slice(0, 2).forEach((l, i) => ctx.fillText(l, x, startY + i * lineHeight));
+        }
+
+        // ========================================================= //
+        // --- NEW: COMMAND PALETTE (⌘K Spotlight) ------------------ //
+        // ========================================================= //
+        let cpSelectedIndex = 0;
+        let cpFilteredActions = [];
+
+        function getCommandActions() {
+            return [
+                { icon: '🏠', label: 'Zum Anfang scrollen', keywords: 'header start oben top', action: () => window.scrollTo({ top: 0, behavior: 'smooth' }) },
+                { icon: '🎓', label: 'Zu Ausbildung & Alltag springen', keywords: 'cards ausbildung skills karten', action: () => scrollToId('cards-section') },
+                { icon: '🎵', label: 'Zum Musik-Dashboard springen', keywords: 'music song track player', action: () => scrollToId('music-section') },
+                { icon: '📬', label: 'Zum Footer / Kontakt springen', keywords: 'footer contact kontakt ende', action: () => scrollToId('footer-section') },
+                { icon: '📖', label: 'Musik-Dashboard öffnen', keywords: 'dashboard aufklappen open music', action: () => { if (!isDashboardOpen) toggleDashboard(); scrollToId('music-section'); } },
+                { icon: '🎤', label: 'Lyrics anzeigen', keywords: 'lyrics songtext text', action: () => { if (!isDashboardOpen) toggleDashboard(); setTimeout(() => toggleLyrics(true), 400); } },
+                { icon: '🌗', label: 'Dark Mode umschalten', keywords: 'dark light theme hell dunkel modus', action: () => themeToggle && themeToggle.click() },
+                { icon: '💧', label: 'Liquid Glass Modus umschalten', keywords: 'liquid glass apple design', action: () => liquidGlassToggle && liquidGlassToggle.click() },
+                { icon: '⚡', label: 'Low-End / Performance Modus umschalten', keywords: 'performance low end animationen aus', action: () => perfToggle && perfToggle.click() },
+                { icon: '📱', label: 'StandBy Modus starten', keywords: 'standby ambient lockscreen uhr', action: () => toggleStandBy() },
+                { icon: '🎨', label: 'Ambient Color umschalten', keywords: 'ambient color farbe cover', action: () => toggleAmbientColor() },
+                { icon: '🪞', label: 'Spatial Tilt umschalten', keywords: 'tilt gyroskop 3d parallax neigen', action: () => toggleTilt() },
+                { icon: '🎴', label: 'Share Card erstellen & herunterladen', keywords: 'share card teilen bild download', action: () => generateShareCard() },
+                { icon: '🧭', label: 'Tutorial starten', keywords: 'tutorial hilfe guide anleitung', action: () => btnStartTutorial && btnStartTutorial.click() },
+                { icon: '🐷', label: 'Tom\'s TikTok öffnen', keywords: 'tiktok tom social', action: () => window.open('https://www.tiktok.com/@gamingpig', '_blank') },
+            ];
+        }
+
+        function scrollToId(id) {
+            const el = document.getElementById(id);
+            if (el) el.scrollIntoView({ behavior: document.body.classList.contains('low-end') ? 'auto' : 'smooth', block: 'start' });
+        }
+
+        function renderCommandPalette(query) {
+            const resultsEl = document.getElementById('cp-results');
+            if (!resultsEl) return;
+            const q = (query || '').toLowerCase().trim();
+            const all = getCommandActions();
+            cpFilteredActions = q ? all.filter(a => (a.label + ' ' + a.keywords).toLowerCase().includes(q)) : all;
+            cpSelectedIndex = 0;
+
+            if (cpFilteredActions.length === 0) {
+                resultsEl.innerHTML = `<div class="cp-empty">Keine Befehle gefunden für "${escapeHTML(query)}"</div>`;
+                return;
+            }
+            resultsEl.innerHTML = cpFilteredActions.map((a, i) => `
+                <div class="cp-item${i === 0 ? ' cp-selected' : ''}" data-index="${i}">
+                    <span class="cp-icon">${a.icon}</span>
+                    <span class="cp-label">${escapeHTML(a.label)}</span>
+                    <span class="cp-hint">↵</span>
+                </div>`).join('');
+
+            resultsEl.querySelectorAll('.cp-item').forEach(el => {
+                el.addEventListener('click', () => executeCommand(parseInt(el.dataset.index, 10)));
+            });
+        }
+
+        function executeCommand(index) {
+            const action = cpFilteredActions[index];
+            if (!action) return;
+            haptic(12);
+            closeCommandPalette();
+            setTimeout(() => action.action(), 150);
+        }
+
+        function moveCommandSelection(delta) {
+            if (cpFilteredActions.length === 0) return;
+            cpSelectedIndex = (cpSelectedIndex + delta + cpFilteredActions.length) % cpFilteredActions.length;
+            document.querySelectorAll('.cp-item').forEach((el, i) => el.classList.toggle('cp-selected', i === cpSelectedIndex));
+            const selectedEl = document.querySelector('.cp-item.cp-selected');
+            if (selectedEl) selectedEl.scrollIntoView({ block: 'nearest' });
+        }
+
+        window.openCommandPalette = function() {
+            const overlay = document.getElementById('command-palette-overlay');
+            const input = document.getElementById('cp-input');
+            if (!overlay) return;
+            haptic(10);
+            overlay.classList.add('cp-active');
+            input.value = '';
+            renderCommandPalette('');
+            setTimeout(() => input.focus(), 50);
+        };
+
+        window.closeCommandPalette = function() {
+            const overlay = document.getElementById('command-palette-overlay');
+            if (overlay) overlay.classList.remove('cp-active');
+        };
+
+        document.addEventListener('keydown', (e) => {
+            const isCpOpen = document.getElementById('command-palette-overlay').classList.contains('cp-active');
+            if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+                e.preventDefault();
+                isCpOpen ? closeCommandPalette() : openCommandPalette();
+                return;
+            }
+            if (!isCpOpen) return;
+            if (e.key === 'Escape') { closeCommandPalette(); return; }
+            if (e.key === 'ArrowDown') { e.preventDefault(); moveCommandSelection(1); return; }
+            if (e.key === 'ArrowUp') { e.preventDefault(); moveCommandSelection(-1); return; }
+            if (e.key === 'Enter') { e.preventDefault(); executeCommand(cpSelectedIndex); return; }
+        });
+
+        const cpInputEl = document.getElementById('cp-input');
+        if (cpInputEl) cpInputEl.addEventListener('input', (e) => renderCommandPalette(e.target.value));
+
+        // --- NEW: STANDBY / AMBIENT MODE LOGIC ---
+        function updateStandByClock() {
+            const now = typeof getTrueDateNow === 'function' ? new Date(getTrueDateNow()) : new Date();
+            const h = String(now.getHours()).padStart(2, '0');
+            const m = String(now.getMinutes()).padStart(2, '0');
+            const clockEl = document.getElementById('standby-clock');
+            if (clockEl) clockEl.textContent = `${h}:${m}`;
+            const dateEl = document.getElementById('standby-date');
+            if (dateEl) dateEl.textContent = now.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' });
+        }
+
+        window.toggleStandBy = function(force) {
+            const overlay = document.getElementById('standby-overlay');
+            if (!overlay) return;
+            const wasActive = standByActive;
+            standByActive = (typeof force === 'boolean') ? force : !standByActive;
+            if (standByActive !== wasActive) haptic(standByActive ? [10, 30, 10] : 10);
+            overlay.classList.toggle('standby-active', standByActive);
+            if (standByActive) {
+                updateStandByClock();
+                clearInterval(standByInterval);
+                standByInterval = setInterval(updateStandByClock, 1000 * 15);
+            } else {
+                clearInterval(standByInterval);
+            }
+        };
+
+        function syncStandByTrackInfo(title, artist, artUrl) {
+            const t = document.getElementById('standby-track-title');
+            const a = document.getElementById('standby-track-artist');
+            const img = document.getElementById('standby-track-art');
+            const bg = document.getElementById('standby-bg');
+            const npCard = document.getElementById('standby-nowplaying');
+            const isIdle = !title;
+
+            if (npCard) npCard.classList.toggle('standby-idle', isIdle);
+            if (t) t.textContent = title || 'Aktuell ist es ruhig...';
+            if (a) a.textContent = artist || 'Genieße die Stille';
+
+            if (isIdle) {
+                if (img) img.removeAttribute('src');
+                if (bg) bg.style.backgroundImage = 'none';
+            } else {
+                if (img && artUrl) img.src = artUrl;
+                if (bg && artUrl) bg.style.backgroundImage = `url('${artUrl}')`;
+            }
+        }
+
+        // Auto-StandBy: mobiles Gerät im Querformat + Ladezustand (best effort, opt-in)
+        window.addEventListener('orientationchange', () => {
+            const isAutoAllowed = localStorage.getItem('autoStandBy') === 'true';
+            if (!isAutoAllowed || window.innerWidth < window.innerHeight) return;
+            if (window.innerWidth < 900) {
+                setTimeout(() => { if (window.innerWidth > window.innerHeight) toggleStandBy(true); }, 400);
+            }
+        });
 
         // --- LIQUID GLASS LOGIC ---
         function applyLiquidGlassMode(isActive) {
@@ -1442,6 +2355,7 @@
 
         if (liquidGlassToggle) {
             liquidGlassToggle.addEventListener('click', () => {
+                haptic(10);
                 const isActive = document.body.classList.toggle('liquid-glass-active');
                 localStorage.setItem('liquidGlassMode', isActive);
                 applyLiquidGlassMode(isActive);
@@ -1455,6 +2369,7 @@
 
         if (themeToggle) {
             themeToggle.addEventListener('click', () => {
+                haptic(10);
                 html.classList.toggle('dark');
                 localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
             });
@@ -1577,10 +2492,17 @@
             const data = details[key];
             if(!data) return;
             if (modalBody) {
+                const copyLinkButton = key === 'contact'
+                    ? `<button onclick="copyPageLink(this)" class="w-full py-2 xxs:py-3 sm:py-5 mb-2 xxs:mb-3 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-xl sm:rounded-[1.5rem] font-bold text-sm xxs:text-base sm:text-lg hover:bg-blue-500/20 transition-all active:scale-95 flex items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        Link zu dieser Seite kopieren
+                      </button>`
+                    : '';
                 modalBody.innerHTML = `
                     <div class="text-[8px] xxs:text-[10px] sm:text-xs font-black uppercase tracking-widest text-blue-500 mb-2">Deep Dive</div>
                     <h3 class="text-xl xxs:text-2xl xs:text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white mb-3 xxs:mb-4 sm:mb-6 leading-tight break-words">${escapeHTML(data.title)}</h3>
                     <p class="text-slate-600 dark:text-slate-300 text-xs xxs:text-sm sm:text-lg leading-relaxed font-medium mb-4 xxs:mb-6 sm:mb-10">${escapeHTML(data.content)}</p>
+                    ${copyLinkButton}
                     <button onclick="document.getElementById('close-modal').click()" class="w-full py-2 xxs:py-3 sm:py-5 bg-blue-600 text-white rounded-xl sm:rounded-[1.5rem] font-bold text-sm xxs:text-base sm:text-lg hover:bg-blue-700 hover:shadow-xl hover:shadow-blue-500/30 transition-all active:scale-95">Verstanden</button>
                 `;
             }
@@ -1677,6 +2599,37 @@
             }, duration);
         };
 
+        // Copy-Link Button im Kontakt-Modal
+        window.copyPageLink = function(btn) {
+            const url = window.location.href;
+            const done = () => {
+                showToast('📋 Link kopiert! Kannst ihn jetzt teilen.');
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(url).then(done).catch(() => {
+                    showToast('⚠️ Kopieren hat nicht geklappt. Link: ' + url, 5000);
+                });
+            } else {
+                showToast('⚠️ Dein Browser unterstützt das nicht. Link: ' + url, 5000);
+            }
+        };
+
+        // Zeit-abhängige Begrüßung im Header
+        function setTimeGreeting() {
+            const el = document.getElementById('time-greeting');
+            if (!el) return;
+            const hour = new Date().getHours();
+            let greeting;
+            if (hour < 5) greeting = '🌙 Na, auch noch wach um diese Uhrzeit?';
+            else if (hour < 11) greeting = '☀️ Guten Morgen! Schön, dass du vorbeischaust.';
+            else if (hour < 17) greeting = '👋 Hey, schön dass du hier bist!';
+            else if (hour < 22) greeting = '🌆 Guten Abend! Viel Spaß beim Stöbern.';
+            else greeting = '🌙 Nachteule, wie ich sehe. Willkommen!';
+            el.innerText = greeting;
+        }
+        setTimeGreeting();
+
+
         // ========================================================= //
         // --- NEUES FEATURE: Easter Eggs (Konami, Tippen, Klicks) -- //
         // ========================================================= //
@@ -1737,6 +2690,32 @@
             }
         }
 
+        // "matrix" tippen -> grüner Digital-Regen für ein paar Sekunden
+        function launchMatrixRain(durationMs = 4000) {
+            const container = document.getElementById('confetti-container');
+            if (!container) return;
+            const isLowEnd = document.body.classList.contains('low-end');
+            const colCount = isLowEnd ? 8 : 20;
+            const chars = '01アイウエオカキクケコサシスセソ';
+
+            for (let i = 0; i < colCount; i++) {
+                const col = document.createElement('div');
+                col.className = 'matrix-rain-col';
+                col.style.left = (Math.random() * 100) + 'vw';
+                let text = '';
+                const lineCount = 14 + Math.floor(Math.random() * 8);
+                for (let j = 0; j < lineCount; j++) {
+                    text += chars[Math.floor(Math.random() * chars.length)] + '\n';
+                }
+                col.innerText = text;
+                const dur = 2 + Math.random() * 2;
+                col.style.animationDuration = dur + 's';
+                col.style.animationDelay = (Math.random() * 0.6) + 's';
+                container.appendChild(col);
+                setTimeout(() => col.remove(), (dur + 0.6) * 1000 + 200);
+            }
+        }
+
         // --- Egg 1: Konami-Code -> Konfetti-Regen ---
         document.addEventListener('keydown', (e) => {
             const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
@@ -1785,6 +2764,13 @@
                     setTimeout(() => document.body.classList.remove('hyperfokus-mode'), 3600);
                 }
                 showToast('🧠⚡ Hyperfokus aktiviert! Jetzt geht nichts mehr verloren.');
+                return;
+            }
+
+            if (typedBuffer.endsWith('matrix')) {
+                typedBuffer = '';
+                launchMatrixRain();
+                showToast('💻 Wake up, Neo...');
                 return;
             }
         });
@@ -2003,8 +2989,19 @@
             if (lyricsContainer) {
                 lyricsContainer.className = `absolute inset-0 overflow-y-auto overflow-x-hidden text-left w-full h-full lyrics-style-${style}`;
             }
+
+            const lyricsOverlayEl = document.getElementById('lyrics-overlay');
+            const isAppleStyle = (style === 'applemusic' || style === 'applemusicpro');
+            if (lyricsOverlayEl) {
+                lyricsOverlayEl.classList.toggle('apple-ambient-active', isAppleStyle);
+            }
+            const appleBadge = document.getElementById('apple-style-badge');
+            if (appleBadge) {
+                appleBadge.classList.toggle('hidden', !isAppleStyle);
+                appleBadge.classList.toggle('flex', isAppleStyle);
+            }
             
-            ['fill', 'bounce', 'fade', 'blur', 'wave', 'wave-char', 'neon', 'typewriter', 'pop', 'karaoke', 'glitch', 'flip', 'zoom', 'zoom-char', 'kinetic', 'hellfire', 'hologram', 'matrix', 'liquid', 'cyberpunk', 'ghost', 'rainbow', 'shake', 'underline', 'ember', 'ice', 'chromatic', 'bubble', 'flagwave', 'spotlight', 'binary', 'paint', 'vinyl', 'starlight', 'applemusic'].forEach(s => {
+            ['fill', 'bounce', 'fade', 'blur', 'wave', 'wave-char', 'neon', 'typewriter', 'pop', 'karaoke', 'glitch', 'flip', 'zoom', 'zoom-char', 'kinetic', 'hellfire', 'hologram', 'matrix', 'liquid', 'cyberpunk', 'ghost', 'rainbow', 'shake', 'underline', 'ember', 'ice', 'chromatic', 'bubble', 'flagwave', 'spotlight', 'binary', 'paint', 'vinyl', 'starlight', 'applemusic', 'applemusicpro'].forEach(s => {
             const btn = document.getElementById(`btn-style-${s}`);
                 if(btn) {
                     if (s === style) {
@@ -2074,28 +3071,44 @@
         }
 
         async function syncWorldwideTime() {
-            try {
-                let startMs = performance.now();
-                let res = await fetch('https://timeapi.io/api/Time/current/zone?timeZone=UTC');
-                let data = await res.json();
-                let endMs = performance.now();
-                let latency = (endMs - startMs) / 2;
-                let trueWorldTime = new Date(data.dateTime + "Z").getTime() + latency;
-                localClockOffset = Date.now() - trueWorldTime;
-                isTimeSynced = true;
-            } catch(e) {
-                try {
-                    let startMs = performance.now();
-                    let res = await fetch('https://worldtimeapi.org/api/timezone/Etc/UTC');
-                    let data = await res.json();
-                    let endMs = performance.now();
-                    let latency = (endMs - startMs) / 2;
-                    let trueWorldTime = new Date(data.datetime).getTime() + latency;
-                    localClockOffset = Date.now() - trueWorldTime;
-                    isTimeSynced = true;
-                } catch(err) {
-                    console.warn("Weltzeit-Sync fehlgeschlagen, vertraue lokaler Uhr.");
+            // NTP-artiger Ansatz: mehrere Messungen nehmen und die mit der geringsten
+            // Round-Trip-Zeit verwenden (die genaueste), statt blind die erste zu nehmen.
+            const timeSources = [
+                async () => {
+                    const t0 = performance.now();
+                    const res = await fetch('https://timeapi.io/api/Time/current/zone?timeZone=UTC');
+                    const data = await res.json();
+                    const rtt = performance.now() - t0;
+                    return { trueTime: new Date(data.dateTime + "Z").getTime(), rtt };
+                },
+                async () => {
+                    const t0 = performance.now();
+                    const res = await fetch('https://worldtimeapi.org/api/timezone/Etc/UTC');
+                    const data = await res.json();
+                    const rtt = performance.now() - t0;
+                    return { trueTime: new Date(data.datetime).getTime(), rtt };
                 }
+            ];
+
+            let best = null;
+            for (const source of timeSources) {
+                try {
+                    const sample = await source();
+                    // Latenz wird hälftig als einseitige Signallaufzeit angenommen (Standard-NTP-Näherung)
+                    const estimatedTrueNow = sample.trueTime + sample.rtt / 2;
+                    if (!best || sample.rtt < best.rtt) {
+                        best = { trueWorldTime: estimatedTrueNow, rtt: sample.rtt };
+                    }
+                    if (best.rtt < 120) break; // schon sehr gut, weitere Quelle sparen
+                } catch (e) { /* nächste Quelle probieren */ }
+            }
+
+            if (best) {
+                localClockOffset = Date.now() - best.trueWorldTime;
+                isTimeSynced = true;
+                lastTimeSyncQualityMs = Math.round(best.rtt);
+            } else if (!isTimeSynced) {
+                console.warn("Weltzeit-Sync fehlgeschlagen, vertraue lokaler Uhr.");
             }
         }
 
@@ -2121,6 +3134,18 @@
                     progressBar.style.width = '0%';
                 }
             }
+            // NEW: StandBy + Dynamic Island Progress synchron mitziehen
+            const pct = totalMs > 0 ? Math.min((currentMs / totalMs) * 100, 100) : 0;
+            const sbBar = document.getElementById('standby-progress-bar');
+            const sbCur = document.getElementById('standby-time-current');
+            const sbTot = document.getElementById('standby-time-total');
+            const sbEq = document.getElementById('standby-eq');
+            if (sbBar) sbBar.style.width = pct + '%';
+            if (sbCur) sbCur.innerText = formatTime(currentMs);
+            if (sbTot) sbTot.innerText = formatTime(totalMs);
+            if (sbEq) sbEq.style.display = trackIsPlaying ? 'flex' : 'none';
+            const diBar = document.getElementById('di-progress-bar');
+            if (diBar) diBar.style.width = pct + '%';
         }
 
         function getCharWeight(char, isLastWord, isVowel) {
@@ -2741,6 +3766,7 @@
                         totalMs = 0;
                         updateProgressUI();
                         offlineTimeout = null;
+                        syncStandByTrackInfo(null, null, null); // NEW: StandBy-Anzeige zurücksetzen
                     }, 2500);
                 }
                 return;
@@ -2834,6 +3860,8 @@
                     mArtwork.src = imgUrl; 
                     mAmbient.style.backgroundImage = `url('${imgUrl}')`;
                     mGlow.style.backgroundImage = `url('${imgUrl}')`;
+                    const lyricsAmbientBg = document.getElementById('lyrics-ambient-bg');
+                    if (lyricsAmbientBg) lyricsAmbientBg.style.backgroundImage = `url('${imgUrl}')`;
                 }
                 
                 if(lyricsMiniArt && lyricsMiniArt.getAttribute('src') !== imgUrl) {
@@ -2885,7 +3913,15 @@
                 }
                 if (mText) mText.innerText = data.provider || "Streaming";
 
+                // NEW: StandBy-Overlay & Ambient-Color immer mit dem aktuellen Track synchron halten
+                syncStandByTrackInfo(data.track.title, rawArtist, imgUrl);
+                extractDominantColor(imgUrl);
+
                 if (isNewTrack) {
+                    // NEW: Dynamic Island 2.0 - kurzes Pop-up bei Songwechsel
+                    if (!isFirstLoad && isPlaying) {
+                        triggerDynamicIsland(data.track.title, rawArtist, imgUrl);
+                    }
                     totalMs = trackDuration;
                     if (timeTotalEl) timeTotalEl.innerText = formatTime(totalMs);
                     
@@ -2909,12 +3945,20 @@
                         syncLyricsUI(true, true);
                     } else {
                         let expectedLocalProgress = serverBaseProgress + (performance.now() - localStartTime);
-                        
-                        if (Math.abs(expectedLocalProgress - (apiProgress + addedDelay)) > 1200) {
+                        let drift = (apiProgress + addedDelay) - expectedLocalProgress;
+                        let absDrift = Math.abs(drift);
+
+                        if (absDrift > 1200) {
+                            // Große Abweichung (Seek/Skip) -> sofort hart korrigieren
                             serverBaseProgress = apiProgress + addedDelay;
                             localStartTime = performance.now();
                             currentMs = serverBaseProgress;
                             syncLyricsUI(true, true);
+                        } else if (absDrift > 120) {
+                            // Kleine Abweichung (normaler Uhren-/Netzwerk-Jitter) -> sanft nachziehen
+                            // statt hart zu springen, damit Fortschrittsbalken & Lyrics nicht sichtbar zucken.
+                            serverBaseProgress = expectedLocalProgress + drift * 0.35;
+                            localStartTime = performance.now();
                         }
                     }
                 }
@@ -3052,6 +4096,17 @@
             }
         }
 
+        function recordFetchLatency(ms) {
+            recentFetchLatencies.push(ms);
+            if (recentFetchLatencies.length > 5) recentFetchLatencies.shift();
+        }
+
+        function getSmoothedLatency() {
+            if (recentFetchLatencies.length === 0) return 50;
+            const sorted = [...recentFetchLatencies].sort((a, b) => a - b);
+            return sorted[Math.floor(sorted.length / 2)]; // Median: robust gegen einzelne Ausreißer-Requests
+        }
+
         function fetchMusicData() {
             let pStart = performance.now();
             fetch('https://npc-api.aikins.xyz/v1/users/gamingpig/now')
@@ -3059,7 +4114,11 @@
                     if (!r.ok) throw new Error("Fetch failed");
                     return r.text();
                 })
-                .then(text => text ? updateMusicUI(JSON.parse(text), (performance.now() - pStart) / 2) : null)
+                .then(text => {
+                    const rtt = performance.now() - pStart;
+                    recordFetchLatency(rtt / 2);
+                    if (text) updateMusicUI(JSON.parse(text), getSmoothedLatency());
+                })
                 .catch(() => {});
         }
 
@@ -3067,7 +4126,9 @@
 
         document.addEventListener("visibilitychange", () => {
             if (document.visibilityState === "visible") {
+                syncWorldwideTime();
                 fetchMusicData();
+                updateTimeOfDayColors(); // NEW: Wallpaper beim Zurückkehren auffrischen
             }
         });
 
