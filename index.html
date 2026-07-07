@@ -941,17 +941,6 @@
             display: flex; flex-direction: column; align-items: center; justify-content: space-between;
             opacity: 0; visibility: hidden; pointer-events: none; cursor: pointer;
             transition: opacity 0.6s var(--apple-ease), visibility 0.6s;
-            /*
-              NEW: Einheitlicher, geräteunabhängiger Skalierungsfaktor für die gesamte
-              StandBy-Ansicht. Basiert auf vmin (kleinere Seite des Viewports) statt vw,
-              damit auch extreme Seitenverhältnisse (sehr schmal+niedrig wie eine
-              Smartwatch, sehr breit wie ein 8K-Fernseher) proportional bleiben statt an
-              starre px-Ober-/Untergrenzen zu stoßen. "400" ist der Referenz-vmin-Wert
-              eines normalen Handys/Desktops (dort ist der Faktor = 1, das bisherige
-              Design). calc(100vmin / 1px) wandelt die Viewport-Länge in eine reine Zahl
-              um, damit sie sich unten mit calc(var(--sb-scale) * Npx) mit px verrechnen lässt.
-            */
-            --sb-scale: clamp(0.4, calc(100vmin / 1px / 400), 4);
         }
         #standby-overlay.standby-active { opacity: 1; visibility: visible; pointer-events: auto; }
         /* NEW: Anti-Burn-in - der gesamte Inhalt verschiebt sich alle ~10min minimal,
@@ -972,56 +961,33 @@
         body.low-end #standby-bg { filter: brightness(0.35); animation: none; }
         @keyframes standby-kenburns { 0% { transform: scale(1.2) translate(0,0); } 100% { transform: scale(1.32) translate(-1.5%, -1.5%); } }
 
-        #standby-clockzone { position: relative; z-index: 2; text-align: center; padding: calc(var(--sb-scale) * 48px) calc(var(--sb-scale) * 20px) 0; }
-        #standby-clock { font-family: 'JetBrains Mono', monospace; font-weight: 800; color: #fff; font-size: calc(var(--sb-scale) * 64px); line-height: 1; letter-spacing: -0.03em; text-shadow: 0 0 60px rgba(255,255,255,0.25); }
-        #standby-date { color: rgba(255,255,255,0.6); font-size: calc(var(--sb-scale) * 15px); font-weight: 600; margin-top: calc(var(--sb-scale) * 6px); text-transform: capitalize; }
+        #standby-clockzone { position: relative; z-index: 2; text-align: center; padding: 48px 20px 0; }
+        #standby-clock { font-family: 'JetBrains Mono', monospace; font-weight: 800; color: #fff; font-size: clamp(2.6rem, 13vw, 6rem); line-height: 1; letter-spacing: -2px; text-shadow: 0 0 60px rgba(255,255,255,0.25); }
+        #standby-date { color: rgba(255,255,255,0.6); font-size: clamp(0.75rem, 2.8vw, 1rem); font-weight: 600; margin-top: 6px; text-transform: capitalize; }
 
         /* --- Große Now-Playing Lockscreen-Karte --- */
         #standby-nowplaying {
-            position: relative; z-index: 2; width: min(94vw, calc(var(--sb-scale) * 520px)); margin-bottom: calc(var(--sb-scale) * 40px);
+            position: relative; z-index: 2; width: min(94vw, 520px); margin-bottom: 40px;
             background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14);
             backdrop-filter: blur(30px) saturate(150%); -webkit-backdrop-filter: blur(30px) saturate(150%);
-            border-radius: calc(var(--sb-scale) * 32px); padding: calc(var(--sb-scale) * 26px);
-            box-shadow: 0 20px 60px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.15);
-            transition: width 0.5s var(--apple-bounce);
+            border-radius: 32px; padding: 26px; box-shadow: 0 20px 60px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.15);
         }
-        #standby-track { display: flex; align-items: center; gap: calc(var(--sb-scale) * 20px); transition: flex-direction 0.1s, gap 0.5s var(--apple-bounce); }
-        #standby-track-art-wrap {
-            position: relative; width: calc(var(--sb-scale) * 168px); height: calc(var(--sb-scale) * 168px); flex-shrink: 0;
-            border-radius: calc(var(--sb-scale) * 28px); overflow: hidden; box-shadow: 0 14px 40px rgba(0,0,0,0.65); cursor: pointer;
-            transition: width 0.5s var(--apple-bounce), height 0.5s var(--apple-bounce), border-radius 0.4s ease, box-shadow 0.5s ease;
-        }
-        #standby-track-art-wrap:active { transform: scale(0.97); }
+        #standby-track { display: flex; align-items: center; gap: 20px; }
+        #standby-track-art-wrap { position: relative; width: clamp(120px, 34vw, 190px); height: clamp(120px, 34vw, 190px); flex-shrink: 0; border-radius: 28px; overflow: hidden; box-shadow: 0 14px 40px rgba(0,0,0,0.65); }
         #standby-track-art { width: 100%; height: 100%; object-fit: cover; display: block; }
-        #standby-eq { position: absolute; bottom: calc(var(--sb-scale) * 8px); left: calc(var(--sb-scale) * 8px); display: flex; align-items: flex-end; gap: calc(var(--sb-scale) * 3.5px); height: calc(var(--sb-scale) * 20px); background: rgba(0,0,0,0.4); padding: calc(var(--sb-scale) * 4px) calc(var(--sb-scale) * 7px); border-radius: calc(var(--sb-scale) * 8px); }
-        #standby-eq span { width: calc(var(--sb-scale) * 4px); background: #fff; border-radius: 2px; animation: di-eq-bounce 0.9s ease-in-out infinite; }
+        #standby-eq { position: absolute; bottom: 8px; left: 8px; display: flex; align-items: flex-end; gap: 3.5px; height: 20px; background: rgba(0,0,0,0.4); padding: 4px 7px; border-radius: 8px; }
+        #standby-eq span { width: 4px; background: #fff; border-radius: 2px; animation: di-eq-bounce 0.9s ease-in-out infinite; }
         #standby-eq span:nth-child(1) { animation-delay: -0.6s; } #standby-eq span:nth-child(2) { animation-delay: -0.3s; } #standby-eq span:nth-child(3) { animation-delay: -0.9s; }
         body.low-end #standby-eq { display: none; }
-        #standby-track-text { min-width: 0; flex: 1; transition: opacity 0.35s ease, max-height 0.4s ease, margin 0.4s ease; }
-        #standby-track-title { color: #fff; font-size: calc(var(--sb-scale) * 24px); font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; letter-spacing: -0.02em; transition: font-size 0.5s var(--apple-bounce), text-align 0.1s; }
-        #standby-track-artist { color: rgba(255,255,255,0.65); font-size: calc(var(--sb-scale) * 16px); font-weight: 600; margin-top: calc(var(--sb-scale) * 4px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transition: font-size 0.5s var(--apple-bounce), text-align 0.1s; }
-        #standby-progress-wrap { margin-top: calc(var(--sb-scale) * 24px); }
-        #standby-progress-track { width: 100%; height: calc(var(--sb-scale) * 6px); background: rgba(255,255,255,0.15); border-radius: 999px; overflow: hidden; }
+        #standby-track-text { min-width: 0; flex: 1; }
+        #standby-track-title { color: #fff; font-size: clamp(19px, 5.6vw, 28px); font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; letter-spacing: -0.3px; }
+        #standby-track-artist { color: rgba(255,255,255,0.65); font-size: clamp(14px, 4vw, 18px); font-weight: 600; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        #standby-progress-wrap { margin-top: 24px; }
+        #standby-progress-track { width: 100%; height: 6px; background: rgba(255,255,255,0.15); border-radius: 999px; overflow: hidden; }
         #standby-progress-bar { height: 100%; width: 0%; background: #fff; border-radius: 999px; transition: width 0.3s linear; }
-        #standby-progress-times { display: flex; justify-content: space-between; margin-top: calc(var(--sb-scale) * 9px); font-family: 'JetBrains Mono', monospace; font-size: calc(var(--sb-scale) * 13px); font-weight: 600; color: rgba(255,255,255,0.5); }
-
-        /* --- NEW: Tap-to-Expand fürs Cover, wie beim echten iOS-Lockscreen --- */
-        #standby-nowplaying.art-expanded { width: min(94vw, calc(var(--sb-scale) * 380px)); }
-        #standby-nowplaying.art-expanded #standby-track { flex-direction: column; gap: calc(var(--sb-scale) * 22px); }
-        #standby-nowplaying.art-expanded #standby-track-art-wrap {
-            width: min(74vw, calc(var(--sb-scale) * 320px)); height: min(74vw, calc(var(--sb-scale) * 320px)); border-radius: calc(var(--sb-scale) * 36px);
-            box-shadow: 0 26px 60px rgba(0,0,0,0.75);
-        }
-        #standby-nowplaying.art-expanded #standby-track-text { text-align: center; width: 100%; }
-        #standby-nowplaying.art-expanded #standby-track-title,
-        #standby-nowplaying.art-expanded #standby-track-artist { text-align: center; white-space: normal; }
-        #standby-nowplaying.art-expanded #standby-track-title { font-size: calc(var(--sb-scale) * 30px); }
-        #standby-nowplaying.art-expanded #standby-track-artist { font-size: calc(var(--sb-scale) * 19px); }
-        /* Idle-Zustand: kein Cover vorhanden, Antippen soll dort nichts expandieren */
-        #standby-nowplaying.standby-idle.art-expanded { width: min(94vw, calc(var(--sb-scale) * 520px)); }
-        #standby-nowplaying.standby-idle.art-expanded #standby-track { flex-direction: row; }
+        #standby-progress-times { display: flex; justify-content: space-between; margin-top: 9px; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.5); }
         #standby-hint {
-            position: relative; z-index: 2; color: rgba(255,255,255,0.3); font-size: calc(var(--sb-scale) * 10px); text-transform: uppercase; letter-spacing: 0.15em; font-weight: 700; padding-bottom: calc(var(--sb-scale) * 24px);
+            position: relative; z-index: 2; color: rgba(255,255,255,0.3); font-size: 10px; text-transform: uppercase; letter-spacing: 2px; font-weight: 700; padding-bottom: 24px;
             transform: translate(var(--standby-shift-x, 0px), var(--standby-shift-y, 0px));
             transition: transform 2.5s ease-in-out;
         }
@@ -1069,6 +1035,35 @@
         #search-hint-bubble.hint-visible { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
         #search-hint-arrow { position: absolute; bottom: -6px; left: 20px; width: 12px; height: 12px; background: rgba(15,23,42,0.92); border-right: 1px solid rgba(255,255,255,0.14); border-bottom: 1px solid rgba(255,255,255,0.14); transform: rotate(45deg); }
         @media (max-width: 640px) { #search-hint-bubble { bottom: 58px; } }
+
+        /* ========================================================= */
+        /* --- NEW: SHARE CARD DESIGN-AUSWAHL ------------------------ */
+        /* ========================================================= */
+        #sharecard-picker-overlay {
+            position: fixed; inset: 0; z-index: 950; background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center;
+            padding: 20px; opacity: 0; visibility: hidden; pointer-events: none;
+            transition: opacity 0.3s ease, visibility 0.3s;
+        }
+        #sharecard-picker-overlay.sc-active { opacity: 1; visibility: visible; pointer-events: auto; }
+        #sharecard-picker-box {
+            width: min(94vw, 480px); max-height: 86vh; overflow-y: auto;
+            background: rgba(15, 23, 42, 0.92); border: 1px solid rgba(255,255,255,0.12);
+            backdrop-filter: blur(30px) saturate(160%); border-radius: 24px; padding: 20px;
+            transform: scale(0.94) translateY(10px); opacity: 0; transition: transform 0.35s var(--apple-bounce), opacity 0.3s ease;
+        }
+        #sharecard-picker-overlay.sc-active #sharecard-picker-box { transform: scale(1) translateY(0); opacity: 1; }
+        #sharecard-picker-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+        #sharecard-picker-header h3 { color: #fff; font-size: 17px; font-weight: 800; margin: 0; }
+        #sharecard-picker-header button { width: 30px; height: 30px; border-radius: 50%; background: rgba(255,255,255,0.08); border: none; color: rgba(255,255,255,0.7); cursor: pointer; font-size: 14px; }
+        #sharecard-picker-header button:hover { background: rgba(255,255,255,0.15); color: #fff; }
+        #sharecard-picker-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        .sc-option { border-radius: 16px; overflow: hidden; cursor: pointer; border: 2px solid transparent; background: #000; transition: border-color 0.2s ease, transform 0.2s var(--apple-bounce); position: relative; }
+        .sc-option:hover, .sc-option:active { border-color: rgba(59,130,246,0.7); transform: translateY(-2px) scale(1.02); }
+        .sc-option canvas { display: block; width: 100%; height: auto; }
+        .sc-option .sc-label { position: absolute; bottom: 0; left: 0; right: 0; padding: 6px 8px; font-size: 11px; font-weight: 700; color: #fff; background: linear-gradient(to top, rgba(0,0,0,0.75), transparent); text-align: center; }
+        .sc-option .sc-spinner { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.4); font-size: 11px; font-weight: 700; }
+        #sharecard-picker-hint { text-align: center; color: rgba(255,255,255,0.35); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-top: 16px; margin-bottom: 0; }
 
         #command-palette-overlay {
             position: fixed; inset: 0; z-index: 900; background: rgba(0,0,0,0.5);
@@ -1218,7 +1213,7 @@
             </div>
             <div id="standby-nowplaying" class="standby-idle">
                 <div id="standby-track">
-                    <div id="standby-track-art-wrap" onclick="toggleStandbyArtExpanded(event)" role="button" tabindex="0" aria-label="Cover vergrößern/verkleinern">
+                    <div id="standby-track-art-wrap">
                         <img id="standby-track-art" alt="">
                         <div id="standby-eq"><span></span><span></span><span></span></div>
                     </div>
@@ -1240,6 +1235,18 @@
     </div>
     
     <!-- NEW: Command Palette (⌘K Spotlight-Suche) -->
+    <!-- NEW: Share Card Design-Auswahl -->
+    <div id="sharecard-picker-overlay" onclick="if(event.target===this) closeSharecardPicker()">
+        <div id="sharecard-picker-box">
+            <div id="sharecard-picker-header">
+                <h3>Design wählen</h3>
+                <button onclick="closeSharecardPicker()" aria-label="Schließen">✕</button>
+            </div>
+            <div id="sharecard-picker-grid"></div>
+            <p id="sharecard-picker-hint">Antippen zum Herunterladen</p>
+        </div>
+    </div>
+
     <div id="command-palette-overlay" onclick="if(event.target===this) closeCommandPalette()">
         <div id="command-palette">
             <div id="cp-input-row">
@@ -2663,19 +2670,22 @@
             if (!island || !uiControls) return;
 
             const uiRect = uiControls.getBoundingClientRect();
+            const baseTop = parseFloat(getComputedStyle(island).top) || 40; // Standard-Position (safe-area + 40px)
 
-            // Vertikal: mindestens so weit unten wie die Kontrollleiste + Puffer, nie höher als die 40px-Basis
-            const minTopFromSafeArea = (parseFloat(getComputedStyle(island).top) || 40);
-            const topPx = Math.max(uiRect.bottom + 10, minTopFromSafeArea);
+            // Die Insel bleibt IMMER horizontal mittig (wie das echte iPhone-Vorbild) - wir
+            // rühren left/transform nie an. Geprüft wird nur, ob die (im ausgeklappten
+            // Zustand max. ~320px breite) mittige Insel horizontal in den Bereich der
+            // Kontrollleiste hineinragen würde. Falls ja, weicht sie NUR nach unten aus.
+            const maxIslandWidth = Math.min(320, window.innerWidth * 0.86);
+            const islandRightEdge = (window.innerWidth + maxIslandWidth) / 2;
+            const wouldOverlapHorizontally = islandRightEdge > (uiRect.left - 12);
 
-            // Horizontal: mittig im Bereich LINKS von der Kontrollleiste (mit 12px Puffer davor),
-            // fällt automatisch auf echte Bildschirmmitte zurück, wenn dort genug Platz ist.
-            const rightBound = Math.max(uiRect.left - 12, window.innerWidth * 0.25);
-            const leftPx = rightBound / 2;
+            const topPx = wouldOverlapHorizontally ? Math.max(baseTop, uiRect.bottom + 10) : baseTop;
 
             island.style.top = topPx + 'px';
-            island.style.left = leftPx + 'px';
-            if (ring) { ring.style.top = topPx + 'px'; ring.style.left = leftPx + 'px'; }
+            island.style.left = ''; // NEW: horizontal nie verändern, CSS-Default (mittig) bleibt bestehen
+            island.style.transform = '';
+            if (ring) { ring.style.top = topPx + 'px'; ring.style.left = ''; }
         }
         window.addEventListener('resize', () => { clearTimeout(window._diPosTimeout); window._diPosTimeout = setTimeout(positionDynamicIsland, 120); });
         window.addEventListener('orientationchange', () => setTimeout(positionDynamicIsland, 200));
@@ -2815,92 +2825,288 @@
 
             if (typeof showToast === 'function') showToast(t('toast_sharecard_creating'));
 
-            const draw = (artImg) => {
-                try {
-                    const W = 720, H = 960;
-                    const canvas = document.createElement('canvas');
-                    canvas.width = W; canvas.height = H;
-                    const ctx = canvas.getContext('2d');
-
-                    // Hintergrund: geblurtes Cover (falls vorhanden), sonst dunkler Verlauf
-                    ctx.fillStyle = '#05060a';
-                    ctx.fillRect(0, 0, W, H);
-                    if (artImg) {
-                        try {
-                            ctx.filter = 'blur(38px) brightness(0.45) saturate(150%)';
-                            ctx.drawImage(artImg, -60, -60, W + 120, H + 120);
-                            ctx.filter = 'none';
-                        } catch (e) {}
-                    }
-                    const grad = ctx.createLinearGradient(0, 0, 0, H);
-                    grad.addColorStop(0, 'rgba(0,0,0,0.15)');
-                    grad.addColorStop(1, 'rgba(0,0,0,0.55)');
-                    ctx.fillStyle = grad;
-                    ctx.fillRect(0, 0, W, H);
-
-                    // Album-Art quadratisch, zentriert
-                    const artSize = 460;
-                    const artX = (W - artSize) / 2;
-                    const artY = 170;
-                    ctx.save();
-                    ctx.shadowColor = 'rgba(0,0,0,0.6)';
-                    ctx.shadowBlur = 60;
-                    ctx.shadowOffsetY = 20;
-                    roundRectPath(ctx, artX, artY, artSize, artSize, 28);
-                    ctx.fillStyle = '#111';
-                    ctx.fill();
-                    ctx.restore();
-                    ctx.save();
-                    roundRectPath(ctx, artX, artY, artSize, artSize, 28);
-                    ctx.clip();
-                    if (artImg) ctx.drawImage(artImg, artX, artY, artSize, artSize);
-                    ctx.restore();
-
-                    // Titel & Artist
-                    ctx.textAlign = 'center';
-                    ctx.fillStyle = '#ffffff';
-                    ctx.font = '800 40px Inter, sans-serif';
-                    wrapText(ctx, title, W / 2, artY + artSize + 70, W - 100, 46);
-                    ctx.fillStyle = 'rgba(255,255,255,0.65)';
-                    ctx.font = '600 26px Inter, sans-serif';
-                    ctx.fillText(artist, W / 2, artY + artSize + 118);
-
-                    // EQ-Deko
-                    const eqY = artY + artSize + 160;
-                    const barW = 6, gap = 6, barsN = 5, heights = [18, 30, 14, 26, 20];
-                    const totalW = barsN * barW + (barsN - 1) * gap;
-                    let bx = (W - totalW) / 2;
-                    ctx.fillStyle = 'rgba(59,130,246,0.9)';
-                    heights.forEach(h => { ctx.fillRect(bx, eqY - h, barW, h); bx += barW + gap; });
-
-                    // Wasserzeichen
-                    ctx.fillStyle = 'rgba(255,255,255,0.4)';
-                    ctx.font = '700 20px Inter, sans-serif';
-                    ctx.fillText('gamingpig · now playing', W / 2, H - 50);
-
-                    const dataUrl = canvas.toDataURL('image/png');
-                    const a = document.createElement('a');
-                    a.href = dataUrl;
-                    a.download = 'now-playing-gamingpig.png';
-                    document.body.appendChild(a);
-                    a.click();
-                    a.remove();
-                    if (typeof showToast === 'function') showToast(t('toast_sharecard_saved'));
-                } catch (err) {
-                    if (typeof showToast === 'function') showToast(t('toast_sharecard_cors'));
-                }
-            };
+            const proceed = (artImg) => openSharecardPicker(artImg, title, artist);
 
             if (artSrc && !artSrc.startsWith('data:')) {
                 const img = new Image();
                 img.crossOrigin = 'anonymous';
-                img.onload = () => draw(img);
-                img.onerror = () => draw(null);
+                img.onload = () => proceed(img);
+                img.onerror = () => proceed(null);
                 img.src = artSrc;
             } else {
-                draw(null);
+                proceed(null);
             }
         };
+
+        // NEW: Vier Share-Card-Designs zur Auswahl, statt nur einem festen Layout.
+        const SHARECARD_DESIGNS = [
+            { id: 'classic', label: 'Classic', draw: drawShareCardClassic },
+            { id: 'minimal', label: 'Minimal', draw: drawShareCardMinimal },
+            { id: 'poster', label: 'Poster', draw: drawShareCardPoster },
+            { id: 'vinyl', label: 'Vinyl', draw: drawShareCardVinyl }
+        ];
+
+        function openSharecardPicker(artImg, title, artist) {
+            const overlay = document.getElementById('sharecard-picker-overlay');
+            const grid = document.getElementById('sharecard-picker-grid');
+            if (!overlay || !grid) return;
+
+            grid.innerHTML = SHARECARD_DESIGNS.map((d, i) => `
+                <div class="sc-option" data-design="${i}">
+                    <canvas width="240" height="320"></canvas>
+                    <span class="sc-label">${escapeHTML(d.label)}</span>
+                </div>`).join('');
+
+            SHARECARD_DESIGNS.forEach((d, i) => {
+                const cell = grid.children[i];
+                const canvas = cell.querySelector('canvas');
+                const ctx = canvas.getContext('2d');
+                try { d.draw(ctx, 240, 320, artImg, title, artist); } catch (e) {}
+                cell.addEventListener('click', () => downloadSharecardDesign(d, artImg, title, artist));
+            });
+
+            overlay.classList.add('sc-active');
+            pushOverlayHistory();
+        }
+
+        window.closeSharecardPicker = function() {
+            const overlay = document.getElementById('sharecard-picker-overlay');
+            if (overlay && overlay.classList.contains('sc-active')) popOverlayHistory();
+            if (overlay) overlay.classList.remove('sc-active');
+        };
+
+        function downloadSharecardDesign(design, artImg, title, artist) {
+            try {
+                haptic(10);
+                const W = 720, H = 960;
+                const canvas = document.createElement('canvas');
+                canvas.width = W; canvas.height = H;
+                const ctx = canvas.getContext('2d');
+                design.draw(ctx, W, H, artImg, title, artist);
+
+                const dataUrl = canvas.toDataURL('image/png');
+                const a = document.createElement('a');
+                a.href = dataUrl;
+                a.download = 'now-playing-gamingpig-' + design.id + '.png';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                closeSharecardPicker();
+                if (typeof showToast === 'function') showToast(t('toast_sharecard_saved'));
+            } catch (err) {
+                if (typeof showToast === 'function') showToast(t('toast_sharecard_cors'));
+            }
+        }
+
+        // --- Hilfsfunktion: zeichnet ein Bild "object-fit: cover" in ein Zielrechteck ---
+        function drawImageCover(ctx, img, x, y, w, h) {
+            if (!img) return;
+            const imgRatio = img.width / img.height;
+            const boxRatio = w / h;
+            let sx, sy, sw, sh;
+            if (imgRatio > boxRatio) {
+                sh = img.height; sw = sh * boxRatio;
+                sx = (img.width - sw) / 2; sy = 0;
+            } else {
+                sw = img.width; sh = sw / boxRatio;
+                sx = 0; sy = (img.height - sh) / 2;
+            }
+            ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
+        }
+
+        // --- Design 1: Classic - geblurtes Cover als Hintergrund, Karte zentriert ---
+        function drawShareCardClassic(ctx, W, H, artImg, title, artist) {
+            const s = W / 720; // Skalierungsfaktor relativ zur Vollauflösung (für Vorschau-Canvas)
+            ctx.fillStyle = '#05060a';
+            ctx.fillRect(0, 0, W, H);
+            if (artImg) {
+                try {
+                    ctx.filter = `blur(${38 * s}px) brightness(0.45) saturate(150%)`;
+                    ctx.drawImage(artImg, -60 * s, -60 * s, W + 120 * s, H + 120 * s);
+                    ctx.filter = 'none';
+                } catch (e) {}
+            }
+            const grad = ctx.createLinearGradient(0, 0, 0, H);
+            grad.addColorStop(0, 'rgba(0,0,0,0.15)');
+            grad.addColorStop(1, 'rgba(0,0,0,0.55)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, W, H);
+
+            const artSize = 460 * s;
+            const artX = (W - artSize) / 2;
+            const artY = 170 * s;
+            ctx.save();
+            ctx.shadowColor = 'rgba(0,0,0,0.6)';
+            ctx.shadowBlur = 60 * s;
+            ctx.shadowOffsetY = 20 * s;
+            roundRectPath(ctx, artX, artY, artSize, artSize, 28 * s);
+            ctx.fillStyle = '#111';
+            ctx.fill();
+            ctx.restore();
+            ctx.save();
+            roundRectPath(ctx, artX, artY, artSize, artSize, 28 * s);
+            ctx.clip();
+            if (artImg) drawImageCover(ctx, artImg, artX, artY, artSize, artSize);
+            ctx.restore();
+
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#ffffff';
+            ctx.font = `800 ${40 * s}px Inter, sans-serif`;
+            wrapText(ctx, title, W / 2, artY + artSize + 70 * s, W - 100 * s, 46 * s);
+            ctx.fillStyle = 'rgba(255,255,255,0.65)';
+            ctx.font = `600 ${26 * s}px Inter, sans-serif`;
+            ctx.fillText(artist, W / 2, artY + artSize + 118 * s);
+
+            const eqY = artY + artSize + 160 * s;
+            const barW = 6 * s, gap = 6 * s, barsN = 5, heights = [18, 30, 14, 26, 20].map(v => v * s);
+            const totalW = barsN * barW + (barsN - 1) * gap;
+            let bx = (W - totalW) / 2;
+            ctx.fillStyle = 'rgba(59,130,246,0.9)';
+            heights.forEach(h => { ctx.fillRect(bx, eqY - h, barW, h); bx += barW + gap; });
+
+            ctx.fillStyle = 'rgba(255,255,255,0.4)';
+            ctx.font = `700 ${20 * s}px Inter, sans-serif`;
+            ctx.fillText('gamingpig · now playing', W / 2, H - 50 * s);
+        }
+
+        // --- Design 2: Minimal - flacher Hintergrund, kleineres Cover, große Typografie ---
+        function drawShareCardMinimal(ctx, W, H, artImg, title, artist) {
+            const s = W / 720;
+            const grad = ctx.createLinearGradient(0, 0, 0, H);
+            grad.addColorStop(0, '#12141c');
+            grad.addColorStop(1, '#05060a');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, W, H);
+
+            const artSize = 190 * s;
+            const artX = (W - artSize) / 2;
+            const artY = 90 * s;
+            ctx.save();
+            ctx.shadowColor = 'rgba(0,0,0,0.5)';
+            ctx.shadowBlur = 30 * s;
+            ctx.shadowOffsetY = 12 * s;
+            roundRectPath(ctx, artX, artY, artSize, artSize, 22 * s);
+            ctx.fillStyle = '#111';
+            ctx.fill();
+            ctx.restore();
+            ctx.save();
+            roundRectPath(ctx, artX, artY, artSize, artSize, 22 * s);
+            ctx.clip();
+            if (artImg) drawImageCover(ctx, artImg, artX, artY, artSize, artSize);
+            ctx.restore();
+
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#ffffff';
+            ctx.font = `800 ${52 * s}px Inter, sans-serif`;
+            wrapText(ctx, title, W / 2, artY + artSize + 130 * s, W - 70 * s, 58 * s);
+
+            ctx.fillStyle = 'rgba(255,255,255,0.5)';
+            ctx.font = `700 ${22 * s}px Inter, sans-serif`;
+            ctx.save();
+            ctx.translate(W / 2, artY + artSize + 230 * s);
+            const spaced = artist.toUpperCase().split('').join(String.fromCharCode(8202) + ' ');
+            ctx.fillText(spaced, 0, 0);
+            ctx.restore();
+
+            ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+            ctx.lineWidth = 1 * s;
+            ctx.beginPath();
+            ctx.moveTo(W / 2 - 40 * s, H - 110 * s);
+            ctx.lineTo(W / 2 + 40 * s, H - 110 * s);
+            ctx.stroke();
+
+            ctx.fillStyle = 'rgba(255,255,255,0.35)';
+            ctx.font = `700 ${17 * s}px Inter, sans-serif`;
+            ctx.fillText('gamingpig', W / 2, H - 60 * s);
+        }
+
+        // --- Design 3: Poster - Cover als Vollflächen-Hintergrund, Text unten links ---
+        function drawShareCardPoster(ctx, W, H, artImg, title, artist) {
+            const s = W / 720;
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, W, H);
+            if (artImg) drawImageCover(ctx, artImg, 0, 0, W, H);
+
+            const grad = ctx.createLinearGradient(0, H * 0.35, 0, H);
+            grad.addColorStop(0, 'rgba(0,0,0,0)');
+            grad.addColorStop(1, 'rgba(0,0,0,0.92)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, W, H);
+
+            ctx.textAlign = 'left';
+            ctx.fillStyle = '#ffffff';
+            ctx.font = `800 ${46 * s}px Inter, sans-serif`;
+            const titleY = H - 140 * s;
+            wrapTextLeft(ctx, title, 44 * s, titleY, W - 90 * s, 52 * s);
+
+            ctx.fillStyle = 'rgba(255,255,255,0.75)';
+            ctx.font = `600 ${26 * s}px Inter, sans-serif`;
+            ctx.fillText(artist, 44 * s, H - 60 * s);
+
+            ctx.textAlign = 'right';
+            ctx.fillStyle = 'rgba(255,255,255,0.55)';
+            ctx.font = `700 ${16 * s}px Inter, sans-serif`;
+            ctx.fillText('gamingpig', W - 30 * s, 40 * s);
+        }
+
+        // --- Design 4: Vinyl - Retro-Look, Cover als Schallplatte ---
+        function drawShareCardVinyl(ctx, W, H, artImg, title, artist) {
+            const s = W / 720;
+            const grad = ctx.createRadialGradient(W / 2, H * 0.4, 10, W / 2, H * 0.4, H * 0.8);
+            grad.addColorStop(0, '#3a2a1c');
+            grad.addColorStop(1, '#100a06');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, W, H);
+
+            const cx = W / 2, cy = 350 * s, r = 210 * s;
+            ctx.save();
+            ctx.shadowColor = 'rgba(0,0,0,0.6)';
+            ctx.shadowBlur = 50 * s;
+            ctx.shadowOffsetY = 20 * s;
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.fillStyle = '#0a0a0a';
+            ctx.fill();
+            ctx.restore();
+
+            // Rillen-Ringe
+            ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+            for (let i = 1; i <= 6; i++) {
+                ctx.lineWidth = 1 * s;
+                ctx.beginPath();
+                ctx.arc(cx, cy, r - i * (18 * s), 0, Math.PI * 2);
+                ctx.stroke();
+            }
+
+            // Cover-Label in der Mitte
+            const labelR = r * 0.52;
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(cx, cy, labelR, 0, Math.PI * 2);
+            ctx.clip();
+            if (artImg) drawImageCover(ctx, artImg, cx - labelR, cy - labelR, labelR * 2, labelR * 2);
+            else { ctx.fillStyle = '#3b2a1c'; ctx.fill(); }
+            ctx.restore();
+
+            // Mittelloch
+            ctx.beginPath();
+            ctx.arc(cx, cy, 7 * s, 0, Math.PI * 2);
+            ctx.fillStyle = '#100a06';
+            ctx.fill();
+
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#f3e7d3';
+            ctx.font = `800 ${38 * s}px 'JetBrains Mono', monospace`;
+            wrapText(ctx, title, W / 2, cy + r + 90 * s, W - 90 * s, 44 * s);
+
+            ctx.fillStyle = 'rgba(243,231,211,0.7)';
+            ctx.font = `600 ${22 * s}px 'JetBrains Mono', monospace`;
+            ctx.fillText(artist, W / 2, cy + r + 150 * s);
+
+            ctx.fillStyle = 'rgba(243,231,211,0.4)';
+            ctx.font = `700 ${15 * s}px 'JetBrains Mono', monospace`;
+            ctx.fillText('◈ GAMINGPIG RECORDS ◈', W / 2, H - 50 * s);
+        }
 
         function roundRectPath(ctx, x, y, w, h, r) {
             ctx.beginPath();
@@ -2928,6 +3134,26 @@
             lines.push(line.trim());
             const startY = y - ((lines.length - 1) * lineHeight) / 2;
             lines.slice(0, 2).forEach((l, i) => ctx.fillText(l, x, startY + i * lineHeight));
+        }
+
+        // NEW: wie wrapText, aber linksbündig (für das Poster-Design)
+        function wrapTextLeft(ctx, text, x, y, maxWidth, lineHeight) {
+            const words = text.split(' ');
+            let line = '';
+            const lines = [];
+            for (let n = 0; n < words.length; n++) {
+                const testLine = line + words[n] + ' ';
+                if (ctx.measureText(testLine).width > maxWidth && n > 0) {
+                    lines.push(line.trim());
+                    line = words[n] + ' ';
+                } else {
+                    line = testLine;
+                }
+            }
+            lines.push(line.trim());
+            const trimmed = lines.slice(0, 2);
+            const startY = y - (trimmed.length - 1) * lineHeight;
+            trimmed.forEach((l, i) => ctx.fillText(l, x, startY + i * lineHeight));
         }
 
         // ========================================================= //
@@ -3083,6 +3309,8 @@
             setTimeout(() => { suppressPopHandling = false; }, 50);
         });
         function closeTopmostOverlay() {
+            const scOverlayEl = document.getElementById('sharecard-picker-overlay');
+            if (scOverlayEl && scOverlayEl.classList.contains('sc-active')) { closeSharecardPicker(); return; }
             const cpOverlayEl = document.getElementById('command-palette-overlay');
             if (cpOverlayEl && cpOverlayEl.classList.contains('cp-active')) { closeCommandPalette(); return; }
             const standbyOverlayEl = document.getElementById('standby-overlay');
@@ -3130,8 +3358,6 @@
                 clearInterval(standByShiftInterval);
                 document.documentElement.style.setProperty('--standby-shift-x', '0px');
                 document.documentElement.style.setProperty('--standby-shift-y', '0px');
-                const npCardReset = document.getElementById('standby-nowplaying');
-                if (npCardReset) npCardReset.classList.remove('art-expanded'); // NEW: nächstes Mal wieder klein starten
                 // NEW: Dynamic Island nach Verlassen von StandBy wieder zulassen
                 const island = document.getElementById('dynamic-island');
                 if (island) island.classList.remove('di-hidden-by-standby');
@@ -3160,17 +3386,6 @@
             document.documentElement.style.setProperty('--standby-shift-y', pos.y + 'px');
         }
 
-        // NEW: Tap-to-Expand fürs Cover im StandBy - wie beim echten iOS-Lockscreen.
-        // stopPropagation() ist wichtig, sonst würde der Tap zusätzlich den onclick des
-        // gesamten Overlays auslösen und StandBy direkt wieder verlassen.
-        window.toggleStandbyArtExpanded = function(event) {
-            if (event) event.stopPropagation();
-            const npCard = document.getElementById('standby-nowplaying');
-            if (!npCard || npCard.classList.contains('standby-idle')) return; // kein Track -> nichts zum Vergrößern
-            haptic(10);
-            npCard.classList.toggle('art-expanded');
-        };
-
         function syncStandByTrackInfo(title, artist, artUrl) {
             const titleEl = document.getElementById('standby-track-title');
             const artistEl = document.getElementById('standby-track-artist');
@@ -3180,7 +3395,6 @@
             const isIdle = !title;
 
             if (npCard) npCard.classList.toggle('standby-idle', isIdle);
-            if (isIdle && npCard) npCard.classList.remove('art-expanded'); // kein Track mehr -> vergrößerte Ansicht zurücksetzen
             if (titleEl) titleEl.textContent = title || t('standby_idle_title');
             if (artistEl) artistEl.textContent = artist || t('standby_idle_subtitle');
 
