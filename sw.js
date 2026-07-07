@@ -1,34 +1,5984 @@
-// Minimaler Service Worker - Zweck: die Seite als installierbare PWA qualifizieren.
-// Chrome verlangt einen registrierten Service Worker mit Fetch-Handler, bevor
-// beforeinstallprompt überhaupt ausgelöst wird ("Zum Startbildschirm hinzufügen").
-const CACHE_NAME = "gamingpig-portfolio-v1";
-const PRECACHE_URLS = ["./", "./manifest.json", "./icon-192.png", "./icon-512.png"];
+<!DOCTYPE html>
+<html lang="de" id="html-root">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title> Gamingpig | Portfolio</title>
 
-self.addEventListener("install", (event) => {
-    self.skipWaiting();
-    event.waitUntil(
-        caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS)).catch(() => {})
-    );
-});
+    <!-- NEW: PWA / "Add to Home Screen" Support -->
+    <meta name="theme-color" content="#020617">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Gamingpig">
+    <!--
+        manifest.json, sw.js, icon-192.png und icon-512.png müssen im selben Ordner
+        wie diese HTML-Datei liegen (gleiches GitHub-Repo, gleiche Ebene) - siehe
+        Anleitung. Nur echte, per HTTP(S) abrufbare Dateien machen die Seite in
+        Chrome wirklich installierbar (data:/blob:-URIs werden dafür nicht zuverlässig
+        erkannt - das war der Grund, warum "App installieren" vorher nirgends auftauchte).
+    -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-512.png">
+    <link rel="icon" type="image/png" href="icon-512.png">
 
-self.addEventListener("activate", (event) => {
-    event.waitUntil(
-        caches.keys().then((keys) =>
-            Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
-        ).then(() => self.clients.claim())
-    );
-});
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    screens: {
+                        'xxs': '200px', /* Extremer Smartwatch Breakpoint */
+                        'xs': '320px',  /* S4 Mini Breakpoint */
+                    },
+                    colors: {
+                        techBlue: '#3b82f6',
+                        techCyan: '#06b6d4',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@500;800&display=swap');
+        
+        :root {
+            /* Apple iOS Spring & Ease Curves */
+            --apple-spring: cubic-bezier(0.32, 0.72, 0, 1);
+            --apple-ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+            --apple-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+            
+            /* Viskose Liquid-Curve für die deepen Morph-Animationen */
+            --liquid-fluid: cubic-bezier(0.25, 1, 0.35, 1.2);
+            
+            /* Liquid Glass Dynamic Shadows */
+            --gl-shadow-idle: 0 15px 35px rgba(0,0,0,0.1), inset 0 1px 1px rgba(255,255,255,0.6), inset 0 -1px 2px rgba(255,255,255,0.1);
+            --gl-shadow-idle-2: 0 18px 40px rgba(0,0,0,0.12), inset 0 1px 2px rgba(255,255,255,0.7), inset 0 -1px 2px rgba(255,255,255,0.15);
+            --gl-shadow-idle-3: 0 12px 30px rgba(0,0,0,0.08), inset 0 1px 1px rgba(255,255,255,0.5), inset 0 -1px 1px rgba(255,255,255,0.05);
+        }
 
-// Network-first mit Cache-Fallback, damit die Seite auch offline zumindest lädt.
-self.addEventListener("fetch", (event) => {
-    if (event.request.method !== "GET") return;
-    event.respondWith(
-        fetch(event.request)
-            .then((response) => {
-                const copy = response.clone();
-                caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy)).catch(() => {});
-                return response;
-            })
-            .catch(() => caches.match(event.request))
-    );
-});
+        html.dark {
+            --gl-shadow-idle: 0 15px 35px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.2), inset 0 -1px 1px rgba(255,255,255,0.05);
+            --gl-shadow-idle-2: 0 18px 40px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.25), inset 0 -1px 2px rgba(255,255,255,0.08);
+            --gl-shadow-idle-3: 0 12px 30px rgba(0,0,0,0.35), inset 0 1px 1px rgba(255,255,255,0.15), inset 0 -1px 1px rgba(255,255,255,0.03);
+        }
+
+        html, body {
+            width: 100%;
+            max-width: 100vw;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            text-rendering: optimizeSpeed; /* Performance Hack */
+            transition: background-color 0.5s var(--apple-ease), color 0.5s var(--apple-ease);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            background-color: #020617; 
+        }
+
+        /* --- EXTREME PERFORMANCE MODUS --- */
+        body.low-end { scroll-behavior: auto !important; }
+        body.low-end *, body.low-end .reveal, body.low-end .glass-card {
+            transition: none !important; animation: none !important;
+            backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+            will-change: auto !important; 
+        }
+        body.low-end .mesh-gradient, body.low-end #ambient-bg, body.low-end #ambilight-glow, body.low-end #particles-container, body.low-end #canvas-video { display: none !important; }
+        body.low-end .reveal { opacity: 1 !important; transform: none !important; }
+        body.low-end .glass-card:not(#main-music-card):not(#mini-player-toggle):hover { transform: none !important; box-shadow: none !important; border-radius: inherit !important; }
+        
+        body.low-end #main-music-card.lyrics-open { background: #0f172a !important; border-color: #1e293b !important; box-shadow: none !important; }
+        body.low-end .lyrics-open #lyrics-overlay { background: #020617 !important; opacity: 1 !important; visibility: visible !important; transform: none !important; }
+        
+        body.low-end .lyric-word, 
+        body.low-end .lyric-char {
+            color: inherit !important; background: none !important; -webkit-text-fill-color: inherit !important; text-shadow: none !important; opacity: 1 !important; filter: none !important; transform: none !important;
+        }
+        body.low-end .lyric-line { color: rgba(255, 255, 255, 0.4) !important; opacity: 1 !important; }
+        body.low-end .lyric-line.active { color: #ffffff !important; text-shadow: 0 0 15px rgba(255, 255, 255, 0.5) !important; font-size: 1.05em !important; }
+        #status-dot { display: none; } body.low-end #status-dot { display: block !important; } body.low-end .eq-bars { display: none !important; }
+
+        body.low-end .modal-opening .modal-content, body.low-end .picker-opening, body.low-end .settings-opening, body.low-end .tutorial-opening, body.low-end .dashboard-opening #main-music-card {
+            opacity: 1 !important; visibility: visible !important; transform: none !important;
+        }
+
+        html:not(.dark) body.liquid-glass-active main p,
+        html:not(.dark) body.liquid-glass-active main h1,
+        html:not(.dark) body.liquid-glass-active main h2,
+        html:not(.dark) body.liquid-glass-active main h3,
+        html:not(.dark) body.liquid-glass-active main span,
+        html:not(.dark) body.liquid-glass-active main div {
+            text-shadow: 0 1px 2px rgba(255, 255, 255, 0.7);
+        }
+        html:not(.dark) body.liquid-glass-active #main-music-card * {
+            text-shadow: none !important;
+        }
+
+        /* --- MESH GRADIENT (GPU OPTIMIZED) --- */
+        :root { --time-r: 59; --time-g: 130; --time-b: 246; --time-r2: 168; --time-g2: 85; --time-b2: 247; }
+        .mesh-gradient {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; overflow: hidden;
+            transform: translateZ(0); will-change: transform;
+            pointer-events: none;
+        }
+        .mesh-gradient::before, .mesh-gradient::after {
+            content: ''; position: absolute; inset: 0; transition: opacity 0.8s var(--apple-ease), background 3s ease;
+            will-change: opacity;
+        }
+        .mesh-gradient::before {
+            background: radial-gradient(circle at 50% 50%, rgba(var(--time-r), var(--time-g), var(--time-b), 0.05) 0%, transparent 50%);
+            opacity: 1;
+        }
+        .mesh-gradient::after {
+            background: radial-gradient(circle at 20% 30%, rgba(var(--time-r), var(--time-g), var(--time-b), 0.1) 0%, transparent 40%),
+                        radial-gradient(circle at 80% 70%, rgba(var(--time-r2), var(--time-g2), var(--time-b2), 0.08) 0%, transparent 40%);
+            opacity: 0;
+        }
+        .dark .mesh-gradient::before { opacity: 0; }
+        .dark .mesh-gradient::after { opacity: 1; }
+
+        /* ========================================================= */
+        /* --- TRUE LIQUID GLASS MODE (FULL EFFECTS RESTORED) ------ */
+        /* ========================================================= */
+        
+        body.liquid-glass-active .mesh-gradient { display: none !important; } 
+
+        /* IDLE ZUSTAND - GPU Beschleunigung forciert */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.9); border: 1px solid rgba(0, 0, 0, 0.05);
+            transition: transform 0.4s var(--apple-spring), border-color 0.4s ease, box-shadow 0.4s ease, border-radius 0.4s ease, background-color 0.6s var(--apple-ease);
+            transform: translate3d(0,0,0); will-change: transform, background-color; backface-visibility: hidden;
+        }
+        .dark .glass-card { background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255, 255, 255, 0.05); }
+
+        body.liquid-glass-active .glass-card {
+            position: relative;
+            overflow: hidden; 
+            background: linear-gradient(120deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.15) 35%, rgba(255, 255, 255, 0.6) 50%, rgba(255, 255, 255, 0.15) 65%, rgba(255, 255, 255, 0.4) 100%) !important;
+            background-size: 250% 250% !important;
+            border: 1px solid rgba(255, 255, 255, 0.6) !important;
+            border-top: 1px solid rgba(255, 255, 255, 0.9) !important;
+            border-left: 1px solid rgba(255, 255, 255, 0.7) !important;
+            
+            /* GPU SAVER: Blur massiv reduziert für die vielen kleinen Karten im Idle */
+            -webkit-backdrop-filter: blur(8px) saturate(120%) !important;
+            backdrop-filter: blur(8px) saturate(120%) !important;
+            
+            /* Idle Animation für kleine Karten deaktiviert um VRAM zu sparen */
+            border-radius: 24px !important;
+            box-shadow: var(--gl-shadow-idle) !important;
+            
+            /* HARDWARE ACCELERATION HACKS */
+            transform: translate3d(0,0,0);
+            backface-visibility: hidden;
+            will-change: transform; 
+            transition: transform 0.6s var(--apple-spring), box-shadow 0.6s var(--apple-spring), border-radius 0.4s var(--apple-ease), background-color 0.4s ease, backdrop-filter 0.4s ease !important;
+        }
+        
+        .dark body.liquid-glass-active .glass-card {
+            background: linear-gradient(120deg, rgba(15, 23, 42, 0.3) 0%, rgba(255, 255, 255, 0.01) 35%, rgba(255, 255, 255, 0.12) 50%, rgba(255, 255, 255, 0.01) 65%, rgba(15, 23, 42, 0.2) 100%) !important;
+            border-top: 1px solid rgba(255, 255, 255, 0.25) !important;
+            border-left: 1px solid rgba(255, 255, 255, 0.1) !important;
+            border-color: rgba(255, 255, 255, 0.08) !important;
+            /* GPU SAVER */
+            -webkit-backdrop-filter: blur(8px) saturate(150%) brightness(1.1) !important;
+            backdrop-filter: blur(8px) saturate(150%) brightness(1.1) !important;
+        }
+
+        /* Voller Blur und fette Idle-Animation NUR für die großen/wichtigen Container */
+        body.liquid-glass-active #main-music-card,
+        body.liquid-glass-active #mini-player-toggle,
+        body.liquid-glass-active .modal-content {
+            -webkit-backdrop-filter: blur(30px) saturate(150%) !important;
+            backdrop-filter: blur(30px) saturate(150%) !important;
+            animation: card-liquid-idle 8s ease-in-out infinite alternate !important;
+        }
+        .dark body.liquid-glass-active #main-music-card,
+        .dark body.liquid-glass-active #mini-player-toggle,
+        .dark body.liquid-glass-active .modal-content {
+            -webkit-backdrop-filter: blur(30px) saturate(200%) brightness(1.15) !important;
+            backdrop-filter: blur(30px) saturate(200%) brightness(1.15) !important;
+        }
+
+        /* FIX: Liquid Glass Mode Transition Update für die Music Card (Damit Dimensionen mit animiert werden) */
+        body.liquid-glass-active #main-music-card {
+            transition: max-width 1.2s var(--liquid-fluid), min-height 1.2s var(--liquid-fluid), transform 0.6s var(--apple-spring), box-shadow 0.6s var(--apple-spring), border-radius 0.4s var(--apple-ease), background-color 0.4s ease, backdrop-filter 0.4s ease !important;
+        }
+
+        body.liquid-glass-active .glass-card::before {
+            content: '';
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle 350px at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255,255,255,0.6), transparent 50%);
+            z-index: -1;
+            opacity: var(--glare-opacity, 0);
+            transition: opacity 0.4s var(--apple-ease);
+            pointer-events: none;
+            mix-blend-mode: overlay;
+        }
+        .dark body.liquid-glass-active .glass-card::before {
+            background: radial-gradient(circle 350px at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255,255,255,0.15), transparent 50%);
+        }
+
+        @keyframes card-liquid-idle {
+            0% { border-radius: 24px; box-shadow: var(--gl-shadow-idle); }
+            50% { border-radius: 28px 20px 26px 22px; box-shadow: var(--gl-shadow-idle-2); }
+            100% { border-radius: 22px 26px 20px 28px; box-shadow: var(--gl-shadow-idle-3); }
+        }
+
+        @media (hover: hover) and (pointer: fine) {
+            body.liquid-glass-active .glass-card:hover::before { opacity: 1; }
+
+            body.liquid-glass-active .glass-card:not(#main-music-card):not(#mini-player-toggle):hover {
+                transform: scale(1.12) translateY(-8px) translate3d(0,0,0) !important; 
+                border-color: rgba(255, 255, 255, 0.9) !important;
+                border-top: 1px solid rgba(255, 255, 255, 1) !important; 
+                background-color: rgba(255, 255, 255, 0.4) !important;
+                box-shadow: 0 50px 80px -20px rgba(0, 0, 0, 0.2), inset 0 1px 2px rgba(255, 255, 255, 1), inset 0 0 20px rgba(255, 255, 255, 0.8), inset 10px 0 40px rgba(6, 182, 212, 0.15), inset -10px 0 40px rgba(168, 85, 247, 0.15) !important;
+                /* VOLLER BLUR BEIM HOVER! */
+                -webkit-backdrop-filter: blur(30px) saturate(150%) brightness(1.05) !important; 
+                backdrop-filter: blur(30px) saturate(150%) brightness(1.05) !important;
+                border-radius: 32px !important;
+                z-index: 50;
+            }
+
+            .dark body.liquid-glass-active .glass-card:not(#main-music-card):not(#mini-player-toggle):hover {
+                background-color: rgba(25, 30, 45, 0.5) !important;
+                border-color: rgba(6, 182, 212, 0.5) !important;
+                border-top: 1px solid rgba(255, 255, 255, 0.4) !important;
+                box-shadow: 0 50px 80px -20px rgba(0, 0, 0, 0.8), inset 0 1px 2px rgba(255, 255, 255, 0.4), inset 0 0 20px rgba(255, 255, 255, 0.1), inset 10px 0 40px rgba(6, 182, 212, 0.3), inset -10px 0 40px rgba(168, 85, 247, 0.3) !important;
+                /* VOLLER BLUR BEIM HOVER! */
+                -webkit-backdrop-filter: blur(30px) saturate(250%) brightness(1.25) !important;
+                backdrop-filter: blur(30px) saturate(250%) brightness(1.25) !important;
+            }
+
+            body:not(.liquid-glass-active) .glass-card:not(#main-music-card):not(#mini-player-toggle):hover {
+                transform: translateY(-6px) scale(1.02) translate3d(0,0,0);
+                border-color: #3b82f6; box-shadow: 0 15px 30px -10px rgba(59, 130, 246, 0.15);
+            }
+        }
+
+        /* APPLE SQUISH */
+        body.liquid-glass-active .glass-card.is-squished:not(#main-music-card):not(#mini-player-toggle) {
+            transform: scale(0.92) translateY(4px) translate3d(0,0,0) !important;
+            border-radius: 40px !important;
+            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-radius 0.2s !important;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3), inset 0 0 30px rgba(255,255,255,0.6) !important;
+            filter: brightness(0.9) !important;
+        }
+
+        /* ========================================================= */
+        /* --- CRAZY FANCY WINDOW OPEN/CLOSE ANIMATIONS (RESTORED) - */
+        /* ========================================================= */
+
+        #music-card-layout-wrapper {
+            display: grid; grid-template-rows: 0fr; width: 100%; padding-top: 0;
+            transition: grid-template-rows 0.6s var(--apple-spring), padding 0.6s var(--apple-spring);
+        }
+        #music-card-layout-wrapper.hidden { display: none !important; }
+        body.liquid-glass-active #music-card-layout-wrapper { transition: grid-template-rows 1.2s var(--liquid-fluid), padding 1.2s var(--liquid-fluid); }
+        #music-card-layout-wrapper.is-open { grid-template-rows: 1fr; padding-top: 1.5rem; }
+        #music-card-wrapper { min-height: 0; width: 100%; display: flex; justify-content: center; align-items: flex-start; overflow: visible; }
+
+        body.liquid-glass-active .modal-opening .modal-content,
+        body.liquid-glass-active .lyrics-open #lyrics-overlay,
+        body.liquid-glass-active .settings-opening,
+        body.liquid-glass-active .picker-opening,
+        body.liquid-glass-active .tutorial-opening {
+            display: flex !important;
+            animation: ext-pop-in 1.2s var(--liquid-fluid) forwards !important;
+            transform-origin: center center;
+            will-change: transform, opacity;
+        }
+        
+        body.liquid-glass-active .modal-closing .modal-content,
+        body.liquid-glass-active .lyrics-closing-state #lyrics-overlay,
+        body.liquid-glass-active .settings-closing,
+        body.liquid-glass-active .picker-closing,
+        body.liquid-glass-active .tutorial-closing {
+            animation: ext-pop-out 0.9s var(--liquid-fluid) forwards !important;
+            transform-origin: center center;
+            will-change: transform, opacity;
+            display: flex !important; /* Sicherstellen, dass es sichtbar bleibt während Animation */
+        }
+
+        body.liquid-glass-active .dashboard-opening #main-music-card { animation: ext-dashboard-in 1.2s var(--liquid-fluid) forwards !important; transform-origin: top center; will-change: transform, opacity; }
+        body.liquid-glass-active .dashboard-closing #main-music-card { animation: ext-dashboard-out 0.9s var(--liquid-fluid) forwards !important; transform-origin: top center; will-change: transform, opacity; }
+
+        @keyframes ext-pop-in {
+            0% { transform: translate3d(0, 120px, 0) scale(0.4, 1.7); opacity: 0; border-radius: 100px; box-shadow: none; }
+            45% { transform: translate3d(0, -30px, 0) scale(1.15, 0.85); opacity: 1; border-radius: 20px; box-shadow: var(--gl-shadow-idle); }
+            75% { transform: translate3d(0, 15px, 0) scale(0.92, 1.08); border-radius: 50px; box-shadow: var(--gl-shadow-idle-2); }
+            100% { transform: translate3d(0, 0, 0) scale(1, 1); border-radius: 24px; opacity: 1; box-shadow: var(--gl-shadow-idle); }
+        }
+
+        @keyframes ext-pop-out {
+            0% { transform: translate3d(0, 0, 0) scale(1, 1); opacity: 1; border-radius: 24px; box-shadow: var(--gl-shadow-idle); }
+            35% { transform: translate3d(0, -20px, 0) scale(1.1, 0.9); opacity: 1; border-radius: 30px; box-shadow: var(--gl-shadow-idle-2); }
+            100% { transform: translate3d(0, 200px, 0) scale(0.3, 2.0); opacity: 0; border-radius: 100px; box-shadow: none; }
+        }
+
+        @keyframes ext-dashboard-in {
+            0% { transform: translate3d(0, -100px, 0) scale(0.4, 1.8); opacity: 0; border-radius: 100px; box-shadow: none; }
+            45% { transform: translate3d(0, 35px, 0) scale(1.15, 0.85); opacity: 1; border-radius: 15px; box-shadow: var(--gl-shadow-idle); }
+            75% { transform: translate3d(0, -15px, 0) scale(0.9, 1.1); border-radius: 50px; box-shadow: var(--gl-shadow-idle-2); }
+            100% { transform: translate3d(0, 0, 0) scale(1, 1); border-radius: 24px; opacity: 1; box-shadow: var(--gl-shadow-idle); }
+        }
+
+        @keyframes ext-dashboard-out {
+            0% { transform: translate3d(0, 0, 0) scale(1, 1); opacity: 1; border-radius: 24px; box-shadow: var(--gl-shadow-idle); }
+            35% { transform: translate3d(0, 20px, 0) scale(1.1, 0.9); opacity: 1; border-radius: 40px; box-shadow: var(--gl-shadow-idle-2); }
+            100% { transform: translate3d(0, -150px, 0) scale(0.3, 2.0); opacity: 0; box-shadow: none; }
+        }
+
+        /* --- TUTORIAL MORPHING --- */
+        @keyframes tutorial-morph {
+            0% { transform: scale(1); }
+            50% { transform: scale(0.95); opacity: 0.7; }
+            100% { transform: scale(1); }
+        }
+        body.liquid-glass-active .tutorial-morphing { animation: tutorial-morph 0.5s var(--liquid-fluid) !important; }
+
+        /* --- STANDARD FALLBACKS --- */
+        .modal-opening .modal-content, .picker-opening, .tutorial-opening, .settings-opening { animation: std-pop-in 0.5s var(--apple-spring) forwards; }
+        .modal-closing .modal-content, .picker-closing, .tutorial-closing, .settings-closing { animation: std-pop-out 0.4s var(--apple-ease) forwards; }
+        .dashboard-opening #main-music-card { animation: std-pop-in 0.5s var(--apple-spring) forwards; transform-origin: top center; }
+        .dashboard-closing #main-music-card { animation: std-pop-out 0.4s var(--apple-ease) forwards; transform-origin: top center; }
+        .lyrics-open #lyrics-overlay { animation: std-pop-in 0.5s var(--apple-spring) forwards; }
+        .lyrics-closing-state #lyrics-overlay { animation: std-pop-out 0.4s var(--apple-ease) forwards; }
+
+        @keyframes std-pop-in { 0% { opacity: 0; transform: scale(0.8) translate3d(0, -20px, 0); } 100% { opacity: 1; transform: scale(1) translate3d(0, 0, 0); } }
+        @keyframes std-pop-out { 0% { opacity: 1; transform: scale(1) translate3d(0, 0, 0); } 100% { opacity: 0; transform: scale(0.8) translate3d(0, 20px, 0); } }
+
+        /* Apple Aura Background */
+        #liquid-blobs {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; overflow: hidden; pointer-events: none;
+            opacity: 0; transition: opacity 1.5s var(--apple-ease), background-color 0.8s var(--apple-ease); display: none; background: #f8fafc;
+        }
+        .dark #liquid-blobs { background: #020617; }
+        body.liquid-glass-active:not(.low-end) #liquid-blobs { display: block; opacity: 1; }
+        
+        .blob-container {
+            position: absolute; width: 100%; height: 100%; opacity: 0.4;
+            transform: translate3d(0,0,0); backface-visibility: hidden; will-change: transform;
+            animation: container-rotate 40s linear infinite;
+        }
+        .dark .blob-container { opacity: 0.35; }
+        .blob { position: absolute; will-change: transform; animation: blob-morph 20s ease-in-out infinite alternate; }
+        
+        .blob-1 { top: -10%; left: -10%; width: 70vw; height: 70vw; background: radial-gradient(circle, rgba(255,0,128,1) 0%, rgba(255,0,128,0) 70%); animation-duration: 25s; }
+        .blob-2 { top: 20%; right: -20%; width: 80vw; height: 80vw; background: radial-gradient(circle, rgba(121,40,202,1) 0%, rgba(121,40,202,0) 70%); animation-delay: -5s; animation-duration: 30s; animation-direction: alternate-reverse; }
+        .blob-3 { bottom: -20%; left: 10%; width: 70vw; height: 70vw; background: radial-gradient(circle, rgba(0,210,255,1) 0%, rgba(0,210,255,0) 70%); animation-delay: -10s; animation-duration: 22s; }
+        .blob-4 { top: 30%; left: 30%; width: 60vw; height: 60vw; background: radial-gradient(circle, rgba(255,77,77,1) 0%, rgba(255,77,77,0) 70%); animation-delay: -15s; animation-duration: 28s; animation-direction: alternate-reverse; }
+        
+        @keyframes container-rotate { from { transform: rotate(0deg) scale(1.2); } to { transform: rotate(360deg) scale(1.2); } }
+        @keyframes blob-morph { 0% { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); } 50% { transform: translate3d(10vw, 8vh, 0) rotate(90deg) scale(1.15); } 100% { transform: translate3d(-8vw, 12vh, 0) rotate(180deg) scale(0.9); } }
+
+        /* --- STANDARD V17 GLASS CARD --- */
+        .reveal { opacity: 0; transform: translate3d(0, 40px, 0) scale(0.96); transition: opacity 0.8s var(--apple-ease), transform 1s var(--apple-spring); will-change: opacity, transform; }
+        .reveal.active { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+
+        @supports (backdrop-filter: blur(12px)) or (-webkit-backdrop-filter: blur(12px)) {
+            .glass-card { background: rgba(255, 255, 255, 0.75); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+            .dark .glass-card { background: rgba(15, 23, 42, 0.65); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+        }
+        
+        #main-music-card {
+            background: rgba(15, 23, 42, 0.4) !important; border-color: rgba(255, 255, 255, 0.15) !important;
+            -webkit-backdrop-filter: blur(25px) saturate(1.5); backdrop-filter: blur(25px) saturate(1.5);
+            /* FIX: Butterweiche Animationen für Dimensionen hinzufügen! */
+            transition: max-width 0.8s var(--apple-spring), min-height 0.8s var(--apple-spring), box-shadow 0.4s ease, border-radius 0.6s var(--apple-spring), transform 0.6s var(--apple-spring) !important;
+            will-change: max-width, min-height, transform;
+        }
+        #main-music-card.lyrics-open { max-width: 800px !important; min-height: 80vh !important; }
+        #main-music-card #track-title { color: #ffffff !important; }
+        #main-music-card #track-artist { color: rgba(255, 255, 255, 0.7) !important; }
+
+        /* --- AMBILIGHT GLOW EFFEKT --- */
+        #ambilight-glow {
+            position: absolute; inset: -15px; z-index: -1; background-size: cover; background-position: center;
+            filter: blur(35px) saturate(2.0) brightness(1.2); opacity: 0; transition: opacity 1.5s ease, transform 1s ease;
+            pointer-events: none; will-change: transform, opacity; border-radius: inherit; transform: translate3d(0,0,0);
+        }
+        @media (min-width: 640px) { #ambilight-glow { inset: -60px; filter: blur(75px) saturate(2.5) brightness(1.2); } }
+        .playing #ambilight-glow { animation: ambilight-pulse 6s infinite alternate ease-in-out; opacity: 0.8; }
+        .dark .playing #ambilight-glow { opacity: 0.6; }
+        @keyframes ambilight-pulse { 0% { transform: scale(1) translate3d(0,0,0); opacity: 0.6; } 100% { transform: scale(1.05) translate3d(0,0,0); opacity: 0.9; } }
+
+        /* --- PARTICLES --- */
+        #particles-container { position: absolute; inset: -100px; z-index: -1; overflow: hidden; pointer-events: none; opacity: 0; transition: opacity 1s ease; transform: translate3d(0,0,0); }
+        .playing #particles-container { opacity: 1; }
+        .particle { position: absolute; bottom: 0; width: 4px; height: 4px; background: rgba(255, 255, 255, 0.4); border-radius: 50%; box-shadow: 0 0 10px rgba(255, 255, 255, 0.8); animation: float-up linear infinite; opacity: 0; transform: translate3d(0,0,0); }
+        @keyframes float-up { 0% { transform: translate3d(0,0,0) scale(1); opacity: 0; } 50% { opacity: 1; } 100% { transform: translate3d(0, -300px, 0) scale(0); opacity: 0; } }
+        .p1 { left: 10%; animation-duration: 4s; animation-delay: 0s; } .p2 { left: 30%; animation-duration: 5s; animation-delay: 1s; width: 6px; height: 6px; }
+        .p3 { left: 50%; animation-duration: 3.5s; animation-delay: 2s; } .p4 { left: 70%; animation-duration: 6s; animation-delay: 0.5s; width: 3px; height: 3px; }
+        .p5 { left: 90%; animation-duration: 4.5s; animation-delay: 1.5s; } .p6 { left: 20%; animation-duration: 5.5s; animation-delay: 3s; }
+        .p7 { left: 80%; animation-duration: 4s; animation-delay: 2.5s; width: 5px; height: 5px; } .p8 { left: 40%; animation-duration: 6.5s; animation-delay: 0.8s; }
+
+        #ambient-bg { position: absolute; inset: -50px; z-index: 0; background-size: cover; background-position: center; filter: blur(35px) brightness(0.75) saturate(1.8); opacity: 0; transition: opacity 1s ease; transform: scale(1.1) translate3d(0,0,0); pointer-events: none; will-change: transform, opacity; }
+
+        /* Apple Music-Feeling: unscharfer, treibender Album-Cover-Hintergrund hinter den Lyrics */
+        #lyrics-ambient-bg {
+            position: absolute; inset: -25px; z-index: -1;
+            background-size: cover; background-position: center;
+            filter: blur(50px) saturate(2.3) brightness(0.5);
+            opacity: 0; transform: scale(1.2);
+            transition: opacity 1.2s ease, background-image 0.6s ease;
+            pointer-events: none; will-change: transform, opacity;
+        }
+        #lyrics-ambient-tint {
+            position: absolute; inset: 0; z-index: -1;
+            background: radial-gradient(circle at 50% 30%, rgba(2, 6, 23, 0.3) 0%, rgba(2, 6, 23, 0.75) 75%);
+            opacity: 0; transition: opacity 1.2s ease;
+            pointer-events: none;
+        }
+        #lyrics-overlay.apple-ambient-active #lyrics-ambient-bg {
+            opacity: 0.95;
+            animation: lyrics-ambient-drift 16s ease-in-out infinite alternate;
+        }
+        #lyrics-overlay.apple-ambient-active #lyrics-ambient-tint { opacity: 1; }
+        @keyframes lyrics-ambient-drift {
+            0% { transform: scale(1.2) translate3d(0, 0, 0); }
+            100% { transform: scale(1.32) translate3d(-3%, 2%, 0); }
+        }
+        body.low-end #lyrics-ambient-bg, body.low-end #lyrics-ambient-tint { display: none !important; }
+        .playing #ambient-bg { opacity: 1; animation: ambient-drift 15s infinite alternate ease-in-out; }
+        @keyframes ambient-drift { 0% { transform: scale(1.1) translate3d(0, 0, 0); } 100% { transform: scale(1.2) translate3d(-5px, 5px, 0); } }
+
+        .playing #track-title, .playing #track-artist { text-shadow: 0 2px 10px rgba(0,0,0,0.8); }
+        #media-container { transition: transform 0.4s var(--apple-spring); transform: translate3d(0,0,0); } #media-container:active { transform: scale(0.95) translate3d(0,0,0); }
+        #artwork { transition: opacity 0.5s ease; opacity: 1; transform: translate3d(0,0,0); }
+        #offline-icon { transition: all 0.4s var(--apple-ease); opacity: 0; transform: scale(0.5) translate3d(0,0,0); pointer-events: none; visibility: hidden; }
+        .offline #artwork { opacity: 0; } .offline #offline-icon { opacity: 1; transform: scale(1) translate3d(0,0,0); filter: drop-shadow(0 0 15px #3b82f6); visibility: visible; }
+        .offline#main-music-card { border-color: rgba(59, 130, 246, 0.3) !important; }
+        .offline #progress-container, .offline #controls-container { display: none !important; }
+
+        .eq-bars { display: flex; gap: 3px; align-items: flex-end; height: 12px; margin-right: 4px; }
+        .eq-bar { width: 3px; background: #3b82f6; border-radius: 2px; transform-origin: bottom; transition: background-color 0.3s; }
+        .playing .eq-bar { background: #22c55e; animation: eq-bounce ease alternate infinite; }
+        .offline .eq-bar { animation: none !important; height: 2px !important; }
+        .eq-bar:nth-child(1) { height: 4px; animation-duration: 0.4s; } .eq-bar:nth-child(2) { height: 8px; animation-duration: 0.6s; }
+        .eq-bar:nth-child(3) { height: 6px; animation-duration: 0.5s; } .eq-bar:nth-child(4) { height: 10px; animation-duration: 0.7s; }
+        @keyframes eq-bounce { 0% { transform: scaleY(0.2); } 100% { transform: scaleY(1); } }
+
+        .lyrics-open #lyrics-overlay { pointer-events: auto; visibility: visible; opacity: 1; }
+        
+        /* FIX: Overlay Sichtbarkeit beim Schließen erzwingen */
+        .lyrics-closing-state #lyrics-overlay { 
+            pointer-events: none; 
+            visibility: visible !important; 
+            display: flex !important;
+            opacity: 1;
+        }
+
+        .lyric-line { display: block; max-width: 94%; margin: 4vh 0; line-height: 1.25; transition: opacity 0.4s ease, filter 0.4s ease, transform 0.5s var(--apple-bounce); transform-origin: left center; overflow-wrap: break-word; word-wrap: break-word; white-space: pre-wrap; padding-right: 1rem; will-change: opacity, transform; transform: translate3d(0,0,0); }
+        .lyrics-open .lyric-line { opacity: 0.25; filter: blur(1px); transform: scale(0.95) translate3d(0,0,0); }
+        .lyrics-open .lyric-line.active { opacity: 1; filter: blur(0px) drop-shadow(0 0 8px rgba(255,255,255,0.1)); transform: scale(1.05) translate3d(0,0,0); }
+
+        .lyric-word { position: relative; display: inline-block; margin-right: 0; white-space: nowrap; will-change: background-size, transform, color, opacity; font-size: 14px; font-size: clamp(0.75rem, 4vw, 2.2rem); font-weight: 800; letter-spacing: -0.02em; transition: color 0.1s linear, transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), text-shadow 0.1s linear, filter 0.1s linear, opacity 0.1s linear; }
+
+        .lyrics-style-fill .lyric-word { background: linear-gradient(to right, #ffffff var(--fill-percent, 0%), rgba(255,255,255,0.2) var(--fill-percent, 0%)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .lyrics-style-bounce .lyric-word { color: rgba(255, 255, 255, 0.3); } .lyrics-style-bounce .lyric-word.word-passed { color: rgba(255, 255, 255, 0.7); } .lyrics-style-bounce .lyric-word.word-active { color: #ffffff; transform: scale(1.15) translate3d(0,-4px,0); text-shadow: 0 4px 15px rgba(255, 255, 255, 0.6); z-index: 10; }
+        .lyrics-style-fade .lyric-word { color: rgba(255, 255, 255, 0.2); } .lyrics-style-fade .lyric-word.word-passed, .lyrics-style-fade .lyric-word.word-active { color: #ffffff; text-shadow: 0 0 10px rgba(255, 255, 255, 0.4); }
+        .lyrics-style-blur .lyric-word { color: rgba(255, 255, 255, 0.15); filter: blur(4px); } .lyrics-style-blur .lyric-word.word-passed { color: rgba(255, 255, 255, 0.6); filter: blur(0px); text-shadow: none; } .lyrics-style-blur .lyric-word.word-active { color: #ffffff; filter: blur(0px); text-shadow: 0 0 12px rgba(255,255,255,0.8); transform: scale(1.02); }
+        .lyrics-style-wave .lyric-word { color: rgba(255, 255, 255, 0.2); transform: translate3d(0,8px,0); } .lyrics-style-wave .lyric-word.word-passed { color: rgba(255, 255, 255, 0.6); transform: translate3d(0,0,0); } .lyrics-style-wave .lyric-word.word-active { color: #ffffff; transform: translate3d(0,-6px,0); text-shadow: 0 4px 12px rgba(59, 130, 246, 0.6); }
+        .lyrics-style-neon .lyric-word { color: rgba(255, 255, 255, 0.15); } .lyrics-style-neon .lyric-word.word-passed { color: rgba(255, 255, 255, 0.8); text-shadow: 0 0 5px rgba(6, 182, 212, 0.5); } .lyrics-style-neon .lyric-word.word-active { color: #ffffff; text-shadow: 0 0 10px #06b6d4, 0 0 20px #06b6d4, 0 0 30px #3b82f6; transform: scale(1.05); }
+        .lyrics-style-pop .lyric-word { color: rgba(255, 255, 255, 0.2); transform: scale(0.8); opacity: 0.5; } .lyrics-style-pop .lyric-word.word-passed { color: rgba(255, 255, 255, 0.7); transform: scale(1); opacity: 1; } .lyrics-style-pop .lyric-word.word-active { color: #ffffff; transform: scale(1.2); opacity: 1; text-shadow: 0 5px 15px rgba(255,255,255,0.5); transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
+        .lyrics-style-karaoke .lyric-word { color: rgba(255, 255, 255, 0.4); padding: 0 0.1em; position: relative; z-index: 1; background: none; -webkit-text-fill-color: currentcolor; }
+        .lyrics-style-karaoke .lyric-word::before { content: ''; position: absolute; top: 0; left: 0; bottom: 0; width: var(--fill-percent, 0%); background-color: #3b82f6; border-radius: 4px; z-index: -1; transition: width 0.1s linear; opacity: 0; }
+        .lyrics-style-karaoke .lyric-word.word-passed { color: #ffffff; } 
+        .lyrics-style-karaoke .lyric-word.word-passed::before { width: 100%; opacity: 0; transition: opacity 0.3s; } 
+        .lyrics-style-karaoke .lyric-word.word-active { color: #ffffff; text-shadow: 0 0 10px rgba(59, 130, 246, 0.8); }
+        .lyrics-style-karaoke .lyric-word.word-active::before { opacity: 1; box-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
+        .lyrics-style-glitch .lyric-word { color: rgba(255, 255, 255, 0.3); opacity: 0.5; } .lyrics-style-glitch .lyric-word.word-passed { color: #ffffff; opacity: 1; } .lyrics-style-glitch .lyric-word.word-active { color: #ffffff; opacity: 1; animation: glitch-anim 0.3s cubic-bezier(.25, .46, .45, .94) both infinite; text-shadow: 2px 0 #ff00c1, -2px 0 #00fff9; } @keyframes glitch-anim { 0% { transform: translate(0) } 20% { transform: translate(-2px, 1px) } 40% { transform: translate(-1px, -1px) } 60% { transform: translate(2px, 1px) } 80% { transform: translate(1px, -1px) } 100% { transform: translate(0) } }
+        .lyrics-style-flip .lyric-word { color: rgba(255, 255, 255, 0.2); transform: perspective(400px) rotateX(-90deg); transform-origin: bottom; opacity: 0; } .lyrics-style-flip .lyric-word.word-passed { color: rgba(255, 255, 255, 0.7); transform: perspective(400px) rotateX(0deg); opacity: 1; } .lyrics-style-flip .lyric-word.word-active { color: #ffffff; transform: perspective(400px) rotateX(0deg); opacity: 1; text-shadow: 0 0 15px rgba(255,255,255,0.6); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .lyrics-style-zoom .lyric-word { color: rgba(255, 255, 255, 0.1); transform: scale(2) translate3d(0,-10px,0); opacity: 0; } .lyrics-style-zoom .lyric-word.word-passed { color: rgba(255, 255, 255, 0.6); transform: scale(1) translate3d(0,0,0); opacity: 1; } .lyrics-style-zoom .lyric-word.word-active { color: #ffffff; transform: scale(1) translate3d(0,0,0); opacity: 1; text-shadow: 0 0 10px #3b82f6; transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s; }
+        
+        .lyrics-style-zoom-char .lyric-word { background: none; -webkit-text-fill-color: currentcolor; } 
+        .lyrics-style-zoom-char .lyric-char { display: inline-block; color: rgba(255, 255, 255, 0.1); transform: scale(2) translate3d(0,-10px,0); opacity: 0; transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s, color 0.15s linear, text-shadow 0.15s linear; } 
+        .lyrics-style-zoom-char .lyric-char.char-passed { color: rgba(255, 255, 255, 0.6); transform: scale(1) translate3d(0,0,0); opacity: 1; text-shadow: none; } 
+        .lyrics-style-zoom-char .lyric-char.char-active { color: #ffffff; transform: scale(1) translate3d(0,0,0); opacity: 1; text-shadow: 0 0 10px #3b82f6; position: relative; z-index: 10; }
+
+        .lyrics-style-kinetic .lyric-word { color: rgba(255,255,255,0.1); transform: scale(1.5) translate3d(0,0,0); filter: blur(8px); opacity: 0; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); } .lyrics-style-kinetic .lyric-word.word-passed { color: rgba(255,255,255,0.5); transform: scale(1) translate3d(0,0,0); filter: blur(0); opacity: 1; } .lyrics-style-kinetic .lyric-word.word-active { color: #ffffff; transform: scale(1.1) translate3d(0,0,0); filter: blur(0); opacity: 1; text-shadow: 0 10px 20px rgba(59,130,246,0.6); }
+        .lyrics-style-hellfire .lyric-word { color: rgba(255,255,255,0.2); transition: all 0.3s; } .lyrics-style-hellfire .lyric-word.word-passed { color: #ff9a9e; opacity: 0.6; } .lyrics-style-hellfire .lyric-word.word-active { background: linear-gradient(90deg, #ff9a9e, #fecfef, #ff9a9e); background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: hellfire-burn 1s linear infinite; transform: scale(1.05); text-shadow: 0 0 15px rgba(255,0,0,0.5); } @keyframes hellfire-burn { to { background-position: 200% center; } }
+        .lyrics-style-hologram .lyric-word { color: rgba(255,255,255,0.2); } .lyrics-style-hologram .lyric-word.word-passed { color: rgba(255,255,255,0.6); } .lyrics-style-hologram .lyric-word.word-active { color: #ffffff; animation: holo-flicker 0.15s infinite; text-shadow: -2px 0 red, 2px 0 cyan; } @keyframes holo-flicker { 0%, 100% { opacity: 1; transform: skewX(0deg); } 50% { opacity: 0.8; transform: skewX(2deg); } }
+        .lyrics-style-wave-char .lyric-word { background: none; -webkit-text-fill-color: currentcolor; } 
+        .lyrics-style-wave-char .lyric-char { display: inline-block; color: rgba(255, 255, 255, 0.2); transform: translate3d(0,8px,0); transition: color 0.15s ease, transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275), text-shadow 0.15s ease; } 
+        .lyrics-style-wave-char .lyric-char.char-passed { color: rgba(255, 255, 255, 0.6); transform: translate3d(0,0,0); } 
+        .lyrics-style-wave-char .lyric-char.char-active { color: #ffffff; transform: translate3d(0,-6px,0); text-shadow: 0 4px 12px rgba(59, 130, 246, 0.8); position: relative; z-index: 10; }
+        .lyrics-style-typewriter .lyric-word { background: none; -webkit-text-fill-color: currentcolor; } 
+        .lyrics-style-typewriter .lyric-char { display: inline-block; opacity: 0.2; transform: translate3d(0,2px,0); transition: opacity 0.05s linear, color 0.05s linear, text-shadow 0.05s linear, transform 0.05s; } 
+        .lyrics-style-typewriter .lyric-char.char-passed { opacity: 1; color: #ffffff; transform: translate3d(0,0,0); text-shadow: 0 0 8px rgba(255, 255, 255, 0.8); } 
+        .lyrics-style-typewriter .lyric-char.char-active { opacity: 1; color: #3b82f6; transform: translate3d(0,0,0); text-shadow: 0 0 15px rgba(59, 130, 246, 0.8); position: relative; z-index: 10; }
+        .lyrics-style-matrix .lyric-word { font-family: 'JetBrains Mono', monospace; background: none; -webkit-text-fill-color: currentcolor; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; } 
+        .lyrics-style-matrix .lyric-char { display: inline-block; color: rgba(0, 255, 65, 0.15); transition: color 0.05s, text-shadow 0.05s, transform 0.05s; } 
+        .lyrics-style-matrix .lyric-char.char-passed { color: rgba(0, 255, 65, 0.8); text-shadow: 0 0 8px rgba(0, 255, 65, 0.4); } 
+        .lyrics-style-matrix .lyric-char.char-active { color: #ffffff; text-shadow: 0 0 10px #ffffff, 0 0 20px #00ff41, 0 0 40px #00ff41, 0 0 80px #00ff41; transform: translate3d(0,-2px,0); z-index: 10; position: relative; }
+        /* NEUE STYLES */
+        .lyrics-style-liquid .lyric-word { color: rgba(255, 255, 255, 0.1); filter: blur(8px); transform: scale(0.85); transition: all 0.6s var(--liquid-fluid); }
+        .lyrics-style-liquid .lyric-word.word-passed { color: rgba(255, 255, 255, 0.6); filter: blur(1px); transform: scale(1); }
+        .lyrics-style-liquid .lyric-word.word-active { color: #ffffff; filter: blur(0px); transform: scale(1.15) translateY(-5px); text-shadow: 0 15px 25px rgba(6, 182, 212, 0.8), 0 0 10px rgba(255, 255, 255, 0.5); z-index: 10; }
+
+        .lyrics-style-cyberpunk .lyric-word { color: rgba(255, 255, 255, 0.15); font-family: 'JetBrains Mono', monospace; text-transform: uppercase; transition: color 0.1s; }
+        .lyrics-style-cyberpunk .lyric-word.word-passed { color: #fce205; text-shadow: 2px 2px 0px #00ffcc; opacity: 0.8; }
+        .lyrics-style-cyberpunk .lyric-word.word-active { color: #ff00ff; text-shadow: -3px -3px 0px #00ffcc, 3px 3px 0px #fce205; transform: scale(1.1) skewX(-10deg); opacity: 1; z-index: 10; animation: cyber-jitter 0.15s infinite; }
+        @keyframes cyber-jitter { 0% { transform: scale(1.1) skewX(-10deg) translate(1px, 1px); } 50% { transform: scale(1.1) skewX(10deg) translate(-1px, -1px); } 100% { transform: scale(1.1) skewX(-10deg) translate(1px, -1px); } }
+
+        .lyrics-style-ghost .lyric-word { color: transparent; text-shadow: 0 5px 15px rgba(255, 255, 255, 0.1); transform: scale(1.2) translateY(15px); transition: all 0.9s cubic-bezier(0.25, 1, 0.5, 1); }
+        .lyrics-style-ghost .lyric-word.word-passed { color: rgba(255, 255, 255, 0.4); text-shadow: 0 0 5px rgba(255, 255, 255, 0.3); transform: scale(1) translateY(0); }
+        .lyrics-style-ghost .lyric-word.word-active { color: #ffffff; text-shadow: 0 0 25px rgba(255, 255, 255, 1), 0 -10px 40px rgba(168, 85, 247, 0.7); transform: scale(1.05) translateY(-8px); z-index: 10; }
+
+        .lyrics-style-rainbow .lyric-word { color: rgba(255, 255, 255, 0.2); background: none; -webkit-text-fill-color: currentcolor; transition: color 0.2s; }
+        .lyrics-style-rainbow .lyric-word.word-passed { color: rgba(255, 255, 255, 0.7); }
+        .lyrics-style-rainbow .lyric-word.word-active { background: linear-gradient(90deg, #ff0066, #ff9900, #ffee00, #33ff00, #00ffee, #0066ff, #cc00ff, #ff0066); background-size: 400% 100%; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; animation: rainbow-cycle 1.4s linear infinite; transform: scale(1.08); z-index: 10; }
+        @keyframes rainbow-cycle { to { background-position: 400% center; } }
+
+        .lyrics-style-shake .lyric-word { color: rgba(255, 255, 255, 0.25); }
+        .lyrics-style-shake .lyric-word.word-passed { color: rgba(255, 255, 255, 0.7); }
+        .lyrics-style-shake .lyric-word.word-active { color: #ffffff; text-shadow: 0 0 12px rgba(59, 130, 246, 0.8); transform: scale(1.05); animation: word-shake 0.35s ease-in-out; z-index: 10; }
+        @keyframes word-shake { 0%, 100% { transform: translateX(0) scale(1.05); } 20% { transform: translateX(-3px) scale(1.05); } 40% { transform: translateX(3px) scale(1.05); } 60% { transform: translateX(-2px) scale(1.05); } 80% { transform: translateX(2px) scale(1.05); } }
+
+        .lyrics-style-underline .lyric-word { color: rgba(255, 255, 255, 0.3); position: relative; }
+        .lyrics-style-underline .lyric-word.word-passed { color: rgba(255, 255, 255, 0.75); }
+        .lyrics-style-underline .lyric-word.word-active { color: #ffffff; z-index: 10; }
+        .lyrics-style-underline .lyric-word.word-active::after { content: ''; position: absolute; left: 0; bottom: -4px; height: 3px; width: 100%; background: linear-gradient(90deg, #3b82f6, #06b6d4); border-radius: 2px; box-shadow: 0 0 8px rgba(59, 130, 246, 0.8); animation: underline-grow 0.3s ease forwards; transform-origin: left center; }
+        @keyframes underline-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+        /* --- 10 NEUE LYRICS-STYLES --- */
+
+        /* 1. Ember - glühende Glut */
+        .lyrics-style-ember .lyric-word { color: rgba(255, 100, 50, 0.15); }
+        .lyrics-style-ember .lyric-word.word-passed { color: rgba(255, 140, 60, 0.55); }
+        .lyrics-style-ember .lyric-word.word-active { color: #ffb347; text-shadow: 0 0 10px #ff5500, 0 0 20px #ff8800, 0 -8px 15px rgba(255,120,0,0.6); animation: ember-flicker 0.8s ease-in-out infinite; z-index: 10; }
+        @keyframes ember-flicker { 0%, 100% { text-shadow: 0 0 10px #ff5500, 0 0 20px #ff8800, 0 -8px 15px rgba(255,120,0,0.6); } 50% { text-shadow: 0 0 16px #ff7700, 0 0 30px #ffaa00, 0 -12px 20px rgba(255,150,0,0.8); } }
+
+        /* 2. Ice Crystal - Frost */
+        .lyrics-style-ice .lyric-word { color: rgba(180, 220, 255, 0.15); }
+        .lyrics-style-ice .lyric-word.word-passed { color: rgba(200, 230, 255, 0.6); }
+        .lyrics-style-ice .lyric-word.word-active { color: #eaf6ff; text-shadow: 0 0 8px #7dd3fc, 0 0 16px #38bdf8, 0 0 24px #0ea5e9; transform: scale(1.05); animation: ice-shimmer 1.2s ease-in-out infinite alternate; z-index: 10; }
+        @keyframes ice-shimmer { 0% { filter: brightness(1); } 100% { filter: brightness(1.3); } }
+
+        /* 3. Chromatic - RGB-Kanal-Versatz */
+        .lyrics-style-chromatic .lyric-word { color: rgba(255,255,255,0.2); }
+        .lyrics-style-chromatic .lyric-word.word-passed { color: rgba(255,255,255,0.7); }
+        .lyrics-style-chromatic .lyric-word.word-active { color: #fff; text-shadow: -2px 0 rgba(255,0,80,0.8), 2px 0 rgba(0,200,255,0.8); animation: chroma-shift 0.6s ease-in-out infinite; z-index: 10; }
+        @keyframes chroma-shift { 0%, 100% { text-shadow: -2px 0 rgba(255,0,80,0.8), 2px 0 rgba(0,200,255,0.8); } 50% { text-shadow: 2px 0 rgba(255,0,80,0.8), -2px 0 rgba(0,200,255,0.8); } }
+
+        /* 4. Bubble Pop */
+        .lyrics-style-bubble .lyric-word { color: rgba(255,255,255,0.2); display: inline-block; transform: scale(0.7); transition: transform 0.2s ease; }
+        .lyrics-style-bubble .lyric-word.word-passed { color: rgba(255,255,255,0.7); transform: scale(1); }
+        .lyrics-style-bubble .lyric-word.word-active { color: #fff; text-shadow: 0 4px 10px rgba(59,130,246,0.6); animation: bubble-pop 0.4s cubic-bezier(0.68,-0.55,0.265,1.55); z-index: 10; }
+        @keyframes bubble-pop { 0% { transform: scale(0.5); } 60% { transform: scale(1.25); } 100% { transform: scale(1.1); } }
+
+        /* 5. Flag Wave (pro Buchstabe) */
+        .lyrics-style-flagwave .lyric-word { background: none; -webkit-text-fill-color: currentcolor; }
+        .lyrics-style-flagwave .lyric-char { display: inline-block; color: rgba(255,255,255,0.2); transition: color 0.15s; }
+        .lyrics-style-flagwave .lyric-char.char-passed { color: rgba(255,255,255,0.65); }
+        .lyrics-style-flagwave .lyric-char.char-active { color: #fff; text-shadow: 0 0 10px rgba(59,130,246,0.7); animation: flag-flap 0.6s ease-in-out infinite; }
+        @keyframes flag-flap { 0%, 100% { transform: rotateZ(-6deg) translateY(0); } 50% { transform: rotateZ(6deg) translateY(-3px); } }
+
+        /* 6. Spotlight Sweep */
+        .lyrics-style-spotlight .lyric-word { color: rgba(255,255,255,0.25); }
+        .lyrics-style-spotlight .lyric-word.word-passed { color: rgba(255,255,255,0.7); }
+        .lyrics-style-spotlight .lyric-word.word-active { color: transparent; background: linear-gradient(100deg, rgba(255,255,255,0.3) 20%, #fff 50%, rgba(255,255,255,0.3) 80%); background-size: 250% 100%; -webkit-background-clip: text; background-clip: text; animation: spotlight-sweep 1s linear infinite; text-shadow: 0 0 12px rgba(255,255,255,0.5); z-index: 10; }
+        @keyframes spotlight-sweep { 0% { background-position: 200% center; } 100% { background-position: -200% center; } }
+
+        /* 7. Binary Decode (pro Buchstabe) */
+        .lyrics-style-binary .lyric-word { background: none; -webkit-text-fill-color: currentcolor; font-family: 'JetBrains Mono', monospace; }
+        .lyrics-style-binary .lyric-char { display: inline-block; color: rgba(34, 197, 94, 0.2); }
+        .lyrics-style-binary .lyric-char.char-passed { color: rgba(34, 197, 94, 0.7); }
+        .lyrics-style-binary .lyric-char.char-active { color: #4ade80; text-shadow: 0 0 8px #22c55e; animation: binary-decode 0.3s steps(2); }
+        @keyframes binary-decode { 0% { opacity: 0.2; transform: translateY(-4px); } 100% { opacity: 1; transform: translateY(0); } }
+
+        /* 8. Paint Stroke */
+        .lyrics-style-paint .lyric-word { color: rgba(255,255,255,0.2); position: relative; }
+        .lyrics-style-paint .lyric-word.word-passed { color: rgba(255,255,255,0.7); }
+        .lyrics-style-paint .lyric-word.word-active { color: #fff; z-index: 10; text-shadow: 0 0 10px rgba(168,85,247,0.6); }
+        .lyrics-style-paint .lyric-word.word-active::before { content: ''; position: absolute; left: -4%; right: -4%; top: 10%; bottom: 10%; background: linear-gradient(90deg, #a855f7, #3b82f6); z-index: -1; border-radius: 4px; animation: paint-reveal 0.4s ease forwards; transform-origin: left; opacity: 0.35; }
+        @keyframes paint-reveal { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+        /* 9. Vinyl Retro */
+        .lyrics-style-vinyl .lyric-word { color: rgba(214, 190, 150, 0.25); font-family: Georgia, serif; }
+        .lyrics-style-vinyl .lyric-word.word-passed { color: rgba(214, 190, 150, 0.7); }
+        .lyrics-style-vinyl .lyric-word.word-active { color: #f4e8d0; text-shadow: 1px 1px 0 rgba(0,0,0,0.5), 0 0 10px rgba(214,160,80,0.5); animation: vinyl-wobble 2s ease-in-out infinite; z-index: 10; }
+        @keyframes vinyl-wobble { 0%, 100% { transform: rotate(-1deg); } 50% { transform: rotate(1deg); } }
+
+        /* 10. Starlight */
+        .lyrics-style-starlight .lyric-word { color: rgba(255,255,255,0.15); }
+        .lyrics-style-starlight .lyric-word.word-passed { color: rgba(255,255,255,0.6); }
+        .lyrics-style-starlight .lyric-word.word-active { color: #fff; text-shadow: 0 0 6px #fff, 0 0 12px #a5b4fc, 0 0 20px #818cf8; animation: star-twinkle 1s ease-in-out infinite, star-drift 2s ease-out forwards; z-index: 10; }
+        @keyframes star-twinkle { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+        @keyframes star-drift { from { transform: translateY(0); } to { transform: translateY(-6px); } }
+
+        /* 11. Apple Music (Silben-genau, sanfter Übergang wie im Referenzvideo) */
+        .lyrics-style-applemusic .lyric-word { background: none; -webkit-text-fill-color: currentcolor; }
+        .lyrics-style-applemusic .lyric-char {
+            display: inline-block;
+            color: rgba(255, 255, 255, 0.35);
+            text-shadow: none;
+            transition: color 0.18s cubic-bezier(0.4, 0, 0.2, 1), text-shadow 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .lyrics-style-applemusic .lyric-char.char-passed { color: #ffffff; text-shadow: none; }
+        .lyrics-style-applemusic .lyric-char.char-active {
+            color: #ffffff;
+            text-shadow: 0 0 6px rgba(255, 255, 255, 0.45);
+        }
+
+        /* 12. Apple Music PRO (Silben-Highlight + Shine-Sweep + geschärfte aktive Zeile) */
+        .lyrics-style-applemusicpro .lyric-word { background: none; -webkit-text-fill-color: currentcolor; }
+        .lyrics-style-applemusicpro .lyric-char {
+            display: inline-block;
+            color: rgba(255, 255, 255, 0.32);
+            text-shadow: none;
+            transition: color 0.2s cubic-bezier(0.4, 0, 0.2, 1), text-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .lyrics-style-applemusicpro .lyric-char.char-passed { color: #ffffff; text-shadow: none; transform: translateY(0); }
+        .lyrics-style-applemusicpro .lyric-char.char-active {
+            color: #ffffff;
+            text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+            transform: translateY(-1px);
+        }
+        #main-music-card.lyrics-open .lyrics-style-applemusicpro .lyric-line.active {
+            transform: scale(1.08);
+            filter: blur(0) drop-shadow(0 0 14px rgba(255, 255, 255, 0.12));
+        }
+
+        .mask-image-gradient { -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%); mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%); }
+
+        #lyrics-overlay, #lyrics-container { overflow: hidden; will-change: transform, opacity; border-radius: inherit; }
+        #lyrics-container { overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+        #lyrics-container::-webkit-scrollbar { width: 4px; }
+        #lyrics-container::-webkit-scrollbar-track { background: transparent; }
+        #lyrics-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+
+        #modal-overlay { backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); transition: opacity 0.5s var(--apple-ease); will-change: opacity; opacity: 0; }
+        #modal-overlay.flex { opacity: 1; }
+        #modal-overlay.modal-closing { opacity: 0; }
+        
+        #music-picker { transition: opacity 0.5s var(--apple-ease); opacity: 0; }
+        #music-picker.flex { opacity: 1; }
+        #music-picker.picker-closing { opacity: 0; }
+        
+        #tutorial-wrapper { transition: opacity 0.5s var(--apple-ease); opacity: 0; z-index: 99999 !important; }
+        #tutorial-wrapper.flex { opacity: 1; }
+        #tutorial-wrapper.tutorial-closing { opacity: 0; }
+
+        /* FIX: Overlay Fade-Zeiten im Liquid Glass Mode perfekt an die Karten-Animationen anpassen */
+        body.liquid-glass-active #modal-overlay,
+        body.liquid-glass-active #music-picker,
+        body.liquid-glass-active #tutorial-wrapper {
+            transition: opacity 0.9s var(--liquid-fluid);
+        }
+
+        @media (pointer: fine) {
+            ::-webkit-scrollbar { width: 8px; }
+            ::-webkit-scrollbar-track { background: transparent; }
+            ::-webkit-scrollbar-thumb { background: #3b82f6; border-radius: 10px; }
+        }
+
+        /* DIE IMPACT ANIMATIONEN SIND ZURÜCK MIT BLUR UND BOX-SHADOW! */
+        .impact-media-out, .impact-text-out, .impact-lyrics-out { animation: quantumCrushOut 0.65s var(--apple-ease) forwards !important; will-change: transform, opacity, filter, box-shadow; transform-origin: center center !important; }
+        .impact-media-in, .impact-text-in, .impact-lyrics-in { animation: quantumBurstIn 0.8s var(--apple-spring) forwards !important; will-change: transform, opacity, filter, drop-shadow; transform-origin: center center !important; }
+        body.is-shaking #main-content, body.is-shaking #ui-controls, body.is-shaking .mesh-gradient { animation: quantumShockwave 0.5s var(--apple-ease) both !important; will-change: transform, filter; transform-origin: center center !important; }
+
+        @keyframes quantumCrushOut { 0% { transform: perspective(1200px) translate3d(0,0,0) scale(1); filter: blur(0) brightness(1) contrast(1); opacity: 1; } 20% { transform: perspective(1200px) translate3d(0,0,80px) scale(1.05); filter: blur(0) brightness(1.5) contrast(1.1); opacity: 1; box-shadow: 0 0 30px rgba(59, 130, 246, 0.4); } 100% { transform: perspective(1200px) translate3d(0,0,-1500px) scale(0.1); filter: blur(10px) brightness(0) contrast(2); opacity: 0; box-shadow: 0 0 0px rgba(0,0,0,0); } }
+        @keyframes quantumBurstIn { 0% { transform: perspective(1200px) translate3d(0,0,-1500px) scale(0.1); filter: blur(20px) brightness(4) contrast(2); opacity: 0; drop-shadow(0 0 50px rgba(255, 255, 255, 1)); } 60% { transform: perspective(1200px) translate3d(0,0,100px) scale(1.05); filter: blur(0px) brightness(1.5) contrast(1.2); opacity: 1; drop-shadow(0 0 30px rgba(6, 182, 212, 0.6)); } 100% { transform: perspective(1200px) translate3d(0,0,0) scale(1); filter: blur(0) brightness(1) contrast(1); opacity: 1; drop-shadow(0 0 0px transparent); } }
+        @keyframes quantumShockwave { 0% { transform: translate3d(0, 0, 0) scale(1); filter: blur(0) contrast(1); } 10% { transform: translate3d(-10px, 10px, 0) scale(1.02); filter: blur(1px) contrast(1.3); } 20% { transform: translate3d(15px, -8px, 0) scale(0.98); filter: contrast(1.2); } 30% { transform: translate3d(-15px, 10px, 0) scale(1.01); filter: blur(0.5px) contrast(1.1); } 40% { transform: translate3d(10px, -10px, 0) scale(1); } 50% { transform: translate3d(-5px, 5px, 0); filter: contrast(1); } 60% { transform: translate3d(5px, -5px, 0); } 70% { transform: translate3d(-3px, 3px, 0); } 80% { transform: translate3d(2px, -2px, 0); } 90% { transform: translate3d(-1px, 1px, 0); } 100% { transform: translate3d(0, 0, 0); filter: blur(0) contrast(1); } }
+
+        #global-emp-shockwave { position: fixed; top: 0; left: 0; width: 100px; height: 100px; margin-top: -50px; margin-left: -50px; border-radius: 50%; pointer-events: none; opacity: 0; z-index: 99999; will-change: transform, opacity; }
+        .trigger-emp { animation: empDetonationLight 4s var(--apple-ease) forwards !important; }
+        .dark .trigger-emp { animation: empDetonationDark 4s var(--apple-ease) forwards !important; mix-blend-mode: screen; }
+
+        @keyframes empDetonationLight { 
+            0% { transform: scale(0.1) translate3d(0,0,0); opacity: 1; box-shadow: 0 0 30px 10px rgba(37, 99, 235, 0.6), inset 0 0 30px rgba(37, 99, 235, 0.6); } 
+            30% { opacity: 0.8; box-shadow: 0 0 60px 20px rgba(147, 51, 234, 0.5), inset 0 0 60px rgba(147, 51, 234, 0.4); } 
+            100% { transform: scale(20) translate3d(0,0,0); opacity: 0; box-shadow: 0 0 10px 2px transparent, inset 0 0 10px transparent; } 
+        }
+        @keyframes empDetonationDark { 
+            0% { transform: scale(0.1) translate3d(0,0,0); opacity: 1; box-shadow: 0 0 60px 30px rgba(6, 182, 212, 1), inset 0 0 60px rgba(6, 182, 212, 1); } 
+            30% { opacity: 0.8; box-shadow: 0 0 90px 20px rgba(168, 85, 247, 0.8), inset 0 0 90px rgba(168, 85, 247, 0.5); } 
+            100% { transform: scale(20) translate3d(0,0,0); opacity: 0; box-shadow: 0 0 30px 5px rgba(59, 130, 246, 0), inset 0 0 30px transparent; } 
+        }
+
+        .tutorial-active-element { z-index: 300 !important; box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7), 0 0 50px 15px rgba(59, 130, 246, 0.5) !important; border-radius: inherit; pointer-events: none; transition: box-shadow 0.8s var(--liquid-fluid) !important; }
+        .tutorial-active-element:not(#ui-controls):not(#cp-trigger):not(#pwa-install-btn):not(#standby-toggle) { position: relative !important; background: white; }
+        .dark .tutorial-active-element:not(#ui-controls):not(#cp-trigger):not(#pwa-install-btn):not(#standby-toggle) { background: #0f172a; }
+        #ui-controls.tutorial-active-element { position: fixed !important; background: transparent !important; border-radius: 1rem; }
+        /* NEW: Bug-Fix - schwebende Elemente (Dynamic Island, Puls-Ring, Such-Hinweis) haben
+           einen höheren z-index als die Tutorial-Abdunkelung und schienen deshalb während
+           JEDES Schritts durch, nicht nur in ihrem eigenen. Jetzt während des ganzen Tutorials
+           ausgeblendet, außer genau das Element ist gerade der hervorgehobene Schritt. */
+        body.tutorial-mode #dynamic-island:not(.tutorial-active-element),
+        body.tutorial-mode #dynamic-island-ring,
+        body.tutorial-mode #search-hint-bubble,
+        body.tutorial-mode #pwa-install-btn:not(.tutorial-active-element),
+        body.tutorial-mode #cp-trigger:not(.tutorial-active-element) {
+            opacity: 0 !important; pointer-events: none !important;
+        }
+        /* NEW: cp-trigger und pwa-install-btn sind selbst position:fixed (keine ui-controls-Kinder) -
+           müssen das während des Tutorials bleiben, sonst werden sie aus ihrer Position gerissen. */
+        #cp-trigger.tutorial-active-element, #pwa-install-btn.tutorial-active-element {
+            position: fixed !important; background: transparent !important;
+        }
+
+        /* ========================================================= */
+        /* --- NEUE FEATURES: Back-to-Top, Easter Eggs -------------- */
+        /* ========================================================= */
+
+        /* Back-to-Top Button */
+        #back-to-top {
+            position: fixed; bottom: 1.25rem; right: 1.25rem; z-index: 90;
+            width: 2.75rem; height: 2.75rem;
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; visibility: hidden; transform: translateY(20px) scale(0.8);
+            transition: opacity 0.4s var(--apple-ease), transform 0.4s var(--apple-spring), visibility 0.4s;
+        }
+        @media (min-width: 640px) { #back-to-top { bottom: 2rem; right: 2rem; width: 3.25rem; height: 3.25rem; } }
+        #back-to-top.visible { opacity: 1; visibility: visible; transform: translateY(0) scale(1); }
+        #back-to-top:active { transform: scale(0.9); }
+
+        /* Toast-Benachrichtigungen (z.B. für Easter Egg) */
+        #toast-container {
+            position: fixed; bottom: 5.5rem; left: 50%; transform: translateX(-50%);
+            z-index: 9997; display: flex; flex-direction: column; gap: 0.5rem;
+            align-items: center; pointer-events: none; width: 90%; max-width: 380px;
+        }
+        .toast {
+            background: rgba(15, 23, 42, 0.92); color: white; border: 1px solid rgba(255,255,255,0.15);
+            padding: 0.75rem 1.25rem; border-radius: 1rem; font-size: 0.8rem; font-weight: 700;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4), 0 0 0 1px rgba(59,130,246,0.1);
+            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            display: flex; align-items: center; gap: 0.5rem; text-align: center;
+            animation: toast-in 0.5s var(--apple-spring) forwards;
+            max-width: 100%;
+        }
+        .toast.toast-out { animation: toast-out 0.4s var(--apple-ease) forwards; }
+        @keyframes toast-in { 0% { opacity: 0; transform: translateY(20px) scale(0.9); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
+        @keyframes toast-out { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(10px) scale(0.9); } }
+
+        /* Konami-Code Konfetti Easter Egg */
+        #confetti-container {
+            position: fixed; inset: 0; z-index: 9996; pointer-events: none; overflow: hidden;
+        }
+        .confetti-piece {
+            position: absolute; top: -20px; width: 8px; height: 14px; opacity: 0.9;
+            animation: confetti-fall linear forwards;
+            will-change: transform, opacity;
+        }
+        .confetti-piece.confetti-emoji {
+            width: auto; height: auto; font-size: 1.6rem; line-height: 1; background: none !important;
+        }
+        @keyframes confetti-fall {
+            0% { transform: translate3d(0,0,0) rotate(0deg); opacity: 1; }
+            100% { transform: translate3d(var(--drift, 0px), 105vh, 0) rotate(var(--spin, 720deg)); opacity: 0.3; }
+        }
+
+        /* Disco-Modus Easter Egg (5x auf die Überschrift klicken) */
+        body.disco-mode #main-content, body.disco-mode #ui-controls {
+            animation: disco-hue 0.6s linear infinite;
+        }
+        @keyframes disco-hue {
+            0% { filter: hue-rotate(0deg) saturate(1.6); }
+            100% { filter: hue-rotate(360deg) saturate(1.6); }
+        }
+
+        /* "forza" tippen -> Auto rast über den Bildschirm */
+        #forza-car {
+            position: fixed; top: 40%; left: -150px; z-index: 9995; font-size: 3rem;
+            pointer-events: none; animation: forza-drive-by 1.6s cubic-bezier(0.4, 0, 0.6, 1) forwards;
+            filter: drop-shadow(0 10px 15px rgba(0,0,0,0.4));
+        }
+        @keyframes forza-drive-by {
+            0% { transform: translateX(0) scaleX(-1); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateX(calc(100vw + 200px)) scaleX(-1); opacity: 0; }
+        }
+
+        /* "fokus"/"hyperfokus" tippen -> Spotlight-Effekt auf den ganzen Content */
+        body.hyperfokus-mode #main-content {
+            animation: hyperfokus-pulse 1.8s ease-in-out 2;
+        }
+        body.hyperfokus-mode::before {
+            content: ''; position: fixed; inset: 0; z-index: 9990; pointer-events: none;
+            background: radial-gradient(circle at 50% 45%, transparent 0%, transparent 25%, rgba(2, 6, 23, 0.85) 70%);
+            animation: hyperfokus-vignette 3.6s ease-in-out forwards;
+        }
+        @keyframes hyperfokus-pulse {
+            0%, 100% { filter: brightness(1) saturate(1); }
+            50% { filter: brightness(1.15) saturate(1.4); }
+        }
+        @keyframes hyperfokus-vignette {
+            0% { opacity: 0; } 15% { opacity: 1; } 85% { opacity: 1; } 100% { opacity: 0; }
+        }
+
+        /* "matrix" tippen -> grüner Digital-Regen */
+        .matrix-rain-col {
+            position: fixed; top: -220px; z-index: 9994; pointer-events: none;
+            font-family: 'JetBrains Mono', monospace; font-size: 1rem; line-height: 1.3;
+            color: #00ff41; text-shadow: 0 0 8px #00ff41, 0 0 2px #ffffff;
+            opacity: 0.85; white-space: pre;
+            animation: matrix-fall linear forwards;
+        }
+        @keyframes matrix-fall { to { transform: translateY(115vh); opacity: 0.15; } }
+
+        /* Barrierefreiheit: reduzierte Bewegung respektieren (Systemeinstellung) */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.001ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.001ms !important;
+                scroll-behavior: auto !important;
+            }
+        }
+
+        /* ========================================================= */
+        /* --- NEW: DYNAMIC ISLAND 2.0 ------------------------------ */
+        /* ========================================================= */
+        #dynamic-island {
+            /* Sitzt bewusst UNTER echten Kamera-Ausschnitten/Notches/der echten iPhone
+               Dynamic Island (safe-area-inset-top + Puffer), nicht direkt am oberen Rand. */
+            position: fixed; top: calc(env(safe-area-inset-top, 12px) + 40px); left: 50%;
+            transform: translateX(-50%) translateZ(0);
+            z-index: 500; width: 38px; height: 38px; border-radius: 999px;
+            background: #000; box-shadow: 0 6px 20px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.1);
+            overflow: hidden; display: flex; flex-direction: column; justify-content: flex-start;
+            padding: 0; opacity: 0; pointer-events: none; cursor: pointer; touch-action: none;
+            -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            transition: width 0.7s var(--liquid-fluid), height 0.7s var(--liquid-fluid), border-radius 0.6s var(--liquid-fluid), opacity 0.4s ease, padding 0.7s var(--liquid-fluid), box-shadow 0.4s ease, top 0.4s ease, left 0.4s ease;
+        }
+        #dynamic-island.di-visible { opacity: 1; pointer-events: auto; }
+        /* NEW: Im StandBy-Modus soll die Insel nicht zu sehen sein (überlagert sonst den Lockscreen) */
+        #dynamic-island.di-hidden-by-standby { opacity: 0 !important; pointer-events: none !important; }
+        /* Sanfter Puls-Ring im eingeklappten (persistenten) Zustand: eigenes, nicht
+           geclipptes Wrapper-Element (die Insel selbst hat overflow:hidden für den
+           Inhalt), animiert nur über transform/opacity statt box-shadow (günstiger
+           fürs Compositing, wichtig für ältere Android-Geräte). */
+        #dynamic-island-ring {
+            position: fixed; top: calc(env(safe-area-inset-top, 12px) + 40px); left: 50%;
+            width: 38px; height: 38px; border-radius: 999px; transform: translateX(-50%) scale(1);
+            border: 1.5px solid rgba(59,130,246,0.6); opacity: 0; pointer-events: none;
+            z-index: 499; will-change: transform, opacity;
+        }
+        #dynamic-island-ring.di-ring-active { animation: di-idle-pulse 3.2s ease-out infinite; }
+        /* NEW: iOS-Bug-Fix - #ui-controls saß auf Geräten mit Notch/Dynamic Island zu weit
+           oben (Tailwinds top-2/top-4/top-6 kennen keine Safe-Area). Jetzt mit echtem
+           Sicherheitsabstand zum oberen Rand, auf allen Breakpoints passend zur Tailwind-Skala. */
+        #ui-controls { top: calc(env(safe-area-inset-top, 0px) + 0.5rem) !important; }
+        @media (min-width: 475px) { #ui-controls { top: calc(env(safe-area-inset-top, 0px) + 1rem) !important; } }
+        @media (min-width: 640px) { #ui-controls { top: calc(env(safe-area-inset-top, 0px) + 1.5rem) !important; } }
+
+        /* ========================================================= */
+        /* --- NEW: SPRACHAUSWAHL (Setup-Assistent-Stil) ------------ */
+        /* ========================================================= */
+        #language-picker-overlay {
+            position: fixed; inset: 0; z-index: 1000; background: #05060a;
+            display: flex; align-items: center; justify-content: center; padding: 24px;
+            opacity: 0; transition: opacity 0.5s ease;
+        }
+        #language-picker-overlay.lp-active { opacity: 1; }
+        #language-picker-overlay.hidden { display: none; }
+        #language-picker-box {
+            width: min(92vw, 460px); text-align: center;
+            transform: translateY(14px); opacity: 0; transition: transform 0.6s var(--apple-bounce) 0.1s, opacity 0.5s ease 0.1s;
+        }
+        #language-picker-overlay.lp-active #language-picker-box { transform: translateY(0); opacity: 1; }
+        #lang-picker-titles { margin-bottom: 32px; }
+        #lang-picker-titles p {
+            color: rgba(255,255,255,0.9); font-weight: 800; font-size: clamp(1.1rem, 4.2vw, 1.6rem);
+            line-height: 1.5; margin: 0;
+        }
+        #lang-picker-titles p:not(:first-child) { color: rgba(255,255,255,0.35); font-size: clamp(0.85rem, 3vw, 1.05rem); font-weight: 700; }
+        #lang-picker-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        .lang-picker-btn {
+            display: flex; flex-direction: column; align-items: center; gap: 8px;
+            background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14);
+            border-radius: 18px; padding: 18px 10px; cursor: pointer; color: #fff;
+            transition: transform 0.2s var(--apple-bounce), background 0.2s ease, border-color 0.2s ease;
+        }
+        .lang-picker-btn:hover, .lang-picker-btn:active { background: rgba(59,130,246,0.18); border-color: rgba(59,130,246,0.5); transform: translateY(-2px) scale(1.02); }
+        .lang-picker-btn .lang-flag { font-size: 32px; line-height: 1; }
+        .lang-picker-btn .lang-name { font-size: 13px; font-weight: 700; }
+        body.low-end #language-picker-box, body.low-end .lang-picker-btn { transition: none !important; }
+        @keyframes di-idle-pulse {
+            0% { opacity: 0.55; transform: translateX(-50%) scale(1); }
+            70% { opacity: 0; transform: translateX(-50%) scale(1.6); }
+            100% { opacity: 0; transform: translateX(-50%) scale(1.6); }
+        }
+        #dynamic-island.di-expanded {
+            width: min(320px, 86vw); height: 62px; border-radius: 28px; padding: 6px 14px 8px 6px;
+            animation: none;
+        }
+        #dynamic-island.di-expanded:active { transform: translateX(-50%) scale(0.97); }
+        #dynamic-island-row { display: flex; align-items: center; gap: 8px; width: 100%; flex: 1; min-height: 0; }
+        #dynamic-island img { width: 44px; height: 44px; border-radius: 12px; object-fit: cover; flex-shrink: 0; opacity: 0; transform: scale(0.6); transition: opacity 0.4s ease 0.25s, transform 0.5s var(--apple-bounce) 0.25s; }
+        #dynamic-island.di-expanded img { opacity: 1; transform: scale(1); }
+        #dynamic-island .di-text { min-width: 0; flex: 1; opacity: 0; transform: translateX(6px); transition: opacity 0.35s ease 0.3s, transform 0.4s var(--apple-ease) 0.3s; }
+        #dynamic-island.di-expanded .di-text { opacity: 1; transform: translateX(0); }
+        #dynamic-island .di-title { color: #fff; font-size: 12px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        #dynamic-island .di-artist { color: rgba(255,255,255,0.6); font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        #dynamic-island .di-eq { display: flex; align-items: flex-end; gap: 2px; height: 14px; flex-shrink: 0; opacity: 0; transition: opacity 0.3s ease 0.3s; }
+        #dynamic-island.di-expanded .di-eq { opacity: 1; }
+        #dynamic-island .di-eq span { width: 2.5px; background: #3b82f6; border-radius: 2px; animation: di-eq-bounce 0.9s ease-in-out infinite; }
+        #dynamic-island .di-eq span:nth-child(1) { animation-delay: -0.6s; }
+        #dynamic-island .di-eq span:nth-child(2) { animation-delay: -0.3s; }
+        #dynamic-island .di-eq span:nth-child(3) { animation-delay: -0.9s; }
+        #dynamic-island #di-progress-track { width: 100%; height: 2.5px; background: rgba(255,255,255,0.18); border-radius: 999px; margin-top: 7px; overflow: hidden; opacity: 0; flex-shrink: 0; transition: opacity 0.3s ease 0.3s; }
+        #dynamic-island.di-expanded #di-progress-track { opacity: 1; }
+        #dynamic-island #di-progress-bar { height: 100%; width: 0%; background: #3b82f6; border-radius: 999px; transition: width 0.3s linear; }
+        @keyframes di-eq-bounce { 0%, 100% { height: 3px; } 50% { height: 13px; } }
+        body.low-end #dynamic-island { transition: none !important; animation: none !important; }
+
+        /* ========================================================= */
+        /* --- NEW: STANDBY / AMBIENT MODE (Lockscreen-Style) ------- */
+        /* ========================================================= */
+        #standby-overlay {
+            position: fixed; inset: 0; z-index: 400; background: #000;
+            display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+            opacity: 0; visibility: hidden; pointer-events: none; cursor: pointer;
+            transition: opacity 0.6s var(--apple-ease), visibility 0.6s;
+        }
+        #standby-overlay.standby-active { opacity: 1; visibility: visible; pointer-events: auto; }
+        /* NEW: Anti-Burn-in - der gesamte Inhalt verschiebt sich alle ~10min minimal,
+           damit bei langem Stehenlassen (z.B. Handy an der Ladestation) kein Einbrennen
+           auf OLED-Screens passiert. Layout/Abstände bleiben dabei unverändert, nur eine
+           dezente transform-Verschiebung. */
+        #standby-shift-wrapper {
+            display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+            flex: 1; width: 100%; min-height: 0;
+            transform: translate(var(--standby-shift-x, 0px), var(--standby-shift-y, 0px));
+            transition: transform 2.5s ease-in-out;
+        }
+        #standby-bg {
+            position: absolute; inset: -30px; background-size: cover; background-position: center;
+            filter: blur(50px) brightness(0.4) saturate(160%); transform: scale(1.2);
+            transition: background-image 0.8s ease; animation: standby-kenburns 20s ease-in-out infinite alternate;
+        }
+        body.low-end #standby-bg { filter: brightness(0.35); animation: none; }
+        @keyframes standby-kenburns { 0% { transform: scale(1.2) translate(0,0); } 100% { transform: scale(1.32) translate(-1.5%, -1.5%); } }
+
+        #standby-clockzone { position: relative; z-index: 2; text-align: center; padding: 48px 20px 0; }
+        #standby-clock { font-family: 'JetBrains Mono', monospace; font-weight: 800; color: #fff; font-size: clamp(2.6rem, 13vw, 6rem); line-height: 1; letter-spacing: -2px; text-shadow: 0 0 60px rgba(255,255,255,0.25); }
+        #standby-date { color: rgba(255,255,255,0.6); font-size: clamp(0.75rem, 2.8vw, 1rem); font-weight: 600; margin-top: 6px; text-transform: capitalize; }
+
+        /* --- Große Now-Playing Lockscreen-Karte --- */
+        #standby-nowplaying {
+            position: relative; z-index: 2; width: min(94vw, 520px); margin-bottom: 40px;
+            background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14);
+            backdrop-filter: blur(30px) saturate(150%); -webkit-backdrop-filter: blur(30px) saturate(150%);
+            border-radius: 32px; padding: 26px; box-shadow: 0 20px 60px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.15);
+        }
+        #standby-track { display: flex; align-items: center; gap: 20px; }
+        #standby-track-art-wrap { position: relative; width: clamp(120px, 34vw, 190px); height: clamp(120px, 34vw, 190px); flex-shrink: 0; border-radius: 28px; overflow: hidden; box-shadow: 0 14px 40px rgba(0,0,0,0.65); }
+        #standby-track-art { width: 100%; height: 100%; object-fit: cover; display: block; }
+        #standby-eq { position: absolute; bottom: 8px; left: 8px; display: flex; align-items: flex-end; gap: 3.5px; height: 20px; background: rgba(0,0,0,0.4); padding: 4px 7px; border-radius: 8px; }
+        #standby-eq span { width: 4px; background: #fff; border-radius: 2px; animation: di-eq-bounce 0.9s ease-in-out infinite; }
+        #standby-eq span:nth-child(1) { animation-delay: -0.6s; } #standby-eq span:nth-child(2) { animation-delay: -0.3s; } #standby-eq span:nth-child(3) { animation-delay: -0.9s; }
+        body.low-end #standby-eq { display: none; }
+        #standby-track-text { min-width: 0; flex: 1; }
+        #standby-track-title { color: #fff; font-size: clamp(19px, 5.6vw, 28px); font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; letter-spacing: -0.3px; }
+        #standby-track-artist { color: rgba(255,255,255,0.65); font-size: clamp(14px, 4vw, 18px); font-weight: 600; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        #standby-progress-wrap { margin-top: 24px; }
+        #standby-progress-track { width: 100%; height: 6px; background: rgba(255,255,255,0.15); border-radius: 999px; overflow: hidden; }
+        #standby-progress-bar { height: 100%; width: 0%; background: #fff; border-radius: 999px; transition: width 0.3s linear; }
+        #standby-progress-times { display: flex; justify-content: space-between; margin-top: 9px; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.5); }
+        #standby-hint {
+            position: relative; z-index: 2; color: rgba(255,255,255,0.3); font-size: 10px; text-transform: uppercase; letter-spacing: 2px; font-weight: 700; padding-bottom: 24px;
+            transform: translate(var(--standby-shift-x, 0px), var(--standby-shift-y, 0px));
+            transition: transform 2.5s ease-in-out;
+        }
+
+        /* ========================================================= */
+        /* --- NEW: COMMAND PALETTE (⌘K Spotlight) ------------------- */
+        /* ========================================================= */
+        #cp-trigger {
+            position: fixed; bottom: 16px; left: 16px; z-index: 300;
+            display: flex; align-items: center; gap: 4px; padding: 8px 12px;
+            background: rgba(15, 23, 42, 0.65); border: 1px solid rgba(255,255,255,0.12);
+            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+            border-radius: 10px; color: rgba(255,255,255,0.7); font-family: 'JetBrains Mono', monospace;
+            font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.25s var(--apple-ease);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+        }
+        #cp-trigger:hover { color: #fff; border-color: rgba(59,130,246,0.5); transform: translateY(-2px); }
+        html:not(.dark) #cp-trigger { background: rgba(255,255,255,0.7); color: rgba(15,23,42,0.7); border-color: rgba(0,0,0,0.08); }
+        html:not(.dark) #cp-trigger:hover { color: #0f172a; }
+        @media (max-width: 640px) {
+            #cp-trigger { padding: 7px 10px; font-size: 11px; bottom: 12px; left: 12px; }
+        }
+
+        #pwa-install-btn {
+            position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); z-index: 300;
+            display: flex; align-items: center; gap: 6px; padding: 10px 18px;
+            background: linear-gradient(120deg, #3b82f6, #8b5cf6); color: #fff;
+            border-radius: 999px; font-size: 12px; font-weight: 800; cursor: pointer;
+            box-shadow: 0 10px 30px rgba(59,130,246,0.4); border: none;
+            transition: transform 0.25s var(--apple-bounce), opacity 0.3s ease;
+        }
+        #pwa-install-btn:hover { transform: translateX(-50%) translateY(-2px) scale(1.03); }
+        #pwa-install-btn.hidden { display: none; }
+        @media (max-width: 380px) { #pwa-install-btn { padding: 8px 14px; font-size: 11px; } }
+
+        /* NEW: Einmaliger dezenter Hinweis-Bubble (Easter-Egg-Tipp), verschwindet von selbst */
+        #search-hint-bubble {
+            position: fixed; bottom: 62px; left: 16px; z-index: 301; max-width: 240px;
+            background: rgba(15,23,42,0.92); color: #fff; border: 1px solid rgba(255,255,255,0.14);
+            border-radius: 14px; padding: 10px 14px; font-size: 12px; font-weight: 600; line-height: 1.4;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.35); cursor: pointer;
+            opacity: 0; transform: translateY(8px) scale(0.96); pointer-events: none;
+            transition: opacity 0.5s ease, transform 0.5s var(--apple-bounce);
+        }
+        #search-hint-bubble.hint-visible { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+        #search-hint-arrow { position: absolute; bottom: -6px; left: 20px; width: 12px; height: 12px; background: rgba(15,23,42,0.92); border-right: 1px solid rgba(255,255,255,0.14); border-bottom: 1px solid rgba(255,255,255,0.14); transform: rotate(45deg); }
+        @media (max-width: 640px) { #search-hint-bubble { bottom: 58px; } }
+
+        /* ========================================================= */
+        /* --- NEW: SHARE CARD DESIGN-AUSWAHL ------------------------ */
+        /* ========================================================= */
+        #sharecard-picker-overlay {
+            position: fixed; inset: 0; z-index: 950; background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center;
+            padding: 20px; opacity: 0; visibility: hidden; pointer-events: none;
+            transition: opacity 0.3s ease, visibility 0.3s;
+        }
+        #sharecard-picker-overlay.sc-active { opacity: 1; visibility: visible; pointer-events: auto; }
+        #sharecard-picker-box {
+            width: min(94vw, 480px); max-height: 86vh; overflow-y: auto;
+            background: rgba(15, 23, 42, 0.92); border: 1px solid rgba(255,255,255,0.12);
+            backdrop-filter: blur(30px) saturate(160%); border-radius: 24px; padding: 20px;
+            transform: scale(0.94) translateY(10px); opacity: 0; transition: transform 0.35s var(--apple-bounce), opacity 0.3s ease;
+        }
+        #sharecard-picker-overlay.sc-active #sharecard-picker-box { transform: scale(1) translateY(0); opacity: 1; }
+        #sharecard-picker-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+        #sharecard-picker-header h3 { color: #fff; font-size: 17px; font-weight: 800; margin: 0; }
+        #sharecard-picker-header button { width: 30px; height: 30px; border-radius: 50%; background: rgba(255,255,255,0.08); border: none; color: rgba(255,255,255,0.7); cursor: pointer; font-size: 14px; }
+        #sharecard-picker-header button:hover { background: rgba(255,255,255,0.15); color: #fff; }
+        #sharecard-picker-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        .sc-option { border-radius: 16px; overflow: hidden; cursor: pointer; border: 2px solid transparent; background: #000; transition: border-color 0.2s ease, transform 0.2s var(--apple-bounce); position: relative; }
+        .sc-option:hover, .sc-option:active { border-color: rgba(59,130,246,0.7); transform: translateY(-2px) scale(1.02); }
+        .sc-option canvas { display: block; width: 100%; height: auto; }
+        .sc-option .sc-label { position: absolute; bottom: 0; left: 0; right: 0; padding: 6px 8px; font-size: 11px; font-weight: 700; color: #fff; background: linear-gradient(to top, rgba(0,0,0,0.75), transparent); text-align: center; }
+        .sc-option .sc-spinner { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.4); font-size: 11px; font-weight: 700; }
+        #sharecard-picker-hint { text-align: center; color: rgba(255,255,255,0.35); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-top: 16px; margin-bottom: 0; }
+
+        #command-palette-overlay {
+            position: fixed; inset: 0; z-index: 900; background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px); display: flex; align-items: flex-start; justify-content: center;
+            padding-top: 12vh; opacity: 0; visibility: hidden; pointer-events: none;
+            transition: opacity 0.25s ease, visibility 0.25s;
+        }
+        #command-palette-overlay.cp-active { opacity: 1; visibility: visible; pointer-events: auto; }
+        #command-palette {
+            width: min(560px, 90vw); max-height: 60vh; display: flex; flex-direction: column;
+            background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255,255,255,0.12);
+            backdrop-filter: blur(30px) saturate(160%); -webkit-backdrop-filter: blur(30px) saturate(160%);
+            border-radius: 20px; box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+            transform: translateY(-16px) scale(0.97); opacity: 0; transition: transform 0.3s var(--apple-bounce), opacity 0.25s ease;
+            overflow: hidden;
+        }
+        #command-palette-overlay.cp-active #command-palette { transform: translateY(0) scale(1); opacity: 1; }
+        #cp-input-row { display: flex; align-items: center; gap: 10px; padding: 16px 18px; border-bottom: 1px solid rgba(255,255,255,0.08); color: rgba(255,255,255,0.4); flex-shrink: 0; }
+        #cp-input { flex: 1; background: transparent; border: none; outline: none; color: #fff; font-size: 16px; font-weight: 600; }
+        #cp-input::placeholder { color: rgba(255,255,255,0.35); }
+        #cp-input-row kbd { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.4); border: 1px solid rgba(255,255,255,0.15); border-radius: 5px; padding: 2px 6px; font-family: 'JetBrains Mono', monospace; }
+        #cp-results { overflow-y: auto; padding: 8px; }
+        .cp-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; cursor: pointer; color: rgba(255,255,255,0.85); transition: background 0.12s ease; }
+        .cp-item .cp-icon { font-size: 17px; width: 22px; text-align: center; flex-shrink: 0; }
+        .cp-item .cp-label { flex: 1; font-size: 13.5px; font-weight: 600; }
+        .cp-item .cp-hint { font-size: 10px; color: rgba(255,255,255,0.35); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .cp-item.cp-selected { background: rgba(59,130,246,0.25); color: #fff; }
+        .cp-empty { padding: 24px 12px; text-align: center; color: rgba(255,255,255,0.35); font-size: 13px; font-weight: 600; }
+
+        /* --- StandBy: Idle-Zustand (keine Musik) - Cover, EQ & Timeline ausblenden --- */
+        #standby-nowplaying.standby-idle #standby-track-art-wrap,
+        #standby-nowplaying.standby-idle #standby-progress-wrap {
+            display: none;
+        }
+        #standby-nowplaying.standby-idle #standby-track {
+            justify-content: center;
+        }
+        #standby-nowplaying.standby-idle #standby-track-text {
+            text-align: center;
+            flex: none;
+        }
+        #standby-nowplaying.standby-idle #standby-track-title,
+        #standby-nowplaying.standby-idle #standby-track-artist {
+            white-space: normal;
+            overflow: visible;
+            text-overflow: clip;
+        }
+
+        /* ========================================================= */
+        /* --- NEW: ADAPTIVE AMBIENT COLOR --------------------------- */
+        /* ========================================================= */
+        :root { --ambient-r: 59; --ambient-g: 130; --ambient-b: 246; --ambient-r2: 168; --ambient-g2: 85; --ambient-b2: 247; }
+        body.ambient-color-active .mesh-gradient::before {
+            background: radial-gradient(circle at 50% 50%, rgba(var(--ambient-r), var(--ambient-g), var(--ambient-b), 0.08) 0%, transparent 55%) !important;
+            transition: background 1.2s ease;
+        }
+        body.ambient-color-active .mesh-gradient::after {
+            background: radial-gradient(circle at 20% 30%, rgba(var(--ambient-r), var(--ambient-g), var(--ambient-b), 0.14) 0%, transparent 45%),
+                        radial-gradient(circle at 80% 70%, rgba(var(--ambient-r2), var(--ambient-g2), var(--ambient-b2), 0.1) 0%, transparent 45%) !important;
+            transition: background 1.2s ease;
+        }
+
+        /* ========================================================= */
+        /* --- NEW: SPATIAL TILT (3D Parallax) ----------------------- */
+        /* ========================================================= */
+        #media-container { perspective: 800px; }
+        body.tilt-active #media-container img#artwork,
+        body.tilt-active #media-container #offline-icon {
+            transform: rotateX(calc(var(--tilt-y, 0) * 1deg)) rotateY(calc(var(--tilt-x, 0) * -1deg)) translateZ(10px);
+            transition: transform 0.15s ease-out;
+            transform-style: preserve-3d;
+        }
+        body.tilt-active:not(.low-end) #media-container {
+            transform: rotateX(calc(var(--tilt-y, 0) * 0.6deg)) rotateY(calc(var(--tilt-x, 0) * -0.6deg));
+            transition: transform 0.15s ease-out;
+        }
+        body.tilt-active #media-container::after {
+            content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+            background: linear-gradient(calc(var(--tilt-x, 0) * 1deg + 120deg), rgba(255,255,255,0.25), transparent 60%);
+            opacity: calc(0.15 + var(--tilt-glare, 0) * 0.01);
+            transition: opacity 0.2s ease;
+        }
+        body.low-end #media-container, body.low-end #media-container * { transform: none !important; }
+    </style>
+    
+    <script>
+        const DEFAULT_SYNC_OFFSET = -800; 
+    </script>
+</head>
+<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen selection:bg-blue-500/30 overflow-x-hidden">
+
+    <div id="toast-container"></div>
+    <div id="confetti-container"></div>
+
+    <button id="back-to-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" aria-label="Nach oben scrollen" class="glass-card rounded-full shadow-xl border border-slate-200 dark:border-slate-700 text-blue-600 dark:text-blue-400 hover:ring-2 hover:ring-blue-500">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+    </button>
+
+    <div class="mesh-gradient"></div>
+    <div id="liquid-blobs">
+        <div class="blob-container">
+            <div class="blob blob-1"></div>
+            <div class="blob blob-2"></div>
+            <div class="blob blob-3"></div>
+            <div class="blob blob-4"></div>
+        </div>
+    </div>
+    
+    <div id="global-emp-shockwave"></div>
+
+    <!-- NEW: Dynamic Island 2.0 -->
+    <!-- NEW: Sprachauswahl (wie Android/iOS Einrichtungsassistent), nur beim ersten Besuch -->
+    <div id="language-picker-overlay" class="hidden">
+        <div id="language-picker-box">
+            <div id="lang-picker-titles">
+                <p>Wähle deine Sprache</p>
+                <p>Choose your language</p>
+                <p>Elige tu idioma</p>
+                <p>Choisis ta langue</p>
+                <p>Escolha seu idioma</p>
+                <p>Dilini seç</p>
+            </div>
+            <div id="lang-picker-grid"></div>
+        </div>
+    </div>
+
+    <div id="dynamic-island-ring" aria-hidden="true"></div>
+    <div id="dynamic-island" role="button" tabindex="0" aria-label="Song-Details öffnen, nach oben wischen zum Ausblenden">
+        <div id="dynamic-island-row">
+            <img id="di-art" src="" alt="" draggable="false" oncontextmenu="return false;">
+            <div class="di-text">
+                <p class="di-title" id="di-title"></p>
+                <p class="di-artist" id="di-artist"></p>
+            </div>
+            <div class="di-eq"><span></span><span></span><span></span></div>
+        </div>
+        <div id="di-progress-track"><div id="di-progress-bar"></div></div>
+    </div>
+
+    <!-- NEW: StandBy / Ambient Mode (Lockscreen-Style) -->
+    <div id="standby-overlay" onclick="toggleStandBy(false)" role="button" tabindex="0" aria-label="StandBy Modus verlassen">
+        <div id="standby-bg"></div>
+        <div id="standby-shift-wrapper">
+            <div id="standby-clockzone">
+                <div id="standby-clock">00:00</div>
+                <div id="standby-date"></div>
+            </div>
+            <div id="standby-nowplaying" class="standby-idle">
+                <div id="standby-track">
+                    <div id="standby-track-art-wrap">
+                        <img id="standby-track-art" alt="">
+                        <div id="standby-eq"><span></span><span></span><span></span></div>
+                    </div>
+                    <div id="standby-track-text">
+                        <p id="standby-track-title">Aktuell ist es ruhig...</p>
+                        <p id="standby-track-artist">Genieße die Stille</p>
+                    </div>
+                </div>
+                <div id="standby-progress-wrap">
+                    <div id="standby-progress-track"><div id="standby-progress-bar"></div></div>
+                    <div id="standby-progress-times">
+                        <span id="standby-time-current">0:00</span>
+                        <span id="standby-time-total">0:00</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <p id="standby-hint">Zum Verlassen tippen</p>
+    </div>
+    
+    <!-- NEW: Command Palette (⌘K Spotlight-Suche) -->
+    <!-- NEW: Share Card Design-Auswahl -->
+    <div id="sharecard-picker-overlay" onclick="if(event.target===this) closeSharecardPicker()">
+        <div id="sharecard-picker-box">
+            <div id="sharecard-picker-header">
+                <h3>Design wählen</h3>
+                <button onclick="closeSharecardPicker()" id="btn-sharecard-close" aria-label="Schließen">✕</button>
+            </div>
+            <div id="sharecard-picker-grid"></div>
+            <p id="sharecard-picker-hint">Antippen zum Herunterladen</p>
+        </div>
+    </div>
+
+    <div id="command-palette-overlay" onclick="if(event.target===this) closeCommandPalette()">
+        <div id="command-palette">
+            <div id="cp-input-row">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <input id="cp-input" type="text" placeholder="Befehl suchen oder Seite durchsuchen..." autocomplete="off" spellcheck="false">
+                <kbd>ESC</kbd>
+            </div>
+            <div id="cp-results"></div>
+        </div>
+    </div>
+
+    <button id="cp-trigger" onclick="openCommandPalette()" aria-label="Befehlspalette öffnen" title="Spotlight-Suche (⌘K)">
+        <span>⌘</span><span>K</span>
+    </button>
+
+    <!-- NEW: Einmaliger, dezenter Hinweis auf die Suche/versteckte Interaktionen -->
+    <div id="search-hint-bubble" onclick="dismissSearchHint()">
+        <p>💡 Tipp: Tippe hier Wörter ein - manche lösen Überraschungen aus...</p>
+        <span id="search-hint-arrow"></span>
+    </div>
+
+    <button id="pwa-install-btn" onclick="triggerInstallPrompt()" class="hidden" aria-label="Als App installieren" title="Zum Home-Bildschirm hinzufügen">
+        📲 App installieren
+    </button>
+
+    <!-- UI CONTROLS -->
+    <div id="ui-controls" class="fixed top-2 right-2 xs:top-4 xs:right-4 sm:top-6 sm:right-6 z-[110] flex items-center gap-1.5 sm:gap-3 bg-white/10 dark:bg-black/10 backdrop-blur-sm p-1 rounded-2xl sm:rounded-3xl border border-white/20 dark:border-slate-800/50 shadow-sm">
+        <button id="liquid-glass-toggle" aria-label="Liquid Glass umschalten" class="group p-2 sm:p-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-lg rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-700 hover:ring-2 hover:ring-cyan-500 transition-all active:scale-90" title="Apple Liquid Glass Modus">
+            <svg id="liquid-glass-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-500 transition-colors group-hover:text-cyan-500 sm:w-6 sm:h-6"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+        </button>
+
+        <button id="tutorial-start-btn" aria-label="Tutorial starten" class="group p-2 sm:p-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-lg rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-700 hover:ring-2 hover:ring-purple-500 transition-all active:scale-90" title="Tutorial starten">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-500 transition-colors group-hover:text-purple-500 sm:w-6 sm:h-6"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+        </button>
+
+        <button id="standby-toggle" onclick="toggleStandBy()" aria-label="StandBy Modus" class="group p-2 sm:p-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-lg rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-700 hover:ring-2 hover:ring-orange-500 transition-all active:scale-90" title="StandBy Modus (Ambient Display)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-500 transition-colors group-hover:text-orange-500 sm:w-6 sm:h-6"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M7 20h10"/><path d="M9 16v4"/><path d="M15 16v4"/></svg>
+        </button>
+
+        <button id="perf-toggle" aria-label="Performance Modus" class="group p-2 sm:p-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-lg rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-700 hover:ring-2 hover:ring-green-500 transition-all active:scale-90" title="Low-End Modus (Deaktiviert Animationen)">
+            <svg id="perf-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-500 transition-colors group-hover:text-green-500 sm:w-6 sm:h-6"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        </button>
+
+        <button id="theme-toggle" aria-label="Darkmode umschalten" class="group p-2 sm:p-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-lg rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-700 hover:ring-2 hover:ring-blue-500 transition-all active:scale-90">
+            <span id="theme-icon-dark" class="hidden dark:block text-yellow-400 group-hover:rotate-12 transition-transform">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="sm:w-6 sm:h-6"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+            </span>
+            <span id="theme-icon-light" class="block dark:hidden text-slate-700 group-hover:-rotate-12 transition-transform">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="sm:w-6 sm:h-6"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+            </span>
+        </button>
+    </div>
+
+    <!-- Das Tutorial Fenster -->
+    <div id="tutorial-wrapper" class="fixed inset-0 z-[310] hidden items-center justify-center pointer-events-none">
+        <div id="tutorial-box" class="flex-col bg-white dark:bg-slate-800 border-2 border-blue-500 rounded-[2rem] pointer-events-auto p-6 sm:p-8 w-[95%] max-w-sm relative shadow-2xl">
+            <div class="text-[10px] font-black uppercase tracking-widest text-blue-500 mb-2" id="tutorial-step-indicator">Schritt 1/4</div>
+            <h3 id="tutorial-title" class="text-xl sm:text-2xl font-extrabold mb-2 text-slate-900 dark:text-white">Willkommen in meiner Welt!</h3>
+            <p id="tutorial-text" class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mb-8 font-medium">Das ist mein persönliches Portfolio. Hier erfährst du alles Wichtige über mich, meinen Weg in die Systemintegration und was mich antreibt. Mein Hyperfokus ist hier Programm!</p>
+            <div class="flex justify-between items-center mt-auto">
+                <button id="tutorial-skip" class="text-[10px] sm:text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-bold transition-colors">Überspringen</button>
+                <button id="tutorial-next" class="bg-blue-600 text-white px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-500/30 transition-all active:scale-95">Weiter</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Das Haupt-Modal -->
+    <div id="modal-overlay" class="fixed inset-0 bg-slate-900/40 dark:bg-black/80 z-[200] hidden items-center justify-center p-2 sm:p-4">
+        <div class="modal-content glass-card w-full max-w-xl rounded-[1rem] xxs:rounded-[1.5rem] sm:rounded-[2.5rem] p-4 xxs:p-5 xs:p-6 sm:p-10 relative border border-white/20 dark:border-white/5 max-h-[90vh] overflow-y-auto">
+            <button id="close-modal" aria-label="Modal schließen" class="absolute top-2 right-2 xxs:top-3 xxs:right-3 sm:top-6 sm:right-6 p-1.5 sm:p-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-blue-500 transition-all">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="sm:w-6 sm:h-6"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            </button>
+            <div id="modal-body"></div>
+        </div>
+    </div>
+
+    <main id="main-content" class="max-w-4xl mx-auto px-4 xs:px-6 sm:px-8 pt-28 xs:pt-36 sm:pt-40 pb-16 xxs:pb-20 sm:pb-32">
+        
+        <header id="header-section" class="mb-10 xxs:mb-12 xs:mb-16 sm:mb-20 reveal mt-4 xs:mt-0 rounded-2xl relative z-10">
+            <div class="inline-flex items-center gap-2 px-2 py-1 sm:px-3 sm:py-1 mb-4 xxs:mb-6 xs:mb-10 sm:mb-16 text-[8px] xxs:text-[10px] xs:text-xs font-bold tracking-widest text-blue-600 uppercase bg-blue-100 dark:bg-blue-500/10 dark:text-blue-400 rounded-full shadow-sm">
+                <span class="relative flex h-1.5 w-1.5 sm:h-2 sm:w-2">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-1.5 w-1.5 sm:h-2 sm:w-2 bg-blue-500"></span>
+                </span>
+                <span id="systems-integration-badge">Systems Integration</span>
+            </div>
+            <p id="time-greeting" class="text-xs xxs:text-sm sm:text-base font-bold text-blue-600 dark:text-blue-400 mb-2 xxs:mb-3"></p>
+            <h1 id="header-main-title" class="text-2xl xxs:text-3xl xs:text-4xl sm:text-5xl md:text-7xl font-extrabold mb-3 xxs:mb-4 sm:mb-8 py-1 sm:py-2 tracking-tighter bg-gradient-to-br from-slate-900 via-slate-800 to-slate-600 dark:from-white dark:via-slate-200 dark:to-slate-400 bg-clip-text text-transparent leading-tight break-words drop-shadow-md">
+                Über Gamingpig
+            </h1>
+            <p id="header-intro-p1" class="text-sm xxs:text-base xs:text-lg sm:text-xl md:text-2xl leading-relaxed text-slate-700 dark:text-slate-300 font-medium drop-shadow-sm">
+                Hallo! Ich bin Gamingpig, im Jugendalter und technikaffin. Ich habe ADHS und mein <span class="text-blue-600 dark:text-blue-400 font-bold italic">Hyperfokus</span> ist meine Superkraft, dadurch kann ich komplexe Probleme lösen, wo andere schon längst aufgegeben hätten.
+            </p>
+            <p id="header-intro-p2" class="mt-3 xxs:mt-4 sm:mt-6 text-xs xxs:text-sm xs:text-base sm:text-lg text-slate-600 dark:text-slate-400 leading-relaxed drop-shadow-sm">
+                In meiner Freizeit beschäftige ich mich mit Gaming und Streaming. Ich bin zwar etwas schüchtern, jedoch an sich ein sehr freundlicher und gelassener Mensch. Ich repariere auch gerne IT Geräte (Laptops, Tablets, PCs, Smartphones usw.).
+            </p>
+        </header>
+
+        <!-- AUSBILDUNG & ALLTAG: Gequetschtes Grid, 2 Spalten -->
+        <section id="cards-section" class="mb-12 xxs:mb-16 xs:mb-20 sm:mb-24 reveal rounded-3xl relative z-10">
+            <h2 id="cards-section-title" class="text-lg xxs:text-xl xs:text-2xl sm:text-3xl font-bold mb-4 xxs:mb-6 sm:mb-10 text-blue-600 dark:text-blue-500 border-b-2 sm:border-b-4 border-blue-600 dark:border-blue-500 pb-1.5 xxs:pb-2 sm:pb-3 inline-block break-words">
+                Real Talk: Ausbildung & Alltag
+            </h2>
+            
+            <div class="grid grid-cols-2 gap-2.5 xxs:gap-3 xs:gap-4 sm:gap-5">
+                <div onclick="openModal('status')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group">
+                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-blue-500/10 text-blue-600 dark:text-blue-500 rounded-lg xxs:rounded-xl group-hover:bg-blue-500 group-hover:text-white transition-all shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    </div>
+                    <div>
+                        <h3 id="card-title-status" class="font-bold text-sm xxs:text-base sm:text-lg mb-0.5 xxs:mb-1">Status</h3>
+                        <p id="card-teaser-status" class="text-slate-700 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">Ausbildung zum Fachinformatiker...</p>
+                    </div>
+                </div>
+
+                <div onclick="openModal('background')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group">
+                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-purple-500/10 text-purple-600 dark:text-purple-500 rounded-lg xxs:rounded-xl group-hover:bg-purple-500 group-hover:text-white transition-all shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                    </div>
+                    <div>
+                        <h3 id="card-title-background" class="font-bold text-sm xxs:text-base sm:text-lg mb-0.5 xxs:mb-1">Hintergrund</h3>
+                        <p id="card-teaser-background" class="text-slate-700 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">Im Jugendalter & in Ausbildung...</p>
+                    </div>
+                </div>
+
+                <div onclick="openModal('freizeit')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group">
+                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-orange-500/10 text-orange-600 dark:text-orange-500 rounded-lg xxs:rounded-xl group-hover:bg-orange-500 group-hover:text-white transition-all shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 12h.01M18 12h.01M15 10h.01M15 14h.01"/></svg>
+                    </div>
+                    <div>
+                        <h3 id="card-title-freizeit" class="font-bold text-sm xxs:text-base sm:text-lg mb-0.5 xxs:mb-1">Freizeit</h3>
+                        <p id="card-teaser-freizeit" class="text-slate-700 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">Forza Horizon 5 & Streaming...</p>
+                    </div>
+                </div>
+
+                <div onclick="openModal('menschen')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group">
+                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-red-500/10 text-red-600 dark:text-red-500 rounded-lg xxs:rounded-xl group-hover:bg-red-500 group-hover:text-white transition-all shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+                    </div>
+                    <div>
+                        <h3 id="card-title-menschen" class="font-bold text-sm xxs:text-base sm:text-lg mb-0.5 xxs:mb-1">Menschen</h3>
+                        <p id="card-teaser-menschen" class="text-slate-700 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">Tom, Danilo, Jakob & Lukas...</p>
+                    </div>
+                </div>
+
+                <div onclick="openModal('techstack')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group">
+                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 rounded-lg xxs:rounded-xl group-hover:bg-emerald-500 group-hover:text-white transition-all shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="M20 16V7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v9m16 0H4m16 0 1.28 2.55a1 1 0 0 1-.9 1.45H3.62a1 1 0 0 1-.9-1.45L4 16"/></svg>
+                    </div>
+                    <div>
+                        <h3 id="card-title-techstack" class="font-bold text-sm xxs:text-base sm:text-lg mb-0.5 xxs:mb-1">Tech Stack</h3>
+                        <p id="card-teaser-techstack" class="text-slate-700 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">Hardware, Linux, Windows...</p>
+                    </div>
+                </div>
+
+                <div onclick="openModal('setup')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group">
+                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-cyan-500/10 text-cyan-600 dark:text-cyan-500 rounded-lg xxs:rounded-xl group-hover:bg-cyan-500 group-hover:text-white transition-all shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
+                    </div>
+                    <div>
+                        <h3 id="card-title-setup" class="font-bold text-sm xxs:text-base sm:text-lg mb-0.5 xxs:mb-1">Setup</h3>
+                        <p id="card-teaser-setup" class="text-slate-700 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">DT 770 Pro & Rockster Cross...</p>
+                    </div>
+                </div>
+
+                <div onclick="openModal('labor')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group">
+                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-yellow-500/10 text-yellow-600 dark:text-yellow-500 rounded-lg xxs:rounded-xl group-hover:bg-yellow-500 group-hover:text-white transition-all shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="M10 2v7.31"/><path d="M14 9.3V1.99"/><path d="M8.5 2h7"/><path d="M14 9.3a6.5 6.5 0 1 1-4 0"/><path d="M5.52 16h12.96"/></svg>
+                    </div>
+                    <div>
+                        <h3 id="card-title-labor" class="font-bold text-sm xxs:text-base sm:text-lg mb-0.5 xxs:mb-1">Labor</h3>
+                        <p id="card-teaser-labor" class="text-slate-700 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">Server & Docker...</p>
+                    </div>
+                </div>
+
+                <div onclick="openModal('contact')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group">
+                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-indigo-500/10 text-indigo-600 dark:text-indigo-500 rounded-lg xxs:rounded-xl group-hover:bg-indigo-500 group-hover:text-white transition-all shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                    </div>
+                    <div>
+                        <h3 id="card-title-contact" class="font-bold text-sm xxs:text-base sm:text-lg mb-0.5 xxs:mb-1">Kontakt</h3>
+                        <p id="card-teaser-contact" class="text-slate-700 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">Connect mit mir...</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="cards-click-hint" class="text-center text-[10px] xxs:text-xs text-slate-500 dark:text-slate-400 mt-2 xxs:mt-3">Klicke auf die Karten für Details.</div>
+        </section>
+
+        <!-- MUSIC DASHBOARD INTEGRATION -->
+        <section id="music-section" class="mb-12 xxs:mb-16 xs:mb-20 sm:mb-24 reveal relative rounded-3xl">
+            <h2 id="music-section-title" class="text-lg xxs:text-xl xs:text-2xl sm:text-3xl font-bold mb-1.5 xxs:mb-2 text-blue-600 dark:text-blue-500 border-b-2 sm:border-b-4 border-blue-600 dark:border-blue-500 pb-1.5 xxs:pb-2 sm:pb-3 inline-block break-words">
+                Was bei mir gerade läuft
+            </h2>
+            <p id="music-sync-note" class="text-[8px] xxs:text-[10px] xs:text-xs text-slate-600 dark:text-slate-400 mb-4 xxs:mb-6 sm:mb-10">*Hinweis: Der Time-Sync ist auf -800ms optimiert.</p>
+            
+            <div id="mini-player-toggle" onclick="toggleDashboard()" role="button" tabindex="0" class="glass-card w-full max-w-[400px] mx-auto p-2 xxs:p-3 sm:p-4 rounded-[1.2rem] xxs:rounded-2xl sm:rounded-[2rem] flex items-center justify-between cursor-pointer group mb-3 xxs:mb-4 sm:mb-6 relative z-20 hover:scale-[1.01] transition-all">
+                <div class="flex items-center gap-2 xxs:gap-3 sm:gap-4 flex-1 min-w-0">
+                    <div id="mini-icon-bg" class="w-8 h-8 xxs:w-10 xxs:h-10 sm:w-12 sm:h-12 shrink-0 rounded-lg xxs:rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-500 flex items-center justify-center transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                    </div>
+                    <div class="text-left flex-1 min-w-0 py-0.5 xxs:py-1">
+                        <p id="mini-title" class="text-[10px] xxs:text-xs sm:text-sm font-bold text-slate-900 dark:text-white break-words whitespace-normal leading-snug transition-colors">Dashboard minimiert</p>
+                        <p id="mini-status" class="text-[8px] xxs:text-[10px] sm:text-xs text-slate-600 dark:text-slate-400 break-words whitespace-normal mt-0.5 leading-snug transition-colors">Klicken zum Öffnen</p>
+                    </div>
+                </div>
+                <div class="p-1 xxs:p-1.5 sm:p-2 shrink-0 bg-slate-200/50 dark:bg-white/5 text-slate-700 dark:text-slate-400 rounded-full group-hover:bg-blue-500/10 group-hover:text-blue-500 transition-colors ml-1 xxs:ml-2">
+                    <svg id="music-chevron" class="transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] xxs:w-4 xxs:h-4 sm:w-5 sm:h-5" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                </div>
+            </div>
+
+            <div id="music-card-layout-wrapper" class="hidden">
+                <div id="music-card-wrapper" class="relative origin-top flex justify-center w-full">
+                    
+                    <div id="main-music-card" class="glass-card offline w-full max-w-[400px] mx-auto p-3 xxs:p-4 xs:p-6 md:p-10 rounded-[1.5rem] xxs:rounded-3xl md:rounded-[3rem] text-center relative z-10 flex flex-col justify-center items-center">
+                        
+                        <div class="absolute inset-0 rounded-[inherit] overflow-hidden z-0 pointer-events-none">
+                            <div id="ambient-bg"></div>
+                            <video id="canvas-video" class="absolute inset-0 w-full h-full object-cover z-[1] opacity-0 transition-opacity duration-1000" loop muted playsinline></video>
+                            <div class="absolute inset-0 bg-black/10 z-[2]"></div>
+                        </div>
+
+                        <div id="ambilight-glow"></div>
+
+                        <div id="particles-container">
+                        <div class="particle p1"></div><div class="particle p2"></div>
+                        <div class="particle p3"></div><div class="particle p4"></div>
+                        <div class="particle p5"></div><div class="particle p6"></div>
+                        <div class="particle p7"></div><div class="particle p8"></div>
+                        <div class="particle p1" style="left:15%; animation-delay:1.2s"></div>
+                        <div class="particle p3" style="left:65%; animation-delay:2.7s"></div>
+                        <div class="particle p5" style="left:85%; animation-delay:0.3s"></div>
+                        <div class="particle p8" style="left:45%; animation-delay:3.1s"></div>
+                    </div>
+
+                    <!-- Das Lyrics Fenster -->
+                    <div id="lyrics-overlay" class="absolute inset-0 bg-slate-950/85 backdrop-blur-2xl rounded-[1.5rem] xxs:rounded-3xl md:rounded-[3rem] flex-col p-2 xxs:p-3 xs:p-6 md:p-8 z-40 transition-all duration-500 opacity-0 pointer-events-none flex border border-white/10 invisible overflow-hidden">
+                        <div id="lyrics-ambient-bg"></div>
+                        <div id="lyrics-ambient-tint"></div>
+                        
+                        <div class="flex items-center justify-between gap-1.5 xxs:gap-2 sm:gap-4 mb-3 xxs:mb-4 sm:mb-6 shrink-0 w-full bg-white/10 p-1.5 xxs:p-2 xs:p-3 sm:p-4 rounded-lg xxs:rounded-xl sm:rounded-2xl border border-white/10 relative z-[100]">
+                            <div class="flex items-center gap-1.5 xxs:gap-2 sm:gap-3 min-w-0 flex-1">
+                                    <img id="lyrics-mini-art" src="" alt="Album Art" class="w-6 h-6 xxs:w-8 xxs:h-8 sm:w-10 sm:h-10 rounded shadow-md object-cover shrink-0">
+                                    <div class="text-left min-w-0">
+                                        <p id="lyrics-mini-title" class="text-[10px] xxs:text-xs sm:text-sm font-bold text-white truncate" data-i18n-placeholder="true">Titel</p>
+                                        <p id="lyrics-mini-artist" class="text-[8px] xxs:text-[10px] sm:text-xs text-white/60 truncate" data-i18n-placeholder="true">Artist</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="relative flex items-center">
+                                    <div id="apple-style-badge" class="px-1.5 xxs:px-2 py-1 mr-1 xxs:mr-2 bg-gradient-to-r from-pink-500/20 to-red-500/20 text-pink-300 text-[8px] xxs:text-[10px] sm:text-xs rounded font-bold shrink-0 whitespace-nowrap hidden items-center gap-1">
+                                        🍎 Apple Music Style
+                                    </div>
+                                    <div id="sync-status-badge" class="px-1.5 xxs:px-2 py-1 mr-1 xxs:mr-2 bg-blue-500/20 text-blue-400 text-[8px] xxs:text-[10px] sm:text-xs rounded font-bold shrink-0 whitespace-nowrap hidden">
+                                        <span id="lyrics-synced-label">Lyrics: Synced</span>
+                                    </div>
+
+                                    <button onclick="toggleLyricsSettings()" id="btn-lyrics-settings" aria-label="Lyrics Einstellungen" class="p-1 xxs:p-1.5 sm:p-2 hover:bg-white/10 rounded-full transition-colors text-white shrink-0 mr-0.5 xxs:mr-1 sm:mr-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-4 xxs:h-4 sm:w-5 sm:h-5"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/></svg>
+                                    </button>
+                                    
+                                    <!-- Das Settings Menü Fenster -->
+                                    <div id="lyrics-settings-menu" class="absolute top-full right-0 mt-2 xxs:mt-3 sm:mt-4 bg-slate-900 border border-slate-700 rounded-xl p-1.5 xxs:p-2 sm:p-3 shadow-2xl hidden flex-col gap-1.5 min-w-[140px] xxs:min-w-[160px] sm:min-w-[180px] z-[9999] origin-top-right max-h-[350px] overflow-y-auto">
+                                        <p id="label-animation-style" class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1 px-1 sticky top-0 bg-slate-900 py-1 z-10">Animation Style</p>
+                                        <button onclick="setLyricsStyle('fill')" id="btn-style-fill" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Classic Fill</button>
+                                        <button onclick="setLyricsStyle('bounce')" id="btn-style-bounce" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Bouncy Pop</button>
+                                        <button onclick="setLyricsStyle('fade')" id="btn-style-fade" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Smooth Fade</button>
+                                        <button onclick="setLyricsStyle('blur')" id="btn-style-blur" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Smooth Focus</button>
+                                        <button onclick="setLyricsStyle('wave')" id="btn-style-wave" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Wave Slide</button>
+                                        <button onclick="setLyricsStyle('wave-char')" id="btn-style-wave-char" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Wave Slide (Letters)</button>
+                                        <button onclick="setLyricsStyle('neon')" id="btn-style-neon" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Neon Glow</button>
+                                        <button onclick="setLyricsStyle('typewriter')" id="btn-style-typewriter" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Typewriter</button>
+                                        <button onclick="setLyricsStyle('pop')" id="btn-style-pop" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Elastic Pop</button>
+                                        <button onclick="setLyricsStyle('karaoke')" id="btn-style-karaoke" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Karaoke Bar</button>
+                                        <button onclick="setLyricsStyle('glitch')" id="btn-style-glitch" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Cyber Glitch</button>
+                                        <button onclick="setLyricsStyle('flip')" id="btn-style-flip" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">3D Flip</button>
+                                        <button onclick="setLyricsStyle('zoom')" id="btn-style-zoom" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Zoom Slide</button>
+                                        <button onclick="setLyricsStyle('zoom-char')" id="btn-style-zoom-char" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Zoom Slide (Letters)</button>
+                                        
+                                        <div class="h-px w-full bg-slate-700 my-1"></div>
+                                        <p id="label-overkill-shaders" class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-red-500 mb-1 px-1">Overkill Shaders</p>
+                                        <button onclick="setLyricsStyle('kinetic')" id="btn-style-kinetic" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Kinetic Impact</button>
+                                        <button onclick="setLyricsStyle('hellfire')" id="btn-style-hellfire" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Hellfire Burn</button>
+                                        <button onclick="setLyricsStyle('hologram')" id="btn-style-hologram" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Hologram Jitter</button>
+                                        <button onclick="setLyricsStyle('matrix')" id="btn-style-matrix" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Matrix Rain</button>
+                                        <button onclick="setLyricsStyle('liquid')" id="btn-style-liquid" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Viscous Liquid</button>
+                                        <button onclick="setLyricsStyle('cyberpunk')" id="btn-style-cyberpunk" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Cyberpunk Glitch</button>
+                                        <button onclick="setLyricsStyle('ghost')" id="btn-style-ghost" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Ghost Trail</button>
+                                        <button onclick="setLyricsStyle('rainbow')" id="btn-style-rainbow" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Rainbow Cycle</button>
+                                        <button onclick="setLyricsStyle('shake')" id="btn-style-shake" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Word Shake</button>
+                                        <button onclick="setLyricsStyle('underline')" id="btn-style-underline" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Underline Sweep</button>
+
+                                        <div class="h-px w-full bg-slate-700 my-1"></div>
+                                        <p id="label-badge-new" class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-emerald-400 mb-1 px-1">Brandneu</p>
+                                        <button onclick="setLyricsStyle('ember')" id="btn-style-ember" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Ember Glow</button>
+                                        <button onclick="setLyricsStyle('ice')" id="btn-style-ice" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Ice Crystal</button>
+                                        <button onclick="setLyricsStyle('chromatic')" id="btn-style-chromatic" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Chromatic Split</button>
+                                        <button onclick="setLyricsStyle('bubble')" id="btn-style-bubble" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Bubble Pop</button>
+                                        <button onclick="setLyricsStyle('flagwave')" id="btn-style-flagwave" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Flag Wave</button>
+                                        <button onclick="setLyricsStyle('spotlight')" id="btn-style-spotlight" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Spotlight Sweep</button>
+                                        <button onclick="setLyricsStyle('binary')" id="btn-style-binary" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Binary Decode</button>
+                                        <button onclick="setLyricsStyle('paint')" id="btn-style-paint" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Paint Stroke</button>
+                                        <button onclick="setLyricsStyle('vinyl')" id="btn-style-vinyl" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Vinyl Retro</button>
+                                        <button onclick="setLyricsStyle('starlight')" id="btn-style-starlight" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Starlight</button>
+                                        <button onclick="setLyricsStyle('applemusic')" id="btn-style-applemusic" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">🍎 Apple Music</button>
+                                        <button onclick="setLyricsStyle('applemusicpro')" id="btn-style-applemusicpro" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">🍏 Apple Music Pro</button>
+
+                                        <div class="h-px w-full bg-slate-700 my-1"></div>
+                                        <p id="label-features" class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1 px-1">Features</p>
+                                        <button onclick="toggleCanvasVideo()" id="btn-toggle-canvas" class="text-left text-[10px] xxs:text-xs sm:text-sm text-green-400 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">Canvas: AN</button>
+                                        <button onclick="toggleAmbientColor()" id="btn-toggle-ambient" class="text-left text-[10px] xxs:text-xs sm:text-sm text-cyan-400 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">Ambient Color: AN</button>
+                                        <button onclick="toggleTilt()" id="btn-toggle-tilt" class="text-left text-[10px] xxs:text-xs sm:text-sm text-purple-400 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">Spatial Tilt: AN</button>
+                                        <button onclick="generateShareCard()" id="btn-share-card" class="text-left text-[10px] xxs:text-xs sm:text-sm text-pink-400 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">🎴 Share Card erstellen</button>
+                                        
+                                        <div class="h-px w-full bg-slate-700 my-1"></div>
+                                        <div class="flex justify-between items-center px-1 mb-1">
+                                            <p id="label-live-sync" class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-blue-400">Live Sync Offset</p>
+                                            <button onclick="resetSyncOffset(this)" id="btn-resync" class="text-[7px] xxs:text-[8px] bg-blue-500/20 hover:bg-blue-500/40 text-blue-300 px-1.5 py-0.5 rounded transition-colors uppercase font-bold tracking-wider active:scale-95">Re-Sync</button>
+                                        </div>
+                                        <div class="px-2 py-1 flex items-center gap-2">
+                                            <input type="range" id="sync-slider" min="-5000" max="5000" step="50" value="-800" class="w-full h-1 bg-slate-600 rounded-lg appearance-none cursor-pointer">
+                                            <span id="sync-value" class="text-[8px] xxs:text-[10px] text-white font-mono w-6 xxs:w-8 text-right">-800</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <button onclick="toggleLyrics(false)" id="btn-lyrics-close" aria-label="Lyrics schließen" class="p-1 xxs:p-1.5 sm:p-2 hover:bg-white/10 rounded-full transition-colors text-white shrink-0">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-4 xxs:h-4 sm:w-5 sm:h-5"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="relative flex-1 overflow-hidden mask-image-gradient w-full max-w-2xl mx-auto">
+                                <div id="lyrics-container" class="absolute inset-0 overflow-y-auto overflow-x-hidden text-left w-full h-full pb-6 sm:pb-10 lyrics-style-fill">
+                                    <div id="lyrics-content" class="transition-all flex flex-col items-start w-full min-h-full"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Das Music Picker Fenster -->
+                        <div id="music-picker" class="absolute inset-0 bg-black/60 backdrop-blur-xl rounded-[1.5rem] xxs:rounded-3xl md:rounded-[3rem] hidden flex-col justify-center p-4 xxs:p-6 sm:p-10 gap-2 xxs:gap-4 z-50">
+                            <p id="label-choose-service" class="text-[8px] xxs:text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1 sm:mb-2">Service wählen</p>
+                            <div id="dynamic-links-container" class="flex flex-col gap-1.5 xxs:gap-2 sm:gap-3 w-full max-h-[120px] xxs:max-h-[140px] sm:max-h-[180px] overflow-y-auto" style="scrollbar-width: thin;"></div>
+                            <p id="link-none" class="text-white/50 text-[10px] xxs:text-xs sm:text-sm font-bold" style="display: none;">Keine Links gefunden</p>
+                            <button onclick="toggleMusicPicker(false)" id="btn-cancel-picker" class="text-white/50 text-[8px] xxs:text-[10px] sm:text-xs mt-1 xxs:mt-2 sm:mt-4 hover:text-white transition-colors">Abbrechen</button>
+                        </div>
+
+                        <div id="music-header-tag" class="relative z-10 text-[6px] xxs:text-[8px] xs:text-[10px] font-black text-blue-500 uppercase tracking-[0.1em] xxs:tracking-[0.2em] xs:tracking-[0.4em] mb-2 xxs:mb-3 sm:mb-4 md:mb-6 transition-all shrink-0">
+                            Gamingpig is Offline
+                        </div>
+
+                        <div id="media-container" onclick="toggleMusicPicker(true)" role="button" tabindex="0" class="relative z-10 w-full max-w-[100px] xxs:max-w-[140px] xs:max-w-[180px] sm:max-w-[240px] md:max-w-[280px] aspect-square shrink-0 rounded-xl xxs:rounded-2xl mx-auto mb-2 xxs:mb-3 sm:mb-4 md:mb-6 overflow-hidden flex items-center justify-center bg-[#121212] shadow-[0_10px_30px_rgba(0,0,0,0.8)] sm:shadow-[0_20px_40px_rgba(0,0,0,0.8)] cursor-pointer hover:ring-2 hover:ring-white/20 transition-all">
+                            <img id="artwork" src="" alt="Album Artwork" class="w-full h-full object-cover">
+                            <div id="offline-icon" class="absolute text-2xl xxs:text-4xl sm:text-6xl" aria-hidden="true">🌙</div>
+                        </div>
+
+                        <div id="track-info-container" class="relative z-10 mb-2 xxs:mb-4 sm:mb-6 text-left px-1 sm:px-2 w-full shrink-0">
+                            <h2 id="track-title" class="text-base xxs:text-lg xs:text-xl sm:text-2xl md:text-3xl font-extrabold text-white break-words leading-[1.1] mb-0.5 xxs:mb-1 sm:mb-2 transition-all">Aktuell ist es ruhig...</h2>
+                            <p id="track-artist" class="text-white/70 text-xs xxs:text-sm sm:text-lg font-medium">Genieße die Stille</p>
+                        </div>
+
+                        <div id="progress-container" class="relative z-10 w-full px-1 sm:px-2 mb-2 xxs:mb-4 sm:mb-6 shrink-0 transition-all">
+                            <div class="flex justify-between text-[7px] xxs:text-[9px] xs:text-[11px] font-mono text-white/60 mb-0.5 xxs:mb-1 sm:mb-2">
+                                <span id="time-current">0:00</span>
+                                <span id="time-total">0:00</span>
+                            </div>
+                            <div class="h-0.5 xxs:h-1 sm:h-1.5 w-full bg-white/10 rounded-full overflow-hidden relative">
+                                <div id="progress-bar" class="absolute top-0 left-0 h-full bg-white w-0 transition-all duration-300 ease-linear rounded-full"></div>
+                            </div>
+                        </div>
+
+                        <div id="controls-container" class="relative z-10 flex items-center justify-between px-1 sm:px-2 w-full shrink-0 transition-all">
+                            <div class="inline-flex items-center gap-1 xxs:gap-1.5 xs:gap-2.5 px-2 py-1 xxs:px-3 xxs:py-1.5 xs:px-4 xs:py-2 bg-white/5 rounded-full text-[0.4rem] xxs:text-[0.6rem] xs:text-[0.7rem] font-extrabold uppercase tracking-[0.5px] xxs:tracking-[1px] xs:tracking-[2px] border border-white/10 text-white">
+                                <span id="status-dot" class="h-1 w-1 xxs:h-1.5 xxs:w-1.5 xs:h-2 xs:w-2 rounded-full bg-blue-500"></span>
+                                <div class="eq-bars hidden xxs:flex">
+                                    <div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div>
+                                </div>
+                                <span id="status-text">Zen Mode</span>
+                            </div>
+                            
+                            <button onclick="toggleLyrics(true)" id="btn-lyrics-show" aria-label="Lyrics anzeigen" class="p-1 xxs:p-1.5 xs:p-2 text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all" title="Lyrics anzeigen">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-4 xxs:h-4 xs:w-5 xs:h-5"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- EINSPALTIGES GRID FÜR GAMES UND SOCIALS -->
+        <div class="grid grid-cols-1 gap-3 xxs:gap-4 xs:gap-6 sm:gap-8 reveal">
+            <!-- Tic-Tac-Toe -->
+            <div class="glass-card p-3 xxs:p-5 xs:p-6 sm:p-8 rounded-[1rem] xxs:rounded-[1.5rem] sm:rounded-[2.5rem] group overflow-hidden relative border border-slate-200 dark:border-slate-800">
+                <div class="flex items-center gap-2 xxs:gap-3 sm:gap-5 mb-2 xxs:mb-4 sm:mb-6">
+                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-indigo-500/10 text-indigo-600 dark:text-indigo-500 rounded-lg xxs:rounded-xl sm:rounded-2xl group-hover:rotate-12 transition-transform">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-6 xxs:h-6 sm:w-8 sm:h-8"><path d="M3 3h18v18H3zM21 9H3M21 15H3M9 3v18M15 3v18"/></svg>
+                    </div>
+                    <h2 id="tictactoe-title" class="text-base xxs:text-xl xs:text-2xl sm:text-3xl font-bold">Tic-Tac-Toe</h2>
+                </div>
+                <a href="https://gamingpig.github.io/tic-tac-toe-by-Gamingpig/" target="_blank" rel="noopener noreferrer" class="group/link inline-flex items-center gap-1.5 xxs:gap-2 sm:gap-3 text-sm xxs:text-base sm:text-xl text-blue-500 hover:text-blue-600 font-bold transition-all">
+                    <span id="cta-tictactoe">Lass uns ne Runde zocken!</span>
+                    <div class="p-0.5 xxs:p-1 sm:p-1.5 bg-blue-500/10 rounded xxs:rounded-md sm:rounded-lg group-hover/link:translate-x-1 transition-transform">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-4 xxs:h-4 sm:w-5 sm:h-5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    </div>
+                </a>
+            </div>
+
+            <!-- TikTok -->
+            <div class="glass-card p-3 xxs:p-5 xs:p-6 sm:p-8 rounded-[1rem] xxs:rounded-[1.5rem] sm:rounded-[2.5rem] group overflow-hidden relative border border-slate-200 dark:border-slate-800">
+                <div class="flex items-center gap-2 xxs:gap-3 sm:gap-5 mb-2 xxs:mb-4 sm:mb-6">
+                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-pink-500/10 text-pink-600 dark:text-pink-500 rounded-lg xxs:rounded-xl sm:rounded-2xl group-hover:rotate-12 transition-transform">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-6 xxs:h-6 sm:w-8 sm:h-8"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/></svg>
+                    </div>
+                    <h2 class="text-base xxs:text-xl xs:text-2xl sm:text-3xl font-bold">Gamingpig‘s TikTok</h2>
+                </div>
+                <a href="https://www.tiktok.com/@gamingpig900" target="_blank" rel="noopener noreferrer" class="group/link inline-flex items-center gap-1.5 xxs:gap-2 sm:gap-3 text-sm xxs:text-base sm:text-xl text-blue-500 hover:text-blue-600 font-bold transition-all">
+                    <span id="cta-gamingpig-tiktok">Hier geht's zu meinem Kanal</span>
+                    <div class="p-0.5 xxs:p-1 sm:p-1.5 bg-blue-500/10 rounded xxs:rounded-md sm:rounded-lg group-hover/link:translate-x-1 transition-transform">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-4 xxs:h-4 sm:w-5 sm:h-5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    </div>
+                </a>
+            </div>
+
+            <!-- YouTube -->
+            <div class="glass-card p-3 xxs:p-5 xs:p-6 sm:p-8 rounded-[1rem] xxs:rounded-[1.5rem] sm:rounded-[2.5rem] group overflow-hidden relative border border-slate-200 dark:border-slate-800">
+                <div class="flex items-center gap-2 xxs:gap-3 sm:gap-5 mb-2 xxs:mb-4 sm:mb-6">
+                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-red-500/10 text-red-600 dark:text-red-500 rounded-lg xxs:rounded-xl sm:rounded-2xl group-hover:rotate-12 transition-transform">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-6 xxs:h-6 sm:w-8 sm:h-8"><path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 2-2 103.38 103.38 0 0 1 15 0 2 2 0 0 1 2 2 24.12 24.12 0 0 1 0 10 2 2 0 0 1-2 2 103.38 103.38 0 0 1-15 0 2 2 0 0 1-2-2Z"/><path d="m10 15 5-3-5-3z"/></svg>
+                    </div>
+                    <h2 class="text-base xxs:text-xl xs:text-2xl sm:text-3xl font-bold">Gamingpig‘s YouTube</h2>
+                </div>
+                <a href="https://www.youtube.com/@gamingpig9409" target="_blank" rel="noopener noreferrer" class="group/link inline-flex items-center gap-1.5 xxs:gap-2 sm:gap-3 text-sm xxs:text-base sm:text-xl text-blue-500 hover:text-blue-600 font-bold transition-all">
+                    <span id="cta-gamingpig-youtube">Hier geht's zu meinem Kanal</span>
+                    <div class="p-0.5 xxs:p-1 sm:p-1.5 bg-blue-500/10 rounded xxs:rounded-md sm:rounded-lg group-hover/link:translate-x-1 transition-transform">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-4 xxs:h-4 sm:w-5 sm:h-5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    </div>
+                </a>
+            </div>
+
+            <!-- GitHub -->
+            <div class="glass-card p-3 xxs:p-5 xs:p-6 sm:p-8 rounded-[1rem] xxs:rounded-[1.5rem] sm:rounded-[2.5rem] group overflow-hidden relative border border-slate-200 dark:border-slate-800">
+                <div class="flex items-center gap-2 xxs:gap-3 sm:gap-5 mb-2 xxs:mb-4 sm:mb-6">
+                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-slate-500/10 text-slate-900 dark:text-white rounded-lg xxs:rounded-xl sm:rounded-2xl group-hover:rotate-12 transition-transform">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-6 xxs:h-6 sm:w-8 sm:h-8"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
+                    </div>
+                    <h2 class="text-base xxs:text-xl xs:text-2xl sm:text-3xl font-bold">Gamingpig‘s GitHub</h2>
+                </div>
+                <a href="https://github.com/Gamingpig" target="_blank" rel="noopener noreferrer" class="group/link inline-flex items-center gap-1.5 xxs:gap-2 sm:gap-3 text-sm xxs:text-base sm:text-xl text-blue-500 hover:text-blue-600 font-bold transition-all">
+                    <span id="cta-gamingpig-github">Hier geht's zu meinem Profil</span>
+                    <div class="p-0.5 xxs:p-1 sm:p-1.5 bg-blue-500/10 rounded xxs:rounded-md sm:rounded-lg group-hover/link:translate-x-1 transition-transform">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-4 xxs:h-4 sm:w-5 sm:h-5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    </div>
+                </a>
+            </div>
+
+            <!-- Tom's TikTok -->
+            <div class="glass-card p-3 xxs:p-5 xs:p-6 sm:p-8 rounded-[1rem] xxs:rounded-[1.5rem] sm:rounded-[2.5rem] group overflow-hidden relative border border-slate-200 dark:border-slate-800">
+                <div class="flex items-center gap-2 xxs:gap-3 sm:gap-5 mb-2 xxs:mb-4 sm:mb-6">
+                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-pink-500/10 text-pink-600 dark:text-pink-500 rounded-lg xxs:rounded-xl sm:rounded-2xl group-hover:rotate-12 transition-transform">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-6 xxs:h-6 sm:w-8 sm:h-8"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/></svg>
+                    </div>
+                    <h2 class="text-base xxs:text-xl xs:text-2xl sm:text-3xl font-bold">Tom's TikTok</h2>
+                </div>
+                <a href="https://www.tiktok.com/@squizey_tt?_r=1&_t=ZG-97oplSDT9Dl" target="_blank" rel="noopener noreferrer" class="group/link inline-flex items-center gap-1.5 xxs:gap-2 sm:gap-3 text-sm xxs:text-base sm:text-xl text-blue-500 hover:text-blue-600 font-bold transition-all">
+                    <span id="cta-tom">Hier geht's zu Tom's Kanal</span>
+                    <div class="p-0.5 xxs:p-1 sm:p-1.5 bg-blue-500/10 rounded xxs:rounded-md sm:rounded-lg group-hover/link:translate-x-1 transition-transform">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-4 xxs:h-4 sm:w-5 sm:h-5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    </div>
+                </a>
+            </div>
+
+            <!-- Jakob's TikTok -->
+            <div class="glass-card p-3 xxs:p-5 xs:p-6 sm:p-8 rounded-[1rem] xxs:rounded-[1.5rem] sm:rounded-[2.5rem] group overflow-hidden relative border border-slate-200 dark:border-slate-800">
+                <div class="flex items-center gap-2 xxs:gap-3 sm:gap-5 mb-2 xxs:mb-4 sm:mb-6">
+                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-pink-500/10 text-pink-600 dark:text-pink-500 rounded-lg xxs:rounded-xl sm:rounded-2xl group-hover:rotate-12 transition-transform">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-6 xxs:h-6 sm:w-8 sm:h-8"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/></svg>
+                    </div>
+                    <h2 class="text-base xxs:text-xl xs:text-2xl sm:text-3xl font-bold">Jakob's TikTok</h2>
+                </div>
+                <a href="https://www.tiktok.com/@ano.nym788?_r=1&_t=ZG-95MjKBGf8HB" target="_blank" rel="noopener noreferrer" class="group/link inline-flex items-center gap-1.5 xxs:gap-2 sm:gap-3 text-sm xxs:text-base sm:text-xl text-blue-500 hover:text-blue-600 font-bold transition-all">
+                    <span id="cta-jakob">Hier geht's zu Jakob's Kanal</span>
+                    <div class="p-0.5 xxs:p-1 sm:p-1.5 bg-blue-500/10 rounded xxs:rounded-md sm:rounded-lg group-hover/link:translate-x-1 transition-transform">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-4 xxs:h-4 sm:w-5 sm:h-5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    </div>
+                </a>
+            </div>
+
+            <!-- Lukas' TikTok -->
+            <div class="glass-card p-3 xxs:p-5 xs:p-6 sm:p-8 rounded-[1rem] xxs:rounded-[1.5rem] sm:rounded-[2.5rem] group overflow-hidden relative border border-slate-200 dark:border-slate-800">
+                <div class="flex items-center gap-2 xxs:gap-3 sm:gap-5 mb-2 xxs:mb-4 sm:mb-6">
+                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-pink-500/10 text-pink-600 dark:text-pink-500 rounded-lg xxs:rounded-xl sm:rounded-2xl group-hover:rotate-12 transition-transform">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-6 xxs:h-6 sm:w-8 sm:h-8"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/></svg>
+                    </div>
+                    <h2 class="text-base xxs:text-xl xs:text-2xl sm:text-3xl font-bold">Lukas' TikTok</h2>
+                </div>
+                <a href="https://www.tiktok.com/@lukas_1838?_r=1&_t=ZG-95Q77G17ixE" target="_blank" rel="noopener noreferrer" class="group/link inline-flex items-center gap-1.5 xxs:gap-2 sm:gap-3 text-sm xxs:text-base sm:text-xl text-blue-500 hover:text-blue-600 font-bold transition-all">
+                    <span id="cta-lukas">Hier geht's zu Lukas' Kanal</span>
+                    <div class="p-0.5 xxs:p-1 sm:p-1.5 bg-blue-500/10 rounded xxs:rounded-md sm:rounded-lg group-hover/link:translate-x-1 transition-transform">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-4 xxs:h-4 sm:w-5 sm:h-5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    </div>
+                </a>
+            </div>
+        </div> 
+
+        <footer id="footer-section" class="mt-12 xxs:mt-20 sm:mt-40 text-center reveal">
+            <div class="inline-flex items-center gap-1.5 xxs:gap-2 sm:gap-4 py-1.5 px-3 xxs:py-2 xxs:px-4 sm:px-6 bg-slate-200/50 dark:bg-slate-900/50 rounded-full border border-slate-300 dark:border-slate-800 flex-wrap justify-center">
+                <span id="footer-established" class="text-[8px] xxs:text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-400">Established 2026</span>
+                <div class="hidden sm:block h-4 w-px bg-slate-300 dark:bg-slate-700"></div>
+                <p id="footer-created-by" class="font-bold text-[10px] xxs:text-xs sm:text-sm text-slate-800 dark:text-white">Erstellt von Gamingpig</p>
+            </div>
+        </footer>
+    </main>
+
+    <script>
+        function escapeHTML(str) {
+            if (!str) return "";
+            return str.replace(/[&<>'"]/g, 
+                tag => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    "'": '&#39;',
+                    '"': '&quot;'
+                }[tag] || tag)
+            );
+        }
+
+        // --- 1. DOM ELEMENTS ---
+        const perfToggle = document.getElementById('perf-toggle');
+        const perfIcon = document.getElementById('perf-icon');
+        const themeToggle = document.getElementById('theme-toggle');
+        const liquidGlassToggle = document.getElementById('liquid-glass-toggle');
+        const liquidGlassIcon = document.getElementById('liquid-glass-icon');
+        const html = document.documentElement;
+        
+        const tutorialWrapper = document.getElementById('tutorial-wrapper');
+        const tutorialBox = document.getElementById('tutorial-box');
+        const btnNext = document.getElementById('tutorial-next');
+        const btnSkip = document.getElementById('tutorial-skip');
+        const stepIndicator = document.getElementById('tutorial-step-indicator');
+        const tutorialTitle = document.getElementById('tutorial-title');
+        const tutorialText = document.getElementById('tutorial-text');
+        const btnStartTutorial = document.getElementById('tutorial-start-btn');
+        
+        const modalOverlay = document.getElementById('modal-overlay');
+        const modalBody = document.getElementById('modal-body');
+        const closeModal = document.getElementById('close-modal');
+        
+        const musicCardLayoutWrapper = document.getElementById('music-card-layout-wrapper');
+        const musicCardWrapper = document.getElementById('music-card-wrapper');
+        const musicChevron = document.getElementById('music-chevron');
+        const miniTitle = document.getElementById('mini-title');
+        const miniStatus = document.getElementById('mini-status');
+        const miniIconBg = document.getElementById('mini-icon-bg');
+        const mainMusicCard = document.getElementById('main-music-card');
+        
+        const lyricsSettingsMenu = document.getElementById('lyrics-settings-menu');
+        const lyricsContainer = document.getElementById('lyrics-container');
+        const canvasVideo = document.getElementById('canvas-video');
+        const btnToggleCanvas = document.getElementById('btn-toggle-canvas');
+        
+        const syncSlider = document.getElementById('sync-slider');
+        const syncValueEl = document.getElementById('sync-value');
+        
+        const mPicker = document.getElementById('music-picker');
+        const mTitle = document.getElementById('track-title');
+        const mArtist = document.getElementById('track-artist');
+        const mArtwork = document.getElementById('artwork');
+        const mAmbient = document.getElementById('ambient-bg');
+        const mGlow = document.getElementById('ambilight-glow');
+        const mHeader = document.getElementById('music-header-tag');
+        const mDot = document.getElementById('status-dot');
+        const mText = document.getElementById('status-text');
+        const timeCurrentEl = document.getElementById('time-current');
+        const timeTotalEl = document.getElementById('time-total');
+        const progressBar = document.getElementById('progress-bar');
+        const lyricsContent = document.getElementById('lyrics-content');
+        const lyricsMiniArt = document.getElementById('lyrics-mini-art');
+        const lyricsMiniTitle = document.getElementById('lyrics-mini-title');
+        const lyricsMiniArtist = document.getElementById('lyrics-mini-artist');
+
+        // --- 2. DATA & STATE VARIABLES ---
+        // ========================================================= //
+        // --- NEW: I18N / SPRACH-SYSTEM ----------------------------- //
+        // ========================================================= //
+        // WICHTIG: Übersetzt werden NUR Bedienelemente (Tutorial, Buttons, Toasts,
+        // Spotlight-Suche, Menüs). Die persönlichen Bio-Texte (details-Objekt weiter
+        // unten) bleiben bewusst unverändert auf Deutsch, exakt so wie geschrieben.
+        const SUPPORTED_LANGUAGES = [
+            { code: 'de', flag: '🇩🇪', name: 'Deutsch' },
+            { code: 'en', flag: '🇬🇧', name: 'English' },
+            { code: 'es', flag: '🇪🇸', name: 'Español' },
+            { code: 'fr', flag: '🇫🇷', name: 'Français' },
+            { code: 'pt', flag: '🇧🇷', name: 'Português' },
+            { code: 'tr', flag: '🇹🇷', name: 'Türkçe' }
+        ];
+
+        const translations = {
+            de: {
+                onboard_title: 'Wähle deine Sprache',
+                onboard_subtitle: 'Du kannst das jederzeit später wieder ändern',
+                tutorial_next: 'Weiter', tutorial_back: 'Zurück', tutorial_finish: 'Fertig', tutorial_skip: 'Überspringen',
+                tutorial_step: (n, total) => `Schritt ${n}/${total}`,
+                t_step1_title: 'Willkommen in meiner Welt!',
+                t_step1_text: 'Das ist mein persönliches Portfolio. Hier erfährst du alles Wichtige über mich, meinen Weg in die Systemintegration und was mich antreibt. Mein Hyperfokus ist hier Programm!',
+                t_step2_title: 'Dein Kontrollzentrum',
+                t_step2_text: 'Oben rechts hast du die volle Kontrolle: "Apple Liquid Glass" schaltet den edlen, aber leistungshungrigen Blur-Look ein, Dark Mode wechselt zwischen hell/dunkel, Low-End-Modus deaktiviert aufwendige Animationen für ältere/langsamere Geräte, StandBy öffnet den Lockscreen-Modus, und der letzte Button startet dieses Tutorial jederzeit neu.',
+                t_step3_title: 'Deep Dive: Wer bin ich?',
+                t_step3_text: 'Klicke auf diese interaktiven Karten. Sie öffnen detaillierte Popups, in denen ich dir mehr über mein Audio-Setup, meinen Tech-Stack, meine Homelab-Projekte und meine Freizeit erzähle.',
+                t_step4_title: 'Echtzeit Musik Integration',
+                t_step4_text: 'Der wildeste Part: Das Dashboard zeigt in Echtzeit, was ich gerade höre! Oben bleibt dabei immer eine kleine Dynamic Island sichtbar, solange Musik läuft - antippen klappt sie auf, nochmal antippen klappt sie wieder zu, nach oben wischen blendet sie komplett aus (über die Spotlight-Suche holst du sie zurück). Klicke auf die Karte für synchronisierte Lyrics mit über 30 verrückten Animationsstilen. Über das Zahnrad-Icon in den Lyrics findest du zusätzlich: Ambient Color (färbt den Seitenhintergrund passend zum Cover ein), Spatial Tilt (3D-Neigeeffekt aufs Cover) und den Share-Card-Generator (lädt ein Bild zum Teilen herunter).',
+                t_step5_title: 'StandBy: Dein Lockscreen',
+                t_step5_text: 'Dieser Button verwandelt die Seite in einen echten Lockscreen: große Uhrzeit, Datum und eine große Now-Playing-Karte mit Cover, Live-EQ und Fortschrittsbalken vor einem sanft animierten, geblurten Hintergrund. Alles verschiebt sich alle paar Minuten minimal, damit nichts auf OLED-Displays einbrennt - perfekt fürs Nachttischhandy beim Laden.',
+                t_step6_title: 'Spotlight-Suche (⌘K)',
+                t_step6_text: 'Drück Strg+K (oder Cmd+K auf dem Mac) und eine echte Befehlspalette öffnet sich - genau wie auf dem Mac! Tippe einfach, was du suchst: "Dark Mode", "Lyrics", "StandBy", oder sogar "Sprache" um die Sprache zu wechseln. Pfeiltasten zum Navigieren, Enter zum Ausführen. Auf dem Handy ohne Tastatur? Auch hier tippst du einfach in das Suchfeld.',
+                t_step7_title: 'Installier mich als App!',
+                t_step7_text: 'Diese Seite erzeugt sich ihr eigenes App-Icon und lässt sich auf Android/Chrome per Klick als richtige App installieren (kein Store nötig) - auf dem iPhone geht das manuell über "Zum Home-Bildschirm" im Teilen-Menü. Fühlt sich danach an wie eine native App, ganz ohne Browserleiste.',
+                t_step8_title: 'Psst... 🤫 Ein Geheimnis',
+                t_step8_text: 'Diese Seite hat ein paar versteckte Easter Eggs. Tipp: Alte Cheat-Codes aus Videospielen, ein paar Tastatur-Wörter, oder einfach mal wild auf Sachen rumklicken. Kein Keyboard zur Hand (z.B. am Handy)? Die getippten Wörter funktionieren auch, wenn du sie ins Spotlight-Suchfeld (⌘K-Button) eintippst. Viel Spaß beim Suchen!',
+                toast_install_ios: '📲 Tippe unten auf "Teilen" ⬆️ und dann auf "Zum Home-Bildschirm"',
+                toast_install_android_menu: '📲 Tippe oben rechts auf die drei Punkte ⋮ und wähle "App installieren" bzw. "Zum Startbildschirm hinzufügen"',
+                toast_install_desktop: '📲 Klicke oben rechts in der Adressleiste auf das Installieren-Symbol, oder öffne das Menü ⋮ → "Gamingpig installieren..."',
+                toast_installed: 'Als App installiert! 🎉',
+                toast_island_hidden: 'Dynamic Island ausgeblendet – über ⌘K wieder einblendbar',
+                toast_island_back: 'Dynamic Island ist wieder da 🏝️',
+                toast_sharecard_creating: 'Share Card wird erstellt...',
+                toast_sharecard_saved: 'Share Card gespeichert! 🎴',
+                toast_sharecard_cors: 'Konnte kein Bild vom Cover laden (CORS) – Card ohne Artwork erzeugt.',
+                toast_link_copied: '📋 Link kopiert! Kannst ihn jetzt teilen.',
+                toast_copy_failed: '⚠️ Kopieren hat nicht geklappt. Link: ',
+                toast_copy_unsupported: '⚠️ Dein Browser unterstützt das nicht. Link: ',
+                toast_konami: '🎉 Konami-Code erkannt! Hyperfokus aktiviert!',
+                toast_oink: '🐷 Oink oink! Wer hat da gerufen?',
+                toast_forza: '🏎️ Vroooom! Forza Horizon 5 Modus!',
+                toast_fokus: '🧠⚡ Hyperfokus aktiviert! Jetzt geht nichts mehr verloren.',
+                toast_matrix: '💻 Wake up, Neo...',
+                toast_disco: '👀 Du hast fünfmal geklickt... Disco-Modus!',
+                toast_search_hint: '💡 Tipp: Tippe hier Wörter ein - manche lösen Überraschungen aus...',
+                cp_placeholder: 'Befehl suchen oder Seite durchsuchen...',
+                cp_placeholder_tiktok: 'Welcher TikTok-Account?',
+                cp_empty: (q) => `Keine Befehle gefunden für "${q}"`,
+                cp_scroll_top: 'Zum Anfang scrollen', cp_scroll_cards: 'Zu Ausbildung & Alltag springen', cp_scroll_music: 'Zum Musik-Dashboard springen', cp_scroll_footer: 'Zum Footer / Kontakt springen',
+                cp_open_dashboard: 'Musik-Dashboard öffnen', cp_open_lyrics: 'Lyrics anzeigen',
+                cp_toggle_dark: 'Dark Mode umschalten', cp_toggle_glass: 'Liquid Glass Modus umschalten', cp_toggle_perf: 'Low-End / Performance Modus umschalten',
+                cp_standby: 'StandBy Modus starten', cp_ambient: 'Ambient Color umschalten', cp_tilt: 'Spatial Tilt umschalten',
+                cp_sharecard: 'Share Card erstellen & herunterladen', cp_tutorial: 'Tutorial starten', cp_tiktok: 'Mein TikTok öffnen',
+                cp_island_back: 'Dynamic Island wieder einblenden', cp_copy_link: 'Link zur Seite kopieren', cp_reload: 'Seite neu laden',
+                cp_change_lang: '🌐 Sprache ändern / Change language',
+                settings_ambient: 'Ambient Color', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
+                on_label: 'AN', off_label: 'AUS',
+                standby_idle_title: 'Aktuell ist es ruhig...', standby_idle_subtitle: 'Genieße die Stille', standby_hint: 'Zum Verlassen tippen',
+                install_btn: '📲 App installieren',
+                aria_dark: 'Dark Mode', aria_glass: 'Liquid Glass Modus', aria_perf: 'Performance Modus', aria_standby: 'StandBy Modus',
+                                                header_intro_html: 'Hallo! Ich bin Gamingpig, im Jugendalter und technikaffin. Ich habe ADHS und mein <span class="text-blue-600 dark:text-blue-400 font-bold italic">Hyperfokus</span> ist meine Superkraft, dadurch kann ich komplexe Probleme lösen, wo andere schon längst aufgegeben hätten.',
+                header_freizeit: 'In meiner Freizeit beschäftige ich mich mit Gaming und Streaming. Ich bin zwar etwas schüchtern, jedoch an sich ein sehr freundlicher und gelassener Mensch. Ich repariere auch gerne IT Geräte (Laptops, Tablets, PCs, Smartphones usw.).',
+                cards_section_title: 'Real Talk: Ausbildung & Alltag',
+                cards_click_hint: 'Klicke auf die Karten für Details.',
+                card_title_status: 'Status',
+                card_title_background: 'Hintergrund',
+                card_title_freizeit: 'Freizeit',
+                card_title_menschen: 'Menschen',
+                card_title_techstack: 'Tech Stack',
+                card_title_setup: 'Setup',
+                card_title_labor: 'Labor',
+                card_title_contact: 'Kontakt',
+                card_teaser_status: 'Ausbildung zum Fachinformatiker...',
+                card_teaser_background: 'Im Jugendalter & in Ausbildung...',
+                card_teaser_freizeit: 'Forza Horizon 5 & Streaming...',
+                card_teaser_menschen: 'Tom, Danilo, Jakob & Lukas...',
+                card_teaser_techstack: 'Hardware, Linux, Windows...',
+                card_teaser_setup: 'DT 770 Pro & Rockster Cross...',
+                card_teaser_labor: 'Server & Docker...',
+                card_teaser_contact: 'Connect mit mir...',
+                modal_deep_dive: 'Deep Dive',
+                modal_understood: 'Verstanden',
+                modal_copy_link_btn: 'Link zu dieser Seite kopieren',
+                footer_established: 'Established 2026',
+                footer_created_by: 'Erstellt von Gamingpig',
+                detail_status_title: 'Ausbildung & Fokus',
+                detail_status_content: 'Ich absolviere aktuell meine Ausbildung zum Fachinformatiker für Systemintegration. Technik und Systeme sind meine Welt. Ich liebe es, Server aufzusetzen, Netzwerke zu konfigurieren und alles am Laufen zu halten. Mein Hyperfokus hilft mir dabei, tief in komplexe IT-Strukturen einzutauchen und Fehler zu finden, bevor sie zum Problem werden.',
+                detail_background_title: 'Hintergrund & Weg',
+                detail_background_content: 'Ich bin im Jugendalter und absolviere aktuell eine Ausbildung zum Fachinformatiker für Systemintegration. Das hat mich früh gelehrt, unabhängig zu sein und meinen eigenen Weg zu gehen. Ich sehe Herausforderungen nicht als Hindernis, sondern als Chance, zu wachsen und meine eigene Zukunft zu gestalten.',
+                detail_freizeit_title: 'Gaming & Content',
+                detail_freizeit_content: 'Wenn die Server laufen, bin ich bei Forza Horizon 5 anzutreffen. Ich streame live auf TikTok und teile meine Leidenschaft für Gaming und Technik mit der Community. Es geht mir um den Vibe, den Austausch und das Meistern neuer Challenges.',
+                detail_menschen_title: 'Meine Wahlfamilie',
+                detail_menschen_content: 'Da ich ohne Eltern aufgewachsen bin, sind Freunde meine gewählte Familie. Loyalität und Vertrauen stehen für mich an erster Stelle. Meine neuen Anker sind Danilo, Jakob und Lukas, aber Tom bleibt es mit ihnen gemeinsam – wir gehen den Weg zusammen.',
+                detail_techstack_title: 'Tech Stack & Skills',
+                detail_techstack_content: 'Als angehender Systemintegrator kenne ich mich mit dem Setup und Wartung von IT-Infrastrukturen aus. Dazu gehören Windows Server, Linux-Distributionen, generelle Netzwerkkonfigurationen und intensives Hardware-Troubleshooting. Egal ob Laptops, PCs oder Smartphones – wenn was defekt ist, finde ich den Fehler.',
+                detail_setup_title: 'Mein Audio Setup',
+                detail_setup_content: 'Guter Sound ist ein absolutes Muss beim Zocken oder Musikhören. An meinem Rechner nutze ich die Beyerdynamic DT 770 Pro (80 Ohm) Studio-Kopfhörer für extrem klaren Klang und geschlossene Isolation. Wenn ich die Bude beschallen will, läuft das über meinen Teufel Rockster Cross Bluetooth-Speaker, der einfach heftig reinhaut.',
+                detail_labor_title: 'Labor & Projekte',
+                detail_labor_content: 'Meine persönliche Spielwiese. Hier baue ich komplexe Docker-Umgebungen, administriere Webserver und setze eigene APIs auf. Ich teste Netzwerkarchitekturen bis an ihre Grenzen und automatisiere Prozesse, um mein Setup stetig auf das nächste Level zu pushen.',
+                detail_contact_title: 'Kontakt & Connect',
+                detail_contact_content: 'Bock auf ne Runde Forza oder brauchst du Tech-Support? Du erreichst mich am besten direkt über meine Social Media Kanäle wie TikTok oder YouTube. Lass uns connecten!',
+                fallback_1: 'Sieht so aus, als hätten wir keinen Text für diesen Song.',
+                fallback_2: 'Erwischt, wir arbeiten noch daran, den Text für diesen Song zu besorgen.',
+                fallback_3: 'Du musst den Text für diesen Song wohl erraten.',
+                fallback_4: 'Hmm. Wir kennen den Text für diesen Song nicht.',
+                fallback_5: 'Leider kein Text am Start. Einfach den Vibe genießen!',
+                secret_1: '🔧 Nächstes Projekt: noch mehr Homelab-Chaos im Docker-Stack.',
+                secret_2: '🎮 Aktueller Highscore in Forza Horizon 5: geheim. Frag nicht.',
+                secret_3: '☕ Diese Seite wurde mit sehr viel Hyperfokus und noch mehr Kaffee gebaut.',
+                secret_4: '🐛 Bugs sind einfach ungeplante Features. Punkt.',
+                secret_5: '💙 Danke fürs Neugierig-Sein und Herumklicken!',
+                                music_section_title: 'Was bei mir gerade läuft',
+                music_sync_note: '*Hinweis: Der Time-Sync ist auf -800ms optimiert.',
+                lyrics_placeholder_title: 'Titel',
+                lyrics_placeholder_artist: 'Artist',
+                lyrics_synced_label: 'Lyrics: Synced',
+                aria_lyrics_settings: 'Lyrics Einstellungen',
+                label_animation_style: 'Animation Style',
+                label_overkill_shaders: 'Overkill Shaders',
+                label_badge_new: 'Brandneu',
+                label_features: 'Features',
+                label_live_sync: 'Live Sync Offset',
+                btn_resync: 'Re-Sync',
+                label_choose_service: 'Service wählen',
+                label_no_links: 'Keine Links gefunden',
+                btn_cancel: 'Abbrechen',
+                aria_lyrics_close: 'Lyrics schließen',
+                aria_lyrics_show: 'Lyrics anzeigen',
+                status_offline: 'Gamingpig is Offline',
+                status_zen_mode: 'Zen Mode',
+                mini_dashboard_minimized: 'Dashboard minimiert',
+                status_offline_short: 'Offline',
+                status_no_music: 'Keine Musik',
+                cta_tictactoe: 'Lass uns ne Runde zocken!',
+                cta_gamingpig_tiktok: 'Hier geht\'s zu meinem Kanal',
+                cta_gamingpig_youtube: 'Hier geht\'s zu meinem Kanal',
+                cta_gamingpig_github: 'Hier geht\'s zu meinem Profil',
+                cta_tom: 'Hier geht\'s zu Tom\'s Kanal',
+                cta_jakob: 'Hier geht\'s zu Jakob\'s Kanal',
+                cta_lukas: 'Hier geht\'s zu Lukas\' Kanal',
+                                aria_scroll_top: 'Nach oben scrollen',
+                aria_close: 'Schließen',
+                aria_tutorial_start: 'Tutorial starten',
+                                header_main_title: 'Über Gamingpig',
+                systems_integration_badge: 'Systems Integration',
+                greeting_night: '🌙 Na, auch noch wach um diese Uhrzeit?',
+                greeting_morning: '☀️ Guten Morgen! Schön, dass du vorbeischaust.',
+                greeting_day: '👋 Hey, schön dass du hier bist!',
+                greeting_evening: '🌆 Guten Abend! Viel Spaß beim Stöbern.',
+                greeting_late_night: '🌙 Nachteule, wie ich sehe. Willkommen!',
+                                label_unsynced: 'Unsynced',
+                mini_click_to_open: 'Klicken zum Öffnen', mini_click_to_close: 'Klicken zum Schließen',
+                aria_cp: 'Befehlspalette öffnen', aria_install: 'Als App installieren', aria_island: 'Song-Details öffnen, nach oben wischen zum Ausblenden'
+            },
+            en: {
+                onboard_title: 'Choose your language',
+                onboard_subtitle: 'You can change this anytime later',
+                tutorial_next: 'Next', tutorial_back: 'Back', tutorial_finish: 'Done', tutorial_skip: 'Skip',
+                tutorial_step: (n, total) => `Step ${n}/${total}`,
+                t_step1_title: 'Welcome to my world!',
+                t_step1_text: "This is my personal portfolio. Here you'll learn everything about me, my path into systems integration, and what drives me. My hyperfocus is the whole point here!",
+                t_step2_title: 'Your control center',
+                t_step2_text: 'Top right you have full control: "Apple Liquid Glass" turns on the fancy but performance-hungry blur look, Dark Mode switches between light/dark, Low-End Mode disables heavy animations for older/slower devices, StandBy opens lock-screen mode, and the last button restarts this tutorial anytime.',
+                t_step3_title: 'Deep dive: who am I?',
+                t_step3_text: 'Click these interactive cards. They open detailed popups where I tell you more about my audio setup, my tech stack, my homelab projects, and my free time.',
+                t_step4_title: 'Real-time music integration',
+                t_step4_text: "The wildest part: the dashboard shows in real time what I'm currently listening to! A small Dynamic Island always stays visible up top while music is playing - tap to expand, tap again to collapse, swipe up to dismiss it completely (bring it back via the Spotlight search). Click the card for synced lyrics with over 30 crazy animation styles. The gear icon in the lyrics view also gives you: Ambient Color (tints the page background to match the cover), Spatial Tilt (a 3D tilt effect on the cover), and the Share Card generator (downloads a shareable image).",
+                t_step5_title: 'StandBy: your lock screen',
+                t_step5_text: 'This button turns the page into a real lock screen: a big clock, date, and a large now-playing card with cover art, a live EQ, and a progress bar in front of a gently animated, blurred background. Everything shifts slightly every few minutes so nothing burns into OLED screens - perfect for your nightstand while charging.',
+                t_step6_title: 'Spotlight search (⌘K)',
+                t_step6_text: 'Press Ctrl+K (or Cmd+K on Mac) and a real command palette opens - just like on a Mac! Just type what you\'re looking for: "dark mode", "lyrics", "standby", or even "language" to switch languages. Arrow keys to navigate, Enter to run. No keyboard on mobile? Just tap into the search box instead.',
+                t_step7_title: 'Install me as an app!',
+                t_step7_text: 'This site generates its own app icon and can be installed as a real app on Android/Chrome with one click (no store needed) - on iPhone that\'s done manually via "Add to Home Screen" in the share menu. Afterwards it feels like a native app, with no browser bar at all.',
+                t_step8_title: "Psst... 🤫 a secret",
+                t_step8_text: "This site has a few hidden easter eggs. Hint: old video game cheat codes, a few keyboard words, or just clicking around wildly. No keyboard handy (e.g. on mobile)? The typed words also work if you type them into the Spotlight search box (⌘K button). Have fun looking!",
+                toast_install_ios: '📲 Tap "Share" ⬆️ below, then "Add to Home Screen"',
+                toast_install_android_menu: '📲 Tap the three dots ⋮ top right and choose "Install app" / "Add to Home screen"',
+                toast_install_desktop: '📲 Click the install icon in the address bar, or open the ⋮ menu → "Install Gamingpig..."',
+                toast_installed: 'Installed as an app! 🎉',
+                toast_island_hidden: 'Dynamic Island hidden – bring it back via ⌘K',
+                toast_island_back: 'Dynamic Island is back 🏝️',
+                toast_sharecard_creating: 'Creating share card...',
+                toast_sharecard_saved: 'Share card saved! 🎴',
+                toast_sharecard_cors: "Couldn't load the cover image (CORS) – card created without artwork.",
+                toast_link_copied: '📋 Link copied! You can share it now.',
+                toast_copy_failed: "⚠️ Couldn't copy. Link: ",
+                toast_copy_unsupported: "⚠️ Your browser doesn't support that. Link: ",
+                toast_konami: '🎉 Konami code detected! Hyperfocus activated!',
+                toast_oink: '🐷 Oink oink! Who called for that?',
+                toast_forza: '🏎️ Vrooom! Forza Horizon 5 mode!',
+                toast_fokus: "🧠⚡ Hyperfocus activated! Nothing gets lost now.",
+                toast_matrix: '💻 Wake up, Neo...',
+                toast_disco: '👀 You clicked five times... Disco mode!',
+                toast_search_hint: '💡 Tip: type words here - some trigger surprises...',
+                cp_placeholder: 'Search a command or the page...',
+                cp_placeholder_tiktok: 'Which TikTok account?',
+                cp_empty: (q) => `No commands found for "${q}"`,
+                cp_scroll_top: 'Scroll to top', cp_scroll_cards: 'Jump to education & daily life', cp_scroll_music: 'Jump to music dashboard', cp_scroll_footer: 'Jump to footer / contact',
+                cp_open_dashboard: 'Open music dashboard', cp_open_lyrics: 'Show lyrics',
+                cp_toggle_dark: 'Toggle dark mode', cp_toggle_glass: 'Toggle Liquid Glass mode', cp_toggle_perf: 'Toggle low-end / performance mode',
+                cp_standby: 'Start StandBy mode', cp_ambient: 'Toggle Ambient Color', cp_tilt: 'Toggle Spatial Tilt',
+                cp_sharecard: 'Create & download share card', cp_tutorial: 'Start tutorial', cp_tiktok: 'Open my TikTok',
+                cp_island_back: 'Show Dynamic Island again', cp_copy_link: 'Copy link to this page', cp_reload: 'Reload page',
+                cp_change_lang: '🌐 Sprache ändern / Change language',
+                settings_ambient: 'Ambient Color', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
+                on_label: 'ON', off_label: 'OFF',
+                standby_idle_title: "It's quiet right now...", standby_idle_subtitle: 'Enjoy the silence', standby_hint: 'Tap to exit',
+                install_btn: '📲 Install app',
+                aria_dark: 'Dark mode', aria_glass: 'Liquid Glass mode', aria_perf: 'Performance mode', aria_standby: 'StandBy mode',
+                                                header_intro_html: 'Hi! I\'m Gamingpig, a teenager who\'s into tech. I have ADHD and my <span class="text-blue-600 dark:text-blue-400 font-bold italic">hyperfocus</span> is my superpower - it lets me solve complex problems where others would have given up long ago.',
+                header_freizeit: 'In my free time I\'m into gaming and streaming. I\'m a bit shy, but overall a very friendly and easygoing person. I also love fixing IT devices (laptops, tablets, PCs, smartphones, etc.).',
+                cards_section_title: 'Real Talk: Training & Daily Life',
+                cards_click_hint: 'Click the cards for details.',
+                card_title_status: 'Status',
+                card_title_background: 'Background',
+                card_title_freizeit: 'Free time',
+                card_title_menschen: 'People',
+                card_title_techstack: 'Tech Stack',
+                card_title_setup: 'Setup',
+                card_title_labor: 'Lab',
+                card_title_contact: 'Contact',
+                card_teaser_status: 'Training as a systems integration IT specialist...',
+                card_teaser_background: 'A teenager & in training...',
+                card_teaser_freizeit: 'Forza Horizon 5 & streaming...',
+                card_teaser_menschen: 'Tom, Danilo, Jakob & Lukas...',
+                card_teaser_techstack: 'Hardware, Linux, Windows...',
+                card_teaser_setup: 'DT 770 Pro & Rockster Cross...',
+                card_teaser_labor: 'Servers & Docker...',
+                card_teaser_contact: 'Connect with me...',
+                modal_deep_dive: 'Deep Dive',
+                modal_understood: 'Got it',
+                modal_copy_link_btn: 'Copy link to this page',
+                footer_established: 'Established 2026',
+                footer_created_by: 'Made by Gamingpig',
+                detail_status_title: 'Training & Focus',
+                detail_status_content: 'I\'m currently training as a systems integration IT specialist. Tech and systems are my world. I love setting up servers, configuring networks, and keeping everything running. My hyperfocus helps me dive deep into complex IT structures and catch errors before they become a problem.',
+                detail_background_title: 'Background & Path',
+                detail_background_content: 'I\'m a teenager and currently training as a systems integration IT specialist. That taught me early on to be independent and go my own way. I don\'t see challenges as obstacles, but as a chance to grow and shape my own future.',
+                detail_freizeit_title: 'Gaming & Content',
+                detail_freizeit_content: 'When the servers are running, you\'ll find me playing Forza Horizon 5. I stream live on TikTok and share my passion for gaming and tech with the community. It\'s all about the vibe, connecting with others, and mastering new challenges.',
+                detail_menschen_title: 'My Chosen Family',
+                detail_menschen_content: 'Since I grew up without parents, friends are my chosen family. Loyalty and trust come first for me. My new anchors are Danilo, Jakob, and Lukas, but Tom stays right there with them - we\'re walking this path together.',
+                detail_techstack_title: 'Tech Stack & Skills',
+                detail_techstack_content: 'As an aspiring systems integrator, I know my way around setting up and maintaining IT infrastructure. That includes Windows Server, Linux distributions, general network configuration, and intense hardware troubleshooting. Laptops, PCs, or smartphones - whatever\'s broken, I\'ll find the problem.',
+                detail_setup_title: 'My Audio Setup',
+                detail_setup_content: 'Good sound is an absolute must when gaming or listening to music. On my PC I use Beyerdynamic DT 770 Pro (80 Ohm) studio headphones for extremely clear sound and closed-back isolation. When I want to fill the whole room with sound, it\'s my Teufel Rockster Cross Bluetooth speaker, which just hits incredibly hard.',
+                detail_labor_title: 'Lab & Projects',
+                detail_labor_content: 'My personal playground. Here I build complex Docker environments, administer web servers, and set up my own APIs. I push network architectures to their limits and automate processes to constantly take my setup to the next level.',
+                detail_contact_title: 'Contact & Connect',
+                detail_contact_content: 'Feel like a round of Forza, or need some tech support? The best way to reach me is directly through my social media channels like TikTok or YouTube. Let\'s connect!',
+                fallback_1: 'Looks like we don\'t have lyrics for this song.',
+                fallback_2: 'Busted, we\'re still working on getting the lyrics for this song.',
+                fallback_3: 'You\'ll have to guess the lyrics for this one.',
+                fallback_4: 'Hmm. We don\'t know the lyrics for this song.',
+                fallback_5: 'No lyrics available, unfortunately. Just enjoy the vibe!',
+                secret_1: '🔧 Next project: even more homelab chaos in the Docker stack.',
+                secret_2: '🎮 Current Forza Horizon 5 high score: classified. Don\'t ask.',
+                secret_3: '☕ This site was built with a lot of hyperfocus and even more coffee.',
+                secret_4: '🐛 Bugs are just unplanned features. Period.',
+                secret_5: '💙 Thanks for being curious and clicking around!',
+                                music_section_title: 'What I\'m currently listening to',
+                music_sync_note: '*Note: Time sync is optimized for -800ms.',
+                lyrics_placeholder_title: 'Title',
+                lyrics_placeholder_artist: 'Artist',
+                lyrics_synced_label: 'Lyrics: Synced',
+                aria_lyrics_settings: 'Lyrics settings',
+                label_animation_style: 'Animation Style',
+                label_overkill_shaders: 'Overkill Shaders',
+                label_badge_new: 'Brand New',
+                label_features: 'Features',
+                label_live_sync: 'Live Sync Offset',
+                btn_resync: 'Re-Sync',
+                label_choose_service: 'Choose a service',
+                label_no_links: 'No links found',
+                btn_cancel: 'Cancel',
+                aria_lyrics_close: 'Close lyrics',
+                aria_lyrics_show: 'Show lyrics',
+                status_offline: 'Gamingpig is Offline',
+                status_zen_mode: 'Zen Mode',
+                mini_dashboard_minimized: 'Dashboard minimized',
+                status_offline_short: 'Offline',
+                status_no_music: 'No music',
+                cta_tictactoe: 'Let\'s play a round!',
+                cta_gamingpig_tiktok: 'Check out my channel here',
+                cta_gamingpig_youtube: 'Check out my channel here',
+                cta_gamingpig_github: 'Check out my profile here',
+                cta_tom: 'Check out Tom\'s channel here',
+                cta_jakob: 'Check out Jakob\'s channel here',
+                cta_lukas: 'Check out Lukas\' channel here',
+                                aria_scroll_top: 'Scroll to top',
+                aria_close: 'Close',
+                aria_tutorial_start: 'Start tutorial',
+                                header_main_title: 'About Gamingpig',
+                systems_integration_badge: 'Systems Integration',
+                greeting_night: '🌙 Well, still awake at this hour too?',
+                greeting_morning: '☀️ Good morning! Glad you stopped by.',
+                greeting_day: '👋 Hey, glad you\'re here!',
+                greeting_evening: '🌆 Good evening! Have fun browsing around.',
+                greeting_late_night: '🌙 A night owl, I see. Welcome!',
+                                label_unsynced: 'Unsynced',
+                mini_click_to_open: 'Click to open', mini_click_to_close: 'Click to close',
+                aria_cp: 'Open command palette', aria_install: 'Install as app', aria_island: 'Open song details, swipe up to dismiss'
+            },
+            es: {
+                onboard_title: 'Elige tu idioma',
+                onboard_subtitle: 'Puedes cambiarlo cuando quieras',
+                tutorial_next: 'Siguiente', tutorial_back: 'Atrás', tutorial_finish: 'Listo', tutorial_skip: 'Omitir',
+                tutorial_step: (n, total) => `Paso ${n}/${total}`,
+                t_step1_title: '¡Bienvenido a mi mundo!',
+                t_step1_text: 'Este es mi portafolio personal. Aquí descubrirás todo sobre mí, mi camino hacia la integración de sistemas y qué me motiva. ¡Mi hiperfoco es el protagonista aquí!',
+                t_step2_title: 'Tu centro de control',
+                t_step2_text: 'Arriba a la derecha tienes el control total: "Apple Liquid Glass" activa el elegante pero exigente efecto de desenfoque, Modo Oscuro cambia entre claro/oscuro, Modo de Bajo Rendimiento desactiva animaciones pesadas para dispositivos más antiguos/lentos, StandBy abre el modo de pantalla de bloqueo, y el último botón reinicia este tutorial cuando quieras.',
+                t_step3_title: 'A fondo: ¿quién soy?',
+                t_step3_text: 'Haz clic en estas tarjetas interactivas. Abren ventanas detalladas donde te cuento más sobre mi equipo de audio, mi stack tecnológico, mis proyectos de homelab y mi tiempo libre.',
+                t_step4_title: 'Música en tiempo real',
+                t_step4_text: 'La parte más loca: ¡el panel muestra en tiempo real lo que estoy escuchando! Una pequeña Dynamic Island permanece siempre visible arriba mientras suena música - tócala para expandirla, tócala de nuevo para cerrarla, deslízala hacia arriba para ocultarla del todo (recupérala desde la búsqueda Spotlight). Haz clic en la tarjeta para ver letras sincronizadas con más de 30 estilos de animación. El icono de ajustes en las letras también tiene: Ambient Color (tiñe el fondo de la página según la portada), Spatial Tilt (efecto de inclinación 3D en la portada), y el generador de tarjetas para compartir (descarga una imagen para compartir).',
+                t_step5_title: 'StandBy: tu pantalla de bloqueo',
+                t_step5_text: 'Este botón convierte la página en una verdadera pantalla de bloqueo: hora grande, fecha y una gran tarjeta de reproducción con portada, ecualizador en vivo y barra de progreso frente a un fondo animado y difuminado. Todo se desplaza ligeramente cada pocos minutos para que nada se queme en pantallas OLED - perfecto para la mesita de noche mientras carga.',
+                t_step6_title: 'Búsqueda Spotlight (⌘K)',
+                t_step6_text: 'Presiona Ctrl+K (o Cmd+K en Mac) y se abre una paleta de comandos real, ¡igual que en Mac! Simplemente escribe lo que buscas: "modo oscuro", "letras", "standby", o incluso "idioma" para cambiar de idioma. Flechas para navegar, Enter para ejecutar. ¿Sin teclado en el móvil? Simplemente toca el cuadro de búsqueda.',
+                t_step7_title: '¡Instálame como app!',
+                t_step7_text: 'Esta página genera su propio icono de app y se puede instalar como una app de verdad en Android/Chrome con un clic (sin tienda necesaria) - en iPhone se hace manualmente con "Añadir a pantalla de inicio" en el menú compartir. Después se siente como una app nativa, sin barra de navegador.',
+                t_step8_title: 'Psst... 🤫 un secreto',
+                t_step8_text: 'Esta página tiene algunos easter eggs escondidos. Pista: códigos antiguos de videojuegos, algunas palabras de teclado, o simplemente hacer clic por todas partes. ¿Sin teclado a mano (por ejemplo en el móvil)? Las palabras escritas también funcionan si las escribes en el buscador Spotlight (botón ⌘K). ¡Diviértete buscando!',
+                toast_install_ios: '📲 Toca "Compartir" ⬆️ abajo y luego "Añadir a pantalla de inicio"',
+                toast_install_android_menu: '📲 Toca los tres puntos ⋮ arriba a la derecha y elige "Instalar app" o "Añadir a pantalla de inicio"',
+                toast_install_desktop: '📲 Haz clic en el icono de instalar en la barra de direcciones, o abre el menú ⋮ → "Instalar Gamingpig..."',
+                toast_installed: '¡Instalado como app! 🎉',
+                toast_island_hidden: 'Dynamic Island ocultada – vuelve a mostrarla con ⌘K',
+                toast_island_back: 'Dynamic Island está de vuelta 🏝️',
+                toast_sharecard_creating: 'Creando tarjeta para compartir...',
+                toast_sharecard_saved: '¡Tarjeta guardada! 🎴',
+                toast_sharecard_cors: 'No se pudo cargar la portada (CORS) – tarjeta creada sin imagen.',
+                toast_link_copied: '📋 ¡Enlace copiado! Ya puedes compartirlo.',
+                toast_copy_failed: '⚠️ No se pudo copiar. Enlace: ',
+                toast_copy_unsupported: '⚠️ Tu navegador no soporta esto. Enlace: ',
+                toast_konami: '🎉 ¡Código Konami detectado! ¡Hiperfoco activado!',
+                toast_oink: '🐷 ¡Oink oink! ¿Quién llamó?',
+                toast_forza: '🏎️ ¡Vrooom! ¡Modo Forza Horizon 5!',
+                toast_fokus: '🧠⚡ ¡Hiperfoco activado! Ahora no se pierde nada.',
+                toast_matrix: '💻 Despierta, Neo...',
+                toast_disco: '👀 Hiciste clic cinco veces... ¡Modo disco!',
+                toast_search_hint: '💡 Consejo: escribe palabras aquí - algunas desbloquean sorpresas...',
+                cp_placeholder: 'Busca un comando o en la página...',
+                cp_placeholder_tiktok: '¿Qué cuenta de TikTok?',
+                cp_empty: (q) => `No se encontraron comandos para "${q}"`,
+                cp_scroll_top: 'Ir arriba', cp_scroll_cards: 'Ir a formación y vida diaria', cp_scroll_music: 'Ir al panel de música', cp_scroll_footer: 'Ir al pie de página / contacto',
+                cp_open_dashboard: 'Abrir panel de música', cp_open_lyrics: 'Mostrar letras',
+                cp_toggle_dark: 'Cambiar modo oscuro', cp_toggle_glass: 'Cambiar modo Liquid Glass', cp_toggle_perf: 'Cambiar modo de bajo rendimiento',
+                cp_standby: 'Iniciar modo StandBy', cp_ambient: 'Cambiar Ambient Color', cp_tilt: 'Cambiar Spatial Tilt',
+                cp_sharecard: 'Crear y descargar tarjeta', cp_tutorial: 'Iniciar tutorial', cp_tiktok: 'Abrir mi TikTok',
+                cp_island_back: 'Mostrar Dynamic Island de nuevo', cp_copy_link: 'Copiar enlace de la página', cp_reload: 'Recargar página',
+                cp_change_lang: '🌐 Cambiar idioma / Change language',
+                settings_ambient: 'Ambient Color', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
+                on_label: 'ON', off_label: 'OFF',
+                standby_idle_title: 'Todo tranquilo por ahora...', standby_idle_subtitle: 'Disfruta del silencio', standby_hint: 'Toca para salir',
+                install_btn: '📲 Instalar app',
+                aria_dark: 'Modo oscuro', aria_glass: 'Modo Liquid Glass', aria_perf: 'Modo rendimiento', aria_standby: 'Modo StandBy',
+                                                header_intro_html: '¡Hola! Soy Gamingpig, adolescente y muy metido en la tecnología. Tengo TDAH y mi <span class="text-blue-600 dark:text-blue-400 font-bold italic">hiperfoco</span> es mi superpoder, gracias a él puedo resolver problemas complejos donde otros ya se habrían rendido.',
+                header_freizeit: 'En mi tiempo libre me dedico a los videojuegos y al streaming. Soy algo tímido, pero en el fondo una persona muy amigable y tranquila. También me encanta reparar dispositivos (portátiles, tablets, PCs, móviles, etc.).',
+                cards_section_title: 'Real Talk: Formación y Día a Día',
+                cards_click_hint: 'Haz clic en las tarjetas para más detalles.',
+                card_title_status: 'Estado',
+                card_title_background: 'Trasfondo',
+                card_title_freizeit: 'Tiempo libre',
+                card_title_menschen: 'Personas',
+                card_title_techstack: 'Tech Stack',
+                card_title_setup: 'Setup',
+                card_title_labor: 'Laboratorio',
+                card_title_contact: 'Contacto',
+                card_teaser_status: 'Formación como técnico en integración de sistemas...',
+                card_teaser_background: 'Adolescente y en formación...',
+                card_teaser_freizeit: 'Forza Horizon 5 y streaming...',
+                card_teaser_menschen: 'Tom, Danilo, Jakob y Lukas...',
+                card_teaser_techstack: 'Hardware, Linux, Windows...',
+                card_teaser_setup: 'DT 770 Pro y Rockster Cross...',
+                card_teaser_labor: 'Servidores y Docker...',
+                card_teaser_contact: 'Conecta conmigo...',
+                modal_deep_dive: 'A Fondo',
+                modal_understood: 'Entendido',
+                modal_copy_link_btn: 'Copiar enlace de esta página',
+                footer_established: 'Fundado en 2026',
+                footer_created_by: 'Creado por Gamingpig',
+                detail_status_title: 'Formación y Enfoque',
+                detail_status_content: 'Actualmente estoy formándome como técnico en integración de sistemas. La tecnología y los sistemas son mi mundo. Me encanta montar servidores, configurar redes y mantener todo funcionando. Mi hiperfoco me ayuda a sumergirme en estructuras de TI complejas y detectar errores antes de que se conviertan en un problema.',
+                detail_background_title: 'Trasfondo y Camino',
+                detail_background_content: 'Soy adolescente y actualmente me estoy formando como técnico en integración de sistemas. Eso me enseñó pronto a ser independiente y a seguir mi propio camino. No veo los desafíos como obstáculos, sino como una oportunidad para crecer y construir mi propio futuro.',
+                detail_freizeit_title: 'Gaming y Contenido',
+                detail_freizeit_content: 'Cuando los servidores están funcionando, me encuentras jugando a Forza Horizon 5. Hago streaming en directo en TikTok y comparto mi pasión por los videojuegos y la tecnología con la comunidad. Para mí se trata del ambiente, del intercambio y de superar nuevos retos.',
+                detail_menschen_title: 'Mi Familia Elegida',
+                detail_menschen_content: 'Como crecí sin padres, mis amigos son mi familia elegida. La lealtad y la confianza son lo primero para mí. Mis nuevos pilares son Danilo, Jakob y Lukas, pero Tom sigue con ellos - recorremos este camino juntos.',
+                detail_techstack_title: 'Tech Stack y Habilidades',
+                detail_techstack_content: 'Como futuro técnico en integración de sistemas, sé cómo configurar y mantener infraestructuras de TI. Eso incluye Windows Server, distribuciones Linux, configuración general de redes y una intensa resolución de problemas de hardware. Portátiles, PCs o móviles: si algo está roto, encuentro el fallo.',
+                detail_setup_title: 'Mi Setup de Audio',
+                detail_setup_content: 'Un buen sonido es totalmente imprescindible al jugar o escuchar música. En mi PC uso los auriculares de estudio Beyerdynamic DT 770 Pro (80 Ohm), con un sonido extremadamente claro y aislamiento cerrado. Cuando quiero llenar la habitación de sonido, uso mi altavoz Bluetooth Teufel Rockster Cross, que suena brutal.',
+                detail_labor_title: 'Laboratorio y Proyectos',
+                detail_labor_content: 'Mi campo de juego personal. Aquí construyo entornos Docker complejos, administro servidores web y configuro mis propias APIs. Pongo a prueba arquitecturas de red hasta el límite y automatizo procesos para llevar mi setup al siguiente nivel constantemente.',
+                detail_contact_title: 'Contacto y Conexión',
+                detail_contact_content: '¿Te apetece una partida de Forza o necesitas soporte técnico? La mejor forma de contactarme es directamente por mis redes sociales como TikTok o YouTube. ¡Conectemos!',
+                fallback_1: 'Parece que no tenemos letra para esta canción.',
+                fallback_2: 'Nos pillaste, todavía estamos consiguiendo la letra de esta canción.',
+                fallback_3: 'Tendrás que adivinar la letra de esta canción.',
+                fallback_4: 'Hmm. No conocemos la letra de esta canción.',
+                fallback_5: 'Lamentablemente no hay letra disponible. ¡Disfruta el ambiente!',
+                secret_1: '🔧 Próximo proyecto: todavía más caos de homelab en el stack de Docker.',
+                secret_2: '🎮 Récord actual en Forza Horizon 5: secreto. No preguntes.',
+                secret_3: '☕ Esta página se construyó con muchísimo hiperfoco y aún más café.',
+                secret_4: '🐛 Los bugs son simplemente funciones no planeadas. Punto.',
+                secret_5: '💙 ¡Gracias por ser curioso y andar haciendo clic por todos lados!',
+                                music_section_title: 'Lo que estoy escuchando ahora',
+                music_sync_note: '*Nota: La sincronización está optimizada para -800ms.',
+                lyrics_placeholder_title: 'Título',
+                lyrics_placeholder_artist: 'Artista',
+                lyrics_synced_label: 'Letra: Sincronizada',
+                aria_lyrics_settings: 'Ajustes de letras',
+                label_animation_style: 'Estilo de Animación',
+                label_overkill_shaders: 'Shaders Extremos',
+                label_badge_new: 'Novedad',
+                label_features: 'Funciones',
+                label_live_sync: 'Desfase de Sincro',
+                btn_resync: 'Re-Sincronizar',
+                label_choose_service: 'Elige un servicio',
+                label_no_links: 'No se encontraron enlaces',
+                btn_cancel: 'Cancelar',
+                aria_lyrics_close: 'Cerrar letra',
+                aria_lyrics_show: 'Mostrar letra',
+                status_offline: 'Gamingpig está desconectado',
+                status_zen_mode: 'Modo Zen',
+                mini_dashboard_minimized: 'Panel minimizado',
+                status_offline_short: 'Desconectado',
+                status_no_music: 'Sin música',
+                cta_tictactoe: '¡Echemos una partida!',
+                cta_gamingpig_tiktok: 'Aquí va a mi canal',
+                cta_gamingpig_youtube: 'Aquí va a mi canal',
+                cta_gamingpig_github: 'Aquí va a mi perfil',
+                cta_tom: 'Aquí va al canal de Tom',
+                cta_jakob: 'Aquí va al canal de Jakob',
+                cta_lukas: 'Aquí va al canal de Lukas',
+                                aria_scroll_top: 'Ir arriba',
+                aria_close: 'Cerrar',
+                aria_tutorial_start: 'Iniciar tutorial',
+                                header_main_title: 'Sobre Gamingpig',
+                systems_integration_badge: 'Integración de Sistemas',
+                greeting_night: '🌙 Vaya, ¿tú también despierto a estas horas?',
+                greeting_morning: '☀️ ¡Buenos días! Qué bien que te pasaste por aquí.',
+                greeting_day: '👋 ¡Hola, qué bien que estés aquí!',
+                greeting_evening: '🌆 ¡Buenas tardes! Que disfrutes explorando.',
+                greeting_late_night: '🌙 Búho nocturno, por lo que veo. ¡Bienvenido!',
+                                label_unsynced: 'Sin sincronizar',
+                mini_click_to_open: 'Clic para abrir', mini_click_to_close: 'Clic para cerrar',
+                aria_cp: 'Abrir paleta de comandos', aria_install: 'Instalar como app', aria_island: 'Abrir detalles de la canción, desliza arriba para ocultar'
+            },
+            fr: {
+                onboard_title: 'Choisis ta langue',
+                onboard_subtitle: 'Tu peux changer ça à tout moment',
+                tutorial_next: 'Suivant', tutorial_back: 'Retour', tutorial_finish: 'Terminé', tutorial_skip: 'Passer',
+                tutorial_step: (n, total) => `Étape ${n}/${total}`,
+                t_step1_title: 'Bienvenue dans mon monde !',
+                t_step1_text: "C'est mon portfolio personnel. Tu y découvriras tout sur moi, mon parcours vers l'intégration de systèmes et ce qui me motive. Mon hyperfocus est ici au centre de tout !",
+                t_step2_title: 'Ton centre de contrôle',
+                t_step2_text: 'En haut à droite, tu as le contrôle total : "Apple Liquid Glass" active le look flou chic mais gourmand en performances, le mode sombre bascule entre clair/sombre, le mode basse consommation désactive les animations lourdes pour les appareils plus anciens/lents, StandBy ouvre le mode écran verrouillé, et le dernier bouton relance ce tutoriel à tout moment.',
+                t_step3_title: 'Plongée en profondeur : qui suis-je ?',
+                t_step3_text: "Clique sur ces cartes interactives. Elles ouvrent des fenêtres détaillées où je te parle de mon setup audio, ma stack technique, mes projets de homelab et mon temps libre.",
+                t_step4_title: 'Intégration musicale en temps réel',
+                t_step4_text: "La partie la plus folle : le tableau de bord affiche en temps réel ce que j'écoute ! Une petite Dynamic Island reste toujours visible en haut tant que la musique joue - appuie pour l'agrandir, réappuie pour la réduire, glisse vers le haut pour la masquer complètement (récupère-la via la recherche Spotlight). Clique sur la carte pour des paroles synchronisées avec plus de 30 styles d'animation. L'icône d'engrenage dans les paroles propose aussi : Ambient Color (teinte le fond de la page selon la pochette), Spatial Tilt (effet d'inclinaison 3D sur la pochette), et le générateur de carte à partager (télécharge une image à partager).",
+                t_step5_title: "StandBy : ton écran verrouillé",
+                t_step5_text: "Ce bouton transforme la page en véritable écran verrouillé : grande horloge, date, et une grande carte de lecture avec pochette, égaliseur en direct et barre de progression devant un fond flouté animé en douceur. Tout se décale légèrement toutes les quelques minutes pour éviter la marque d'écran sur les écrans OLED - parfait sur la table de nuit pendant la charge.",
+                t_step6_title: 'Recherche Spotlight (⌘K)',
+                t_step6_text: 'Appuie sur Ctrl+K (ou Cmd+K sur Mac) et une vraie palette de commandes s\'ouvre - exactement comme sur Mac ! Tape simplement ce que tu cherches : "mode sombre", "paroles", "standby", ou même "langue" pour changer de langue. Flèches pour naviguer, Entrée pour valider. Pas de clavier sur mobile ? Touche simplement le champ de recherche.',
+                t_step7_title: 'Installe-moi comme appli !',
+                t_step7_text: "Ce site génère sa propre icône d'application et peut être installé comme une vraie appli sur Android/Chrome en un clic (pas besoin de store) - sur iPhone ça se fait manuellement via \"Sur l'écran d'accueil\" dans le menu de partage. Après ça, on dirait une vraie appli native, sans aucune barre de navigateur.",
+                t_step8_title: 'Psst... 🤫 un secret',
+                t_step8_text: "Ce site cache quelques easter eggs. Indice : de vieux codes de triche de jeux vidéo, quelques mots à taper, ou simplement cliquer un peu partout. Pas de clavier sous la main (sur mobile par exemple) ? Les mots tapés fonctionnent aussi si tu les tapes dans la recherche Spotlight (bouton ⌘K). Amuse-toi bien à chercher !",
+                toast_install_ios: '📲 Appuie sur "Partager" ⬆️ en bas, puis "Sur l\'écran d\'accueil"',
+                toast_install_android_menu: '📲 Appuie sur les trois points ⋮ en haut à droite et choisis "Installer l\'appli" / "Ajouter à l\'écran d\'accueil"',
+                toast_install_desktop: '📲 Clique sur l\'icône d\'installation dans la barre d\'adresse, ou ouvre le menu ⋮ → "Installer Gamingpig..."',
+                toast_installed: 'Installé comme appli ! 🎉',
+                toast_island_hidden: 'Dynamic Island masquée – ré-affiche-la via ⌘K',
+                toast_island_back: 'La Dynamic Island est de retour 🏝️',
+                toast_sharecard_creating: 'Création de la carte à partager...',
+                toast_sharecard_saved: 'Carte enregistrée ! 🎴',
+                toast_sharecard_cors: "Impossible de charger la pochette (CORS) – carte créée sans image.",
+                toast_link_copied: '📋 Lien copié ! Tu peux le partager maintenant.',
+                toast_copy_failed: '⚠️ Impossible de copier. Lien : ',
+                toast_copy_unsupported: '⚠️ Ton navigateur ne supporte pas ça. Lien : ',
+                toast_konami: '🎉 Code Konami détecté ! Hyperfocus activé !',
+                toast_oink: '🐷 Oink oink ! Qui a appelé ça ?',
+                toast_forza: '🏎️ Vrooom ! Mode Forza Horizon 5 !',
+                toast_fokus: "🧠⚡ Hyperfocus activé ! Plus rien ne se perd maintenant.",
+                toast_matrix: '💻 Réveille-toi, Neo...',
+                toast_disco: '👀 Tu as cliqué cinq fois... Mode disco !',
+                toast_search_hint: '💡 Astuce : tape des mots ici - certains déclenchent des surprises...',
+                cp_placeholder: 'Rechercher une commande ou dans la page...',
+                cp_placeholder_tiktok: 'Quel compte TikTok ?',
+                cp_empty: (q) => `Aucune commande trouvée pour "${q}"`,
+                cp_scroll_top: 'Remonter en haut', cp_scroll_cards: 'Aller à formation & quotidien', cp_scroll_music: 'Aller au tableau de bord musique', cp_scroll_footer: 'Aller au pied de page / contact',
+                cp_open_dashboard: 'Ouvrir le tableau de bord musique', cp_open_lyrics: 'Afficher les paroles',
+                cp_toggle_dark: 'Basculer le mode sombre', cp_toggle_glass: 'Basculer le mode Liquid Glass', cp_toggle_perf: 'Basculer le mode basse consommation',
+                cp_standby: 'Démarrer le mode StandBy', cp_ambient: 'Basculer Ambient Color', cp_tilt: 'Basculer Spatial Tilt',
+                cp_sharecard: 'Créer & télécharger la carte à partager', cp_tutorial: 'Démarrer le tutoriel', cp_tiktok: 'Ouvrir mon TikTok',
+                cp_island_back: 'Réafficher la Dynamic Island', cp_copy_link: 'Copier le lien de la page', cp_reload: 'Recharger la page',
+                cp_change_lang: '🌐 Changer de langue / Change language',
+                settings_ambient: 'Ambient Color', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
+                on_label: 'ON', off_label: 'OFF',
+                standby_idle_title: "C'est calme pour le moment...", standby_idle_subtitle: 'Profite du silence', standby_hint: 'Toucher pour quitter',
+                install_btn: '📲 Installer l\'appli',
+                aria_dark: 'Mode sombre', aria_glass: 'Mode Liquid Glass', aria_perf: 'Mode performance', aria_standby: 'Mode StandBy',
+                                                header_intro_html: 'Salut ! Je suis Gamingpig, ado et passionné de technologie. J\'ai un TDAH et mon <span class="text-blue-600 dark:text-blue-400 font-bold italic">hyperfocus</span> est mon super-pouvoir, grâce à lui je résous des problèmes complexes là où d\'autres auraient déjà abandonné.',
+                header_freizeit: 'Pendant mon temps libre, je fais du gaming et du streaming. Je suis un peu timide, mais au fond quelqu\'un de très sympa et détendu. J\'adore aussi réparer des appareils IT (ordinateurs portables, tablettes, PC, smartphones, etc.).',
+                cards_section_title: 'Real Talk : Formation & Quotidien',
+                cards_click_hint: 'Clique sur les cartes pour plus de détails.',
+                card_title_status: 'Statut',
+                card_title_background: 'Contexte',
+                card_title_freizeit: 'Temps libre',
+                card_title_menschen: 'Personnes',
+                card_title_techstack: 'Tech Stack',
+                card_title_setup: 'Setup',
+                card_title_labor: 'Labo',
+                card_title_contact: 'Contact',
+                card_teaser_status: 'Formation d\'informaticien en intégration de systèmes...',
+                card_teaser_background: 'Ado & en formation...',
+                card_teaser_freizeit: 'Forza Horizon 5 & streaming...',
+                card_teaser_menschen: 'Tom, Danilo, Jakob & Lukas...',
+                card_teaser_techstack: 'Matériel, Linux, Windows...',
+                card_teaser_setup: 'DT 770 Pro & Rockster Cross...',
+                card_teaser_labor: 'Serveurs & Docker...',
+                card_teaser_contact: 'Connecte-toi avec moi...',
+                modal_deep_dive: 'En Détail',
+                modal_understood: 'Compris',
+                modal_copy_link_btn: 'Copier le lien de cette page',
+                footer_established: 'Fondé en 2026',
+                footer_created_by: 'Créé par Gamingpig',
+                detail_status_title: 'Formation & Focus',
+                detail_status_content: 'Je suis actuellement en formation d\'informaticien en intégration de systèmes. La technique et les systèmes sont mon univers. J\'adore installer des serveurs, configurer des réseaux et faire tourner tout ça. Mon hyperfocus m\'aide à plonger dans des structures informatiques complexes et à repérer les erreurs avant qu\'elles ne deviennent un problème.',
+                detail_background_title: 'Contexte & Parcours',
+                detail_background_content: 'Je suis ado et actuellement en formation d\'informaticien en intégration de systèmes. Cela m\'a appris tôt à être indépendant et à suivre mon propre chemin. Je ne vois pas les défis comme des obstacles, mais comme une chance de grandir et de construire mon propre avenir.',
+                detail_freizeit_title: 'Gaming & Contenu',
+                detail_freizeit_content: 'Quand les serveurs tournent, je suis sur Forza Horizon 5. Je stream en direct sur TikTok et je partage ma passion du gaming et de la tech avec la communauté. Ce qui compte pour moi, c\'est l\'ambiance, les échanges et relever de nouveaux défis.',
+                detail_menschen_title: 'Ma Famille de Cœur',
+                detail_menschen_content: 'Comme j\'ai grandi sans parents, mes amis sont ma famille de cœur. La loyauté et la confiance passent avant tout pour moi. Mes nouveaux piliers sont Danilo, Jakob et Lukas, mais Tom reste avec eux - on avance ensemble sur ce chemin.',
+                detail_techstack_title: 'Tech Stack & Compétences',
+                detail_techstack_content: 'En tant que futur intégrateur de systèmes, je sais installer et maintenir des infrastructures IT. Cela inclut Windows Server, les distributions Linux, la configuration réseau générale et un dépannage matériel intensif. Ordinateurs portables, PC ou smartphones - si quelque chose est cassé, je trouve la panne.',
+                detail_setup_title: 'Mon Setup Audio',
+                detail_setup_content: 'Un bon son est absolument indispensable pour jouer ou écouter de la musique. Sur mon PC, j\'utilise le casque de studio Beyerdynamic DT 770 Pro (80 Ohm), pour un son extrêmement clair et une isolation fermée. Quand je veux faire résonner toute la pièce, c\'est mon enceinte Bluetooth Teufel Rockster Cross qui envoie du lourd.',
+                detail_labor_title: 'Labo & Projets',
+                detail_labor_content: 'Mon terrain de jeu personnel. J\'y construis des environnements Docker complexes, j\'administre des serveurs web et je mets en place mes propres API. Je pousse les architectures réseau jusqu\'à leurs limites et j\'automatise des processus pour faire évoluer mon setup en permanence.',
+                detail_contact_title: 'Contact & Connexion',
+                detail_contact_content: 'Envie d\'une partie de Forza ou besoin d\'un coup de main tech ? Le mieux, c\'est de me contacter directement via mes réseaux sociaux comme TikTok ou YouTube. Connectons-nous !',
+                fallback_1: 'On dirait qu\'on n\'a pas les paroles de cette chanson.',
+                fallback_2: 'Ah, on est encore en train de chercher les paroles de cette chanson.',
+                fallback_3: 'Tu vas devoir deviner les paroles de celle-ci.',
+                fallback_4: 'Hmm. On ne connaît pas les paroles de cette chanson.',
+                fallback_5: 'Malheureusement pas de paroles disponibles. Profite juste de l\'ambiance !',
+                secret_1: '🔧 Prochain projet : encore plus de chaos homelab dans la stack Docker.',
+                secret_2: '🎮 Meilleur score actuel sur Forza Horizon 5 : secret. Ne demande pas.',
+                secret_3: '☕ Ce site a été construit avec beaucoup d\'hyperfocus et encore plus de café.',
+                secret_4: '🐛 Les bugs, ce sont juste des fonctionnalités pas prévues. Point final.',
+                secret_5: '💙 Merci d\'être curieux et d\'avoir cliqué partout !',
+                                music_section_title: 'Ce que j\'écoute en ce moment',
+                music_sync_note: '*Remarque : la synchro est optimisée pour -800ms.',
+                lyrics_placeholder_title: 'Titre',
+                lyrics_placeholder_artist: 'Artiste',
+                lyrics_synced_label: 'Paroles : Synchro',
+                aria_lyrics_settings: 'Réglages des paroles',
+                label_animation_style: 'Style d\'Animation',
+                label_overkill_shaders: 'Shaders Extrêmes',
+                label_badge_new: 'Tout Nouveau',
+                label_features: 'Fonctionnalités',
+                label_live_sync: 'Décalage de Synchro',
+                btn_resync: 'Re-Synchro',
+                label_choose_service: 'Choisir un service',
+                label_no_links: 'Aucun lien trouvé',
+                btn_cancel: 'Annuler',
+                aria_lyrics_close: 'Fermer les paroles',
+                aria_lyrics_show: 'Afficher les paroles',
+                status_offline: 'Gamingpig est hors ligne',
+                status_zen_mode: 'Mode Zen',
+                mini_dashboard_minimized: 'Tableau de bord réduit',
+                status_offline_short: 'Hors ligne',
+                status_no_music: 'Pas de musique',
+                cta_tictactoe: 'Faisons une partie !',
+                cta_gamingpig_tiktok: 'Voici ma chaîne',
+                cta_gamingpig_youtube: 'Voici ma chaîne',
+                cta_gamingpig_github: 'Voici mon profil',
+                cta_tom: 'Voici la chaîne de Tom',
+                cta_jakob: 'Voici la chaîne de Jakob',
+                cta_lukas: 'Voici la chaîne de Lukas',
+                                aria_scroll_top: 'Remonter en haut',
+                aria_close: 'Fermer',
+                aria_tutorial_start: 'Démarrer le tutoriel',
+                                header_main_title: 'À propos de Gamingpig',
+                systems_integration_badge: 'Intégration de Systèmes',
+                greeting_night: '🌙 Alors, toi aussi encore réveillé à cette heure ?',
+                greeting_morning: '☀️ Bonjour ! Content que tu sois passé.',
+                greeting_day: '👋 Salut, content que tu sois là !',
+                greeting_evening: '🌆 Bonsoir ! Amuse-toi bien à explorer.',
+                greeting_late_night: '🌙 Un oiseau de nuit, à ce que je vois. Bienvenue !',
+                                label_unsynced: 'Non synchronisé',
+                mini_click_to_open: 'Cliquer pour ouvrir', mini_click_to_close: 'Cliquer pour fermer',
+                aria_cp: 'Ouvrir la palette de commandes', aria_install: 'Installer comme appli', aria_island: 'Ouvrir les détails du morceau, glisser vers le haut pour masquer'
+            },
+            pt: {
+                onboard_title: 'Escolha seu idioma',
+                onboard_subtitle: 'Você pode mudar isso quando quiser',
+                tutorial_next: 'Próximo', tutorial_back: 'Voltar', tutorial_finish: 'Concluir', tutorial_skip: 'Pular',
+                tutorial_step: (n, total) => `Passo ${n}/${total}`,
+                t_step1_title: 'Bem-vindo ao meu mundo!',
+                t_step1_text: 'Este é meu portfólio pessoal. Aqui você descobre tudo sobre mim, meu caminho na integração de sistemas e o que me motiva. Meu hiperfoco é o protagonista aqui!',
+                t_step2_title: 'Sua central de controle',
+                t_step2_text: 'No canto superior direito você tem controle total: "Apple Liquid Glass" ativa o visual desfocado chique mas pesado, Modo Escuro alterna entre claro/escuro, Modo de Baixo Desempenho desativa animações pesadas para aparelhos mais antigos/lentos, StandBy abre o modo tela de bloqueio, e o último botão reinicia este tutorial quando quiser.',
+                t_step3_title: 'Aprofundando: quem sou eu?',
+                t_step3_text: 'Clique nesses cartões interativos. Eles abrem janelas detalhadas onde conto mais sobre minha configuração de áudio, minha stack de tecnologia, meus projetos de homelab e meu tempo livre.',
+                t_step4_title: 'Integração musical em tempo real',
+                t_step4_text: 'A parte mais louca: o painel mostra em tempo real o que estou ouvindo! Uma pequena Dynamic Island fica sempre visível no topo enquanto a música toca - toque para expandir, toque de novo para recolher, deslize para cima para ocultar completamente (traga de volta pela busca Spotlight). Clique no cartão para letras sincronizadas com mais de 30 estilos de animação. O ícone de engrenagem nas letras também tem: Ambient Color (tinge o fundo da página conforme a capa), Spatial Tilt (efeito de inclinação 3D na capa), e o gerador de cartão para compartilhar (baixa uma imagem para compartilhar).',
+                t_step5_title: 'StandBy: sua tela de bloqueio',
+                t_step5_text: 'Este botão transforma a página em uma tela de bloqueio de verdade: relógio grande, data e um grande cartão do que está tocando, com capa, equalizador ao vivo e barra de progresso na frente de um fundo animado e desfocado. Tudo se desloca levemente a cada poucos minutos para não queimar telas OLED - perfeito para o criado-mudo enquanto carrega.',
+                t_step6_title: 'Busca Spotlight (⌘K)',
+                t_step6_text: 'Aperte Ctrl+K (ou Cmd+K no Mac) e uma paleta de comandos de verdade se abre - igualzinho ao Mac! É só digitar o que procura: "modo escuro", "letras", "standby", ou até "idioma" para mudar o idioma. Setas para navegar, Enter para executar. Sem teclado no celular? É só tocar na caixa de busca.',
+                t_step7_title: 'Me instale como app!',
+                t_step7_text: 'Este site gera seu próprio ícone de app e pode ser instalado como um app de verdade no Android/Chrome com um clique (sem loja necessária) - no iPhone isso é feito manualmente via "Adicionar à Tela de Início" no menu de compartilhar. Depois disso parece um app nativo, sem nenhuma barra de navegador.',
+                t_step8_title: 'Psst... 🤫 um segredo',
+                t_step8_text: 'Este site tem alguns easter eggs escondidos. Dica: códigos antigos de videogame, algumas palavras de teclado, ou simplesmente clicar em tudo. Sem teclado à mão (por exemplo no celular)? As palavras digitadas também funcionam se você as digitar na busca Spotlight (botão ⌘K). Divirta-se procurando!',
+                toast_install_ios: '📲 Toque em "Compartilhar" ⬆️ embaixo e depois em "Adicionar à Tela de Início"',
+                toast_install_android_menu: '📲 Toque nos três pontinhos ⋮ no canto superior direito e escolha "Instalar app" / "Adicionar à tela inicial"',
+                toast_install_desktop: '📲 Clique no ícone de instalação na barra de endereço, ou abra o menu ⋮ → "Instalar Gamingpig..."',
+                toast_installed: 'Instalado como app! 🎉',
+                toast_island_hidden: 'Dynamic Island ocultada – traga de volta pelo ⌘K',
+                toast_island_back: 'A Dynamic Island está de volta 🏝️',
+                toast_sharecard_creating: 'Criando cartão para compartilhar...',
+                toast_sharecard_saved: 'Cartão salvo! 🎴',
+                toast_sharecard_cors: 'Não foi possível carregar a capa (CORS) – cartão criado sem imagem.',
+                toast_link_copied: '📋 Link copiado! Já pode compartilhar.',
+                toast_copy_failed: '⚠️ Não foi possível copiar. Link: ',
+                toast_copy_unsupported: '⚠️ Seu navegador não suporta isso. Link: ',
+                toast_konami: '🎉 Código Konami detectado! Hiperfoco ativado!',
+                toast_oink: '🐷 Oink oink! Quem chamou?',
+                toast_forza: '🏎️ Vrooom! Modo Forza Horizon 5!',
+                toast_fokus: '🧠⚡ Hiperfoco ativado! Agora nada se perde.',
+                toast_matrix: '💻 Acorda, Neo...',
+                toast_disco: '👀 Você clicou cinco vezes... Modo disco!',
+                toast_search_hint: '💡 Dica: digite palavras aqui - algumas desbloqueiam surpresas...',
+                cp_placeholder: 'Buscar um comando ou na página...',
+                cp_placeholder_tiktok: 'Qual conta do TikTok?',
+                cp_empty: (q) => `Nenhum comando encontrado para "${q}"`,
+                cp_scroll_top: 'Rolar para o topo', cp_scroll_cards: 'Ir para formação & dia a dia', cp_scroll_music: 'Ir para o painel de música', cp_scroll_footer: 'Ir para rodapé / contato',
+                cp_open_dashboard: 'Abrir painel de música', cp_open_lyrics: 'Mostrar letras',
+                cp_toggle_dark: 'Alternar modo escuro', cp_toggle_glass: 'Alternar modo Liquid Glass', cp_toggle_perf: 'Alternar modo de baixo desempenho',
+                cp_standby: 'Iniciar modo StandBy', cp_ambient: 'Alternar Ambient Color', cp_tilt: 'Alternar Spatial Tilt',
+                cp_sharecard: 'Criar & baixar cartão para compartilhar', cp_tutorial: 'Iniciar tutorial', cp_tiktok: 'Abrir meu TikTok',
+                cp_island_back: 'Mostrar Dynamic Island novamente', cp_copy_link: 'Copiar link da página', cp_reload: 'Recarregar página',
+                cp_change_lang: '🌐 Mudar idioma / Change language',
+                settings_ambient: 'Ambient Color', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
+                on_label: 'LIGADO', off_label: 'DESLIGADO',
+                standby_idle_title: 'Está tudo quieto agora...', standby_idle_subtitle: 'Aproveite o silêncio', standby_hint: 'Toque para sair',
+                install_btn: '📲 Instalar app',
+                aria_dark: 'Modo escuro', aria_glass: 'Modo Liquid Glass', aria_perf: 'Modo desempenho', aria_standby: 'Modo StandBy',
+                                                header_intro_html: 'Oi! Eu sou o Gamingpig, adolescente e apaixonado por tecnologia. Tenho TDAH e meu <span class="text-blue-600 dark:text-blue-400 font-bold italic">hiperfoco</span> é meu superpoder, com ele consigo resolver problemas complexos onde outros já teriam desistido.',
+                header_freizeit: 'No meu tempo livre curto games e streaming. Sou um pouco tímido, mas no fundo uma pessoa bem simpática e tranquila. Também adoro consertar aparelhos de TI (notebooks, tablets, PCs, smartphones etc.).',
+                cards_section_title: 'Real Talk: Formação & Dia a Dia',
+                cards_click_hint: 'Clique nos cartões para mais detalhes.',
+                card_title_status: 'Status',
+                card_title_background: 'Contexto',
+                card_title_freizeit: 'Tempo livre',
+                card_title_menschen: 'Pessoas',
+                card_title_techstack: 'Tech Stack',
+                card_title_setup: 'Setup',
+                card_title_labor: 'Laboratório',
+                card_title_contact: 'Contato',
+                card_teaser_status: 'Formação técnica em integração de sistemas...',
+                card_teaser_background: 'Adolescente & em formação...',
+                card_teaser_freizeit: 'Forza Horizon 5 & streaming...',
+                card_teaser_menschen: 'Tom, Danilo, Jakob & Lukas...',
+                card_teaser_techstack: 'Hardware, Linux, Windows...',
+                card_teaser_setup: 'DT 770 Pro & Rockster Cross...',
+                card_teaser_labor: 'Servidores & Docker...',
+                card_teaser_contact: 'Conecte-se comigo...',
+                modal_deep_dive: 'Mergulho Profundo',
+                modal_understood: 'Entendi',
+                modal_copy_link_btn: 'Copiar link desta página',
+                footer_established: 'Fundado em 2026',
+                footer_created_by: 'Criado por Gamingpig',
+                detail_status_title: 'Formação & Foco',
+                detail_status_content: 'Atualmente estou fazendo minha formação técnica em integração de sistemas. Tecnologia e sistemas são o meu mundo. Adoro configurar servidores, redes e manter tudo funcionando. Meu hiperfoco me ajuda a mergulhar fundo em estruturas de TI complexas e encontrar erros antes que virem um problema.',
+                detail_background_title: 'Contexto & Caminho',
+                detail_background_content: 'Sou adolescente e atualmente faço minha formação técnica em integração de sistemas. Isso me ensinou cedo a ser independente e seguir meu próprio caminho. Não vejo desafios como obstáculos, mas como uma chance de crescer e construir meu próprio futuro.',
+                detail_freizeit_title: 'Gaming & Conteúdo',
+                detail_freizeit_content: 'Quando os servidores estão rodando, você me encontra jogando Forza Horizon 5. Faço streaming ao vivo no TikTok e compartilho minha paixão por games e tecnologia com a comunidade. Pra mim é sobre o clima, a troca e superar novos desafios.',
+                detail_menschen_title: 'Minha Família Escolhida',
+                detail_menschen_content: 'Como cresci sem pais, meus amigos são minha família escolhida. Lealdade e confiança vêm em primeiro lugar pra mim. Meus novos pilares são Danilo, Jakob e Lukas, mas o Tom continua junto com eles - seguimos esse caminho juntos.',
+                detail_techstack_title: 'Tech Stack & Habilidades',
+                detail_techstack_content: 'Como futuro integrador de sistemas, entendo de configuração e manutenção de infraestrutura de TI. Isso inclui Windows Server, distribuições Linux, configuração geral de redes e troubleshooting intenso de hardware. Notebooks, PCs ou smartphones - se algo quebrou, eu encontro o problema.',
+                detail_setup_title: 'Meu Setup de Áudio',
+                detail_setup_content: 'Um som bom é essencial pra jogar ou ouvir música. No meu PC uso o fone de estúdio Beyerdynamic DT 770 Pro (80 Ohm), som extremamente nítido e isolamento fechado. Quando quero encher o quarto de som, uso minha caixa Bluetooth Teufel Rockster Cross, que manda muito bem.',
+                detail_labor_title: 'Laboratório & Projetos',
+                detail_labor_content: 'Meu playground pessoal. Aqui eu construo ambientes Docker complexos, administro servidores web e monto minhas próprias APIs. Testo arquiteturas de rede até o limite e automatizo processos pra levar meu setup pro próximo nível o tempo todo.',
+                detail_contact_title: 'Contato & Conexão',
+                detail_contact_content: 'Tá afim de uma partida de Forza ou precisa de suporte técnico? A melhor forma de me encontrar é direto pelas minhas redes sociais como TikTok ou YouTube. Bora se conectar!',
+                fallback_1: 'Parece que não temos a letra dessa música.',
+                fallback_2: 'Te pegamos, ainda estamos correndo atrás da letra dessa música.',
+                fallback_3: 'Você vai ter que adivinhar a letra dessa aqui.',
+                fallback_4: 'Hmm. Não conhecemos a letra dessa música.',
+                fallback_5: 'Infelizmente não tem letra disponível. Aproveita o vibe!',
+                secret_1: '🔧 Próximo projeto: ainda mais caos de homelab na stack do Docker.',
+                secret_2: '🎮 Recorde atual no Forza Horizon 5: segredo. Não pergunta.',
+                secret_3: '☕ Este site foi feito com muito hiperfoco e ainda mais café.',
+                secret_4: '🐛 Bugs são só funcionalidades não planejadas. Ponto final.',
+                secret_5: '💙 Valeu por ser curioso e clicar em tudo por aí!',
+                                music_section_title: 'O que estou ouvindo agora',
+                music_sync_note: '*Nota: A sincronização está otimizada para -800ms.',
+                lyrics_placeholder_title: 'Título',
+                lyrics_placeholder_artist: 'Artista',
+                lyrics_synced_label: 'Letra: Sincronizada',
+                aria_lyrics_settings: 'Configurações de letra',
+                label_animation_style: 'Estilo de Animação',
+                label_overkill_shaders: 'Shaders Extremos',
+                label_badge_new: 'Novidade',
+                label_features: 'Funcionalidades',
+                label_live_sync: 'Offset de Sincronia',
+                btn_resync: 'Re-Sincronizar',
+                label_choose_service: 'Escolha um serviço',
+                label_no_links: 'Nenhum link encontrado',
+                btn_cancel: 'Cancelar',
+                aria_lyrics_close: 'Fechar letra',
+                aria_lyrics_show: 'Mostrar letra',
+                status_offline: 'Gamingpig está offline',
+                status_zen_mode: 'Modo Zen',
+                mini_dashboard_minimized: 'Painel minimizado',
+                status_offline_short: 'Offline',
+                status_no_music: 'Sem música',
+                cta_tictactoe: 'Bora jogar uma partida!',
+                cta_gamingpig_tiktok: 'Aqui vai pro meu canal',
+                cta_gamingpig_youtube: 'Aqui vai pro meu canal',
+                cta_gamingpig_github: 'Aqui vai pro meu perfil',
+                cta_tom: 'Aqui vai pro canal do Tom',
+                cta_jakob: 'Aqui vai pro canal do Jakob',
+                cta_lukas: 'Aqui vai pro canal do Lukas',
+                                aria_scroll_top: 'Rolar para o topo',
+                aria_close: 'Fechar',
+                aria_tutorial_start: 'Iniciar tutorial',
+                                header_main_title: 'Sobre o Gamingpig',
+                systems_integration_badge: 'Integração de Sistemas',
+                greeting_night: '🌙 Nossa, você também tá acordado a essa hora?',
+                greeting_morning: '☀️ Bom dia! Que bom que você passou por aqui.',
+                greeting_day: '👋 E aí, que bom que você tá aqui!',
+                greeting_evening: '🌆 Boa noite! Aproveite pra dar uma olhada por aqui.',
+                greeting_late_night: '🌙 Uma coruja noturna, pelo visto. Seja bem-vindo!',
+                                label_unsynced: 'Não sincronizado',
+                mini_click_to_open: 'Clique para abrir', mini_click_to_close: 'Clique para fechar',
+                aria_cp: 'Abrir paleta de comandos', aria_install: 'Instalar como app', aria_island: 'Abrir detalhes da música, deslize para cima para ocultar'
+            },
+            tr: {
+                onboard_title: 'Dilini seç',
+                onboard_subtitle: 'Bunu istediğin zaman değiştirebilirsin',
+                tutorial_next: 'İleri', tutorial_back: 'Geri', tutorial_finish: 'Bitir', tutorial_skip: 'Atla',
+                tutorial_step: (n, total) => `Adım ${n}/${total}`,
+                t_step1_title: 'Dünyama hoş geldin!',
+                t_step1_text: 'Bu benim kişisel portfolyom. Burada benim hakkımda, sistem entegrasyonuna giden yolum ve beni neyin motive ettiği hakkında her şeyi öğreneceksin. Hiperodağım burada başrolde!',
+                t_step2_title: 'Kontrol merkezin',
+                t_step2_text: 'Sağ üstte tüm kontrol sende: "Apple Liquid Glass" şık ama performans yiyen bulanıklık görünümünü açar, Karanlık Mod açık/koyu arasında geçiş yapar, Düşük Performans Modu eski/yavaş cihazlar için ağır animasyonları kapatır, StandBy kilit ekranı modunu açar, ve son buton bu eğitimi istediğin zaman yeniden başlatır.',
+                t_step3_title: 'Derinlemesine: ben kimim?',
+                t_step3_text: 'Bu etkileşimli kartlara tıkla. Ses düzenim, teknoloji yığınım, homelab projelerim ve boş zamanım hakkında daha fazla bilgi veren detaylı pencereler açılıyor.',
+                t_step4_title: 'Gerçek zamanlı müzik entegrasyonu',
+                t_step4_text: "En çılgın kısım: panel şu anda ne dinlediğimi gerçek zamanlı gösteriyor! Müzik çalarken üstte küçük bir Dynamic Island her zaman görünür kalır - dokun genişlesin, tekrar dokun küçülsün, yukarı kaydır tamamen gizlensin (Spotlight aramasıyla geri getir). Senkronize şarkı sözleri için karta tıkla, 30'dan fazla animasyon stiliyle. Şarkı sözlerindeki dişli simgesi ayrıca şunları sunar: Ambient Color (sayfa arka planını kapak resmine göre boyar), Spatial Tilt (kapak resminde 3D eğim efekti), ve paylaşım kartı oluşturucu (paylaşılabilir bir resim indirir).",
+                t_step5_title: 'StandBy: kilit ekranın',
+                t_step5_text: 'Bu buton sayfayı gerçek bir kilit ekranına dönüştürür: büyük saat, tarih ve kapak resmi, canlı ekolayzır ve ilerleme çubuğuyla büyük bir "şimdi çalıyor" kartı, yumuşakça hareket eden bulanık bir arka plan önünde. OLED ekranlarda iz bırakmaması için her şey birkaç dakikada bir hafifçe kayar - şarj olurken komodinde durması için mükemmel.',
+                t_step6_title: 'Spotlight arama (⌘K)',
+                t_step6_text: 'Ctrl+K (Mac\'te Cmd+K) tuşuna bas ve gerçek bir komut paleti açılsın - tıpkı Mac\'teki gibi! Ne aradığını yaz: "karanlık mod", "şarkı sözleri", "standby", hatta dili değiştirmek için "dil" bile yazabilirsin. Gezinmek için ok tuşları, çalıştırmak için Enter. Telefonda klavye yok mu? Arama kutusuna dokunman yeterli.',
+                t_step7_title: 'Beni uygulama olarak yükle!',
+                t_step7_text: 'Bu site kendi uygulama simgesini oluşturur ve Android/Chrome\'da tek tıkla gerçek bir uygulama olarak yüklenebilir (mağaza gerekmez) - iPhone\'da bu, paylaş menüsündeki "Ana Ekrana Ekle" ile manuel yapılır. Sonrasında tarayıcı çubuğu olmadan gerçek bir uygulama gibi hissettirir.',
+                t_step8_title: 'Pist... 🤫 bir sır',
+                t_step8_text: 'Bu sitede birkaç gizli easter egg var. İpucu: eski video oyunu hile kodları, birkaç klavye kelimesi veya sadece etrafa vahşice tıklamak. Elinde klavye yok mu (örneğin telefonda)? Yazılan kelimeler Spotlight arama kutusuna (⌘K butonu) yazılırsa da çalışır. Aramak eğlenceli olsun!',
+                toast_install_ios: '📲 Altta "Paylaş" ⬆️ dokun, sonra "Ana Ekrana Ekle"',
+                toast_install_android_menu: '📲 Sağ üstteki üç noktaya ⋮ dokun ve "Uygulamayı yükle" / "Ana ekrana ekle" seç',
+                toast_install_desktop: '📲 Adres çubuğundaki yükleme simgesine tıkla veya ⋮ menüsünü aç → "Gamingpig\'i yükle..."',
+                toast_installed: 'Uygulama olarak yüklendi! 🎉',
+                toast_island_hidden: 'Dynamic Island gizlendi – ⌘K ile geri getir',
+                toast_island_back: 'Dynamic Island geri döndü 🏝️',
+                toast_sharecard_creating: 'Paylaşım kartı oluşturuluyor...',
+                toast_sharecard_saved: 'Paylaşım kartı kaydedildi! 🎴',
+                toast_sharecard_cors: 'Kapak resmi yüklenemedi (CORS) – kart resimsiz oluşturuldu.',
+                toast_link_copied: '📋 Bağlantı kopyalandı! Şimdi paylaşabilirsin.',
+                toast_copy_failed: '⚠️ Kopyalanamadı. Bağlantı: ',
+                toast_copy_unsupported: '⚠️ Tarayıcın bunu desteklemiyor. Bağlantı: ',
+                toast_konami: '🎉 Konami kodu algılandı! Hiperodak etkinleştirildi!',
+                toast_oink: '🐷 Oink oink! Kim seslendi?',
+                toast_forza: '🏎️ Vrooom! Forza Horizon 5 modu!',
+                toast_fokus: '🧠⚡ Hiperodak etkinleştirildi! Artık hiçbir şey kaybolmuyor.',
+                toast_matrix: '💻 Uyan, Neo...',
+                toast_disco: '👀 Beş kez tıkladın... Disko modu!',
+                toast_search_hint: '💡 İpucu: buraya kelimeler yaz - bazıları sürpriz açar...',
+                cp_placeholder: 'Komut ara veya sayfada ara...',
+                cp_placeholder_tiktok: 'Hangi TikTok hesabı?',
+                cp_empty: (q) => `"${q}" için komut bulunamadı`,
+                cp_scroll_top: 'Başa dön', cp_scroll_cards: 'Eğitim & günlük hayata git', cp_scroll_music: 'Müzik paneline git', cp_scroll_footer: 'Alt bilgi / iletişime git',
+                cp_open_dashboard: 'Müzik panelini aç', cp_open_lyrics: 'Şarkı sözlerini göster',
+                cp_toggle_dark: 'Karanlık modu değiştir', cp_toggle_glass: 'Liquid Glass modunu değiştir', cp_toggle_perf: 'Düşük performans modunu değiştir',
+                cp_standby: 'StandBy modunu başlat', cp_ambient: 'Ambient Color değiştir', cp_tilt: 'Spatial Tilt değiştir',
+                cp_sharecard: 'Paylaşım kartı oluştur & indir', cp_tutorial: 'Eğitimi başlat', cp_tiktok: "TikTok'umu aç",
+                cp_island_back: "Dynamic Island'ı tekrar göster", cp_copy_link: 'Sayfa bağlantısını kopyala', cp_reload: 'Sayfayı yenile',
+                cp_change_lang: '🌐 Dili değiştir / Change language',
+                settings_ambient: 'Ambient Color', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
+                on_label: 'AÇIK', off_label: 'KAPALI',
+                standby_idle_title: 'Şu an sessiz...', standby_idle_subtitle: 'Sessizliğin tadını çıkar', standby_hint: 'Çıkmak için dokun',
+                install_btn: '📲 Uygulamayı yükle',
+                aria_dark: 'Karanlık mod', aria_glass: 'Liquid Glass modu', aria_perf: 'Performans modu', aria_standby: 'StandBy modu',
+                                                header_intro_html: 'Merhaba! Ben Gamingpig, genç yaşta ve teknolojiyle aram çok iyi. DEHB\'im var ve <span class="text-blue-600 dark:text-blue-400 font-bold italic">hiperodağım</span> benim süper gücüm - başkalarının çoktan pes ettiği karmaşık sorunları bu sayede çözebiliyorum.',
+                header_freizeit: 'Boş zamanlarımda oyun oynamak ve yayın açmakla uğraşıyorum. Biraz çekingenimdir ama aslında çok arkadaş canlısı ve sakin biriyim. Ayrıca bilgisayar/telefon gibi cihazları (laptop, tablet, PC, akıllı telefon vb.) tamir etmeyi de severim.',
+                cards_section_title: 'Real Talk: Eğitim ve Günlük Hayat',
+                cards_click_hint: 'Detaylar için kartlara tıkla.',
+                card_title_status: 'Durum',
+                card_title_background: 'Geçmiş',
+                card_title_freizeit: 'Boş Zaman',
+                card_title_menschen: 'İnsanlar',
+                card_title_techstack: 'Teknoloji Yığını',
+                card_title_setup: 'Kurulum',
+                card_title_labor: 'Laboratuvar',
+                card_title_contact: 'İletişim',
+                card_teaser_status: 'Sistem entegrasyonu BT uzmanlığı eğitimi...',
+                card_teaser_background: 'Genç yaşta & eğitimde...',
+                card_teaser_freizeit: 'Forza Horizon 5 ve yayın...',
+                card_teaser_menschen: 'Tom, Danilo, Jakob ve Lukas...',
+                card_teaser_techstack: 'Donanım, Linux, Windows...',
+                card_teaser_setup: 'DT 770 Pro ve Rockster Cross...',
+                card_teaser_labor: 'Sunucular ve Docker...',
+                card_teaser_contact: 'Benimle bağlantı kur...',
+                modal_deep_dive: 'Derinlemesine',
+                modal_understood: 'Anladım',
+                modal_copy_link_btn: 'Bu sayfanın bağlantısını kopyala',
+                footer_established: '2026\'da Kuruldu',
+                footer_created_by: 'Gamingpig tarafından yapıldı',
+                detail_status_title: 'Eğitim ve Odak',
+                detail_status_content: 'Şu anda sistem entegrasyonu alanında BT uzmanlığı eğitimi alıyorum. Teknoloji ve sistemler benim dünyam. Sunucu kurmayı, ağları yapılandırmayı ve her şeyi çalışır tutmayı seviyorum. Hiperodağım, karmaşık BT yapılarına derinlemesine dalmama ve sorunlar büyümeden hataları bulmama yardımcı oluyor.',
+                detail_background_title: 'Geçmiş ve Yol',
+                detail_background_content: 'Genç yaştayım ve şu anda sistem entegrasyonu alanında BT uzmanlığı eğitimi alıyorum. Bu bana erken yaşta bağımsız olmayı ve kendi yolumu çizmeyi öğretti. Zorlukları engel değil, büyümek ve kendi geleceğimi şekillendirmek için bir fırsat olarak görüyorum.',
+                detail_freizeit_title: 'Oyun ve İçerik',
+                detail_freizeit_content: 'Sunucular çalışırken beni Forza Horizon 5 oynarken bulabilirsin. TikTok\'ta canlı yayın açıyor ve oyun/teknoloji tutkumu toplulukla paylaşıyorum. Benim için önemli olan atmosfer, etkileşim ve yeni zorlukların üstesinden gelmek.',
+                detail_menschen_title: 'Seçtiğim Ailem',
+                detail_menschen_content: 'Ebeveynsiz büyüdüğüm için arkadaşlarım benim seçtiğim ailem. Benim için sadakat ve güven her şeyden önce gelir. Yeni dayanaklarım Danilo, Jakob ve Lukas, ama Tom da onlarla birlikte kalıyor - bu yolda birlikte ilerliyoruz.',
+                detail_techstack_title: 'Teknoloji Yığını ve Yetenekler',
+                detail_techstack_content: 'Sistem entegratörü adayı olarak BT altyapısı kurulumu ve bakımından anlıyorum. Buna Windows Server, Linux dağıtımları, genel ağ yapılandırması ve yoğun donanım sorun giderme dahil. Laptop, PC ya da akıllı telefon fark etmez - bozuksa hatayı bulurum.',
+                detail_setup_title: 'Ses Kurulumum',
+                detail_setup_content: 'Oyun oynarken veya müzik dinlerken iyi ses kesinlikle şart. Bilgisayarımda son derece net ses ve kapalı izolasyon için Beyerdynamic DT 770 Pro (80 Ohm) stüdyo kulaklık kullanıyorum. Odayı sesle doldurmak istediğimde ise gerçekten sert vuran Teufel Rockster Cross Bluetooth hoparlörüm devreye giriyor.',
+                detail_labor_title: 'Laboratuvar ve Projeler',
+                detail_labor_content: 'Kişisel oyun alanım. Burada karmaşık Docker ortamları kuruyorum, web sunucuları yönetiyorum ve kendi API\'lerimi oluşturuyorum. Ağ mimarilerini sınırlarına kadar test ediyor ve kurulumumu sürekli bir sonraki seviyeye taşımak için süreçleri otomatikleştiriyorum.',
+                detail_contact_title: 'İletişim ve Bağlantı',
+                detail_contact_content: 'Bir tur Forza ister misin ya da teknik desteğe mi ihtiyacın var? Bana en iyi TikTok veya YouTube gibi sosyal medya kanallarımdan ulaşabilirsin. Hadi bağlantı kuralım!',
+                fallback_1: 'Görünüşe göre bu şarkının sözleri elimizde yok.',
+                fallback_2: 'Yakalandık, bu şarkının sözlerini bulmaya hâlâ çalışıyoruz.',
+                fallback_3: 'Bu şarkının sözlerini tahmin etmen gerekecek.',
+                fallback_4: 'Hmm. Bu şarkının sözlerini bilmiyoruz.',
+                fallback_5: 'Maalesef söz mevcut değil. Sadece atmosferin tadını çıkar!',
+                secret_1: '🔧 Sıradaki proje: Docker yığınında daha da fazla homelab kaosu.',
+                secret_2: '🎮 Forza Horizon 5\'teki güncel rekorum: gizli. Sorma.',
+                secret_3: '☕ Bu site çok fazla hiperodak ve daha da fazla kahveyle yapıldı.',
+                secret_4: '🐛 Hatalar sadece planlanmamış özelliklerdir. Nokta.',
+                secret_5: '💙 Meraklı olduğun ve etrafa tıkladığın için teşekkürler!',
+                                music_section_title: 'Şu an ne dinliyorum',
+                music_sync_note: '*Not: Zaman senkronizasyonu -800ms için optimize edilmiştir.',
+                lyrics_placeholder_title: 'Başlık',
+                lyrics_placeholder_artist: 'Sanatçı',
+                lyrics_synced_label: 'Şarkı Sözü: Senkronize',
+                aria_lyrics_settings: 'Şarkı sözü ayarları',
+                label_animation_style: 'Animasyon Stili',
+                label_overkill_shaders: 'Aşırı Shader\'lar',
+                label_badge_new: 'Yepyeni',
+                label_features: 'Özellikler',
+                label_live_sync: 'Canlı Senkron Ofseti',
+                btn_resync: 'Yeniden Senkronize Et',
+                label_choose_service: 'Servis Seç',
+                label_no_links: 'Bağlantı bulunamadı',
+                btn_cancel: 'İptal',
+                aria_lyrics_close: 'Şarkı sözlerini kapat',
+                aria_lyrics_show: 'Şarkı sözlerini göster',
+                status_offline: 'Gamingpig Çevrimdışı',
+                status_zen_mode: 'Zen Modu',
+                mini_dashboard_minimized: 'Panel küçültüldü',
+                status_offline_short: 'Çevrimdışı',
+                status_no_music: 'Müzik yok',
+                cta_tictactoe: 'Hadi bir tur oynayalım!',
+                cta_gamingpig_tiktok: 'Kanalıma buradan ulaşabilirsin',
+                cta_gamingpig_youtube: 'Kanalıma buradan ulaşabilirsin',
+                cta_gamingpig_github: 'Profilime buradan ulaşabilirsin',
+                cta_tom: 'Tom\'un kanalına buradan ulaşabilirsin',
+                cta_jakob: 'Jakob\'un kanalına buradan ulaşabilirsin',
+                cta_lukas: 'Lukas\'ın kanalına buradan ulaşabilirsin',
+                                aria_scroll_top: 'Başa dön',
+                aria_close: 'Kapat',
+                aria_tutorial_start: 'Eğitimi başlat',
+                                header_main_title: 'Gamingpig Hakkında',
+                systems_integration_badge: 'Sistem Entegrasyonu',
+                greeting_night: '🌙 Vay, sen de bu saatte hâlâ uyanık mısın?',
+                greeting_morning: '☀️ Günaydın! Uğradığına sevindim.',
+                greeting_day: '👋 Selam, burada olmana sevindim!',
+                greeting_evening: '🌆 İyi akşamlar! Gezinmenin tadını çıkar.',
+                greeting_late_night: '🌙 Anlaşılan gece kuşusun. Hoş geldin!',
+                                label_unsynced: 'Senkronize Değil',
+                mini_click_to_open: 'Açmak için tıkla', mini_click_to_close: 'Kapatmak için tıkla',
+                aria_cp: 'Komut paletini aç', aria_install: 'Uygulama olarak yükle', aria_island: 'Şarkı detaylarını aç, gizlemek için yukarı kaydır'
+            }
+        };
+
+        let currentLang = localStorage.getItem('selectedLanguage') || null;
+        function t(key, ...args) {
+            const langDict = translations[currentLang || 'de'] || translations.de;
+            const val = langDict[key] !== undefined ? langDict[key] : translations.de[key];
+            if (typeof val === 'function') return val(...args);
+            return val !== undefined ? val : key;
+        }
+
+        // --- Sprachauswahl-Overlay (Setup-Assistent-Stil) ---
+        function renderLanguagePicker() {
+            const grid = document.getElementById('lang-picker-grid');
+            if (!grid) return;
+            grid.innerHTML = SUPPORTED_LANGUAGES.map(l => `
+                <button class="lang-picker-btn" onclick="selectLanguage('${l.code}')">
+                    <span class="lang-flag">${l.flag}</span>
+                    <span class="lang-name">${l.name}</span>
+                </button>`).join('');
+        }
+
+        window.openLanguagePicker = function() {
+            const overlay = document.getElementById('language-picker-overlay');
+            if (!overlay) return;
+            overlay.classList.remove('hidden');
+            void overlay.offsetWidth;
+            requestAnimationFrame(() => overlay.classList.add('lp-active'));
+        };
+
+        window.selectLanguage = function(code) {
+            if (typeof haptic === 'function') haptic(10);
+            applyLanguage(code);
+            const overlay = document.getElementById('language-picker-overlay');
+            if (overlay) {
+                overlay.classList.remove('lp-active');
+                setTimeout(() => overlay.classList.add('hidden'), 550);
+            }
+        };
+
+        // Aktualisiert alle übersetzbaren Bedienelemente auf der Seite. Persönliche
+        // Bio-Texte (details-Objekt) werden hier bewusst NICHT angefasst.
+        function applyLanguage(lang) {
+            if (!translations[lang]) lang = 'de';
+            currentLang = lang;
+            localStorage.setItem('selectedLanguage', lang);
+            document.documentElement.setAttribute('lang', lang);
+
+            const cpInput = document.getElementById('cp-input');
+            if (cpInput && !document.getElementById('command-palette-overlay').classList.contains('cp-active')) {
+                cpInput.placeholder = t('cp_placeholder');
+            }
+
+            const standbyHintEl = document.getElementById('standby-hint');
+            if (standbyHintEl) standbyHintEl.textContent = t('standby_hint');
+
+            // Idle-Texte nur überschreiben, wenn gerade wirklich kein Track aktiv ist
+            const npCard = document.getElementById('standby-nowplaying');
+            if (npCard && npCard.classList.contains('standby-idle')) {
+                const stt = document.getElementById('standby-track-title');
+                const sta = document.getElementById('standby-track-artist');
+                if (stt) stt.textContent = t('standby_idle_title');
+                if (sta) sta.textContent = t('standby_idle_subtitle');
+            }
+            if (typeof currentTrackId !== 'undefined' && !currentTrackId) {
+                const mTitleEl = document.getElementById('track-title');
+                const mArtistEl = document.getElementById('track-artist');
+                if (mTitleEl) mTitleEl.innerText = t('standby_idle_title');
+                if (mArtistEl) mArtistEl.innerText = t('standby_idle_subtitle');
+            }
+
+            // Settings-Menü Toggle-Labels neu rendern
+            if (typeof ambientColorEnabled !== 'undefined' && typeof applyAmbientColorMode === 'function') applyAmbientColorMode(ambientColorEnabled);
+            if (typeof tiltEnabled !== 'undefined' && typeof applyTiltMode === 'function') applyTiltMode(tiltEnabled);
+            const btnCanvasEl = document.getElementById('btn-toggle-canvas');
+            if (btnCanvasEl && typeof canvasEnabled !== 'undefined') {
+                btnCanvasEl.innerText = t('settings_canvas') + ': ' + (canvasEnabled ? t('on_label') : t('off_label'));
+            }
+
+            // Buttons: aria-label / title
+            const setAria = (id, label, title) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                if (label) el.setAttribute('aria-label', label);
+                if (title) el.setAttribute('title', title);
+            };
+            setAria('theme-toggle', t('aria_dark'));
+            setAria('liquid-glass-toggle', t('aria_glass'), t('aria_glass'));
+            setAria('perf-toggle', t('aria_perf'), t('aria_perf'));
+            setAria('standby-toggle', t('aria_standby'), t('aria_standby'));
+            setAria('cp-trigger', t('aria_cp'));
+            setAria('pwa-install-btn', t('aria_install'));
+            setAria('dynamic-island', t('aria_island'));
+            setAria('back-to-top', t('aria_scroll_top'));
+            setAria('close-modal', t('aria_close'));
+            setAria('btn-sharecard-close', t('aria_close'));
+            setAria('tutorial-start-btn', t('aria_tutorial_start'), t('aria_tutorial_start'));
+
+            const pwaBtn = document.getElementById('pwa-install-btn');
+            if (pwaBtn) pwaBtn.innerHTML = t('install_btn');
+
+            const skipBtn = document.getElementById('tutorial-skip');
+            if (skipBtn) skipBtn.innerText = t('tutorial_skip');
+
+            // Falls Tutorial gerade offen ist, aktuellen Schritt neu übersetzen
+            const tw = document.getElementById('tutorial-wrapper');
+            if (tw && !tw.classList.contains('hidden') && typeof currentStepIndex !== 'undefined' && typeof showTutorialStep === 'function') {
+                showTutorialStep(currentStepIndex);
+            }
+
+            // NEW: Header-Bio-Text
+            const setText = (id, val, html) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                if (html) el.innerHTML = val; else el.innerText = val;
+            };
+            setText('header-intro-p1', t('header_intro_html'), true);
+            setText('header-intro-p2', t('header_freizeit'));
+            setText('header-main-title', t('header_main_title'));
+            setText('systems-integration-badge', t('systems_integration_badge'));
+            setTimeGreeting();
+
+            // NEW: Sektions-Überschrift + Hinweistext
+            setText('cards-section-title', t('cards_section_title'));
+            setText('cards-click-hint', t('cards_click_hint'));
+
+            // NEW: Karten-Titel + Teaser
+            ['status', 'background', 'freizeit', 'menschen', 'techstack', 'setup', 'labor', 'contact'].forEach(key => {
+                setText('card-title-' + key, t('card_title_' + key));
+                setText('card-teaser-' + key, t('card_teaser_' + key));
+            });
+
+            // NEW: Footer
+            setText('footer-established', t('footer_established'));
+            setText('footer-created-by', t('footer_created_by'));
+
+            // NEW: fallbackMessages / secretMessages Arrays in-place mit neuer Sprache befüllen
+            // (sie sind const, aber der Inhalt darf mutiert werden - so bleiben alle
+            // bestehenden Referenzen darauf im restlichen Code gültig)
+            if (typeof fallbackMessages !== 'undefined' && typeof getFallbackMessages === 'function') {
+                const freshFallbacks = getFallbackMessages();
+                fallbackMessages.length = 0;
+                freshFallbacks.forEach(m => fallbackMessages.push(m));
+                if (typeof currentNoLyricsMessage !== 'undefined') currentNoLyricsMessage = fallbackMessages[0];
+            }
+            if (typeof secretMessages !== 'undefined' && typeof getSecretMessages === 'function') {
+                const freshSecrets = getSecretMessages();
+                secretMessages.length = 0;
+                freshSecrets.forEach(m => secretMessages.push(m));
+            }
+
+            // NEW: Musik-Dashboard-Bereich
+            setText('music-section-title', t('music_section_title'));
+            setText('music-sync-note', t('music_sync_note'));
+            setText('lyrics-synced-label', t('lyrics_synced_label'));
+            setText('label-animation-style', t('label_animation_style'));
+            setText('label-overkill-shaders', t('label_overkill_shaders'));
+            setText('label-badge-new', t('label_badge_new'));
+            setText('label-features', t('label_features'));
+            setText('label-live-sync', t('label_live_sync'));
+            setText('btn-resync', t('btn_resync'));
+            setText('label-choose-service', t('label_choose_service'));
+            setText('link-none', t('label_no_links'));
+            setText('btn-cancel-picker', t('btn_cancel'));
+            setText('cta-tictactoe', t('cta_tictactoe'));
+            setText('cta-gamingpig-tiktok', t('cta_gamingpig_tiktok'));
+            setText('cta-gamingpig-youtube', t('cta_gamingpig_youtube'));
+            setText('cta-gamingpig-github', t('cta_gamingpig_github'));
+            setText('cta-tom', t('cta_tom'));
+            setText('cta-jakob', t('cta_jakob'));
+            setText('cta-lukas', t('cta_lukas'));
+            setAria('btn-lyrics-settings', t('aria_lyrics_settings'));
+            setAria('btn-lyrics-close', t('aria_lyrics_close'));
+            setAria('btn-lyrics-show', t('aria_lyrics_show'), t('aria_lyrics_show'));
+
+            // Platzhalter-Texte (Titel/Artist in der Lyrics-Mini-Leiste) nur überschreiben,
+            // solange sie noch den unveränderten Platzhalter zeigen (kein echter Songtitel drin)
+            const lmTitleEl = document.getElementById('lyrics-mini-title');
+            const lmArtistEl = document.getElementById('lyrics-mini-artist');
+            if (lmTitleEl && lmTitleEl.hasAttribute('data-i18n-placeholder')) lmTitleEl.innerText = t('lyrics_placeholder_title');
+            if (lmArtistEl && lmArtistEl.hasAttribute('data-i18n-placeholder')) lmArtistEl.innerText = t('lyrics_placeholder_artist');
+
+            // Offline-Status-Texte nur überschreiben, wenn aktuell wirklich offline
+            if (typeof currentTrackId !== 'undefined' && !currentTrackId) {
+                setText('music-header-tag', t('status_offline'));
+                setText('status-text', t('status_zen_mode'));
+                setText('mini-title', t('mini_dashboard_minimized'));
+                if (lmTitleEl && !lmTitleEl.hasAttribute('data-i18n-placeholder')) lmTitleEl.innerText = t('status_offline_short');
+                if (lmArtistEl && !lmArtistEl.hasAttribute('data-i18n-placeholder')) lmArtistEl.innerText = t('status_no_music');
+            }
+        }
+
+        function getTutorialSteps() {
+            return [
+                { targetId: 'header-section', title: t('t_step1_title'), text: t('t_step1_text') },
+                { targetId: 'ui-controls', title: t('t_step2_title'), text: t('t_step2_text') },
+                { targetId: 'cards-section', title: t('t_step3_title'), text: t('t_step3_text') },
+                { targetId: 'music-section', title: t('t_step4_title'), text: t('t_step4_text') },
+                { targetId: 'standby-toggle', title: t('t_step5_title'), text: t('t_step5_text') },
+                { targetId: 'cp-trigger', title: t('t_step6_title'), text: t('t_step6_text') },
+                { targetId: 'pwa-install-btn', title: t('t_step7_title'), text: t('t_step7_text') },
+                { targetId: 'footer-section', title: t('t_step8_title'), text: t('t_step8_text') }
+            ];
+        }
+
+        function getDetails() {
+            return {
+                status: { title: t('detail_status_title'), content: t('detail_status_content') },
+                background: { title: t('detail_background_title'), content: t('detail_background_content') },
+                freizeit: { title: t('detail_freizeit_title'), content: t('detail_freizeit_content') },
+                menschen: { title: t('detail_menschen_title'), content: t('detail_menschen_content') },
+                techstack: { title: t('detail_techstack_title'), content: t('detail_techstack_content') },
+                setup: { title: t('detail_setup_title'), content: t('detail_setup_content') },
+                labor: { title: t('detail_labor_title'), content: t('detail_labor_content') },
+                contact: { title: t('detail_contact_title'), content: t('detail_contact_content') }
+            };
+        }
+
+        function getFallbackMessages() {
+            return [
+                t('fallback_1'), t('fallback_2'), t('fallback_3'), t('fallback_4'), t('fallback_5')
+            ];
+        }
+        const fallbackMessages = getFallbackMessages(); // Startwert; wird bei Sprachwechsel über applyLanguage() neu befüllt
+        
+        let currentStepIndex = 0;
+        let originalPerfModeState = localStorage.getItem('perfMode');
+        let activeTutorialTarget = null;
+        let currentNoLyricsMessage = fallbackMessages[0];
+        let isDashboardOpen = false;
+        // NEW: Android-Back-Button-Fix - trackt offene Overlays, damit "Zurück" sie sauber schließt
+        // statt die Seite in einen kaputten Zwischenzustand zu bringen.
+        let overlayHistoryDepth = 0;
+        let suppressPopHandling = false;
+        let isLyricsSettingsOpen = false;
+        let currentLyricsStyle = localStorage.getItem('lyricsStyle') || 'fill';
+        let canvasEnabled = localStorage.getItem('canvasEnabled') !== 'false';
+        let currentCanvasUrl = null;
+        let liveSyncOffset = typeof DEFAULT_SYNC_OFFSET !== 'undefined' ? DEFAULT_SYNC_OFFSET : -800;
+        
+        let currentMs = 0;
+        let totalMs = 0;
+        let currentTrackId = ""; 
+        let parsedLyrics = [];
+        let currentLyricIndex = -1;
+        let currentLyricsProvider = "";
+        let currentLyricsWriter = "";
+        
+        let localStartTime = 0;
+        let serverBaseProgress = 0;
+        let trackIsPlaying = false;
+        let isAnimating = false; 
+        let lyricAnimFrame = null;
+        let lastProcessedUpdate = 0;
+        let lastSeenProgressMs = -1;
+        let localClockOffset = 0;
+        let isTimeSynced = false;
+        let recentFetchLatencies = [];
+        let lastTimeSyncQualityMs = null;
+        let isUserScrolling = false;
+        let userScrollTimeout = null;
+        let currentFetchId = 0;
+        let offlineTimeout = null;
+        let lastLowEndUpdate = 0;
+
+        // --- NEW FEATURE STATE ---
+        let ambientColorEnabled = localStorage.getItem('ambientColor') !== 'false';
+        let tiltEnabled = localStorage.getItem('tiltEnabled') !== 'false';
+        let standByActive = false;
+        let standByInterval = null;
+        let standByShiftInterval = null;
+        let diHideTimeout = null;
+        let lastAmbientArtUrl = null;
+        let tiltPermissionRequested = false;
+        let islandDismissed = localStorage.getItem('islandDismissed') === 'true';
+        let islandDragStartY = null;
+        let islandDragCurrentY = 0;
+        let islandDragging = false;
+        let islandDragMoved = false;
+
+        // --- 3. LOGIC & EVENT LISTENERS ---
+
+        function applyPerformanceMode(isActive) {
+            if (isActive) {
+                document.body.classList.add('low-end');
+                if (perfToggle) perfToggle.classList.add('ring-2', 'ring-green-500');
+                if (perfIcon) perfIcon.classList.add('text-green-500');
+                document.querySelectorAll('.reveal').forEach(el => el.classList.add('active'));
+            } else {
+                document.body.classList.remove('low-end');
+                if (perfToggle) perfToggle.classList.remove('ring-2', 'ring-green-500');
+                if (perfIcon) perfIcon.classList.remove('text-green-500');
+            }
+            if (typeof parsedLyrics !== 'undefined' && parsedLyrics.length > 0) {
+                renderLyrics();
+                syncLyricsUI(true, true);
+            }
+        }
+
+        if (window.innerWidth < 360 && !localStorage.getItem('perfMode')) {
+            applyPerformanceMode(true);
+            localStorage.setItem('perfMode', 'true');
+        } else {
+            const savedPerfMode = localStorage.getItem('perfMode');
+            if (savedPerfMode === 'true') {
+                applyPerformanceMode(true);
+            }
+        }
+
+        if (perfToggle) {
+            perfToggle.addEventListener('click', () => {
+                haptic(10);
+                const isActive = document.body.classList.toggle('low-end');
+                localStorage.setItem('perfMode', isActive);
+                applyPerformanceMode(isActive);
+            });
+        }
+
+        // --- NEW: ADAPTIVE AMBIENT COLOR LOGIC ---
+        function applyAmbientColorMode(isActive) {
+            ambientColorEnabled = isActive;
+            document.body.classList.toggle('ambient-color-active', isActive);
+            const btn = document.getElementById('btn-toggle-ambient');
+            if (btn) btn.textContent = t('settings_ambient') + ': ' + (isActive ? t('on_label') : t('off_label'));
+            if (isActive && lastAmbientArtUrl) extractDominantColor(lastAmbientArtUrl);
+        }
+        window.toggleAmbientColor = function() {
+            haptic(10);
+            const next = !ambientColorEnabled;
+            localStorage.setItem('ambientColor', next);
+            applyAmbientColorMode(next);
+        };
+        applyAmbientColorMode(ambientColorEnabled);
+
+        function extractDominantColor(imgUrl) {
+            if (!ambientColorEnabled || !imgUrl) return;
+            lastAmbientArtUrl = imgUrl;
+            try {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = () => {
+                    try {
+                        const canvas = document.createElement('canvas');
+                        const size = 24;
+                        canvas.width = size; canvas.height = size;
+                        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+                        ctx.drawImage(img, 0, 0, size, size);
+                        const data = ctx.getImageData(0, 0, size, size).data;
+                        let r = 0, g = 0, b = 0, n = 0;
+                        let r2 = 0, g2 = 0, b2 = 0, n2 = 0;
+                        for (let i = 0; i < data.length; i += 4) {
+                            const px = i / 4;
+                            const x = px % size;
+                            const sat = Math.max(data[i], data[i+1], data[i+2]) - Math.min(data[i], data[i+1], data[i+2]);
+                            if (sat < 12 && (data[i] > 235 || data[i] < 15)) continue; // skip near white/black, low-info pixels
+                            if (x < size / 2) { r += data[i]; g += data[i+1]; b += data[i+2]; n++; }
+                            else { r2 += data[i]; g2 += data[i+1]; b2 += data[i+2]; n2++; }
+                        }
+                        if (n === 0) { n = 1; r = data[0]; g = data[1]; b = data[2]; }
+                        if (n2 === 0) { n2 = n; r2 = r; g2 = g; b2 = b; }
+                        const root = document.documentElement.style;
+                        root.setProperty('--ambient-r', Math.round(r / n));
+                        root.setProperty('--ambient-g', Math.round(g / n));
+                        root.setProperty('--ambient-b', Math.round(b / n));
+                        root.setProperty('--ambient-r2', Math.round(r2 / n2));
+                        root.setProperty('--ambient-g2', Math.round(g2 / n2));
+                        root.setProperty('--ambient-b2', Math.round(b2 / n2));
+                    } catch (e) { /* Canvas getainted (CORS) - stille Ignorierung */ }
+                };
+                img.src = imgUrl;
+            } catch (e) {}
+        }
+
+        // --- NEW: SPATIAL TILT (3D PARALLAX) LOGIC ---
+        function applyTiltMode(isActive) {
+            tiltEnabled = isActive;
+            document.body.classList.toggle('tilt-active', isActive);
+            const btn = document.getElementById('btn-toggle-tilt');
+            if (btn) btn.textContent = t('settings_tilt') + ': ' + (isActive ? t('on_label') : t('off_label'));
+            if (isActive) requestTiltPermissionIfNeeded();
+        }
+        window.toggleTilt = function() {
+            haptic(10);
+            const next = !tiltEnabled;
+            localStorage.setItem('tiltEnabled', next);
+            applyTiltMode(next);
+        };
+        applyTiltMode(tiltEnabled);
+
+        function requestTiltPermissionIfNeeded() {
+            if (tiltPermissionRequested) return;
+            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                tiltPermissionRequested = true;
+                DeviceOrientationEvent.requestPermission().then(state => {
+                    if (state === 'granted') window.addEventListener('deviceorientation', handleDeviceTilt);
+                }).catch(() => {});
+            } else {
+                tiltPermissionRequested = true;
+                window.addEventListener('deviceorientation', handleDeviceTilt);
+            }
+        }
+
+        let deviceTiltRafPending = false;
+        function handleDeviceTilt(e) {
+            if (!tiltEnabled || document.body.classList.contains('low-end')) return;
+            if (deviceTiltRafPending) return;
+            deviceTiltRafPending = true;
+            requestAnimationFrame(() => {
+                deviceTiltRafPending = false;
+                const gamma = Math.max(-24, Math.min(24, e.gamma || 0));
+                const beta = Math.max(-24, Math.min(24, (e.beta || 0) - 45));
+                document.documentElement.style.setProperty('--tilt-x', (gamma / 24 * 14).toFixed(2));
+                document.documentElement.style.setProperty('--tilt-y', (beta / 24 * 14).toFixed(2));
+            });
+        }
+
+        (() => {
+            const mc = document.getElementById('media-container');
+            if (!mc) return;
+            let tiltRafPending = false;
+            let tiltLastEvent = null;
+            mc.addEventListener('mousemove', (e) => {
+                if (!tiltEnabled || document.body.classList.contains('low-end') || window.matchMedia('(hover: none)').matches) return;
+                tiltLastEvent = e;
+                if (tiltRafPending) return;
+                tiltRafPending = true;
+                requestAnimationFrame(() => {
+                    tiltRafPending = false;
+                    if (!tiltLastEvent) return;
+                    const rect = mc.getBoundingClientRect();
+                    const x = ((tiltLastEvent.clientX - rect.left) / rect.width - 0.5) * 2;
+                    const y = ((tiltLastEvent.clientY - rect.top) / rect.height - 0.5) * 2;
+                    document.documentElement.style.setProperty('--tilt-x', (x * 12).toFixed(2));
+                    document.documentElement.style.setProperty('--tilt-y', (y * 12).toFixed(2));
+                    document.documentElement.style.setProperty('--tilt-glare', Math.round(Math.abs(x) * 50 + Math.abs(y) * 50));
+                });
+            }, { passive: true });
+            mc.addEventListener('mouseleave', () => {
+                document.documentElement.style.setProperty('--tilt-x', 0);
+                document.documentElement.style.setProperty('--tilt-y', 0);
+                document.documentElement.style.setProperty('--tilt-glare', 0);
+            }, { passive: true });
+            mc.addEventListener('touchstart', () => requestTiltPermissionIfNeeded(), { passive: true });
+        })();
+
+        // --- NEW: HAPTIC FEEDBACK (Vibration API) ---
+        // Hinweis: iOS Safari unterstützt die Vibration API grundsätzlich nicht (bewusste Einschränkung von Apple).
+        // Auf Android/Chrome gibt's dafür echtes Hardware-Feedback bei jedem Tap - etwas, das iOS-Nutzer im Web nie bekommen.
+        function haptic(pattern = 10) {
+            try { if (navigator.vibrate) navigator.vibrate(pattern); } catch (e) {}
+        }
+
+        // --- NEW: DYNAMIC TIME-OF-DAY WALLPAPER ---
+        const TIME_OF_DAY_STOPS = [
+            { h: 0,  c1: [30, 41, 90],   c2: [88, 28, 135] },   // Tiefe Nacht
+            { h: 5,  c1: [30, 41, 90],   c2: [88, 28, 135] },   // Tiefe Nacht (Ende)
+            { h: 7,  c1: [251, 146, 60], c2: [244, 114, 182] }, // Morgendämmerung
+            { h: 11, c1: [59, 130, 246], c2: [6, 182, 212] },   // Heller Tag
+            { h: 16, c1: [59, 130, 246], c2: [6, 182, 212] },   // Heller Tag (Ende)
+            { h: 18, c1: [249, 115, 22], c2: [219, 39, 119] },  // Sonnenuntergang
+            { h: 20, c1: [99, 102, 241], c2: [168, 85, 247] },  // Abend
+            { h: 24, c1: [30, 41, 90],   c2: [88, 28, 135] }    // zurück zur Nacht
+        ];
+        function lerp(a, b, t) { return a + (b - a) * t; }
+        function lerpColor(c1, c2, t) { return [Math.round(lerp(c1[0], c2[0], t)), Math.round(lerp(c1[1], c2[1], t)), Math.round(lerp(c1[2], c2[2], t))]; }
+
+        function updateTimeOfDayColors() {
+            const now = typeof getTrueDateNow === 'function' ? new Date(getTrueDateNow()) : new Date();
+            const hourFrac = now.getHours() + now.getMinutes() / 60;
+            let stopA = TIME_OF_DAY_STOPS[0], stopB = TIME_OF_DAY_STOPS[TIME_OF_DAY_STOPS.length - 1];
+            for (let i = 0; i < TIME_OF_DAY_STOPS.length - 1; i++) {
+                if (hourFrac >= TIME_OF_DAY_STOPS[i].h && hourFrac <= TIME_OF_DAY_STOPS[i + 1].h) {
+                    stopA = TIME_OF_DAY_STOPS[i]; stopB = TIME_OF_DAY_STOPS[i + 1];
+                    break;
+                }
+            }
+            const span = (stopB.h - stopA.h) || 1;
+            const t = Math.max(0, Math.min(1, (hourFrac - stopA.h) / span));
+            const c1 = lerpColor(stopA.c1, stopB.c1, t);
+            const c2 = lerpColor(stopA.c2, stopB.c2, t);
+            const root = document.documentElement.style;
+            root.setProperty('--time-r', c1[0]); root.setProperty('--time-g', c1[1]); root.setProperty('--time-b', c1[2]);
+            root.setProperty('--time-r2', c2[0]); root.setProperty('--time-g2', c2[1]); root.setProperty('--time-b2', c2[2]);
+        }
+        updateTimeOfDayColors();
+        setInterval(updateTimeOfDayColors, 5 * 60 * 1000);
+
+        // ========================================================= //
+        // --- NEW: INSTALLIERBARE PWA (echte Dateien) --------------- //
+        // ========================================================= //
+        // manifest.json, sw.js, icon-192.png und icon-512.png sind echte Dateien im
+        // selben Ordner (siehe <head> und Upload-Anleitung) - nötig, damit Chrome die
+        // Seite überhaupt als installierbar erkennt und "App installieren" anbietet.
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch((err) => {
+                    console.warn('Service Worker Registrierung fehlgeschlagen (PWA-Installation evtl. nicht möglich):', err);
+                });
+            });
+        }
+
+        // --- "Zum Home-Bildschirm hinzufügen" Prompt (Android/Chrome) ---
+        let deferredInstallPrompt = null;
+        const isStandaloneApp = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+        const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+        (function initInstallButton() {
+            const btn = document.getElementById('pwa-install-btn');
+            if (!btn) return;
+            // Nur verstecken, wenn die Seite bereits als installierte App läuft - sonst IMMER sichtbar,
+            // unabhängig davon, ob der Browser das native beforeinstallprompt-Event überhaupt unterstützt
+            // (z.B. iOS Safari feuert dieses Event nie, soll den Button aber trotzdem zeigen).
+            if (isStandaloneApp) btn.classList.add('hidden');
+            else btn.classList.remove('hidden');
+        })();
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredInstallPrompt = e;
+            const btn = document.getElementById('pwa-install-btn');
+            if (btn) btn.classList.remove('hidden');
+        });
+
+        window.triggerInstallPrompt = async function() {
+            haptic(10);
+            if (deferredInstallPrompt) {
+                // Chromium-Pfad: nativer Installations-Dialog
+                deferredInstallPrompt.prompt();
+                await deferredInstallPrompt.userChoice;
+                deferredInstallPrompt = null;
+                const btn = document.getElementById('pwa-install-btn');
+                if (btn) btn.classList.add('hidden');
+                return;
+            }
+            // Kein natives Prompt verfügbar - manuelle Anleitung zeigen (zuverlässigster Weg ohne Service Worker)
+            if (typeof showToast !== 'function') return;
+            if (isIOSDevice) {
+                showToast(t('toast_install_ios'), 6000);
+            } else if (window.innerWidth < 768) {
+                showToast(t('toast_install_android_menu'), 6500);
+            } else {
+                showToast(t('toast_install_desktop'), 6500);
+            }
+        };
+        window.addEventListener('appinstalled', () => {
+            if (typeof showToast === 'function') showToast(t('toast_installed'));
+        });
+
+        // --- NEW: DYNAMIC ISLAND 2.0 LOGIC (persistent, tap-to-expand, swipe-to-dismiss) ---
+
+        // Aktualisiert Inhalt + zeigt die Insel dauerhaft (klein) an, solange ein Track aktiv ist.
+        // Wird bei JEDEM Musik-Update aufgerufen, nicht nur bei Songwechsel.
+        // NEW: Positioniert die Dynamic Island IMMER kollisionsfrei zur echten Kontrollleiste
+        // (#ui-controls), egal welche Bildschirmgröße - misst deren tatsächliche, live
+        // gerenderte Position/Größe (statt starrer Media-Query-Werte), da diese sich je nach
+        // Breakpoint/Sprache/Inhalt unterscheiden kann. Wird unterhalb + links davon zentriert,
+        // sodass auf breiten Screens viel Platz bleibt (Insel bleibt dann schön mittig-links),
+        // auf schmalen Screens (z.B. iPhone) aber garantiert kein Overlap mehr entsteht.
+        function positionDynamicIsland() {
+            const island = document.getElementById('dynamic-island');
+            const ring = document.getElementById('dynamic-island-ring');
+            const uiControls = document.getElementById('ui-controls');
+            if (!island || !uiControls) return;
+
+            const uiRect = uiControls.getBoundingClientRect();
+            const baseTop = parseFloat(getComputedStyle(island).top) || 40; // Standard-Position (safe-area + 40px)
+
+            // Die Insel bleibt IMMER horizontal mittig (wie das echte iPhone-Vorbild) - wir
+            // rühren left/transform nie an. Geprüft wird nur, ob die (im ausgeklappten
+            // Zustand max. ~320px breite) mittige Insel horizontal in den Bereich der
+            // Kontrollleiste hineinragen würde. Falls ja, weicht sie NUR nach unten aus.
+            const maxIslandWidth = Math.min(320, window.innerWidth * 0.86);
+            const islandRightEdge = (window.innerWidth + maxIslandWidth) / 2;
+            const wouldOverlapHorizontally = islandRightEdge > (uiRect.left - 12);
+
+            const topPx = wouldOverlapHorizontally ? Math.max(baseTop, uiRect.bottom + 10) : baseTop;
+
+            island.style.top = topPx + 'px';
+            island.style.left = ''; // NEW: horizontal nie verändern, CSS-Default (mittig) bleibt bestehen
+            island.style.transform = '';
+            if (ring) { ring.style.top = topPx + 'px'; ring.style.left = ''; }
+        }
+        window.addEventListener('resize', () => { clearTimeout(window._diPosTimeout); window._diPosTimeout = setTimeout(positionDynamicIsland, 120); });
+        window.addEventListener('orientationchange', () => setTimeout(positionDynamicIsland, 200));
+
+        function updateIslandRing() {
+            const ring = document.getElementById('dynamic-island-ring');
+            const island = document.getElementById('dynamic-island');
+            if (!ring || !island) return;
+            const shouldPulse = island.classList.contains('di-visible') && !island.classList.contains('di-expanded') && !island.classList.contains('di-hidden-by-standby') && !document.body.classList.contains('low-end');
+            ring.classList.toggle('di-ring-active', shouldPulse);
+        }
+
+        function showIslandPersistent(title, artist, artUrl) {
+            if (islandDismissed) return;
+            const island = document.getElementById('dynamic-island');
+            if (!island || document.body.classList.contains('low-end')) return;
+            const titleEl = document.getElementById('di-title');
+            const artistEl = document.getElementById('di-artist');
+            const artEl = document.getElementById('di-art');
+            if (titleEl) titleEl.textContent = title || '';
+            if (artistEl) artistEl.textContent = artist || '';
+            if (artEl && artUrl) artEl.src = artUrl;
+            island.classList.add('di-visible');
+            updateIslandRing();
+        }
+
+        // Kein Track mehr aktiv (offline) - Insel komplett verstecken, bis wieder Musik da ist.
+        function hideIslandCompletely() {
+            const island = document.getElementById('dynamic-island');
+            if (island) island.classList.remove('di-visible', 'di-expanded');
+            clearTimeout(diHideTimeout);
+            updateIslandRing();
+        }
+
+        // Kurzes Aufpoppen bei echtem Songwechsel: expandiert kurz, fällt danach auf die
+        // kleine, persistente Pille zurück (verschwindet NICHT mehr komplett wie vorher -
+        // das war der Bug, durch den sie nach einem Songwechsel manchmal nicht wiederkam).
+        function triggerDynamicIsland(title, artist, artUrl) {
+            if (islandDismissed) return;
+            const island = document.getElementById('dynamic-island');
+            if (!island || document.body.classList.contains('low-end')) return;
+            showIslandPersistent(title, artist, artUrl);
+            clearTimeout(diHideTimeout);
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => { island.classList.add('di-expanded'); updateIslandRing(); });
+            });
+            diHideTimeout = setTimeout(() => {
+                island.classList.remove('di-expanded'); // fällt zurück auf die kleine Pille, bleibt sichtbar
+                updateIslandRing();
+            }, 3800);
+        }
+
+        // Tap auf die (sichtbare) Insel: expandiert <-> kollabiert, öffnet NICHT mehr automatisch
+        // das Dashboard (das war zu aufdringlich in Kombination mit dem neuen Dauer-Zustand).
+        function handleIslandTap() {
+            const island = document.getElementById('dynamic-island');
+            if (!island || !island.classList.contains('di-visible')) return;
+            haptic(10);
+            clearTimeout(diHideTimeout);
+            island.classList.toggle('di-expanded');
+            updateIslandRing();
+        }
+
+        // Nutzer wischt die Insel nach oben weg - dauerhaft ausgeblendet, bis er sie über
+        // die Spotlight-Suche ("Dynamic Island wieder einblenden") reaktiviert.
+        function dismissIslandPermanently() {
+            const island = document.getElementById('dynamic-island');
+            if (island) island.classList.remove('di-visible', 'di-expanded');
+            islandDismissed = true;
+            localStorage.setItem('islandDismissed', 'true');
+            haptic([10, 20, 10]);
+            updateIslandRing();
+            if (typeof showToast === 'function') showToast(t('toast_island_hidden'));
+        }
+
+        // --- Swipe-/Tap-Erkennung (Touch + Maus) ---
+        (function initIslandGestures() {
+            const island = document.getElementById('dynamic-island');
+            if (!island) return;
+            const DISMISS_THRESHOLD = 34; // px nach oben, um als "Wegwisch-Geste" zu zählen
+            const TAP_TOLERANCE = 8; // px Toleranz, ab der es als Wisch statt Tap zählt
+
+            function dragStart(clientY) {
+                islandDragStartY = clientY;
+                islandDragCurrentY = clientY;
+                islandDragging = true;
+                islandDragMoved = false;
+                island.style.transition = 'none';
+            }
+            function dragMove(clientY) {
+                if (!islandDragging || islandDragStartY === null) return;
+                islandDragCurrentY = clientY;
+                const delta = clientY - islandDragStartY;
+                if (Math.abs(delta) > TAP_TOLERANCE) islandDragMoved = true;
+                const upward = Math.min(0, delta);
+                island.style.transform = `translateX(-50%) translateY(${upward}px)`;
+                island.style.opacity = String(Math.max(0.25, 1 + upward / 110));
+            }
+            function dragEnd() {
+                if (!islandDragging) return;
+                islandDragging = false;
+                island.style.transition = '';
+                island.style.transform = '';
+                island.style.opacity = '';
+                const delta = islandDragCurrentY - islandDragStartY;
+                if (delta < -DISMISS_THRESHOLD) {
+                    dismissIslandPermanently();
+                } else if (!islandDragMoved) {
+                    handleIslandTap();
+                }
+                islandDragStartY = null;
+            }
+
+            island.addEventListener('touchstart', (e) => dragStart(e.touches[0].clientY), { passive: true });
+            island.addEventListener('touchmove', (e) => dragMove(e.touches[0].clientY), { passive: true });
+            island.addEventListener('touchend', dragEnd, { passive: true });
+            island.addEventListener('touchcancel', dragEnd, { passive: true });
+
+            island.addEventListener('mousedown', (e) => { e.preventDefault(); dragStart(e.clientY); });
+            window.addEventListener('mousemove', (e) => { if (islandDragging) dragMove(e.clientY); });
+            window.addEventListener('mouseup', () => { if (islandDragging) dragEnd(); });
+
+            island.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleIslandTap(); }
+            });
+            island.addEventListener('contextmenu', (e) => e.preventDefault());
+        })();
+
+        // --- NEW: SHARE CARD GENERATOR ---
+        window.generateShareCard = function() {
+            const titleEl = document.getElementById('track-title');
+            const artistEl = document.getElementById('track-artist');
+            const artworkEl = document.getElementById('artwork');
+            const title = (titleEl && titleEl.innerText) ? titleEl.innerText : t('standby_idle_title');
+            const artist = (artistEl && artistEl.innerText) ? artistEl.innerText : t('standby_idle_subtitle');
+            const artSrc = artworkEl ? artworkEl.getAttribute('src') : null;
+
+            if (typeof showToast === 'function') showToast(t('toast_sharecard_creating'));
+
+            const proceed = (artImg) => openSharecardPicker(artImg, title, artist);
+
+            if (artSrc && !artSrc.startsWith('data:')) {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = () => proceed(img);
+                img.onerror = () => proceed(null);
+                img.src = artSrc;
+            } else {
+                proceed(null);
+            }
+        };
+
+        // NEW: Vier Share-Card-Designs zur Auswahl, statt nur einem festen Layout.
+        const SHARECARD_DESIGNS = [
+            { id: 'classic', label: 'Classic', draw: drawShareCardClassic },
+            { id: 'minimal', label: 'Minimal', draw: drawShareCardMinimal },
+            { id: 'poster', label: 'Poster', draw: drawShareCardPoster },
+            { id: 'vinyl', label: 'Vinyl', draw: drawShareCardVinyl }
+        ];
+
+        function openSharecardPicker(artImg, title, artist) {
+            const overlay = document.getElementById('sharecard-picker-overlay');
+            const grid = document.getElementById('sharecard-picker-grid');
+            if (!overlay || !grid) return;
+
+            grid.innerHTML = SHARECARD_DESIGNS.map((d, i) => `
+                <div class="sc-option" data-design="${i}">
+                    <canvas width="240" height="320"></canvas>
+                    <span class="sc-label">${escapeHTML(d.label)}</span>
+                </div>`).join('');
+
+            SHARECARD_DESIGNS.forEach((d, i) => {
+                const cell = grid.children[i];
+                const canvas = cell.querySelector('canvas');
+                const ctx = canvas.getContext('2d');
+                try { d.draw(ctx, 240, 320, artImg, title, artist); } catch (e) {}
+                cell.addEventListener('click', () => downloadSharecardDesign(d, artImg, title, artist));
+            });
+
+            overlay.classList.add('sc-active');
+            pushOverlayHistory();
+        }
+
+        window.closeSharecardPicker = function() {
+            const overlay = document.getElementById('sharecard-picker-overlay');
+            if (overlay && overlay.classList.contains('sc-active')) popOverlayHistory();
+            if (overlay) overlay.classList.remove('sc-active');
+        };
+
+        function downloadSharecardDesign(design, artImg, title, artist) {
+            try {
+                haptic(10);
+                const W = 720, H = 960;
+                const canvas = document.createElement('canvas');
+                canvas.width = W; canvas.height = H;
+                const ctx = canvas.getContext('2d');
+                design.draw(ctx, W, H, artImg, title, artist);
+
+                const dataUrl = canvas.toDataURL('image/png');
+                const a = document.createElement('a');
+                a.href = dataUrl;
+                a.download = 'now-playing-gamingpig-' + design.id + '.png';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                closeSharecardPicker();
+                if (typeof showToast === 'function') showToast(t('toast_sharecard_saved'));
+            } catch (err) {
+                if (typeof showToast === 'function') showToast(t('toast_sharecard_cors'));
+            }
+        }
+
+        // --- Hilfsfunktion: zeichnet ein Bild "object-fit: cover" in ein Zielrechteck ---
+        function drawImageCover(ctx, img, x, y, w, h) {
+            if (!img) return;
+            const imgRatio = img.width / img.height;
+            const boxRatio = w / h;
+            let sx, sy, sw, sh;
+            if (imgRatio > boxRatio) {
+                sh = img.height; sw = sh * boxRatio;
+                sx = (img.width - sw) / 2; sy = 0;
+            } else {
+                sw = img.width; sh = sw / boxRatio;
+                sx = 0; sy = (img.height - sh) / 2;
+            }
+            ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
+        }
+
+        // --- Design 1: Classic - geblurtes Cover als Hintergrund, Karte zentriert ---
+        function drawShareCardClassic(ctx, W, H, artImg, title, artist) {
+            const s = W / 720; // Skalierungsfaktor relativ zur Vollauflösung (für Vorschau-Canvas)
+            ctx.fillStyle = '#05060a';
+            ctx.fillRect(0, 0, W, H);
+            if (artImg) {
+                try {
+                    ctx.filter = `blur(${38 * s}px) brightness(0.45) saturate(150%)`;
+                    ctx.drawImage(artImg, -60 * s, -60 * s, W + 120 * s, H + 120 * s);
+                    ctx.filter = 'none';
+                } catch (e) {}
+            }
+            const grad = ctx.createLinearGradient(0, 0, 0, H);
+            grad.addColorStop(0, 'rgba(0,0,0,0.15)');
+            grad.addColorStop(1, 'rgba(0,0,0,0.55)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, W, H);
+
+            const artSize = 460 * s;
+            const artX = (W - artSize) / 2;
+            const artY = 170 * s;
+            ctx.save();
+            ctx.shadowColor = 'rgba(0,0,0,0.6)';
+            ctx.shadowBlur = 60 * s;
+            ctx.shadowOffsetY = 20 * s;
+            roundRectPath(ctx, artX, artY, artSize, artSize, 28 * s);
+            ctx.fillStyle = '#111';
+            ctx.fill();
+            ctx.restore();
+            ctx.save();
+            roundRectPath(ctx, artX, artY, artSize, artSize, 28 * s);
+            ctx.clip();
+            if (artImg) drawImageCover(ctx, artImg, artX, artY, artSize, artSize);
+            ctx.restore();
+
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#ffffff';
+            ctx.font = `800 ${40 * s}px Inter, sans-serif`;
+            wrapText(ctx, title, W / 2, artY + artSize + 70 * s, W - 100 * s, 46 * s);
+            ctx.fillStyle = 'rgba(255,255,255,0.65)';
+            ctx.font = `600 ${26 * s}px Inter, sans-serif`;
+            ctx.fillText(artist, W / 2, artY + artSize + 118 * s);
+
+            const eqY = artY + artSize + 160 * s;
+            const barW = 6 * s, gap = 6 * s, barsN = 5, heights = [18, 30, 14, 26, 20].map(v => v * s);
+            const totalW = barsN * barW + (barsN - 1) * gap;
+            let bx = (W - totalW) / 2;
+            ctx.fillStyle = 'rgba(59,130,246,0.9)';
+            heights.forEach(h => { ctx.fillRect(bx, eqY - h, barW, h); bx += barW + gap; });
+
+            ctx.fillStyle = 'rgba(255,255,255,0.4)';
+            ctx.font = `700 ${20 * s}px Inter, sans-serif`;
+            ctx.fillText('gamingpig · now playing', W / 2, H - 50 * s);
+        }
+
+        // --- Design 2: Minimal - flacher Hintergrund, kleineres Cover, große Typografie ---
+        function drawShareCardMinimal(ctx, W, H, artImg, title, artist) {
+            const s = W / 720;
+            const grad = ctx.createLinearGradient(0, 0, 0, H);
+            grad.addColorStop(0, '#12141c');
+            grad.addColorStop(1, '#05060a');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, W, H);
+
+            const artSize = 190 * s;
+            const artX = (W - artSize) / 2;
+            const artY = 90 * s;
+            ctx.save();
+            ctx.shadowColor = 'rgba(0,0,0,0.5)';
+            ctx.shadowBlur = 30 * s;
+            ctx.shadowOffsetY = 12 * s;
+            roundRectPath(ctx, artX, artY, artSize, artSize, 22 * s);
+            ctx.fillStyle = '#111';
+            ctx.fill();
+            ctx.restore();
+            ctx.save();
+            roundRectPath(ctx, artX, artY, artSize, artSize, 22 * s);
+            ctx.clip();
+            if (artImg) drawImageCover(ctx, artImg, artX, artY, artSize, artSize);
+            ctx.restore();
+
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#ffffff';
+            ctx.font = `800 ${52 * s}px Inter, sans-serif`;
+            wrapText(ctx, title, W / 2, artY + artSize + 130 * s, W - 70 * s, 58 * s);
+
+            ctx.fillStyle = 'rgba(255,255,255,0.5)';
+            ctx.font = `700 ${22 * s}px Inter, sans-serif`;
+            ctx.save();
+            ctx.translate(W / 2, artY + artSize + 230 * s);
+            const spaced = artist.toUpperCase().split('').join(String.fromCharCode(8202) + ' ');
+            ctx.fillText(spaced, 0, 0);
+            ctx.restore();
+
+            ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+            ctx.lineWidth = 1 * s;
+            ctx.beginPath();
+            ctx.moveTo(W / 2 - 40 * s, H - 110 * s);
+            ctx.lineTo(W / 2 + 40 * s, H - 110 * s);
+            ctx.stroke();
+
+            ctx.fillStyle = 'rgba(255,255,255,0.35)';
+            ctx.font = `700 ${17 * s}px Inter, sans-serif`;
+            ctx.fillText('gamingpig', W / 2, H - 60 * s);
+        }
+
+        // --- Design 3: Poster - Cover als Vollflächen-Hintergrund, Text unten links ---
+        function drawShareCardPoster(ctx, W, H, artImg, title, artist) {
+            const s = W / 720;
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, W, H);
+            if (artImg) drawImageCover(ctx, artImg, 0, 0, W, H);
+
+            const grad = ctx.createLinearGradient(0, H * 0.35, 0, H);
+            grad.addColorStop(0, 'rgba(0,0,0,0)');
+            grad.addColorStop(1, 'rgba(0,0,0,0.92)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, W, H);
+
+            ctx.textAlign = 'left';
+            ctx.fillStyle = '#ffffff';
+            ctx.font = `800 ${46 * s}px Inter, sans-serif`;
+            const titleY = H - 140 * s;
+            wrapTextLeft(ctx, title, 44 * s, titleY, W - 90 * s, 52 * s);
+
+            ctx.fillStyle = 'rgba(255,255,255,0.75)';
+            ctx.font = `600 ${26 * s}px Inter, sans-serif`;
+            ctx.fillText(artist, 44 * s, H - 60 * s);
+
+            ctx.textAlign = 'right';
+            ctx.fillStyle = 'rgba(255,255,255,0.55)';
+            ctx.font = `700 ${16 * s}px Inter, sans-serif`;
+            ctx.fillText('gamingpig', W - 30 * s, 40 * s);
+        }
+
+        // --- Design 4: Vinyl - Retro-Look, Cover als Schallplatte ---
+        function drawShareCardVinyl(ctx, W, H, artImg, title, artist) {
+            const s = W / 720;
+            const grad = ctx.createRadialGradient(W / 2, H * 0.4, 10, W / 2, H * 0.4, H * 0.8);
+            grad.addColorStop(0, '#3a2a1c');
+            grad.addColorStop(1, '#100a06');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, W, H);
+
+            const cx = W / 2, cy = 350 * s, r = 210 * s;
+            ctx.save();
+            ctx.shadowColor = 'rgba(0,0,0,0.6)';
+            ctx.shadowBlur = 50 * s;
+            ctx.shadowOffsetY = 20 * s;
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.fillStyle = '#0a0a0a';
+            ctx.fill();
+            ctx.restore();
+
+            // Rillen-Ringe
+            ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+            for (let i = 1; i <= 6; i++) {
+                ctx.lineWidth = 1 * s;
+                ctx.beginPath();
+                ctx.arc(cx, cy, r - i * (18 * s), 0, Math.PI * 2);
+                ctx.stroke();
+            }
+
+            // Cover-Label in der Mitte
+            const labelR = r * 0.52;
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(cx, cy, labelR, 0, Math.PI * 2);
+            ctx.clip();
+            if (artImg) drawImageCover(ctx, artImg, cx - labelR, cy - labelR, labelR * 2, labelR * 2);
+            else { ctx.fillStyle = '#3b2a1c'; ctx.fill(); }
+            ctx.restore();
+
+            // Mittelloch
+            ctx.beginPath();
+            ctx.arc(cx, cy, 7 * s, 0, Math.PI * 2);
+            ctx.fillStyle = '#100a06';
+            ctx.fill();
+
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#f3e7d3';
+            ctx.font = `800 ${38 * s}px 'JetBrains Mono', monospace`;
+            wrapText(ctx, title, W / 2, cy + r + 90 * s, W - 90 * s, 44 * s);
+
+            ctx.fillStyle = 'rgba(243,231,211,0.7)';
+            ctx.font = `600 ${22 * s}px 'JetBrains Mono', monospace`;
+            ctx.fillText(artist, W / 2, cy + r + 150 * s);
+
+            ctx.fillStyle = 'rgba(243,231,211,0.4)';
+            ctx.font = `700 ${15 * s}px 'JetBrains Mono', monospace`;
+            ctx.fillText('◈ GAMINGPIG RECORDS ◈', W / 2, H - 50 * s);
+        }
+
+        function roundRectPath(ctx, x, y, w, h, r) {
+            ctx.beginPath();
+            ctx.moveTo(x + r, y);
+            ctx.arcTo(x + w, y, x + w, y + h, r);
+            ctx.arcTo(x + w, y + h, x, y + h, r);
+            ctx.arcTo(x, y + h, x, y, r);
+            ctx.arcTo(x, y, x + w, y, r);
+            ctx.closePath();
+        }
+
+        function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+            const words = text.split(' ');
+            let line = '';
+            const lines = [];
+            for (let n = 0; n < words.length; n++) {
+                const testLine = line + words[n] + ' ';
+                if (ctx.measureText(testLine).width > maxWidth && n > 0) {
+                    lines.push(line.trim());
+                    line = words[n] + ' ';
+                } else {
+                    line = testLine;
+                }
+            }
+            lines.push(line.trim());
+            const startY = y - ((lines.length - 1) * lineHeight) / 2;
+            lines.slice(0, 2).forEach((l, i) => ctx.fillText(l, x, startY + i * lineHeight));
+        }
+
+        // NEW: wie wrapText, aber linksbündig (für das Poster-Design)
+        function wrapTextLeft(ctx, text, x, y, maxWidth, lineHeight) {
+            const words = text.split(' ');
+            let line = '';
+            const lines = [];
+            for (let n = 0; n < words.length; n++) {
+                const testLine = line + words[n] + ' ';
+                if (ctx.measureText(testLine).width > maxWidth && n > 0) {
+                    lines.push(line.trim());
+                    line = words[n] + ' ';
+                } else {
+                    line = testLine;
+                }
+            }
+            lines.push(line.trim());
+            const trimmed = lines.slice(0, 2);
+            const startY = y - (trimmed.length - 1) * lineHeight;
+            trimmed.forEach((l, i) => ctx.fillText(l, x, startY + i * lineHeight));
+        }
+
+        // ========================================================= //
+        // --- NEW: COMMAND PALETTE (⌘K Spotlight) ------------------ //
+        // ========================================================= //
+        let cpSelectedIndex = 0;
+        let cpFilteredActions = [];
+
+        function getCommandActions() {
+            return [
+                { icon: '🏠', label: t('cp_scroll_top'), keywords: 'header start oben top', action: () => window.scrollTo({ top: 0, behavior: 'smooth' }) },
+                { icon: '🎓', label: t('cp_scroll_cards'), keywords: 'cards ausbildung skills karten', action: () => scrollToId('cards-section') },
+                { icon: '🎵', label: t('cp_scroll_music'), keywords: 'music song track player', action: () => scrollToId('music-section') },
+                { icon: '📬', label: t('cp_scroll_footer'), keywords: 'footer contact kontakt ende', action: () => scrollToId('footer-section') },
+                { icon: '📖', label: t('cp_open_dashboard'), keywords: 'dashboard aufklappen open music', action: () => { if (!isDashboardOpen) toggleDashboard(); scrollToId('music-section'); } },
+                { icon: '🎤', label: t('cp_open_lyrics'), keywords: 'lyrics songtext text', action: () => { if (!isDashboardOpen) toggleDashboard(); setTimeout(() => toggleLyrics(true), 400); } },
+                { icon: '🌗', label: t('cp_toggle_dark'), keywords: 'dark light theme hell dunkel modus', action: () => themeToggle && themeToggle.click() },
+                { icon: '💧', label: t('cp_toggle_glass'), keywords: 'liquid glass apple design', action: () => liquidGlassToggle && liquidGlassToggle.click() },
+                { icon: '⚡', label: t('cp_toggle_perf'), keywords: 'performance low end animationen aus', action: () => perfToggle && perfToggle.click() },
+                { icon: '📱', label: t('cp_standby'), keywords: 'standby ambient lockscreen uhr', action: () => toggleStandBy() },
+                { icon: '🎨', label: t('cp_ambient'), keywords: 'ambient color farbe cover', action: () => toggleAmbientColor() },
+                { icon: '🪞', label: t('cp_tilt'), keywords: 'tilt gyroskop 3d parallax neigen', action: () => toggleTilt() },
+                { icon: '🎴', label: t('cp_sharecard'), keywords: 'share card teilen bild download', action: () => generateShareCard() },
+                { icon: '🧭', label: t('cp_tutorial'), keywords: 'tutorial hilfe guide anleitung', action: () => btnStartTutorial && btnStartTutorial.click() },
+                { icon: '🐷', label: t('cp_tiktok'), keywords: 'tiktok social gamingpig', action: () => window.open('https://www.tiktok.com/@gamingpig900', '_blank') },
+                { icon: '🏝️', label: t('cp_island_back'), keywords: 'dynamic island zeigen einblenden reset ausgeblendet wisch', action: () => {
+                    islandDismissed = false;
+                    localStorage.setItem('islandDismissed', 'false');
+                    const titleEl = document.getElementById('track-title');
+                    const artistEl = document.getElementById('track-artist');
+                    const art = document.getElementById('artwork');
+                    showIslandPersistent(titleEl ? titleEl.innerText : '', artistEl ? artistEl.innerText : '', art ? art.getAttribute('src') : null);
+                    if (typeof showToast === 'function') showToast(t('toast_island_back'));
+                } },
+                { icon: '📋', label: t('cp_copy_link'), keywords: 'copy link teilen share url', action: () => { if (typeof copyPageLink === 'function') copyPageLink(); } },
+                { icon: '🔄', label: t('cp_reload'), keywords: 'reload refresh neu laden', action: () => window.location.reload() },
+                { icon: '🌐', label: t('cp_change_lang'), keywords: 'language sprache language change idioma langue idioma dil', keepOpen: true, action: () => openLanguagePicker(true) },
+            ];
+        }
+
+        function scrollToId(id) {
+            const el = document.getElementById(id);
+            if (el) el.scrollIntoView({ behavior: document.body.classList.contains('low-end') ? 'auto' : 'smooth', block: 'start' });
+        }
+
+        function renderCommandPalette(query) {
+            const resultsEl = document.getElementById('cp-results');
+            if (!resultsEl) return;
+            const q = (query || '').toLowerCase().trim();
+            const all = getCommandActions();
+            cpFilteredActions = q ? all.filter(a => (a.label + ' ' + a.keywords).toLowerCase().includes(q)) : all;
+            cpSelectedIndex = 0;
+
+            if (cpFilteredActions.length === 0) {
+                resultsEl.innerHTML = `<div class="cp-empty">${t('cp_empty', escapeHTML(query))}</div>`;
+                return;
+            }
+            resultsEl.innerHTML = cpFilteredActions.map((a, i) => `
+                <div class="cp-item${i === 0 ? ' cp-selected' : ''}" data-index="${i}">
+                    <span class="cp-icon">${a.icon}</span>
+                    <span class="cp-label">${escapeHTML(a.label)}</span>
+                    <span class="cp-hint">↵</span>
+                </div>`).join('');
+
+            resultsEl.querySelectorAll('.cp-item').forEach(el => {
+                el.addEventListener('click', () => executeCommand(parseInt(el.dataset.index, 10)));
+            });
+        }
+
+        function executeCommand(index) {
+            const action = cpFilteredActions[index];
+            if (!action) return;
+            haptic(12);
+            if (action.keepOpen) {
+                action.action();
+                return;
+            }
+            closeCommandPalette();
+            setTimeout(() => action.action(), 150);
+        }
+
+        function moveCommandSelection(delta) {
+            if (cpFilteredActions.length === 0) return;
+            cpSelectedIndex = (cpSelectedIndex + delta + cpFilteredActions.length) % cpFilteredActions.length;
+            document.querySelectorAll('.cp-item').forEach((el, i) => el.classList.toggle('cp-selected', i === cpSelectedIndex));
+            const selectedEl = document.querySelector('.cp-item.cp-selected');
+            if (selectedEl) selectedEl.scrollIntoView({ block: 'nearest' });
+        }
+
+        window.openCommandPalette = function() {
+            const overlay = document.getElementById('command-palette-overlay');
+            const input = document.getElementById('cp-input');
+            if (!overlay) return;
+            haptic(10);
+            pushOverlayHistory();
+            overlay.classList.add('cp-active');
+            input.value = '';
+            input.placeholder = t('cp_placeholder');
+            renderCommandPalette('');
+            setTimeout(() => input.focus(), 50);
+        };
+
+        window.closeCommandPalette = function() {
+            const overlay = document.getElementById('command-palette-overlay');
+            if (overlay && overlay.classList.contains('cp-active')) popOverlayHistory();
+            if (overlay) overlay.classList.remove('cp-active');
+        };
+
+        document.addEventListener('keydown', (e) => {
+            const isCpOpen = document.getElementById('command-palette-overlay').classList.contains('cp-active');
+            if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+                e.preventDefault();
+                isCpOpen ? closeCommandPalette() : openCommandPalette();
+                return;
+            }
+            if (!isCpOpen) return;
+            if (e.key === 'Escape') { closeCommandPalette(); return; }
+            if (e.key === 'ArrowDown') { e.preventDefault(); moveCommandSelection(1); return; }
+            if (e.key === 'ArrowUp') { e.preventDefault(); moveCommandSelection(-1); return; }
+            if (e.key === 'Enter') { e.preventDefault(); executeCommand(cpSelectedIndex); return; }
+        });
+
+        const cpInputEl = document.getElementById('cp-input');
+        if (cpInputEl) cpInputEl.addEventListener('input', (e) => renderCommandPalette(e.target.value));
+
+        // ========================================================= //
+        // --- NEW: ANDROID BACK-BUTTON FIX FÜR OVERLAYS ------------- //
+        // ========================================================= //
+        // Ohne das hier reagiert der Zurück-Button des Handys (bzw. die Geste) auf gar
+        // nichts, was auf manchen Android-Geräten dazu führt, dass Overlays/Animationen
+        // in einem kaputten Zwischenzustand hängen bleiben. Jedes Overlay (Dashboard,
+        // Lyrics, StandBy, Command Palette) schiebt beim Öffnen einen History-Eintrag,
+        // und "Zurück" schließt sauber das oberste offene Overlay statt die Seite zu verlassen.
+        function pushOverlayHistory() {
+            overlayHistoryDepth++;
+            try { history.pushState({ gpOverlayDepth: overlayHistoryDepth }, ''); } catch (e) {}
+        }
+        function popOverlayHistory() {
+            if (overlayHistoryDepth > 0) {
+                overlayHistoryDepth--;
+                if (!suppressPopHandling) {
+                    try { history.back(); } catch (e) {}
+                }
+            }
+        }
+        window.addEventListener('popstate', () => {
+            if (overlayHistoryDepth <= 0) return;
+            suppressPopHandling = true;
+            overlayHistoryDepth--;
+            closeTopmostOverlay();
+            // Kurze Verzögerung, bevor wir wieder auf normale Klicks reagieren, damit
+            // ein zeitgleicher Tap nicht versehentlich nochmal popOverlayHistory() auslöst.
+            setTimeout(() => { suppressPopHandling = false; }, 50);
+        });
+        function closeTopmostOverlay() {
+            const scOverlayEl = document.getElementById('sharecard-picker-overlay');
+            if (scOverlayEl && scOverlayEl.classList.contains('sc-active')) { closeSharecardPicker(); return; }
+            const cpOverlayEl = document.getElementById('command-palette-overlay');
+            if (cpOverlayEl && cpOverlayEl.classList.contains('cp-active')) { closeCommandPalette(); return; }
+            const standbyOverlayEl = document.getElementById('standby-overlay');
+            if (standbyOverlayEl && standbyOverlayEl.classList.contains('standby-active')) { toggleStandBy(false); return; }
+            if (mainMusicCard && mainMusicCard.classList.contains('lyrics-open')) { toggleLyrics(false); return; }
+            if (isDashboardOpen) { toggleDashboard(); return; }
+        }
+
+        // --- NEW: STANDBY / AMBIENT MODE LOGIC ---
+        function updateStandByClock() {
+            const now = typeof getTrueDateNow === 'function' ? new Date(getTrueDateNow()) : new Date();
+            const h = String(now.getHours()).padStart(2, '0');
+            const m = String(now.getMinutes()).padStart(2, '0');
+            const clockEl = document.getElementById('standby-clock');
+            if (clockEl) clockEl.textContent = `${h}:${m}`;
+            const dateEl = document.getElementById('standby-date');
+            if (dateEl) dateEl.textContent = now.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' });
+        }
+
+        window.toggleStandBy = function(force) {
+            const overlay = document.getElementById('standby-overlay');
+            if (!overlay) return;
+            const wasActive = standByActive;
+            standByActive = (typeof force === 'boolean') ? force : !standByActive;
+            if (standByActive !== wasActive) {
+                haptic(standByActive ? [10, 30, 10] : 10);
+                if (standByActive) { pushOverlayHistory(); } else { popOverlayHistory(); }
+            }
+            overlay.classList.toggle('standby-active', standByActive);
+            if (standByActive) {
+                updateStandByClock();
+                clearInterval(standByInterval);
+                standByInterval = setInterval(updateStandByClock, 1000 * 15);
+                // NEW: Anti-Burn-in Pixel-Shift starten (echter Positions-Zyklus, siehe unten)
+                standByShiftIndex = Math.floor(Math.random() * (AOD_SHIFT_POSITIONS.length - 1)) + 1; // nie bei Index 0 (Mitte) starten
+                shiftStandbyContent();
+                clearInterval(standByShiftInterval);
+                standByShiftInterval = setInterval(shiftStandbyContent, AOD_SHIFT_INTERVAL_MS);
+                // NEW: Dynamic Island im StandBy-Modus ausblenden (nicht dauerhaft dismissed, kommt danach zurück)
+                const island = document.getElementById('dynamic-island');
+                if (island) island.classList.add('di-hidden-by-standby');
+                updateIslandRing();
+            } else {
+                clearInterval(standByInterval);
+                clearInterval(standByShiftInterval);
+                document.documentElement.style.setProperty('--standby-shift-x', '0px');
+                document.documentElement.style.setProperty('--standby-shift-y', '0px');
+                // NEW: Dynamic Island nach Verlassen von StandBy wieder zulassen
+                const island = document.getElementById('dynamic-island');
+                if (island) island.classList.remove('di-hidden-by-standby');
+                updateIslandRing();
+            }
+        };
+
+        // NEW: Anti-Burn-in nach echtem AOD-Vorbild (Pixel/iPhone Always-on-Display):
+        // kein reiner Zufall (der auch mal fast 0px ergeben könnte), sondern ein fester
+        // Zyklus von Positionen mit garantiertem Mindestversatz, alle 10 Minuten - genau
+        // wie echte Hardware-Displays das machen, damit wirklich andere Pixel angesteuert werden.
+        const AOD_SHIFT_INTERVAL_MS = 10 * 60 * 1000; // 10 Minuten, wie bei echten AOD-Systemen
+        const AOD_SHIFT_POSITIONS = [
+            { x: 0, y: 0 },
+            { x: 10, y: 7 }, { x: -10, y: -7 },
+            { x: 9, y: -8 }, { x: -9, y: 8 },
+            { x: 7, y: 0 }, { x: -7, y: 0 },
+            { x: 0, y: 8 }, { x: 0, y: -8 },
+            { x: 6, y: 6 }, { x: -6, y: -6 }
+        ];
+        let standByShiftIndex = 0;
+        function shiftStandbyContent() {
+            standByShiftIndex = (standByShiftIndex + 1) % AOD_SHIFT_POSITIONS.length;
+            const pos = AOD_SHIFT_POSITIONS[standByShiftIndex];
+            document.documentElement.style.setProperty('--standby-shift-x', pos.x + 'px');
+            document.documentElement.style.setProperty('--standby-shift-y', pos.y + 'px');
+        }
+
+        function syncStandByTrackInfo(title, artist, artUrl) {
+            const titleEl = document.getElementById('standby-track-title');
+            const artistEl = document.getElementById('standby-track-artist');
+            const img = document.getElementById('standby-track-art');
+            const bg = document.getElementById('standby-bg');
+            const npCard = document.getElementById('standby-nowplaying');
+            const isIdle = !title;
+
+            if (npCard) npCard.classList.toggle('standby-idle', isIdle);
+            if (titleEl) titleEl.textContent = title || t('standby_idle_title');
+            if (artistEl) artistEl.textContent = artist || t('standby_idle_subtitle');
+
+            if (isIdle) {
+                if (img) img.removeAttribute('src');
+                if (bg) bg.style.backgroundImage = 'none';
+            } else {
+                if (img && artUrl) img.src = artUrl;
+                if (bg && artUrl) bg.style.backgroundImage = `url('${artUrl}')`;
+            }
+        }
+
+        // Auto-StandBy: mobiles Gerät im Querformat + Ladezustand (best effort, opt-in)
+        window.addEventListener('orientationchange', () => {
+            const isAutoAllowed = localStorage.getItem('autoStandBy') === 'true';
+            if (!isAutoAllowed || window.innerWidth < window.innerHeight) return;
+            if (window.innerWidth < 900) {
+                setTimeout(() => { if (window.innerWidth > window.innerHeight) toggleStandBy(true); }, 400);
+            }
+        });
+
+        // --- LIQUID GLASS LOGIC ---
+        function applyLiquidGlassMode(isActive) {
+            if (isActive) {
+                document.body.classList.add('liquid-glass-active');
+                if (liquidGlassToggle) liquidGlassToggle.classList.add('ring-2', 'ring-cyan-500');
+                if (liquidGlassIcon) liquidGlassIcon.classList.add('text-cyan-500', 'fill-cyan-500/20');
+            } else {
+                document.body.classList.remove('liquid-glass-active');
+                if (liquidGlassToggle) liquidGlassToggle.classList.remove('ring-2', 'ring-cyan-500');
+                if (liquidGlassIcon) liquidGlassIcon.classList.remove('text-cyan-500', 'fill-cyan-500/20');
+            }
+        }
+
+        const savedLiquidGlass = localStorage.getItem('liquidGlassMode');
+        if (savedLiquidGlass === 'true') {
+            applyLiquidGlassMode(true);
+        }
+
+        if (liquidGlassToggle) {
+            liquidGlassToggle.addEventListener('click', () => {
+                haptic(10);
+                const isActive = document.body.classList.toggle('liquid-glass-active');
+                localStorage.setItem('liquidGlassMode', isActive);
+                applyLiquidGlassMode(isActive);
+            });
+        }
+
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            html.classList.add('dark');
+        }
+
+        if (themeToggle) {
+            themeToggle.addEventListener('click', () => {
+                haptic(10);
+                html.classList.toggle('dark');
+                localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
+            });
+        }
+
+        function clearTutorialHighlights() {
+            document.querySelectorAll('.tutorial-active-element').forEach(el => {
+                el.classList.remove('tutorial-active-element');
+            });
+        }
+
+        function endTutorial() {
+            document.body.classList.remove('tutorial-mode');
+            if (tutorialBox) {
+                clearTimeout(tutorialTimeout);
+                tutorialBox.classList.remove('tutorial-opening');
+                tutorialBox.classList.add('tutorial-closing');
+            }
+            if (tutorialWrapper) {
+                tutorialWrapper.classList.add('tutorial-closing');
+            }
+            
+            setTimeout(() => {
+                if (tutorialWrapper) {
+                    tutorialWrapper.classList.add('hidden');
+                    tutorialWrapper.classList.remove('flex', 'tutorial-closing');
+                }
+                if (tutorialBox) {
+                    tutorialBox.classList.remove('tutorial-closing');
+                }
+                clearTutorialHighlights();
+                localStorage.setItem('tutorialCompleted', 'true');
+                
+                if (originalPerfModeState !== 'true' && window.innerWidth >= 360) {
+                    applyPerformanceMode(false);
+                    localStorage.setItem('perfMode', 'false');
+                }
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                
+                setTimeout(() => {
+                    window.location.reload();
+                }, 300);
+            }, 850);
+        }
+
+        function showTutorialStep(index) {
+            clearTutorialHighlights();
+            const steps = getTutorialSteps();
+            if (index >= steps.length) {
+                endTutorial();
+                return;
+            }
+
+            const step = steps[index];
+            activeTutorialTarget = document.getElementById(step.targetId);
+            
+            if (activeTutorialTarget) {
+                activeTutorialTarget.classList.add('tutorial-active-element');
+                activeTutorialTarget.scrollIntoView({ behavior: 'auto', block: 'center' });
+            }
+
+            if (stepIndicator) stepIndicator.innerText = t('tutorial_step', index + 1, steps.length);
+            if (tutorialTitle) tutorialTitle.innerText = step.title;
+            if (tutorialText) tutorialText.innerText = step.text;
+
+            if (btnNext) {
+                if (index === steps.length - 1) {
+                    btnNext.innerText = t('tutorial_finish');
+                } else {
+                    btnNext.innerText = t('tutorial_next');
+                }
+            }
+        }
+
+        let tutorialTimeout;
+        function startTutorial() {
+            currentStepIndex = 0;
+            originalPerfModeState = localStorage.getItem('perfMode');
+            document.body.classList.add('tutorial-mode');
+            
+            applyPerformanceMode(true);
+            
+            if (tutorialWrapper) {
+                tutorialWrapper.classList.remove('hidden', 'tutorial-closing');
+                void tutorialWrapper.offsetWidth;
+                tutorialWrapper.classList.add('flex');
+            }
+            if (tutorialBox) {
+                clearTimeout(tutorialTimeout);
+                tutorialBox.classList.remove('tutorial-closing');
+                tutorialBox.classList.add('tutorial-opening');
+                tutorialTimeout = setTimeout(() => {
+                    tutorialBox.classList.remove('tutorial-opening');
+                }, 1200);
+            }
+            showTutorialStep(currentStepIndex);
+        }
+
+        if (btnNext) {
+            btnNext.addEventListener('click', () => {
+                if (tutorialBox) {
+                    tutorialBox.classList.remove('tutorial-morphing');
+                    void tutorialBox.offsetWidth; // Trigger reflow
+                    tutorialBox.classList.add('tutorial-morphing');
+                }
+                
+                setTimeout(() => {
+                    currentStepIndex++;
+                    showTutorialStep(currentStepIndex);
+                }, 200); 
+            });
+        }
+
+        if (btnSkip) btnSkip.addEventListener('click', endTutorial);
+        if (btnStartTutorial) btnStartTutorial.addEventListener('click', startTutorial);
+
+        if (!localStorage.getItem('tutorialCompleted')) {
+            setTimeout(startTutorial, 500);
+        }
+
+        let modalTimeout;
+        window.openModal = function(key) {
+            const data = getDetails()[key];
+            if(!data) return;
+            if (modalBody) {
+                const copyLinkButton = key === 'contact'
+                    ? `<button onclick="copyPageLink(this)" class="w-full py-2 xxs:py-3 sm:py-5 mb-2 xxs:mb-3 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-xl sm:rounded-[1.5rem] font-bold text-sm xxs:text-base sm:text-lg hover:bg-blue-500/20 transition-all active:scale-95 flex items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        ${escapeHTML(t('modal_copy_link_btn'))}
+                      </button>`
+                    : '';
+                modalBody.innerHTML = `
+                    <div class="text-[8px] xxs:text-[10px] sm:text-xs font-black uppercase tracking-widest text-blue-500 mb-2">${escapeHTML(t('modal_deep_dive'))}</div>
+                    <h3 class="text-xl xxs:text-2xl xs:text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white mb-3 xxs:mb-4 sm:mb-6 leading-tight break-words">${escapeHTML(data.title)}</h3>
+                    <p class="text-slate-600 dark:text-slate-300 text-xs xxs:text-sm sm:text-lg leading-relaxed font-medium mb-4 xxs:mb-6 sm:mb-10">${escapeHTML(data.content)}</p>
+                    ${copyLinkButton}
+                    <button onclick="document.getElementById('close-modal').click()" class="w-full py-2 xxs:py-3 sm:py-5 bg-blue-600 text-white rounded-xl sm:rounded-[1.5rem] font-bold text-sm xxs:text-base sm:text-lg hover:bg-blue-700 hover:shadow-xl hover:shadow-blue-500/30 transition-all active:scale-95">${escapeHTML(t('modal_understood'))}</button>
+                `;
+            }
+            if (modalOverlay) {
+                clearTimeout(modalTimeout);
+                modalOverlay.classList.remove('hidden', 'modal-closing');
+                void modalOverlay.offsetWidth;
+                modalOverlay.classList.add('flex', 'modal-opening');
+                
+                modalTimeout = setTimeout(() => {
+                    modalOverlay.classList.remove('modal-opening');
+                }, 1200);
+            }
+            document.body.style.overflow = 'hidden';
+        };
+
+        if (closeModal) {
+            closeModal.addEventListener('click', () => {
+                if (modalOverlay) {
+                    clearTimeout(modalTimeout);
+                    modalOverlay.classList.remove('modal-opening');
+                    modalOverlay.classList.add('modal-closing');
+                    setTimeout(() => {
+                        modalOverlay.classList.add('hidden');
+                        modalOverlay.classList.remove('flex', 'modal-closing');
+                        document.body.style.overflow = ''; 
+                    }, 900); 
+                }
+            });
+        }
+
+        if (modalOverlay) {
+            modalOverlay.addEventListener('click', (e) => {
+                if (e.target === modalOverlay && closeModal) closeModal.click();
+            });
+        }
+
+        const observerOptions = {
+            root: null,
+            rootMargin: '0px',
+            threshold: 0.1
+        };
+
+        const revealObserver = new IntersectionObserver((entries, observer) => {
+            if (document.body.classList.contains('low-end')) return; 
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                    observer.unobserve(entry.target); 
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.reveal').forEach(el => {
+            revealObserver.observe(el);
+        });
+
+        // ========================================================= //
+        // --- NEUES FEATURE: Back-to-Top-Button -------------------- //
+        // ========================================================= //
+        const backToTopBtn = document.getElementById('back-to-top');
+        let scrollTicking = false;
+
+        function updateScrollUI() {
+            const scrollTop = window.scrollY || document.documentElement.scrollTop;
+            if (backToTopBtn) {
+                if (scrollTop > 500) backToTopBtn.classList.add('visible');
+                else backToTopBtn.classList.remove('visible');
+            }
+            scrollTicking = false;
+        }
+
+        window.addEventListener('scroll', () => {
+            if (!scrollTicking) {
+                requestAnimationFrame(updateScrollUI);
+                scrollTicking = true;
+            }
+        }, { passive: true });
+        updateScrollUI();
+
+        // ========================================================= //
+        // --- NEUES FEATURE: Toast-Benachrichtigungen -------------- //
+        // ========================================================= //
+        const toastContainer = document.getElementById('toast-container');
+        window.showToast = function(message, duration = 3200) {
+            if (!toastContainer) return;
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerText = message;
+            toastContainer.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.add('toast-out');
+                setTimeout(() => toast.remove(), 450);
+            }, duration);
+        };
+
+        // Copy-Link Button im Kontakt-Modal
+        window.copyPageLink = function(btn) {
+            const url = window.location.href;
+            const done = () => {
+                showToast(t('toast_link_copied'));
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(url).then(done).catch(() => {
+                    showToast(t('toast_copy_failed') + url, 5000);
+                });
+            } else {
+                showToast(t('toast_copy_unsupported') + url, 5000);
+            }
+        };
+
+        // Zeit-abhängige Begrüßung im Header
+        function setTimeGreeting() {
+            const el = document.getElementById('time-greeting');
+            if (!el) return;
+            const hour = new Date().getHours();
+            let greeting;
+            if (hour < 5) greeting = t('greeting_night');
+            else if (hour < 11) greeting = t('greeting_morning');
+            else if (hour < 17) greeting = t('greeting_day');
+            else if (hour < 22) greeting = t('greeting_evening');
+            else greeting = t('greeting_late_night');
+            el.innerText = greeting;
+        }
+        setTimeGreeting();
+
+
+        // ========================================================= //
+        // --- NEUES FEATURE: Easter Eggs (Konami, Tippen, Klicks) -- //
+        // ========================================================= //
+        const KONAMI_SEQUENCE = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
+        let konamiProgress = 0;
+        const confettiColors = ['#3b82f6', '#06b6d4', '#a855f7', '#22c55e', '#f97316', '#ec4899'];
+
+        function launchConfetti() {
+            const container = document.getElementById('confetti-container');
+            if (!container) return;
+            const isLowEnd = document.body.classList.contains('low-end');
+            const pieceCount = isLowEnd ? 30 : 90;
+
+            for (let i = 0; i < pieceCount; i++) {
+                const piece = document.createElement('div');
+                piece.className = 'confetti-piece';
+                const color = confettiColors[Math.floor(Math.random() * confettiColors.length)];
+                const left = Math.random() * 100;
+                const duration = 2.2 + Math.random() * 1.8;
+                const delay = Math.random() * 0.6;
+                const drift = (Math.random() - 0.5) * 200;
+                const spin = 360 + Math.random() * 720;
+                piece.style.left = left + 'vw';
+                piece.style.background = color;
+                piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+                piece.style.animationDuration = duration + 's';
+                piece.style.animationDelay = delay + 's';
+                piece.style.setProperty('--drift', drift + 'px');
+                piece.style.setProperty('--spin', spin + 'deg');
+                container.appendChild(piece);
+                setTimeout(() => piece.remove(), (duration + delay) * 1000 + 200);
+            }
+        }
+
+        // Regen aus Emojis statt bunter Konfetti-Schnipsel (fürs "oink"-Easter-Egg u.a.)
+        function launchEmojiRain(emojis, count = 40) {
+            const container = document.getElementById('confetti-container');
+            if (!container) return;
+            const isLowEnd = document.body.classList.contains('low-end');
+            const pieceCount = isLowEnd ? Math.min(15, count) : count;
+
+            for (let i = 0; i < pieceCount; i++) {
+                const piece = document.createElement('div');
+                piece.className = 'confetti-piece confetti-emoji';
+                piece.innerText = emojis[Math.floor(Math.random() * emojis.length)];
+                const left = Math.random() * 100;
+                const duration = 2.5 + Math.random() * 2;
+                const delay = Math.random() * 0.8;
+                const drift = (Math.random() - 0.5) * 150;
+                const spin = (Math.random() - 0.5) * 360;
+                piece.style.left = left + 'vw';
+                piece.style.animationDuration = duration + 's';
+                piece.style.animationDelay = delay + 's';
+                piece.style.setProperty('--drift', drift + 'px');
+                piece.style.setProperty('--spin', spin + 'deg');
+                container.appendChild(piece);
+                setTimeout(() => piece.remove(), (duration + delay) * 1000 + 200);
+            }
+        }
+
+        // "matrix" tippen -> grüner Digital-Regen für ein paar Sekunden
+        function launchMatrixRain(durationMs = 4000) {
+            const container = document.getElementById('confetti-container');
+            if (!container) return;
+            const isLowEnd = document.body.classList.contains('low-end');
+            const colCount = isLowEnd ? 8 : 20;
+            const chars = '01アイウエオカキクケコサシスセソ';
+
+            for (let i = 0; i < colCount; i++) {
+                const col = document.createElement('div');
+                col.className = 'matrix-rain-col';
+                col.style.left = (Math.random() * 100) + 'vw';
+                let text = '';
+                const lineCount = 14 + Math.floor(Math.random() * 8);
+                for (let j = 0; j < lineCount; j++) {
+                    text += chars[Math.floor(Math.random() * chars.length)] + '\n';
+                }
+                col.innerText = text;
+                const dur = 2 + Math.random() * 2;
+                col.style.animationDuration = dur + 's';
+                col.style.animationDelay = (Math.random() * 0.6) + 's';
+                container.appendChild(col);
+                setTimeout(() => col.remove(), (dur + 0.6) * 1000 + 200);
+            }
+        }
+
+        // --- Egg 1: Konami-Code -> Konfetti-Regen ---
+        document.addEventListener('keydown', (e) => {
+            const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+            if (key === KONAMI_SEQUENCE[konamiProgress]) {
+                konamiProgress++;
+                if (konamiProgress === KONAMI_SEQUENCE.length) {
+                    konamiProgress = 0;
+                    launchConfetti();
+                    showToast(t('toast_konami'));
+                }
+            } else {
+                konamiProgress = (key === KONAMI_SEQUENCE[0]) ? 1 : 0;
+            }
+        });
+
+        // --- Egg 2-4: Wörter tippen -> "oink", "forza", "fokus"/"hyperfokus", "matrix" ---
+        // NEW: Ausgelagert in eine wiederverwendbare Funktion, damit sie sowohl von normaler
+        // Tastatur (Desktop) als auch vom Spotlight-Suchfeld (⌘K-Button, per Tap auf Mobile
+        // erreichbar - ohne die brauchen Handy-Nutzer ohne Dauer-Tastatur keine Chance,
+        // diese Eggs auszulösen) gefüttert werden kann.
+        function checkSecretWordBuffer(buffer) {
+            if (buffer.endsWith('oink')) {
+                launchEmojiRain(['🐷', '🐽'], 45);
+                showToast(t('toast_oink'));
+                return true;
+            }
+            if (buffer.endsWith('forza')) {
+                if (!document.getElementById('forza-car')) {
+                    const car = document.createElement('div');
+                    car.id = 'forza-car';
+                    car.innerText = '🏎️';
+                    document.body.appendChild(car);
+                    setTimeout(() => car.remove(), 1700);
+                }
+                showToast(t('toast_forza'));
+                return true;
+            }
+            if (buffer.endsWith('fokus') || buffer.endsWith('hyperfokus')) {
+                if (!document.body.classList.contains('low-end')) {
+                    document.body.classList.add('hyperfokus-mode');
+                    setTimeout(() => document.body.classList.remove('hyperfokus-mode'), 3600);
+                }
+                showToast(t('toast_fokus'));
+                return true;
+            }
+            if (buffer.endsWith('matrix')) {
+                launchMatrixRain();
+                showToast(t('toast_matrix'));
+                return true;
+            }
+            return false;
+        }
+
+        let typedBuffer = '';
+        document.addEventListener('keydown', (e) => {
+            if (e.key.length !== 1) return;
+            typedBuffer = (typedBuffer + e.key.toLowerCase()).slice(-14);
+            if (checkSecretWordBuffer(typedBuffer)) typedBuffer = '';
+        });
+
+        // NEW: Gleiche Wörter auch übers Spotlight-Suchfeld erkennbar (mobile-freundlich!)
+        if (cpInputEl) {
+            cpInputEl.addEventListener('input', (e) => {
+                const val = e.target.value.toLowerCase();
+                if (checkSecretWordBuffer(val)) {
+                    e.target.value = '';
+                    renderCommandPalette('');
+                    setTimeout(() => closeCommandPalette(), 900);
+                }
+            });
+        }
+
+        // ========================================================= //
+        // --- NEW: EINMALIGER HINWEIS AUF VERSTECKTE INTERAKTIONEN - //
+        // ========================================================= //
+        // Dezent, taucht einmal pro Browser für ~9s auf, verschwindet dann für immer
+        // (localStorage-Flag) - zeigt Handy-Nutzern ohne Dauer-Tastatur, dass die
+        // Spotlight-Suche der Weg ist, um Easter Eggs auszulösen.
+        window.dismissSearchHint = function() {
+            const bubble = document.getElementById('search-hint-bubble');
+            if (bubble) bubble.classList.remove('hint-visible');
+            localStorage.setItem('seenSearchHint', 'true');
+        };
+        (function initSearchHint() {
+            if (localStorage.getItem('seenSearchHint') === 'true') return;
+            setTimeout(() => {
+                const bubble = document.getElementById('search-hint-bubble');
+                if (!bubble || document.body.classList.contains('low-end')) return;
+                bubble.classList.add('hint-visible');
+                setTimeout(() => { dismissSearchHint(); }, 9000);
+            }, 7000);
+        })();
+
+        // --- Egg 5: 5x schnell auf die Überschrift klicken -> Disco-Modus ---
+        let headerClickCount = 0;
+        let headerClickTimer = null;
+        const headerTitleEl = document.querySelector('#header-section h1');
+        if (headerTitleEl) {
+            headerTitleEl.style.cursor = 'pointer';
+            headerTitleEl.addEventListener('click', () => {
+                headerClickCount++;
+                clearTimeout(headerClickTimer);
+                headerClickTimer = setTimeout(() => { headerClickCount = 0; }, 1200);
+
+                if (headerClickCount >= 5) {
+                    headerClickCount = 0;
+                    if (!document.body.classList.contains('low-end')) {
+                        document.body.classList.add('disco-mode');
+                        setTimeout(() => document.body.classList.remove('disco-mode'), 2500);
+                    }
+                    launchEmojiRain(['✨', '🎮', '⚡', '🐷'], 35);
+                    showToast(t('toast_disco'));
+                }
+            });
+        }
+
+        // --- Egg 6: 3x auf den Footer-Badge klicken -> geheime Botschaft ---
+        let footerClickCount = 0;
+        let footerClickTimer = null;
+        const footerBadgeEl = document.querySelector('footer .inline-flex');
+        function getSecretMessages() {
+            return [t('secret_1'), t('secret_2'), t('secret_3'), t('secret_4'), t('secret_5')];
+        }
+        const secretMessages = getSecretMessages(); // Startwert; wird bei Sprachwechsel über applyLanguage() neu befüllt
+        if (footerBadgeEl) {
+            footerBadgeEl.style.cursor = 'pointer';
+            footerBadgeEl.addEventListener('click', () => {
+                footerClickCount++;
+                clearTimeout(footerClickTimer);
+                footerClickTimer = setTimeout(() => { footerClickCount = 0; }, 1000);
+
+                if (footerClickCount >= 3) {
+                    footerClickCount = 0;
+                    const msg = secretMessages[Math.floor(Math.random() * secretMessages.length)];
+                    showToast(msg, 4200);
+                }
+            });
+        }
+
+    // --- DASHBOARD LOGIC FIX ---
+        let dashboardTimeout;
+        let dashboardOpenTimeout;
+        let statusTextTimeout;
+
+        window.toggleDashboard = function() {
+            isDashboardOpen = !isDashboardOpen;
+            if (isDashboardOpen) { pushOverlayHistory(); } else { popOverlayHistory(); }
+            clearTimeout(dashboardTimeout); 
+            clearTimeout(dashboardOpenTimeout);
+            clearTimeout(statusTextTimeout);
+            
+            if (isDashboardOpen) {
+                if (musicCardLayoutWrapper) musicCardLayoutWrapper.classList.remove('hidden');
+                
+                setTimeout(() => {
+                    if (musicCardWrapper) {
+                        musicCardWrapper.classList.remove('dashboard-closing');
+                        musicCardWrapper.classList.add('dashboard-opening');
+                    }
+                    if (musicCardLayoutWrapper) musicCardLayoutWrapper.classList.add('is-open');
+                }, 20);
+                
+                dashboardOpenTimeout = setTimeout(() => {
+                    if (musicCardWrapper) musicCardWrapper.classList.remove('dashboard-opening');
+                }, 1200);
+                
+                if (musicChevron) musicChevron.style.transform = 'rotate(180deg)';
+                if (miniStatus) miniStatus.innerText = t('mini_click_to_close');
+            } else {
+                if (musicCardWrapper) {
+                    musicCardWrapper.classList.remove('dashboard-opening');
+                    musicCardWrapper.classList.add('dashboard-closing');
+                }
+                if (musicCardLayoutWrapper) musicCardLayoutWrapper.classList.remove('is-open');
+                
+                if (musicChevron) musicChevron.style.transform = 'rotate(0deg)';
+                
+                dashboardTimeout = setTimeout(() => {
+                    if (!isDashboardOpen) {
+                        if (musicCardLayoutWrapper) musicCardLayoutWrapper.classList.add('hidden');
+                        if (musicCardWrapper) musicCardWrapper.classList.remove('dashboard-closing');
+                    }
+                }, 900); 
+                
+                if (mainMusicCard && mainMusicCard.classList.contains('offline')) {
+                    if (miniStatus) miniStatus.innerText = t('mini_click_to_open');
+                } else {
+                    if (miniStatus) miniStatus.innerText = t('mini_click_to_close');
+                    setTimeout(() => { 
+                        if(!isDashboardOpen && miniStatus) {
+                            miniStatus.innerText = t('mini_click_to_open');
+                            
+                            statusTextTimeout = setTimeout(() => {
+                                if(!isDashboardOpen && miniStatus) {
+                                    miniStatus.innerText = mArtist && mArtist.innerText !== t('standby_idle_subtitle') ? mArtist.innerText : t('mini_click_to_open');
+                                }
+                            }, 5000);
+                        } 
+                    }, 300);
+                }
+            }
+        };
+
+        let pickerTimeout;
+        window.toggleMusicPicker = function(show) {
+            if (mainMusicCard && !mainMusicCard.classList.contains('offline') && mPicker) {
+                clearTimeout(pickerTimeout);
+                if(show) {
+                    mPicker.classList.remove('hidden', 'picker-closing');
+                    void mPicker.offsetWidth;
+                    mPicker.classList.add('flex', 'picker-opening');
+                    
+                    pickerTimeout = setTimeout(() => {
+                        mPicker.classList.remove('picker-opening');
+                    }, 1200);
+                } else {
+                    mPicker.classList.remove('picker-opening');
+                    mPicker.classList.add('picker-closing');
+                    setTimeout(() => {
+                        mPicker.classList.add('hidden');
+                        mPicker.classList.remove('flex', 'picker-closing');
+                    }, 900); 
+                }
+            }
+        };
+
+        if (syncSlider && syncValueEl) {
+            syncSlider.value = liveSyncOffset;
+            syncValueEl.innerText = liveSyncOffset;
+            
+            syncSlider.addEventListener('input', (e) => {
+                syncValueEl.innerText = e.target.value;
+            });
+
+            syncSlider.addEventListener('change', (e) => {
+                liveSyncOffset = parseInt(e.target.value);
+                syncValueEl.innerText = liveSyncOffset;
+                syncLyricsUI(true, true); 
+            });
+        }
+
+            window.resetSyncOffset = async function(btn) {
+            const title = mTitle ? mTitle.innerText : null;
+            let artist = mArtist ? mArtist.innerText : null;
+            
+            // FIX: Smart Shuffle Suffix entfernen (genau wie beim ersten Laden), 
+            // sonst scheitert die API Suche beim Re-Sync!
+            if (artist) {
+                artist = artist.replace(/\s*•\s*From Smart Shuffle/gi, '').trim();
+            }
+            
+            const originalText = btn ? btn.innerText : "Re-Sync";
+            
+            if (btn) {
+                btn.innerText = "SYNCING";
+                btn.classList.add('opacity-50', 'pointer-events-none', 'animate-pulse');
+            }
+            
+            if (title && artist && title !== t('standby_idle_title')) {
+                await fetchExternalLyrics(title, artist, totalMs);
+            }
+            
+            liveSyncOffset = typeof DEFAULT_SYNC_OFFSET !== 'undefined' ? DEFAULT_SYNC_OFFSET : -800;
+            if (syncSlider) syncSlider.value = liveSyncOffset;
+            if (syncValueEl) syncValueEl.innerText = liveSyncOffset;
+            
+            syncLyricsUI(true, true);
+            
+            if (btn) {
+                btn.innerText = originalText;
+                btn.classList.remove('opacity-50', 'pointer-events-none', 'animate-pulse');
+            }
+        };
+        
+        let lyricsSettingsTimeout;
+        window.toggleLyricsSettings = function() {
+            isLyricsSettingsOpen = !isLyricsSettingsOpen;
+            if (!lyricsSettingsMenu) return;
+            clearTimeout(lyricsSettingsTimeout);
+            if (isLyricsSettingsOpen) {
+                lyricsSettingsMenu.classList.remove('hidden', 'settings-closing');
+                lyricsSettingsMenu.classList.add('settings-opening');
+            } else {
+                lyricsSettingsMenu.classList.remove('settings-opening');
+                lyricsSettingsMenu.classList.add('settings-closing');
+                lyricsSettingsTimeout = setTimeout(() => {
+                    lyricsSettingsMenu.classList.add('hidden');
+                    lyricsSettingsMenu.classList.remove('settings-closing');
+                }, 900); // FIX: Zurück auf 900ms
+            }
+        };
+
+        document.addEventListener('click', (e) => {
+            if (isLyricsSettingsOpen && !e.target.closest('#lyrics-settings-menu') && !e.target.closest('button[aria-label="Lyrics Einstellungen"]')) {
+                toggleLyricsSettings();
+            }
+        });
+
+        window.setLyricsStyle = function(style) {
+            currentLyricsStyle = style;
+            localStorage.setItem('lyricsStyle', style);
+            
+            if (lyricsContainer) {
+                lyricsContainer.className = `absolute inset-0 overflow-y-auto overflow-x-hidden text-left w-full h-full lyrics-style-${style}`;
+            }
+
+            const lyricsOverlayEl = document.getElementById('lyrics-overlay');
+            const isAppleStyle = (style === 'applemusic' || style === 'applemusicpro');
+            if (lyricsOverlayEl) {
+                lyricsOverlayEl.classList.toggle('apple-ambient-active', isAppleStyle);
+            }
+            const appleBadge = document.getElementById('apple-style-badge');
+            if (appleBadge) {
+                appleBadge.classList.toggle('hidden', !isAppleStyle);
+                appleBadge.classList.toggle('flex', isAppleStyle);
+            }
+            
+            ['fill', 'bounce', 'fade', 'blur', 'wave', 'wave-char', 'neon', 'typewriter', 'pop', 'karaoke', 'glitch', 'flip', 'zoom', 'zoom-char', 'kinetic', 'hellfire', 'hologram', 'matrix', 'liquid', 'cyberpunk', 'ghost', 'rainbow', 'shake', 'underline', 'ember', 'ice', 'chromatic', 'bubble', 'flagwave', 'spotlight', 'binary', 'paint', 'vinyl', 'starlight', 'applemusic', 'applemusicpro'].forEach(s => {
+            const btn = document.getElementById(`btn-style-${s}`);
+                if(btn) {
+                    if (s === style) {
+                        btn.classList.add('bg-blue-500/20', 'text-blue-400', 'font-bold');
+                        btn.classList.remove('hover:bg-slate-700');
+                    } else {
+                        btn.classList.remove('bg-blue-500/20', 'text-blue-400', 'font-bold');
+                        btn.classList.add('hover:bg-slate-700');
+                    }
+                }
+            });
+
+            syncLyricsUI(false, true); 
+        };
+
+        window.toggleCanvasVideo = function() {
+            if (!currentCanvasUrl) return; 
+            canvasEnabled = !canvasEnabled;
+            localStorage.setItem('canvasEnabled', canvasEnabled);
+            
+            if (!btnToggleCanvas || !canvasVideo) return;
+
+            if (canvasEnabled) {
+                canvasVideo.classList.remove('opacity-0');
+                canvasVideo.play().catch(()=>{});
+                btnToggleCanvas.innerText = t('settings_canvas') + ': ' + t('on_label');
+                btnToggleCanvas.classList.add('text-green-400');
+                btnToggleCanvas.classList.remove('text-slate-400');
+            } else {
+                canvasVideo.classList.add('opacity-0');
+                btnToggleCanvas.innerText = t('settings_canvas') + ': ' + t('off_label');
+                btnToggleCanvas.classList.add('text-slate-400');
+                btnToggleCanvas.classList.remove('text-green-400');
+            }
+        };
+
+        // FIX: Re-Add Smooth Transitions for Size changes
+        window.toggleLyrics = function(show) {
+            if (!mainMusicCard) return;
+            if (show) { pushOverlayHistory(); } else { popOverlayHistory(); }
+            if(show) {
+                mainMusicCard.classList.remove('lyrics-closing-state');
+                void mainMusicCard.offsetWidth; // Reflow erzwingen
+                mainMusicCard.classList.add('lyrics-open');
+                setTimeout(() => syncLyricsUI(true), 100); 
+            } else {
+                mainMusicCard.classList.add('lyrics-closing-state');
+                // Wichtig: Um die Transition zurück auf Standard-Größe zu starten, direkt entfernen!
+                mainMusicCard.classList.remove('lyrics-open');
+                setTimeout(() => {
+                    mainMusicCard.classList.remove('lyrics-closing-state');
+                }, 900); // Overlay Pop-Out Animation abwarten
+            }
+        };
+
+        function handleUserScroll() {
+            isUserScrolling = true;
+            clearTimeout(userScrollTimeout);
+            userScrollTimeout = setTimeout(() => {
+                isUserScrolling = false;
+            }, 3000);
+        }
+
+        if (lyricsContainer) {
+            lyricsContainer.addEventListener('wheel', handleUserScroll, {passive: true});
+            lyricsContainer.addEventListener('touchstart', handleUserScroll, {passive: true});
+            lyricsContainer.addEventListener('touchmove', handleUserScroll, {passive: true});
+        }
+
+        async function syncWorldwideTime() {
+            // NTP-artiger Ansatz: mehrere Messungen nehmen und die mit der geringsten
+            // Round-Trip-Zeit verwenden (die genaueste), statt blind die erste zu nehmen.
+            const timeSources = [
+                async () => {
+                    const t0 = performance.now();
+                    const res = await fetch('https://timeapi.io/api/Time/current/zone?timeZone=UTC');
+                    const data = await res.json();
+                    const rtt = performance.now() - t0;
+                    return { trueTime: new Date(data.dateTime + "Z").getTime(), rtt };
+                },
+                async () => {
+                    const t0 = performance.now();
+                    const res = await fetch('https://worldtimeapi.org/api/timezone/Etc/UTC');
+                    const data = await res.json();
+                    const rtt = performance.now() - t0;
+                    return { trueTime: new Date(data.datetime).getTime(), rtt };
+                }
+            ];
+
+            let best = null;
+            for (const source of timeSources) {
+                try {
+                    const sample = await source();
+                    // Latenz wird hälftig als einseitige Signallaufzeit angenommen (Standard-NTP-Näherung)
+                    const estimatedTrueNow = sample.trueTime + sample.rtt / 2;
+                    if (!best || sample.rtt < best.rtt) {
+                        best = { trueWorldTime: estimatedTrueNow, rtt: sample.rtt };
+                    }
+                    if (best.rtt < 120) break; // schon sehr gut, weitere Quelle sparen
+                } catch (e) { /* nächste Quelle probieren */ }
+            }
+
+            if (best) {
+                localClockOffset = Date.now() - best.trueWorldTime;
+                isTimeSynced = true;
+                lastTimeSyncQualityMs = Math.round(best.rtt);
+            } else if (!isTimeSynced) {
+                console.warn("Weltzeit-Sync fehlgeschlagen, vertraue lokaler Uhr.");
+            }
+        }
+
+        function getTrueDateNow() {
+            return isTimeSynced ? (Date.now() - localClockOffset) : Date.now();
+        }
+
+        function formatTime(ms) {
+            if (!ms || ms < 0) return "0:00";
+            const totalSeconds = Math.floor(ms / 1000);
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function updateProgressUI() {
+            if (timeCurrentEl) timeCurrentEl.innerText = formatTime(currentMs);
+            if (progressBar) {
+                if (totalMs > 0) {
+                    const percentage = (currentMs / totalMs) * 100;
+                    progressBar.style.width = `${Math.min(percentage, 100)}%`;
+                } else {
+                    progressBar.style.width = '0%';
+                }
+            }
+            // NEW: StandBy + Dynamic Island Progress synchron mitziehen
+            const pct = totalMs > 0 ? Math.min((currentMs / totalMs) * 100, 100) : 0;
+            const sbBar = document.getElementById('standby-progress-bar');
+            const sbCur = document.getElementById('standby-time-current');
+            const sbTot = document.getElementById('standby-time-total');
+            const sbEq = document.getElementById('standby-eq');
+            if (sbBar) sbBar.style.width = pct + '%';
+            if (sbCur) sbCur.innerText = formatTime(currentMs);
+            if (sbTot) sbTot.innerText = formatTime(totalMs);
+            if (sbEq) sbEq.style.display = trackIsPlaying ? 'flex' : 'none';
+            const diBar = document.getElementById('di-progress-bar');
+            if (diBar) diBar.style.width = pct + '%';
+        }
+
+        function getCharWeight(char, isLastWord, isVowel) {
+            const c = char.toLowerCase();
+            if (/[aeiouyæøåœäöüáéíóúàèìòùâêîôûãẽĩõũ]/.test(c)) {
+                return isLastWord ? 6.0 : 2.5; 
+            }
+            if (/[mnlrwjvszñç]/.test(c)) return 1.2; 
+            if (/[tkpbgdcqfxh]/.test(c)) return 0.4; 
+            if (/[\n\r\t.,!? ]/.test(c)) return 0.0; 
+            return 1.0; 
+        }
+
+        function parseLrc(lrcString) {
+            const lines = lrcString.split('\n');
+            const lineRegex = /\[(\d{2}):(\d{2})\.(\d{2,3})\](.*)/;
+            const enhancedRegex = /<(\d{2}):(\d{2})\.(\d{2,3})>([^<]*)/g;
+            parsedLyrics = [];
+            
+            lines.forEach(line => {
+                const match = lineRegex.exec(line);
+                if (match) {
+                    const m = parseInt(match[1]);
+                    const s = parseInt(match[2]);
+                    let msStr = match[3];
+                    const ms = msStr.length === 2 ? parseInt(msStr) * 10 : parseInt(msStr);
+                    const lineTime = (m * 60000) + (s * 1000) + ms;
+                    const rawText = match[4];
+                    
+                    let tokens = [];
+                    let hasWordTimings = false;
+
+                    if (/<(\d{2}):(\d{2})\.(\d{2,3})>/.test(rawText)) {
+                        hasWordTimings = true;
+                        let firstTagIdx = rawText.indexOf('<');
+                        if (firstTagIdx > 0) {
+                            let initialText = rawText.substring(0, firstTagIdx); 
+                            if (initialText.trim()) {
+                                tokens.push({ timeMs: lineTime, text: initialText });
+                            }
+                        }
+                        const matches = [...rawText.matchAll(enhancedRegex)];
+                        matches.forEach(wm => {
+                            const wm_m = parseInt(wm[1]);
+                            const wm_s = parseInt(wm[2]);
+                            const wm_msStr = wm[3];
+                            const wm_ms = wm_msStr.length === 2 ? parseInt(wm_msStr) * 10 : parseInt(wm_msStr);
+                            const wTime = (wm_m * 60000) + (wm_s * 1000) + wm_ms;
+                            tokens.push({ timeMs: wTime, text: wm[4] }); 
+                        });
+                    } else {
+                        const cleanText = rawText.replace(/<\d{2}:\d{2}\.\d{2,3}>/g, '').trim();
+                        if (cleanText) {
+                            const words = cleanText.match(/([^\s\-]+[\s\-]*|[\s\-]+)/g) || [cleanText];
+                            tokens = words.map(w => ({ timeMs: null, text: w }));
+                        } else {
+                            tokens = [{ timeMs: lineTime, text: "♪" }];
+                        }
+                    }
+
+                    parsedLyrics.push({ 
+                        timeMs: lineTime, 
+                        text: rawText.replace(/<\d{2}:\d{2}\.\d{2,3}>/g, '').trim() || "♪",
+                        tokens: tokens,
+                        hasWordTimings: hasWordTimings
+                    });
+                }
+            });
+
+            parsedLyrics.sort((a, b) => a.timeMs - b.timeMs);
+
+            for (let i = 0; i < parsedLyrics.length; i++) {
+                let line = parsedLyrics[i];
+                
+                let timeToNextLine = 5000;
+                let trueNextLineTime = line.timeMs + 5000;
+                for (let k = i + 1; k < parsedLyrics.length; k++) {
+                    let diff = parsedLyrics[k].timeMs - line.timeMs;
+                    if (diff > 150) { 
+                        timeToNextLine = diff;
+                        trueNextLineTime = parsedLyrics[k].timeMs;
+                        break;
+                    }
+                }
+                
+                let lineWeight = 0;
+                line.tokens.forEach((tok, idx) => {
+                    tok.cleanText = tok.text.replace(/\s+$/, '');
+                    tok.trailingSpace = tok.text.slice(tok.cleanText.length);
+                    
+                    let pureText = tok.cleanText.replace(/[.,!?]/g, '');
+                    tok.rawWeight = 0;
+                    tok.isPhraseEnd = /[.,!?]$/.test(tok.cleanText) || (idx === line.tokens.length - 1);
+
+                    for (let c of pureText) {
+                        tok.rawWeight += getCharWeight(c, tok.isPhraseEnd, /[aeiouy]/.test(c.toLowerCase()));
+                    }
+                    if (tok.rawWeight === 0) tok.rawWeight = 0.5; 
+                    
+                    tok.weight = Math.pow(tok.rawWeight, 0.75);
+                    
+                    lineWeight += tok.weight;
+                });
+
+                if (!line.hasWordTimings && line.tokens.length > 0) {
+                    let maxAvailableTime = timeToNextLine * 0.95; 
+                    if (maxAvailableTime > 15000) maxAvailableTime = 15000;
+
+                    let totalRawTime = 0;
+                    line.tokens.forEach((tok) => {
+                        tok.rawDuration = tok.weight * 80;
+                        tok.rawPause = 30;
+                        let maxGap = Math.min(timeToNextLine, 8000);
+                        let dynamicPauseBase = maxGap * 0.05;
+
+                        if (tok.isPhraseEnd) {
+                            if (/[.!?]$/.test(tok.cleanText)) {
+                                tok.rawPause = Math.max(400, Math.min(dynamicPauseBase * 2.5, 1500));
+                            } else if (/[,;:]$/.test(tok.cleanText)) {
+                                tok.rawPause = Math.max(200, Math.min(dynamicPauseBase * 1.5, 800));
+                            } else {
+                                tok.rawPause = Math.max(100, Math.min(dynamicPauseBase * 0.8, 400));
+                            }
+                        }
+                        totalRawTime += tok.rawDuration + tok.rawPause;
+                    });
+
+                    let timeScale = 1.0;
+                    if (totalRawTime > maxAvailableTime) {
+                        timeScale = maxAvailableTime / totalRawTime; 
+                    } else {
+                        timeScale = Math.min(maxAvailableTime / totalRawTime, 1.25); 
+                    }
+                    
+                    let currentOffsetMs = line.timeMs;
+                    
+                    for (let j = 0; j < line.tokens.length; j++) {
+                        let tok = line.tokens[j];
+                        tok.timeMs = currentOffsetMs;
+                        
+                        tok.duration = tok.rawDuration * timeScale;
+                        let microPause = tok.rawPause * timeScale;
+
+                        if (j === line.tokens.length - 1 && totalRawTime * timeScale < maxAvailableTime) {
+                            let remainingExtra = maxAvailableTime - (totalRawTime * timeScale);
+                            if (/[aeiouyæøåœäöüáéíóúàèìòùâêîôûãẽĩõũ][^a-zA-Z]*$/.test(tok.cleanText.toLowerCase())) {
+                                tok.duration += Math.min(remainingExtra * 0.6, 1200); 
+                            }
+                        }
+                        
+                        let maxAllowedDuration = trueNextLineTime - tok.timeMs;
+                        if (tok.duration > maxAllowedDuration * 0.95) {
+                            tok.duration = Math.max(10, maxAllowedDuration * 0.95);
+                        }
+
+                        currentOffsetMs += tok.duration + microPause; 
+                    }
+                } else if (line.hasWordTimings) {
+                    for (let j = 0; j < line.tokens.length; j++) {
+                        let tok = line.tokens[j];
+                        let nextTok = line.tokens[j+1];
+                        
+                        let rawGap = nextTok ? (nextTok.timeMs - tok.timeMs) : (trueNextLineTime - tok.timeMs);
+                        if (rawGap < 0) rawGap = 50;
+                        
+                        let maxLogicalSingTime = tok.weight * 250; 
+
+                        if (rawGap > 1000 || tok.isPhraseEnd) {
+                            tok.duration = Math.min(rawGap * 0.5, maxLogicalSingTime);
+                        } else if (rawGap > 400) {
+                            tok.duration = Math.min(rawGap * 0.8, maxLogicalSingTime);
+                        } else {
+                            tok.duration = rawGap;
+                        }
+                        
+                        if (tok.duration > rawGap * 0.95) {
+                            tok.duration = rawGap * 0.95;
+                        }
+                        
+                        if (tok.duration <= 0) tok.duration = 20; 
+                    }
+                }
+            }
+        }
+
+        function renderLyrics(fallbackText, isUnsyncedData = false) {
+            const syncBadge = document.getElementById('sync-status-badge');
+            if (!lyricsContent) return;
+
+            if (parsedLyrics.length === 0) {
+                const displayMsg = fallbackText || currentNoLyricsMessage;
+                const isCustomFallback = fallbackMessages.includes(displayMsg);
+                
+                if (isUnsyncedData) {
+                    if (syncBadge) {
+                        syncBadge.style.display = 'inline-block';
+                        syncBadge.innerText = t('label_unsynced');
+                        syncBadge.className = "px-1.5 xxs:px-2 py-1 mr-1 xxs:mr-2 bg-orange-500/20 text-orange-400 text-[8px] xxs:text-[10px] sm:text-xs rounded font-bold shrink-0 whitespace-nowrap";
+                    }
+                    lyricsContent.innerHTML = `
+                    <div class="w-full flex-1 pt-[10vh] pb-[50vh] px-1 sm:px-4 md:px-8">
+                        <p class="text-xs xxs:text-sm xs:text-base sm:text-2xl md:text-3xl font-bold text-white/90 leading-relaxed whitespace-pre-wrap text-left break-words">${escapeHTML(displayMsg.trim())}</p>
+                    </div>`;
+                } else if (isCustomFallback) {
+                    if (syncBadge) syncBadge.style.display = 'none';
+                    lyricsContent.innerHTML = `<div class="w-full flex-1 flex flex-col justify-center min-h-full py-8 px-2 sm:px-4 md:px-8"><h2 class="text-sm xxs:text-lg xs:text-xl sm:text-3xl md:text-4xl font-extrabold text-white tracking-tight leading-[1.2] text-left break-words">${escapeHTML(displayMsg)}</h2></div>`;
+                } else {
+                    if (syncBadge) syncBadge.style.display = 'none';
+                    lyricsContent.innerHTML = `<div class="w-full flex-1 pt-[10vh] pb-[50vh] px-2 sm:px-4 md:px-8"><p class="text-xs xxs:text-sm xs:text-base sm:text-2xl md:text-3xl font-bold text-white/80 leading-relaxed whitespace-pre-wrap text-left break-words">${escapeHTML(displayMsg.trim())}</p></div>`;
+                }
+                return;
+            }
+            
+            if (syncBadge) {
+                syncBadge.style.display = 'inline-block';
+                syncBadge.innerText = "Synced";
+                syncBadge.className = "px-1.5 xxs:px-2 py-1 mr-1 xxs:mr-2 bg-blue-500/20 text-blue-400 text-[8px] xxs:text-[10px] sm:text-xs rounded font-bold shrink-0 whitespace-nowrap";
+            }
+            
+            const isLowEnd = document.body.classList.contains('low-end');
+
+            // NEU: Footer HTML für Writer und Provider dynamisch zusammenbauen
+            let footerHtml = '';
+            if (currentLyricsProvider || currentLyricsWriter) {
+                footerHtml = `<div class="mt-20 border-t border-white/10 pt-6 pb-20 w-full text-left">
+                    ${currentLyricsWriter ? `<p class="text-[10px] xxs:text-xs sm:text-sm text-white/40 font-medium mb-1.5">Written by: ${escapeHTML(currentLyricsWriter)}</p>` : ''}
+                    ${currentLyricsProvider ? `<p class="text-[8px] xxs:text-[10px] sm:text-xs text-blue-400/80 font-black uppercase tracking-widest">Provided by ${escapeHTML(currentLyricsProvider)}</p>` : ''}
+                </div>`;
+            }
+            
+            lyricsContent.innerHTML = '<div class="w-full pt-[40vh] pb-[40vh] px-2 sm:px-4">' + parsedLyrics.map((line, idx) => {
+                if (isLowEnd) {
+                    return `<div id="lyric-line-${idx}" class="lyric-line">` + 
+                        line.tokens.map((tok, wIdx) => {
+                            return `<span id="word-${idx}-${wIdx}" class="lyric-word">${escapeHTML(tok.cleanText)}</span>${tok.trailingSpace}`;
+                        }).join('') +
+                    `</div>`;
+                }
+                return `<div id="lyric-line-${idx}" class="lyric-line">` + 
+                    line.tokens.map((tok, wIdx) => {
+                        const chars = tok.cleanText.split('').map((c, cIdx) => {
+                            if (c === ' ') return ' ';
+                            return `<span id="char-${idx}-${wIdx}-${cIdx}" class="lyric-char">${escapeHTML(c)}</span>`;
+                        }).join('');
+                        return `<span id="word-${idx}-${wIdx}" class="lyric-word">${chars}</span>${tok.trailingSpace}`;
+                    }).join('') +
+                `</div>`;
+            }).join('') + footerHtml + '</div>';
+        }
+
+        function scrollToLyricElement(el) {
+            if (!el || !lyricsContainer || isUserScrolling) return;
+            const containerHeight = lyricsContainer.clientHeight;
+            const elementTop = el.offsetTop;
+            const elementHeight = el.clientHeight;
+            const scrollBehavior = document.body.classList.contains('low-end') ? 'auto' : 'smooth';
+            requestAnimationFrame(() => {
+                lyricsContainer.scrollTo({ top: elementTop - (containerHeight / 2) + (elementHeight / 2), behavior: scrollBehavior });
+            });
+        }
+
+        function syncLyricsUI(forceScroll = false, forceRefresh = false) {
+            if (parsedLyrics.length === 0 || (!mainMusicCard || (!mainMusicCard.classList.contains('lyrics-open') && !forceRefresh))) return;
+
+            const syncMs = currentMs + liveSyncOffset; 
+
+            let newActiveIdx = -1;
+            for (let i = 0; i < parsedLyrics.length; i++) {
+                if (syncMs >= parsedLyrics[i].timeMs) {
+                    newActiveIdx = i;
+                } else {
+                    break;
+                }
+            }
+
+            if (newActiveIdx !== currentLyricIndex || forceScroll || forceRefresh) {
+                document.querySelectorAll('.lyric-line.active').forEach(el => el.classList.remove('active'));
+                currentLyricIndex = newActiveIdx;
+                if (currentLyricIndex !== -1) {
+                    const activeEl = document.getElementById(`lyric-line-${currentLyricIndex}`);
+                    if (activeEl) {
+                        activeEl.classList.add('active');
+                        if (forceScroll || !isUserScrolling) scrollToLyricElement(activeEl);
+                    }
+                }
+            }
+
+            if (document.body.classList.contains('low-end')) return;
+
+            parsedLyrics.forEach((line, idx) => {
+                if (idx < currentLyricIndex) {
+                    line.tokens.forEach((tok, wIdx) => {
+                        const wordSpan = document.getElementById(`word-${idx}-${wIdx}`);
+                        if (wordSpan) {
+                            wordSpan.style.setProperty('--fill-percent', '100%');
+                            wordSpan.classList.add('word-passed');
+                            wordSpan.classList.remove('word-active');
+                        }
+                        for(let cIdx=0; cIdx<tok.cleanText.length; cIdx++) {
+                            const charSpan = document.getElementById(`char-${idx}-${wIdx}-${cIdx}`);
+                            if(charSpan && !charSpan.classList.contains('char-passed')) {
+                                charSpan.classList.add('char-passed');
+                                charSpan.classList.remove('char-active');
+                            }
+                        }
+                    });
+                } else if (idx === currentLyricIndex) {
+                    line.tokens.forEach((tok, wIdx) => {
+                        const wordSpan = document.getElementById(`word-${idx}-${wIdx}`);
+                        if (!wordSpan) return;
+
+                        let tokProgress = 0;
+                        if (syncMs >= tok.timeMs + tok.duration) {
+                            tokProgress = 1; 
+                        } else if (syncMs > tok.timeMs) {
+                            tokProgress = (syncMs - tok.timeMs) / tok.duration; 
+                        }
+                        
+                        if (tokProgress > 0 && tokProgress < 1) {
+                            wordSpan.classList.add('word-active');
+                            wordSpan.classList.remove('word-passed');
+                        } else if (tokProgress >= 1) {
+                            wordSpan.classList.remove('word-active');
+                            wordSpan.classList.add('word-passed');
+                        } else {
+                            wordSpan.classList.remove('word-active', 'word-passed');
+                        }
+
+                        let tokLen = tok.cleanText.length;
+                        let currentTokWeightPassed = 0;
+                        
+                        for(let cIdx=0; cIdx<tokLen; cIdx++) {
+                            let cChar = tok.cleanText[cIdx];
+                            let cWeight = 0;
+                            if (!/[.,!?]/.test(cChar)) {
+                                cWeight = getCharWeight(cChar, tok.isPhraseEnd, /[aeiouy]/.test(cChar.toLowerCase()));
+                            }
+                            if (cWeight === 0 && tok.rawWeight > 0) cWeight = tok.rawWeight * 0.05; 
+                            
+                            let charStartRatio = tok.rawWeight > 0 ? (currentTokWeightPassed / tok.rawWeight) : 0;
+                            let charEndRatio = tok.rawWeight > 0 ? ((currentTokWeightPassed + cWeight) / tok.rawWeight) : 1;
+                            
+                            const charSpan = document.getElementById(`char-${idx}-${wIdx}-${cIdx}`);
+                            if(charSpan) {
+                                if (tokProgress === 0) {
+                                    charSpan.classList.remove('char-passed', 'char-active');
+                                } else if (tokProgress >= charEndRatio) {
+                                    charSpan.classList.add('char-passed');
+                                    charSpan.classList.remove('char-active');
+                                } else if (tokProgress >= charStartRatio && tokProgress < charEndRatio) {
+                                    charSpan.classList.add('char-active');
+                                    charSpan.classList.remove('char-passed');
+                                } else {
+                                    charSpan.classList.remove('char-passed', 'char-active');
+                                }
+                            }
+                            currentTokWeightPassed += cWeight;
+                        }
+                        
+                        wordSpan.style.setProperty('--fill-percent', `${tokProgress * 100}%`);
+                    });
+                } else {
+                    line.tokens.forEach((tok, wIdx) => {
+                        const wordSpan = document.getElementById(`word-${idx}-${wIdx}`);
+                        if (wordSpan) {
+                            wordSpan.style.setProperty('--fill-percent', '0%');
+                            wordSpan.classList.remove('word-active', 'word-passed');
+                        }
+                        for(let cIdx=0; cIdx<tok.cleanText.length; cIdx++) {
+                            const charSpan = document.getElementById(`char-${idx}-${wIdx}-${cIdx}`);
+                            if(charSpan) charSpan.classList.remove('char-passed', 'char-active');
+                        }
+                    });
+                }
+            });
+        }
+
+        function animateLoop(now) {
+            if (trackIsPlaying) {
+                if (document.body.classList.contains('low-end')) {
+                    if (now - lastLowEndUpdate < 250) { 
+                        lyricAnimFrame = requestAnimationFrame(animateLoop);
+                        return; 
+                    }
+                    lastLowEndUpdate = now;
+                }
+
+                currentMs = serverBaseProgress + (now - localStartTime);
+                if (totalMs > 0 && currentMs > totalMs) currentMs = totalMs;
+                
+                updateProgressUI();
+
+                if (mainMusicCard && mainMusicCard.classList.contains('lyrics-open')) {
+                    syncLyricsUI();
+                }
+                lyricAnimFrame = requestAnimationFrame(animateLoop);
+            } else {
+                isAnimating = false; 
+            }
+        }
+
+        function isDummyLyrics(text) {
+            if (!text) return true;
+            const lower = text.toLowerCase();
+            return lower.includes("this song has no") || 
+                   lower.includes("lyrics not available") || 
+                   lower.includes("instrumental") ||
+                   lower.includes("we don't have lyrics") ||
+                   lower.includes("kein text");
+        }
+
+        function cleanStringForAPI(str) {
+            if (!str) return "";
+            return str.replace(/\b(feat|ft|prod)\.?\s+.*$/gi, '') 
+                      .replace(/\((?:official|music|video|audio|lyric|visualizer)[^)]*\)/gi, '')
+                      .replace(/\[(?:official|music|video|audio|lyric|visualizer)[^\]]*\]/gi, '')
+                      .trim();
+        }
+
+        function isStrictMatch(apiTrack, apiArtist, apiDurationSec, searchTrack, searchArtist, searchDurationMs) {
+            if (!apiTrack || !apiArtist || !searchTrack || !searchArtist) return false;
+
+            if (apiDurationSec && searchDurationMs) {
+                const searchSec = searchDurationMs / 1000;
+                if (Math.abs(apiDurationSec - searchSec) > 10) {
+                    return false; 
+                }
+            }
+
+            const cleanStr = (s) => s.toLowerCase().replace(/[^\w\s]/gi, '').trim();
+
+            const t1 = cleanStr(apiTrack);
+            const a1 = cleanStr(apiArtist);
+            const t2 = cleanStr(searchTrack);
+            const a2 = cleanStr(searchArtist);
+
+            const trackMatch = t1 === t2 || t1.includes(t2) || t2.includes(t1);
+
+            const a1Words = a1.split(' ');
+            const a2Words = a2.split(' ');
+            const hasCommonArtistWord = a2Words.some(w => w.length > 2 && a1Words.includes(w)) || a1 === a2 || a1.includes(a2);
+
+            const isSearchRemix = searchTrack.toLowerCase().match(/(remix|mix|edit|sped up|slowed)/);
+            const isApiRemix = apiTrack.toLowerCase().match(/(remix|mix|edit|sped up|slowed)/);
+            
+            if (isSearchRemix && !isApiRemix) return false;
+            if (!isSearchRemix && isApiRemix) return false;
+
+            return trackMatch && hasCommonArtistWord;
+        }
+
+        async function fetchExternalLyrics(title, artist, searchDurationMs = 0) {
+        const fetchId = ++currentFetchId; 
+        
+        if (lyricsContent) {
+            lyricsContent.innerHTML = `
+                <div class="w-full flex-1 flex flex-col justify-center min-h-full py-16 px-2 sm:px-4 md:px-8">
+                    <h2 class="text-xl sm:text-3xl md:text-4xl font-extrabold text-white/30 tracking-tight leading-tight text-left animate-pulse">
+                        Suche Songtext...
+                    </h2>
+                </div>`;
+        }
+        parsedLyrics = [];
+        currentLyricIndex = -1;
+        currentLyricsProvider = "";
+        currentLyricsWriter = "";
+
+        const checkAndRenderStrict = (data, searchT, searchA, searchDurMs) => {
+            if (!data) return false;
+            if (Array.isArray(data)) {
+                const validMatches = data.filter(d => isStrictMatch(d.trackName, d.artistName, d.duration, searchT, searchA, searchDurMs));
+                if (validMatches.length > 0) {
+                    const best = validMatches.find(d => d.syncedLyrics) || validMatches[0];
+                    if (best.syncedLyrics && !isDummyLyrics(best.syncedLyrics)) {
+                        currentLyricsProvider = "LRCLIB";
+                        parseLrc(best.syncedLyrics);
+                        renderLyrics();
+                        syncLyricsUI(true);
+                        return true;
+                    } else if (best.plainLyrics && !isDummyLyrics(best.plainLyrics)) {
+                        currentLyricsProvider = "LRCLIB";
+                        renderLyrics(best.plainLyrics, true);
+                        return true;
+                    }
+                }
+            } else {
+                if (data.syncedLyrics && !isDummyLyrics(data.syncedLyrics)) {
+                    currentLyricsProvider = "LRCLIB";
+                    parseLrc(data.syncedLyrics);
+                    renderLyrics();
+                    syncLyricsUI(true);
+                    return true;
+                } else if (data.plainLyrics && !isDummyLyrics(data.plainLyrics)) {
+                    currentLyricsProvider = "LRCLIB";
+                    renderLyrics(data.plainLyrics, true);
+                    return true;
+                }
+            }
+            return false;
+        };
+
+        const cleanT = cleanStringForAPI(title);
+        let cleanA = cleanStringForAPI(artist);
+
+        // ==========================================
+        // QUELLE 0: LRCLIB (zuverlässigste öffentliche Quelle, zeilensynchron)
+        // ==========================================
+        try {
+            let res = await fetch(`https://lrclib.net/api/get?` + new URLSearchParams({ track_name: title, artist_name: artist }));
+            if (fetchId !== currentFetchId) return;
+            
+            if (res.ok) {
+                const data = await res.json();
+                if (checkAndRenderStrict(data, title, artist, searchDurationMs)) return;
+            }
+
+            if (cleanT !== title || cleanA !== artist) {
+                let resClean = await fetch(`https://lrclib.net/api/get?` + new URLSearchParams({ track_name: cleanT, artist_name: cleanA }));
+                if (fetchId !== currentFetchId) return;
+                if (resClean.ok) {
+                    const dataClean = await resClean.json();
+                    if (checkAndRenderStrict(dataClean, cleanT, cleanA, searchDurationMs)) return;
+                }
+            }
+
+            let searchRes = await fetch(`https://lrclib.net/api/search?q=` + encodeURIComponent(`${title} ${artist}`));
+            if (fetchId !== currentFetchId) return;
+            
+            if (searchRes.ok) {
+                const searchData = await searchRes.json();
+                if (checkAndRenderStrict(searchData, title, artist, searchDurationMs)) return;
+            }
+        } catch (err) {}
+
+        // ==========================================
+        // QUELLE 1: NETEASE CLOUD MUSIC (Fallback, zeilensynchron)
+        // ==========================================
+        try {
+            if (fetchId !== currentFetchId) return;
+            const searchUrl = `https://neteasecloudmusicapi.vercel.app/search?keywords=${encodeURIComponent(cleanT + ' ' + cleanA)}`;
+            let neteaseSearch = await fetch(searchUrl);
+            
+            if (neteaseSearch.ok) {
+                const searchData = await neteaseSearch.json();
+                const songs = searchData.result?.songs;
+                
+                if (songs && songs.length > 0) {
+                    const songId = songs[0].id;
+                    const lyricUrl = `https://neteasecloudmusicapi.vercel.app/lyric?id=${songId}`;
+                    let neteaseLyric = await fetch(lyricUrl);
+                    if (fetchId !== currentFetchId) return;
+                    
+                    if (neteaseLyric.ok) {
+                        const lyricData = await neteaseLyric.json();
+                        const lrcText = lyricData.lrc?.lyric;
+                        if (lrcText && !isDummyLyrics(lrcText)) {
+                            currentLyricsProvider = "NetEase Cloud Music";
+                            currentLyricsWriter = "";
+                            parseLrc(lrcText);
+                            renderLyrics();
+                            syncLyricsUI(true);
+                            return;
+                        }
+                    }
+                }
+            }
+        } catch (neteaseErr) {}
+
+        // Alle Quellen ohne Treffer -> Fallback-Hinweistext anzeigen
+        if (fetchId !== currentFetchId) return;
+        renderLyrics(currentNoLyricsMessage);
+    }
+            
+        function updateMusicUI(data, dynamicLatency = 50) {
+            const hasTrack = data && data.track;
+            const isPlaying = data && data.status === "playing";
+
+            if (!hasTrack || !isPlaying) {
+                trackIsPlaying = false;
+                if (!offlineTimeout) {
+                    offlineTimeout = setTimeout(() => {
+                        if (mainMusicCard) {
+                            mainMusicCard.classList.add('offline');
+                            mainMusicCard.classList.remove('playing');
+                            if(mainMusicCard.classList.contains('lyrics-open')) toggleLyrics(false);
+                        }
+                        if (mHeader) mHeader.innerText = t('status_offline');
+                        if (mTitle) mTitle.innerText = t('standby_idle_title');
+                        if (mArtist) mArtist.innerText = t('standby_idle_subtitle');
+                        if (mAmbient) mAmbient.style.backgroundImage = "none";
+                        if (mGlow) mGlow.style.backgroundImage = "none";
+                        if (mArtwork) mArtwork.removeAttribute('src');
+                        if (mDot) mDot.className = "h-1 w-1 xxs:h-1.5 xxs:w-1.5 xs:h-2 xs:w-2 rounded-full bg-blue-500";
+                        if (mText) mText.innerText = t('status_zen_mode');
+                        if (miniTitle) miniTitle.innerText = t('mini_dashboard_minimized');
+                        if (miniIconBg) miniIconBg.className = "w-8 h-8 xxs:w-10 xxs:h-10 sm:w-12 sm:h-12 shrink-0 rounded-lg xxs:rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center transition-colors";
+                        if(!isDashboardOpen && miniStatus) miniStatus.innerText = t('mini_click_to_open');
+                        
+                        if (lyricsMiniTitle) lyricsMiniTitle.innerText = t('status_offline_short');
+                        if (lyricsMiniArtist) lyricsMiniArtist.innerText = t('status_no_music');
+                        if (lyricsMiniArt) lyricsMiniArt.removeAttribute('src'); 
+                        
+                        if (canvasVideo) {
+                            canvasVideo.removeAttribute('src');
+                            canvasVideo.classList.add('opacity-0');
+                        }
+                        currentCanvasUrl = null;
+                        if (btnToggleCanvas) {
+                            btnToggleCanvas.classList.add('opacity-50', 'cursor-not-allowed', 'text-slate-400');
+                            btnToggleCanvas.classList.remove('text-green-400');
+                            btnToggleCanvas.innerText = t('settings_canvas') + ' Video (N/A)';
+                        }
+                        
+                        currentTrackId = "";
+                        parsedLyrics = [];
+                        currentLyricIndex = -1; 
+                        currentMs = 0;
+                        totalMs = 0;
+                        updateProgressUI();
+                        offlineTimeout = null;
+                        syncStandByTrackInfo(null, null, null); // NEW: StandBy-Anzeige zurücksetzen
+                        hideIslandCompletely(); // NEW: Dynamic Island ausblenden, kein Track mehr aktiv
+                    }, 2500);
+                }
+                return;
+            }
+
+            if (offlineTimeout) {
+                clearTimeout(offlineTimeout);
+                offlineTimeout = null;
+            }
+
+            if (mainMusicCard) {
+                mainMusicCard.classList.remove('offline');
+                mainMusicCard.classList.add('playing');
+            }
+
+                     
+            if (mHeader) mHeader.innerText = "Gamingpig is listening to";
+            if (mDot) mDot.className = "h-1 w-1 xxs:h-1.5 xxs:w-1.5 xs:h-2 xs:w-2 rounded-full bg-green-500 active-dot";
+            
+            // FIX: Integriertes Platzhalter-Bild (Dunkles Quadrat mit Noten-Icon), falls kein Artwork existiert
+            const fallbackImg = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 400 400'%3E%3Crect width='400' height='400' fill='%230f172a'/%3E%3Cpath d='M250 120v100c0 33.1-26.9 60-60 60s-60-26.9-60-60 26.9-60 60-60c7.1 0 13.7 1.2 20 3.5V120h40z' fill='%23334155'/%3E%3C/svg%3E";
+            
+            let imgUrl = data.track.artwork_url;
+            if (!imgUrl || imgUrl.trim() === "") {
+                imgUrl = fallbackImg;
+            }
+
+            const rawArtist = data.track.artist || "Unknown";
+            
+            const cleanArtist = rawArtist.replace(/\s*•\s*From Smart Shuffle/gi, '').trim();
+            
+            const newTrackId = data.track.title + "-" + cleanArtist;
+            const isNewTrack = (newTrackId !== currentTrackId);
+            const isFirstLoad = (currentTrackId === "");
+
+            if (isNewTrack) {
+                currentTrackId = newTrackId;
+            }
+
+            let currentApiProgress = data.progress_ms !== undefined ? data.progress_ms : (data.track && data.track.progress_ms) || 0;
+
+            if (currentApiProgress === lastSeenProgressMs && trackIsPlaying === isPlaying && !isNewTrack) {
+                return;
+            }
+            lastSeenProgressMs = currentApiProgress;
+
+            let apiProgress = currentApiProgress;
+            if (isPlaying) {
+                let dataAge = 0;
+                let serverTimestamp = data.timestamp || data.updated_at || data.fetched_at || (data.track && data.track.timestamp);
+                
+                if (serverTimestamp) {
+                    let st = typeof serverTimestamp === 'number'
+                        ? (serverTimestamp < 20000000000 ? serverTimestamp * 1000 : serverTimestamp)
+                        : new Date(serverTimestamp).getTime();
+
+                    let trueNow = getTrueDateNow();
+                    let rawAge = trueNow - st;
+                    
+                    let maxAllowedAge = (data.track && data.track.duration_ms) ? data.track.duration_ms : 600000;
+
+                    if (rawAge >= 0 && rawAge <= maxAllowedAge) {
+                        dataAge = rawAge;
+                    } else {
+                        dataAge = 0; 
+                    }
+                } else {
+                    dataAge = 0; 
+                }
+                
+                apiProgress += dataAge + dynamicLatency;
+            }
+            
+            const trackDuration = data.track.duration_ms || data.duration_ms || 0;
+            if (trackDuration && apiProgress > trackDuration) {
+                apiProgress = trackDuration;
+            }
+
+                const applyDataChanges = (addedDelay = 0) => {
+                // Der native Error-Handler: Feuert WIRKLICH NUR, wenn der Link kaputt ist (z.B. 404 Fehler vom CDN)
+                if (mArtwork && !mArtwork.onerror) {
+                    mArtwork.onerror = function() {
+                        this.src = fallbackImg;
+                        if (mAmbient) mAmbient.style.backgroundImage = `url('${fallbackImg}')`;
+                        if (mGlow) mGlow.style.backgroundImage = `url('${fallbackImg}')`;
+                        if (lyricsMiniArt) lyricsMiniArt.src = fallbackImg;
+                    };
+                }
+
+                if(mArtwork && mAmbient && mGlow && (mArtwork.getAttribute('src') !== imgUrl || mAmbient.style.backgroundImage === "none" || mAmbient.style.backgroundImage === "")) {
+                    mArtwork.src = imgUrl; 
+                    mAmbient.style.backgroundImage = `url('${imgUrl}')`;
+                    mGlow.style.backgroundImage = `url('${imgUrl}')`;
+                    const lyricsAmbientBg = document.getElementById('lyrics-ambient-bg');
+                    if (lyricsAmbientBg) lyricsAmbientBg.style.backgroundImage = `url('${imgUrl}')`;
+                }
+                
+                if(lyricsMiniArt && lyricsMiniArt.getAttribute('src') !== imgUrl) {
+                    lyricsMiniArt.src = imgUrl; 
+                }
+                
+                const canvasUrl = data.track.canvas_url || data.track.canvasUrl || null;
+                
+                if(canvasUrl !== currentCanvasUrl) {
+                    currentCanvasUrl = canvasUrl;
+                    if(canvasUrl) {
+                        if (canvasVideo) canvasVideo.src = canvasUrl;
+                        if (btnToggleCanvas) btnToggleCanvas.classList.remove('opacity-50', 'cursor-not-allowed', 'text-slate-400');
+                        if (canvasEnabled) {
+                            if (btnToggleCanvas) {
+                                btnToggleCanvas.innerText = t('settings_canvas') + ': ' + t('on_label');
+                                btnToggleCanvas.classList.add('text-green-400');
+                            }
+                            if (canvasVideo) {
+                                canvasVideo.classList.remove('opacity-0');
+                                canvasVideo.play().catch(()=>{});
+                            }
+                        } else {
+                            if (btnToggleCanvas) {
+                                btnToggleCanvas.innerText = t('settings_canvas') + ': ' + t('off_label');
+                                btnToggleCanvas.classList.add('text-slate-400');
+                            }
+                        }
+                    } else {
+                        if (canvasVideo) {
+                            canvasVideo.removeAttribute('src');
+                            canvasVideo.classList.add('opacity-0');
+                        }
+                        if (btnToggleCanvas) {
+                            btnToggleCanvas.classList.add('opacity-50', 'cursor-not-allowed', 'text-slate-400');
+                            btnToggleCanvas.classList.remove('text-green-400');
+                            btnToggleCanvas.innerText = t('settings_canvas') + ' Video (N/A)';
+                        }
+                    }
+                }
+                
+                if(mTitle && mTitle.innerText !== data.track.title) {
+                    mTitle.innerText = data.track.title;
+                    if (lyricsMiniTitle) { lyricsMiniTitle.innerText = data.track.title; lyricsMiniTitle.removeAttribute('data-i18n-placeholder'); }
+                }
+                if(mArtist && mArtist.innerText !== rawArtist) {
+                    mArtist.innerText = rawArtist;
+                    if (lyricsMiniArtist) { lyricsMiniArtist.innerText = rawArtist; lyricsMiniArtist.removeAttribute('data-i18n-placeholder'); }
+                }
+                if (mText) mText.innerText = data.provider || t('status_streaming_fallback');
+
+                // NEW: StandBy-Overlay & Ambient-Color immer mit dem aktuellen Track synchron halten
+                syncStandByTrackInfo(data.track.title, rawArtist, imgUrl);
+                extractDominantColor(imgUrl);
+                // NEW: Dynamic Island bleibt bei jedem Update aktuell (persistent, solange Musik läuft)
+                if (isPlaying) showIslandPersistent(data.track.title, rawArtist, imgUrl);
+
+                if (isNewTrack) {
+                    // NEW: Dynamic Island 2.0 - kurzes Aufpoppen bei echtem Songwechsel
+                    if (!isFirstLoad && isPlaying) {
+                        triggerDynamicIsland(data.track.title, rawArtist, imgUrl);
+                    }
+                    totalMs = trackDuration;
+                    if (timeTotalEl) timeTotalEl.innerText = formatTime(totalMs);
+                    
+                    trackIsPlaying = isPlaying;
+                    serverBaseProgress = apiProgress + addedDelay;
+                    localStartTime = performance.now();
+                    currentMs = serverBaseProgress;
+                    
+                    currentNoLyricsMessage = fallbackMessages[Math.floor(Math.random() * fallbackMessages.length)];
+                    fetchExternalLyrics(data.track.title, cleanArtist, trackDuration);
+                } else {
+                    if (!trackIsPlaying && isPlaying) {
+                        trackIsPlaying = true;
+                        serverBaseProgress = apiProgress + addedDelay;
+                        localStartTime = performance.now();
+                        currentMs = serverBaseProgress;
+                        syncLyricsUI(true, true);
+                    } else if (trackIsPlaying && !isPlaying) {
+                        trackIsPlaying = false;
+                        currentMs = apiProgress + addedDelay;
+                        syncLyricsUI(true, true);
+                    } else {
+                        let expectedLocalProgress = serverBaseProgress + (performance.now() - localStartTime);
+                        let drift = (apiProgress + addedDelay) - expectedLocalProgress;
+                        let absDrift = Math.abs(drift);
+
+                        if (absDrift > 1200) {
+                            // Große Abweichung (Seek/Skip) -> sofort hart korrigieren
+                            serverBaseProgress = apiProgress + addedDelay;
+                            localStartTime = performance.now();
+                            currentMs = serverBaseProgress;
+                            syncLyricsUI(true, true);
+                        } else if (absDrift > 120) {
+                            // Kleine Abweichung (normaler Uhren-/Netzwerk-Jitter) -> sanft nachziehen
+                            // statt hart zu springen, damit Fortschrittsbalken & Lyrics nicht sichtbar zucken.
+                            serverBaseProgress = expectedLocalProgress + drift * 0.35;
+                            localStartTime = performance.now();
+                        }
+                    }
+                }
+
+                if (trackIsPlaying && !isAnimating) {
+                    isAnimating = true;
+                    lyricAnimFrame = requestAnimationFrame(animateLoop);
+                }
+
+                updateProgressUI();
+
+                if (miniTitle) miniTitle.innerText = data.track.title;
+                if (miniIconBg) miniIconBg.className = 'w-8 h-8 xxs:w-10 xxs:h-10 sm:w-12 sm:h-12 shrink-0 rounded-lg xxs:rounded-xl flex items-center justify-center transition-colors bg-green-500/10 text-green-500 animate-pulse';
+                
+                if(!isDashboardOpen && miniStatus) miniStatus.innerText = rawArtist;
+                
+                const linksContainer = document.getElementById('dynamic-links-container');
+                const noLinkEl = document.getElementById('link-none');
+                
+                if (linksContainer && noLinkEl) {
+                    linksContainer.innerHTML = '';
+                    let hasLinks = false;
+                    const availableLinks = { ...(data.track.platform_links || {}), ...(data.track.external_urls || {}) };
+
+                    let mainSpotifyUrl = data.track.url;
+                    if (!mainSpotifyUrl && data.track.uri && data.track.uri.startsWith('spotify:')) {
+                        const uriParts = data.track.uri.split(':');
+                        if (uriParts.length >= 3) {
+                            mainSpotifyUrl = `https://open.spotify.com/${uriParts[1]}/${uriParts[2]}`;
+                        }
+                    }
+                    if (mainSpotifyUrl && !availableLinks.spotify) {
+                        availableLinks.spotify = mainSpotifyUrl;
+                    }
+
+                    const searchQuery = encodeURIComponent(`${data.track.title} ${rawArtist}`.trim());
+                    
+                    const linkKeys = Object.keys(availableLinks).map(k => k.toLowerCase());
+                    const hasSpotify = linkKeys.some(k => k.includes('spotify'));
+                    const hasApple = linkKeys.some(k => k.includes('apple'));
+                    const hasYT = linkKeys.some(k => k.includes('youtube') || k.includes('yt'));
+                    const hasSC = linkKeys.some(k => k.includes('soundcloud'));
+                    const hasDeezer = linkKeys.some(k => k.includes('deezer'));
+                    const hasTidal = linkKeys.some(k => k.includes('tidal'));
+
+                    if (!hasSpotify) availableLinks.spotify = `https://open.spotify.com/search/${searchQuery}`;
+                    if (!hasApple) availableLinks.applemusic = `https://music.apple.com/search?term=${searchQuery}`;
+                    if (!hasYT) availableLinks.youtube = `https://music.youtube.com/search?q=${searchQuery}`;
+                    if (!hasSC) availableLinks.soundcloud = `https://soundcloud.com/search?q=${searchQuery}`;
+                    if (!hasDeezer) availableLinks.deezer = `https://www.deezer.com/search/${searchQuery}`;
+                    if (!hasTidal) availableLinks.tidal = `https://tidal.com/search?q=${searchQuery}`;
+
+                    const serviceStyles = {
+                        spotify: { name: 'Spotify', bg: '#1DB954' },
+                        applemusic: { name: 'Apple Music', bg: '#FC3C44' },
+                        youtube: { name: 'YouTube Music', bg: '#FF0000' },
+                        soundcloud: { name: 'SoundCloud', bg: '#FF5500' },
+                        deezer: { name: 'Deezer', bg: '#00C7F2' },
+                        tidal: { name: 'Tidal', bg: '#000000' }
+                    };
+
+                    for (let [key, url] of Object.entries(availableLinks)) {
+                        if (!url || typeof url !== 'string') continue;
+                        
+                        if (url.startsWith('spotify:')) {
+                            const uriParts = url.split(':');
+                            if (uriParts.length >= 3) {
+                                url = `https://open.spotify.com/${uriParts[1]}/${uriParts[2]}`;
+                            }
+                        }
+
+                        if (!url.startsWith('http')) continue;
+                        
+                        hasLinks = true;
+                        const lowerKey = key.toLowerCase();
+                        let style = { name: key.charAt(0).toUpperCase() + key.slice(1), bg: '#3b82f6' }; 
+
+                        for (const [sKey, sValue] of Object.entries(serviceStyles)) {
+                            if (lowerKey.includes(sKey) || lowerKey === sKey) {
+                                style = sValue;
+                                break;
+                            }
+                        }
+                        const linkEl = document.createElement('a');
+                        linkEl.href = url;
+                        linkEl.target = '_blank';
+                        linkEl.rel = 'noopener noreferrer';
+                        linkEl.className = 'p-1.5 xxs:p-2 sm:p-3 rounded-lg xxs:rounded-xl sm:rounded-2xl text-white font-bold text-[10px] xxs:text-xs sm:text-sm text-center hover:brightness-110 active:scale-95 transition-all';
+                        linkEl.style.backgroundColor = style.bg;
+                        linkEl.innerText = style.name;
+                        linksContainer.appendChild(linkEl);
+                    }
+                    noLinkEl.style.display = hasLinks ? 'none' : 'block';
+                }
+            };
+
+            if (isNewTrack && !isFirstLoad && trackIsPlaying && !document.body.classList.contains('low-end') && isDashboardOpen) {
+                const mediaCont = document.getElementById('media-container');
+                const infoCont = document.getElementById('track-info-container');
+                const lyricsCont = document.getElementById('lyrics-container');
+                
+                if (mediaCont && infoCont && lyricsCont) {
+                    mediaCont.classList.add('impact-media-out'); infoCont.classList.add('impact-text-out'); lyricsCont.classList.add('impact-lyrics-out');
+
+                    setTimeout(() => {
+                        applyDataChanges(500); 
+                        mediaCont.classList.remove('impact-media-out'); infoCont.classList.remove('impact-text-out'); lyricsCont.classList.remove('impact-lyrics-out');
+                        void mediaCont.offsetWidth;
+                        mediaCont.classList.add('impact-media-in'); infoCont.classList.add('impact-text-in'); lyricsCont.classList.add('impact-lyrics-in');
+                        
+                        setTimeout(() => {
+                            document.body.classList.add('is-shaking');
+                            const shockwave = document.getElementById('global-emp-shockwave');
+                            const mediaTarget = document.getElementById('media-container');
+                            if (shockwave && mediaTarget) {
+                                const rect = mediaTarget.getBoundingClientRect();
+                                const centerX = rect.left + (rect.width / 2);
+                                const centerY = rect.top + (rect.height / 2);
+                                shockwave.style.left = `${centerX}px`; shockwave.style.top = `${centerY}px`;
+                                shockwave.classList.remove('trigger-emp'); void shockwave.offsetWidth; shockwave.classList.add('trigger-emp');
+                            }
+                            setTimeout(() => document.body.classList.remove('is-shaking'), 500);
+                            setTimeout(() => { if (shockwave) shockwave.classList.remove('trigger-emp'); }, 3000);
+                        }, 300); 
+                        
+                        setTimeout(() => {
+                            mediaCont.classList.remove('impact-media-in'); infoCont.classList.remove('impact-text-in'); lyricsCont.classList.remove('impact-lyrics-in');
+                        }, 600); 
+                    }, 500); 
+                } else {
+                    applyDataChanges(0);
+                }
+            } else {
+                applyDataChanges(0);
+            }
+        }
+
+        function recordFetchLatency(ms) {
+            recentFetchLatencies.push(ms);
+            if (recentFetchLatencies.length > 5) recentFetchLatencies.shift();
+        }
+
+        function getSmoothedLatency() {
+            if (recentFetchLatencies.length === 0) return 50;
+            const sorted = [...recentFetchLatencies].sort((a, b) => a - b);
+            return sorted[Math.floor(sorted.length / 2)]; // Median: robust gegen einzelne Ausreißer-Requests
+        }
+
+        function fetchMusicData() {
+            let pStart = performance.now();
+            fetch('https://npc-api.aikins.xyz/v1/users/gamingpig/now')
+                .then(r => {
+                    if (!r.ok) throw new Error("Fetch failed");
+                    return r.text();
+                })
+                .then(text => {
+                    const rtt = performance.now() - pStart;
+                    recordFetchLatency(rtt / 2);
+                    if (text) updateMusicUI(JSON.parse(text), getSmoothedLatency());
+                })
+                .catch(() => {});
+        }
+
+        setInterval(fetchMusicData, 5000);
+
+        document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "visible") {
+                syncWorldwideTime();
+                fetchMusicData();
+                updateTimeOfDayColors(); // NEW: Wallpaper beim Zurückkehren auffrischen
+            }
+        });
+
+        // ========================================================= //
+        // --- 3D LIQUID Glass MOUSE INTERACTION TRACKING ---------- //
+        // ========================================================= //
+        let isSpotlightUpdating = false;
+
+        document.querySelectorAll('.glass-card').forEach(card => {
+            if (card.id === 'main-music-card' || card.id === 'mini-player-toggle') return; 
+
+            const updateSpotlight = (clientX, clientY) => {
+                if (isSpotlightUpdating) return;
+                isSpotlightUpdating = true;
+
+                requestAnimationFrame(() => {
+                    if (!document.body.classList.contains('liquid-glass-active') || document.body.classList.contains('low-end')) {
+                        card.style.setProperty('--mouse-x', '50%');
+                        card.style.setProperty('--mouse-y', '50%');
+                        isSpotlightUpdating = false;
+                        return;
+                    }
+                    const rect = card.getBoundingClientRect();
+                    const x = clientX - rect.left;
+                    const y = clientY - rect.top;
+                    
+                    card.style.setProperty('--mouse-x', `${x}px`);
+                    card.style.setProperty('--mouse-y', `${y}px`);
+                    isSpotlightUpdating = false;
+                });
+            };
+
+            const resetSpotlight = () => {
+                if (!document.body.classList.contains('liquid-glass-active')) return;
+                
+                if(window.matchMedia("(hover: none)").matches) {
+                    card.style.setProperty('--glare-opacity', '0');
+                }
+                
+                setTimeout(() => {
+                    card.style.setProperty('--mouse-x', '50%');
+                    card.style.setProperty('--mouse-y', '50%');
+                }, 400); 
+            };
+
+            // Mouse Events
+            card.addEventListener('mousemove', (e) => updateSpotlight(e.clientX, e.clientY), {passive: true});
+            card.addEventListener('mouseleave', resetSpotlight, {passive: true});
+            
+            // Touch Events
+            card.addEventListener('touchstart', (e) => {
+                if(window.matchMedia("(hover: none)").matches) {
+                    card.style.setProperty('--glare-opacity', '1');
+                }
+                card.classList.add('is-squished');
+                updateSpotlight(e.touches[0].clientX, e.touches[0].clientY);
+            }, {passive: true});
+            
+            card.addEventListener('touchmove', (e) => {
+                card.classList.remove('is-squished'); 
+                updateSpotlight(e.touches[0].clientX, e.touches[0].clientY);
+            }, {passive: true});
+            
+            card.addEventListener('touchend', (e) => {
+                card.classList.remove('is-squished');
+                resetSpotlight();
+            }, {passive: true});
+            card.addEventListener('touchcancel', (e) => {
+                card.classList.remove('is-squished');
+                resetSpotlight();
+            }, {passive: true});
+
+            // Desktop active state
+            card.addEventListener('mousedown', () => card.classList.add('is-squished'), {passive: true});
+            card.addEventListener('mouseup', () => card.classList.remove('is-squished'), {passive: true});
+        });
+
+        (async () => {
+            setLyricsStyle(currentLyricsStyle); 
+            await syncWorldwideTime();
+            if (trackIsPlaying && !isAnimating) {
+                isAnimating = true;
+                requestAnimationFrame(animateLoop);
+            }
+            fetchMusicData();
+            setInterval(syncWorldwideTime, 600000);
+        })();
+
+        // NEW: Sprachauswahl - beim allerersten Besuch als Setup-Assistent zeigen,
+        // sonst gespeicherte Sprache sofort auf alle Bedienelemente anwenden.
+        renderLanguagePicker();
+        positionDynamicIsland();
+        setTimeout(positionDynamicIsland, 400); // Nachlauf, falls Fonts/Layout sich noch verschieben
+        if (!currentLang) {
+            openLanguagePicker();
+        } else {
+            applyLanguage(currentLang);
+        }
+    </script>
+</body>
+</html>
