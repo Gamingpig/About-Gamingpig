@@ -854,6 +854,45 @@
             z-index: 499; will-change: transform, opacity;
         }
         #dynamic-island-ring.di-ring-active { animation: di-idle-pulse 3.2s ease-out infinite; }
+        /* NEW: iOS-Bug-Fix - #ui-controls saß auf Geräten mit Notch/Dynamic Island zu weit
+           oben (Tailwinds top-2/top-4/top-6 kennen keine Safe-Area). Jetzt mit echtem
+           Sicherheitsabstand zum oberen Rand, auf allen Breakpoints passend zur Tailwind-Skala. */
+        #ui-controls { top: calc(env(safe-area-inset-top, 0px) + 0.5rem) !important; }
+        @media (min-width: 475px) { #ui-controls { top: calc(env(safe-area-inset-top, 0px) + 1rem) !important; } }
+        @media (min-width: 640px) { #ui-controls { top: calc(env(safe-area-inset-top, 0px) + 1.5rem) !important; } }
+
+        /* ========================================================= */
+        /* --- NEW: SPRACHAUSWAHL (Setup-Assistent-Stil) ------------ */
+        /* ========================================================= */
+        #language-picker-overlay {
+            position: fixed; inset: 0; z-index: 1000; background: #05060a;
+            display: flex; align-items: center; justify-content: center; padding: 24px;
+            opacity: 0; transition: opacity 0.5s ease;
+        }
+        #language-picker-overlay.lp-active { opacity: 1; }
+        #language-picker-overlay.hidden { display: none; }
+        #language-picker-box {
+            width: min(92vw, 460px); text-align: center;
+            transform: translateY(14px); opacity: 0; transition: transform 0.6s var(--apple-bounce) 0.1s, opacity 0.5s ease 0.1s;
+        }
+        #language-picker-overlay.lp-active #language-picker-box { transform: translateY(0); opacity: 1; }
+        #lang-picker-titles { margin-bottom: 32px; }
+        #lang-picker-titles p {
+            color: rgba(255,255,255,0.9); font-weight: 800; font-size: clamp(1.1rem, 4.2vw, 1.6rem);
+            line-height: 1.5; margin: 0;
+        }
+        #lang-picker-titles p:not(:first-child) { color: rgba(255,255,255,0.35); font-size: clamp(0.85rem, 3vw, 1.05rem); font-weight: 700; }
+        #lang-picker-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        .lang-picker-btn {
+            display: flex; flex-direction: column; align-items: center; gap: 8px;
+            background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14);
+            border-radius: 18px; padding: 18px 10px; cursor: pointer; color: #fff;
+            transition: transform 0.2s var(--apple-bounce), background 0.2s ease, border-color 0.2s ease;
+        }
+        .lang-picker-btn:hover, .lang-picker-btn:active { background: rgba(59,130,246,0.18); border-color: rgba(59,130,246,0.5); transform: translateY(-2px) scale(1.02); }
+        .lang-picker-btn .lang-flag { font-size: 32px; line-height: 1; }
+        .lang-picker-btn .lang-name { font-size: 13px; font-weight: 700; }
+        body.low-end #language-picker-box, body.low-end .lang-picker-btn { transition: none !important; }
         @keyframes di-idle-pulse {
             0% { opacity: 0.55; transform: translateX(-50%) scale(1); }
             70% { opacity: 0; transform: translateX(-50%) scale(1.6); }
@@ -1096,6 +1135,21 @@
     <div id="global-emp-shockwave"></div>
 
     <!-- NEW: Dynamic Island 2.0 -->
+    <!-- NEW: Sprachauswahl (wie Android/iOS Einrichtungsassistent), nur beim ersten Besuch -->
+    <div id="language-picker-overlay" class="hidden">
+        <div id="language-picker-box">
+            <div id="lang-picker-titles">
+                <p>Wähle deine Sprache</p>
+                <p>Choose your language</p>
+                <p>Elige tu idioma</p>
+                <p>Choisis ta langue</p>
+                <p>Escolha seu idioma</p>
+                <p>Dilini seç</p>
+            </div>
+            <div id="lang-picker-grid"></div>
+        </div>
+    </div>
+
     <div id="dynamic-island-ring" aria-hidden="true"></div>
     <div id="dynamic-island" role="button" tabindex="0" aria-label="Song-Details öffnen, nach oben wischen zum Ausblenden">
         <div id="dynamic-island-row">
@@ -1262,7 +1316,7 @@
                     </div>
                     <div>
                         <h3 class="font-bold text-sm xxs:text-base sm:text-lg mb-0.5 xxs:mb-1">Hintergrund</h3>
-                        <p class="text-slate-700 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">Jugendalter & Status...</p>
+                        <p class="text-slate-700 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">Im Jugendalter & in Ausbildung...</p>
                     </div>
                 </div>
 
@@ -1722,52 +1776,492 @@
         const lyricsMiniArtist = document.getElementById('lyrics-mini-artist');
 
         // --- 2. DATA & STATE VARIABLES ---
-        const tutorialSteps = [
-            {
-                targetId: 'header-section',
-                title: 'Willkommen in meiner Welt!',
-                text: 'Das ist mein persönliches Portfolio. Hier erfährst du alles Wichtige über mich, meinen Weg in die Systemintegration und was mich antreibt. Mein Hyperfokus ist hier Programm!'
-            },
-            {
-                targetId: 'ui-controls',
-                title: 'Dein Kontrollzentrum',
-                text: 'Oben rechts hast du die volle Macht: Aktiviere den krassen "Apple Liquid Glass" Modus (Achtung: frisst Leistung!), wechsle in den Darkmode, schalte den Low-End-Modus ein, falls dein Gerät laggt, aktiviere den StandBy-Modus, oder starte dieses Tutorial neu.'
-            },
-            {
-                targetId: 'cards-section',
-                title: 'Deep Dive: Wer bin ich?',
-                text: 'Klicke auf diese interaktiven Karten. Sie öffnen detaillierte Popups, in denen ich dir mehr über mein Audio-Setup, meinen Tech-Stack, meine Homelab-Projekte und meine Freizeit erzähle.'
-            },
-            {
-                targetId: 'music-section',
-                title: 'Echtzeit Musik Integration',
-                text: 'Der wildeste Part: Das Dashboard zeigt in Echtzeit, was ich gerade höre! Oben bleibt dabei immer eine kleine Dynamic Island sichtbar - antippen klappt sie auf, nochmal antippen klappt sie wieder zu, nach oben wischen blendet sie ganz aus. Klicke auf die Karte für synchronisierte Lyrics mit über 30 verrückten Shader-Stilen. Über das Zahnrad-Icon in den Lyrics findest du außerdem Ambient Color, Spatial Tilt und den Share-Card-Generator.'
-            },
-            {
-                targetId: 'standby-toggle',
-                title: 'StandBy: Dein Lockscreen',
-                text: 'Dieser Button verwandelt die Seite in einen echten Lockscreen: große Uhrzeit, Datum und eine große Now-Playing-Karte mit Cover, Live-EQ und Fortschrittsbalken vor einem sanft animierten, geblurten Hintergrund. Perfekt fürs Nachttischhandy beim Laden.'
-            },
-            {
-                targetId: 'cp-trigger',
-                title: 'Spotlight-Suche (⌘K)',
-                text: 'Drück Strg+K (oder Cmd+K auf dem Mac) und eine echte Befehlspalette öffnet sich - genau wie auf dem Mac! Tippe einfach, was du suchst: "Dark Mode", "Lyrics", "StandBy"... Pfeiltasten zum Navigieren, Enter zum Ausführen.'
-            },
-            {
-                targetId: 'pwa-install-btn',
-                title: 'Installier mich als App!',
-                text: 'Diese Seite erzeugt sich ihr eigenes App-Icon und lässt sich auf Android/Chrome per Klick als richtige App installieren (kein Store nötig) - auf dem iPhone geht das manuell über "Zum Home-Bildschirm" im Teilen-Menü. Fühlt sich danach an wie eine native App, ganz ohne Browserleiste.'
-            },
-            {
-                targetId: 'footer-section',
-                title: 'Psst... 🤫 Ein Geheimnis',
-                text: 'Diese Seite hat ein paar versteckte Easter Eggs. Tipp: Alte Cheat-Codes aus Videospielen, ein paar Tastatur-Wörter, oder einfach mal wild auf Sachen rumklicken. Kein Keyboard zur Hand (z.B. am Handy)? Die getippten Wörter funktionieren auch, wenn du sie ins Spotlight-Suchfeld (⌘K-Button) eintippst. Viel Spaß beim Suchen!'
-            }
+        // ========================================================= //
+        // --- NEW: I18N / SPRACH-SYSTEM ----------------------------- //
+        // ========================================================= //
+        // WICHTIG: Übersetzt werden NUR Bedienelemente (Tutorial, Buttons, Toasts,
+        // Spotlight-Suche, Menüs). Die persönlichen Bio-Texte (details-Objekt weiter
+        // unten) bleiben bewusst unverändert auf Deutsch, exakt so wie geschrieben.
+        const SUPPORTED_LANGUAGES = [
+            { code: 'de', flag: '🇩🇪', name: 'Deutsch' },
+            { code: 'en', flag: '🇬🇧', name: 'English' },
+            { code: 'es', flag: '🇪🇸', name: 'Español' },
+            { code: 'fr', flag: '🇫🇷', name: 'Français' },
+            { code: 'pt', flag: '🇧🇷', name: 'Português' },
+            { code: 'tr', flag: '🇹🇷', name: 'Türkçe' }
         ];
+
+        const translations = {
+            de: {
+                onboard_title: 'Wähle deine Sprache',
+                onboard_subtitle: 'Du kannst das jederzeit später wieder ändern',
+                tutorial_next: 'Weiter', tutorial_back: 'Zurück', tutorial_finish: 'Fertig', tutorial_skip: 'Überspringen',
+                tutorial_step: (n, total) => `Schritt ${n}/${total}`,
+                t_step1_title: 'Willkommen in meiner Welt!',
+                t_step1_text: 'Das ist mein persönliches Portfolio. Hier erfährst du alles Wichtige über mich, meinen Weg in die Systemintegration und was mich antreibt. Mein Hyperfokus ist hier Programm!',
+                t_step2_title: 'Dein Kontrollzentrum',
+                t_step2_text: 'Oben rechts hast du die volle Macht: Aktiviere den krassen "Apple Liquid Glass" Modus (Achtung: frisst Leistung!), wechsle in den Darkmode, schalte den Low-End-Modus ein, falls dein Gerät laggt, aktiviere den StandBy-Modus, oder starte dieses Tutorial neu.',
+                t_step3_title: 'Deep Dive: Wer bin ich?',
+                t_step3_text: 'Klicke auf diese interaktiven Karten. Sie öffnen detaillierte Popups, in denen ich dir mehr über mein Audio-Setup, meinen Tech-Stack, meine Homelab-Projekte und meine Freizeit erzähle.',
+                t_step4_title: 'Echtzeit Musik Integration',
+                t_step4_text: 'Der wildeste Part: Das Dashboard zeigt in Echtzeit, was ich gerade höre! Oben bleibt dabei immer eine kleine Dynamic Island sichtbar - antippen klappt sie auf, nochmal antippen klappt sie wieder zu, nach oben wischen blendet sie ganz aus. Klicke auf die Karte für synchronisierte Lyrics mit über 30 verrückten Shader-Stilen. Über das Zahnrad-Icon in den Lyrics findest du außerdem Ambient Color, Spatial Tilt und den Share-Card-Generator.',
+                t_step5_title: 'StandBy: Dein Lockscreen',
+                t_step5_text: 'Dieser Button verwandelt die Seite in einen echten Lockscreen: große Uhrzeit, Datum und eine große Now-Playing-Karte mit Cover, Live-EQ und Fortschrittsbalken vor einem sanft animierten, geblurten Hintergrund. Perfekt fürs Nachttischhandy beim Laden.',
+                t_step6_title: 'Spotlight-Suche (⌘K)',
+                t_step6_text: 'Drück Strg+K (oder Cmd+K auf dem Mac) und eine echte Befehlspalette öffnet sich - genau wie auf dem Mac! Tippe einfach, was du suchst: "Dark Mode", "Lyrics", "StandBy"... Pfeiltasten zum Navigieren, Enter zum Ausführen.',
+                t_step7_title: 'Installier mich als App!',
+                t_step7_text: 'Diese Seite erzeugt sich ihr eigenes App-Icon und lässt sich auf Android/Chrome per Klick als richtige App installieren (kein Store nötig) - auf dem iPhone geht das manuell über "Zum Home-Bildschirm" im Teilen-Menü. Fühlt sich danach an wie eine native App, ganz ohne Browserleiste.',
+                t_step8_title: 'Psst... 🤫 Ein Geheimnis',
+                t_step8_text: 'Diese Seite hat ein paar versteckte Easter Eggs. Tipp: Alte Cheat-Codes aus Videospielen, ein paar Tastatur-Wörter, oder einfach mal wild auf Sachen rumklicken. Kein Keyboard zur Hand (z.B. am Handy)? Die getippten Wörter funktionieren auch, wenn du sie ins Spotlight-Suchfeld (⌘K-Button) eintippst. Viel Spaß beim Suchen!',
+                toast_install_ios: '📲 Tippe unten auf "Teilen" ⬆️ und dann auf "Zum Home-Bildschirm"',
+                toast_install_android_menu: '📲 Tippe oben rechts auf die drei Punkte ⋮ und wähle "App installieren" bzw. "Zum Startbildschirm hinzufügen"',
+                toast_install_desktop: '📲 Klicke oben rechts in der Adressleiste auf das Installieren-Symbol, oder öffne das Menü ⋮ → "Gamingpig installieren..."',
+                toast_installed: 'Als App installiert! 🎉',
+                toast_island_hidden: 'Dynamic Island ausgeblendet – über ⌘K wieder einblendbar',
+                toast_island_back: 'Dynamic Island ist wieder da 🏝️',
+                toast_sharecard_creating: 'Share Card wird erstellt...',
+                toast_sharecard_saved: 'Share Card gespeichert! 🎴',
+                toast_sharecard_cors: 'Konnte kein Bild vom Cover laden (CORS) – Card ohne Artwork erzeugt.',
+                toast_link_copied: '📋 Link kopiert! Kannst ihn jetzt teilen.',
+                toast_copy_failed: '⚠️ Kopieren hat nicht geklappt. Link: ',
+                toast_copy_unsupported: '⚠️ Dein Browser unterstützt das nicht. Link: ',
+                toast_konami: '🎉 Konami-Code erkannt! Hyperfokus aktiviert!',
+                toast_oink: '🐷 Oink oink! Wer hat da gerufen?',
+                toast_forza: '🏎️ Vroooom! Forza Horizon 5 Modus!',
+                toast_fokus: '🧠⚡ Hyperfokus aktiviert! Jetzt geht nichts mehr verloren.',
+                toast_matrix: '💻 Wake up, Neo...',
+                toast_disco: '👀 Du hast fünfmal geklickt... Disco-Modus!',
+                toast_search_hint: '💡 Tipp: Tippe hier Wörter ein - manche lösen Überraschungen aus...',
+                cp_placeholder: 'Befehl suchen oder Seite durchsuchen...',
+                cp_placeholder_tiktok: 'Welcher TikTok-Account?',
+                cp_empty: (q) => `Keine Befehle gefunden für "${q}"`,
+                cp_scroll_top: 'Zum Anfang scrollen', cp_scroll_cards: 'Zu Ausbildung & Alltag springen', cp_scroll_music: 'Zum Musik-Dashboard springen', cp_scroll_footer: 'Zum Footer / Kontakt springen',
+                cp_open_dashboard: 'Musik-Dashboard öffnen', cp_open_lyrics: 'Lyrics anzeigen',
+                cp_toggle_dark: 'Dark Mode umschalten', cp_toggle_glass: 'Liquid Glass Modus umschalten', cp_toggle_perf: 'Low-End / Performance Modus umschalten',
+                cp_standby: 'StandBy Modus starten', cp_ambient: 'Ambient Color umschalten', cp_tilt: 'Spatial Tilt umschalten',
+                cp_sharecard: 'Share Card erstellen & herunterladen', cp_tutorial: 'Tutorial starten', cp_tiktok: 'Mein TikTok öffnen',
+                cp_island_back: 'Dynamic Island wieder einblenden', cp_copy_link: 'Link zur Seite kopieren', cp_reload: 'Seite neu laden',
+                cp_change_lang: '🌐 Sprache ändern / Change language',
+                settings_ambient: 'Ambient Color', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
+                on_label: 'AN', off_label: 'AUS',
+                standby_idle_title: 'Aktuell ist es ruhig...', standby_idle_subtitle: 'Genieße die Stille', standby_hint: 'Zum Verlassen tippen',
+                install_btn: '📲 App installieren',
+                aria_dark: 'Dark Mode', aria_glass: 'Liquid Glass Modus', aria_perf: 'Performance Modus', aria_standby: 'StandBy Modus',
+                                mini_click_to_open: 'Klicken zum Öffnen', mini_click_to_close: 'Klicken zum Schließen',
+                aria_cp: 'Befehlspalette öffnen', aria_install: 'Als App installieren', aria_island: 'Song-Details öffnen, nach oben wischen zum Ausblenden'
+            },
+            en: {
+                onboard_title: 'Choose your language',
+                onboard_subtitle: 'You can change this anytime later',
+                tutorial_next: 'Next', tutorial_back: 'Back', tutorial_finish: 'Done', tutorial_skip: 'Skip',
+                tutorial_step: (n, total) => `Step ${n}/${total}`,
+                t_step1_title: 'Welcome to my world!',
+                t_step1_text: "This is my personal portfolio. Here you'll learn everything about me, my path into systems integration, and what drives me. My hyperfocus is the whole point here!",
+                t_step2_title: 'Your control center',
+                t_step2_text: 'Top right you have full control: turn on the wild "Apple Liquid Glass" mode (careful, it eats performance!), switch to dark mode, enable low-end mode if your device lags, activate StandBy mode, or restart this tutorial.',
+                t_step3_title: 'Deep dive: who am I?',
+                t_step3_text: 'Click these interactive cards. They open detailed popups where I tell you more about my audio setup, my tech stack, my homelab projects, and my free time.',
+                t_step4_title: 'Real-time music integration',
+                t_step4_text: "The wildest part: the dashboard shows in real time what I'm currently listening to! A small Dynamic Island always stays visible up top - tap to expand, tap again to collapse, swipe up to dismiss it completely. Click the card for synced lyrics with over 30 crazy shader styles. The gear icon in the lyrics view also has Ambient Color, Spatial Tilt, and the Share Card generator.",
+                t_step5_title: 'StandBy: your lock screen',
+                t_step5_text: 'This button turns the page into a real lock screen: a big clock, date, and a large now-playing card with cover art, a live EQ, and a progress bar in front of a gently animated, blurred background. Perfect for your nightstand while charging.',
+                t_step6_title: 'Spotlight search (⌘K)',
+                t_step6_text: 'Press Ctrl+K (or Cmd+K on Mac) and a real command palette opens - just like on a Mac! Just type what you\'re looking for: "dark mode", "lyrics", "standby"... arrow keys to navigate, Enter to run.',
+                t_step7_title: 'Install me as an app!',
+                t_step7_text: 'This site generates its own app icon and can be installed as a real app on Android/Chrome with one click (no store needed) - on iPhone that\'s done manually via "Add to Home Screen" in the share menu. Afterwards it feels like a native app, with no browser bar at all.',
+                t_step8_title: "Psst... 🤫 a secret",
+                t_step8_text: "This site has a few hidden easter eggs. Hint: old video game cheat codes, a few keyboard words, or just clicking around wildly. No keyboard handy (e.g. on mobile)? The typed words also work if you type them into the Spotlight search box (⌘K button). Have fun looking!",
+                toast_install_ios: '📲 Tap "Share" ⬆️ below, then "Add to Home Screen"',
+                toast_install_android_menu: '📲 Tap the three dots ⋮ top right and choose "Install app" / "Add to Home screen"',
+                toast_install_desktop: '📲 Click the install icon in the address bar, or open the ⋮ menu → "Install Gamingpig..."',
+                toast_installed: 'Installed as an app! 🎉',
+                toast_island_hidden: 'Dynamic Island hidden – bring it back via ⌘K',
+                toast_island_back: 'Dynamic Island is back 🏝️',
+                toast_sharecard_creating: 'Creating share card...',
+                toast_sharecard_saved: 'Share card saved! 🎴',
+                toast_sharecard_cors: "Couldn't load the cover image (CORS) – card created without artwork.",
+                toast_link_copied: '📋 Link copied! You can share it now.',
+                toast_copy_failed: "⚠️ Couldn't copy. Link: ",
+                toast_copy_unsupported: "⚠️ Your browser doesn't support that. Link: ",
+                toast_konami: '🎉 Konami code detected! Hyperfocus activated!',
+                toast_oink: '🐷 Oink oink! Who called for that?',
+                toast_forza: '🏎️ Vrooom! Forza Horizon 5 mode!',
+                toast_fokus: "🧠⚡ Hyperfocus activated! Nothing gets lost now.",
+                toast_matrix: '💻 Wake up, Neo...',
+                toast_disco: '👀 You clicked five times... Disco mode!',
+                toast_search_hint: '💡 Tip: type words here - some trigger surprises...',
+                cp_placeholder: 'Search a command or the page...',
+                cp_placeholder_tiktok: 'Which TikTok account?',
+                cp_empty: (q) => `No commands found for "${q}"`,
+                cp_scroll_top: 'Scroll to top', cp_scroll_cards: 'Jump to education & daily life', cp_scroll_music: 'Jump to music dashboard', cp_scroll_footer: 'Jump to footer / contact',
+                cp_open_dashboard: 'Open music dashboard', cp_open_lyrics: 'Show lyrics',
+                cp_toggle_dark: 'Toggle dark mode', cp_toggle_glass: 'Toggle Liquid Glass mode', cp_toggle_perf: 'Toggle low-end / performance mode',
+                cp_standby: 'Start StandBy mode', cp_ambient: 'Toggle Ambient Color', cp_tilt: 'Toggle Spatial Tilt',
+                cp_sharecard: 'Create & download share card', cp_tutorial: 'Start tutorial', cp_tiktok: 'Open my TikTok',
+                cp_island_back: 'Show Dynamic Island again', cp_copy_link: 'Copy link to this page', cp_reload: 'Reload page',
+                cp_change_lang: '🌐 Sprache ändern / Change language',
+                settings_ambient: 'Ambient Color', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
+                on_label: 'ON', off_label: 'OFF',
+                standby_idle_title: "It's quiet right now...", standby_idle_subtitle: 'Enjoy the silence', standby_hint: 'Tap to exit',
+                install_btn: '📲 Install app',
+                aria_dark: 'Dark mode', aria_glass: 'Liquid Glass mode', aria_perf: 'Performance mode', aria_standby: 'StandBy mode',
+                                mini_click_to_open: 'Click to open', mini_click_to_close: 'Click to close',
+                aria_cp: 'Open command palette', aria_install: 'Install as app', aria_island: 'Open song details, swipe up to dismiss'
+            },
+            es: {
+                onboard_title: 'Elige tu idioma',
+                onboard_subtitle: 'Puedes cambiarlo cuando quieras',
+                tutorial_next: 'Siguiente', tutorial_back: 'Atrás', tutorial_finish: 'Listo', tutorial_skip: 'Omitir',
+                tutorial_step: (n, total) => `Paso ${n}/${total}`,
+                t_step1_title: '¡Bienvenido a mi mundo!',
+                t_step1_text: 'Este es mi portafolio personal. Aquí descubrirás todo sobre mí, mi camino hacia la integración de sistemas y qué me motiva. ¡Mi hiperfoco es el protagonista aquí!',
+                t_step2_title: 'Tu centro de control',
+                t_step2_text: 'Arriba a la derecha tienes el control total: activa el modo "Apple Liquid Glass" (¡cuidado, consume rendimiento!), cambia al modo oscuro, activa el modo de bajo rendimiento si tu dispositivo va lento, activa el modo StandBy o reinicia este tutorial.',
+                t_step3_title: 'A fondo: ¿quién soy?',
+                t_step3_text: 'Haz clic en estas tarjetas interactivas. Abren ventanas detalladas donde te cuento más sobre mi equipo de audio, mi stack tecnológico, mis proyectos de homelab y mi tiempo libre.',
+                t_step4_title: 'Música en tiempo real',
+                t_step4_text: 'La parte más loca: ¡el panel muestra en tiempo real lo que estoy escuchando! Arriba siempre queda visible una pequeña Dynamic Island - tócala para expandirla, tócala de nuevo para cerrarla, deslízala hacia arriba para ocultarla del todo. Haz clic en la tarjeta para ver letras sincronizadas con más de 30 estilos de animación. El icono de ajustes en las letras también tiene Ambient Color, Spatial Tilt y el generador de tarjetas para compartir.',
+                t_step5_title: 'StandBy: tu pantalla de bloqueo',
+                t_step5_text: 'Este botón convierte la página en una verdadera pantalla de bloqueo: hora grande, fecha y una gran tarjeta de reproducción con portada, ecualizador en vivo y barra de progreso frente a un fondo animado y difuminado. Perfecto para la mesita de noche mientras carga.',
+                t_step6_title: 'Búsqueda Spotlight (⌘K)',
+                t_step6_text: 'Presiona Ctrl+K (o Cmd+K en Mac) y se abre una paleta de comandos real, ¡igual que en Mac! Simplemente escribe lo que buscas: "modo oscuro", "letras", "standby"... flechas para navegar, Enter para ejecutar.',
+                t_step7_title: '¡Instálame como app!',
+                t_step7_text: 'Esta página genera su propio icono de app y se puede instalar como una app de verdad en Android/Chrome con un clic (sin tienda necesaria) - en iPhone se hace manualmente con "Añadir a pantalla de inicio" en el menú compartir. Después se siente como una app nativa, sin barra de navegador.',
+                t_step8_title: 'Psst... 🤫 un secreto',
+                t_step8_text: 'Esta página tiene algunos easter eggs escondidos. Pista: códigos antiguos de videojuegos, algunas palabras de teclado, o simplemente hacer clic por todas partes. ¿Sin teclado a mano (por ejemplo en el móvil)? Las palabras escritas también funcionan si las escribes en el buscador Spotlight (botón ⌘K). ¡Diviértete buscando!',
+                toast_install_ios: '📲 Toca "Compartir" ⬆️ abajo y luego "Añadir a pantalla de inicio"',
+                toast_install_android_menu: '📲 Toca los tres puntos ⋮ arriba a la derecha y elige "Instalar app" o "Añadir a pantalla de inicio"',
+                toast_install_desktop: '📲 Haz clic en el icono de instalar en la barra de direcciones, o abre el menú ⋮ → "Instalar Gamingpig..."',
+                toast_installed: '¡Instalado como app! 🎉',
+                toast_island_hidden: 'Dynamic Island ocultada – vuelve a mostrarla con ⌘K',
+                toast_island_back: 'Dynamic Island está de vuelta 🏝️',
+                toast_sharecard_creating: 'Creando tarjeta para compartir...',
+                toast_sharecard_saved: '¡Tarjeta guardada! 🎴',
+                toast_sharecard_cors: 'No se pudo cargar la portada (CORS) – tarjeta creada sin imagen.',
+                toast_link_copied: '📋 ¡Enlace copiado! Ya puedes compartirlo.',
+                toast_copy_failed: '⚠️ No se pudo copiar. Enlace: ',
+                toast_copy_unsupported: '⚠️ Tu navegador no soporta esto. Enlace: ',
+                toast_konami: '🎉 ¡Código Konami detectado! ¡Hiperfoco activado!',
+                toast_oink: '🐷 ¡Oink oink! ¿Quién llamó?',
+                toast_forza: '🏎️ ¡Vrooom! ¡Modo Forza Horizon 5!',
+                toast_fokus: '🧠⚡ ¡Hiperfoco activado! Ahora no se pierde nada.',
+                toast_matrix: '💻 Despierta, Neo...',
+                toast_disco: '👀 Hiciste clic cinco veces... ¡Modo disco!',
+                toast_search_hint: '💡 Consejo: escribe palabras aquí - algunas desbloquean sorpresas...',
+                cp_placeholder: 'Busca un comando o en la página...',
+                cp_placeholder_tiktok: '¿Qué cuenta de TikTok?',
+                cp_empty: (q) => `No se encontraron comandos para "${q}"`,
+                cp_scroll_top: 'Ir arriba', cp_scroll_cards: 'Ir a formación y vida diaria', cp_scroll_music: 'Ir al panel de música', cp_scroll_footer: 'Ir al pie de página / contacto',
+                cp_open_dashboard: 'Abrir panel de música', cp_open_lyrics: 'Mostrar letras',
+                cp_toggle_dark: 'Cambiar modo oscuro', cp_toggle_glass: 'Cambiar modo Liquid Glass', cp_toggle_perf: 'Cambiar modo de bajo rendimiento',
+                cp_standby: 'Iniciar modo StandBy', cp_ambient: 'Cambiar Ambient Color', cp_tilt: 'Cambiar Spatial Tilt',
+                cp_sharecard: 'Crear y descargar tarjeta', cp_tutorial: 'Iniciar tutorial', cp_tiktok: 'Abrir mi TikTok',
+                cp_island_back: 'Mostrar Dynamic Island de nuevo', cp_copy_link: 'Copiar enlace de la página', cp_reload: 'Recargar página',
+                cp_change_lang: '🌐 Cambiar idioma / Change language',
+                settings_ambient: 'Ambient Color', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
+                on_label: 'ON', off_label: 'OFF',
+                standby_idle_title: 'Todo tranquilo por ahora...', standby_idle_subtitle: 'Disfruta del silencio', standby_hint: 'Toca para salir',
+                install_btn: '📲 Instalar app',
+                aria_dark: 'Modo oscuro', aria_glass: 'Modo Liquid Glass', aria_perf: 'Modo rendimiento', aria_standby: 'Modo StandBy',
+                                mini_click_to_open: 'Clic para abrir', mini_click_to_close: 'Clic para cerrar',
+                aria_cp: 'Abrir paleta de comandos', aria_install: 'Instalar como app', aria_island: 'Abrir detalles de la canción, desliza arriba para ocultar'
+            },
+            fr: {
+                onboard_title: 'Choisis ta langue',
+                onboard_subtitle: 'Tu peux changer ça à tout moment',
+                tutorial_next: 'Suivant', tutorial_back: 'Retour', tutorial_finish: 'Terminé', tutorial_skip: 'Passer',
+                tutorial_step: (n, total) => `Étape ${n}/${total}`,
+                t_step1_title: 'Bienvenue dans mon monde !',
+                t_step1_text: "C'est mon portfolio personnel. Tu y découvriras tout sur moi, mon parcours vers l'intégration de systèmes et ce qui me motive. Mon hyperfocus est ici au centre de tout !",
+                t_step2_title: 'Ton centre de contrôle',
+                t_step2_text: 'En haut à droite, tu as le contrôle total : active le mode "Apple Liquid Glass" (attention, ça consomme des ressources !), passe en mode sombre, active le mode basse consommation si ton appareil rame, active le mode StandBy, ou relance ce tutoriel.',
+                t_step3_title: 'Plongée en profondeur : qui suis-je ?',
+                t_step3_text: "Clique sur ces cartes interactives. Elles ouvrent des fenêtres détaillées où je te parle de mon setup audio, ma stack technique, mes projets de homelab et mon temps libre.",
+                t_step4_title: 'Intégration musicale en temps réel',
+                t_step4_text: "La partie la plus folle : le tableau de bord affiche en temps réel ce que j'écoute ! Une petite Dynamic Island reste toujours visible en haut - appuie pour l'agrandir, réappuie pour la réduire, glisse vers le haut pour la masquer complètement. Clique sur la carte pour des paroles synchronisées avec plus de 30 styles d'animation dingues. L'icône d'engrenage dans les paroles propose aussi Ambient Color, Spatial Tilt et le générateur de carte à partager.",
+                t_step5_title: "StandBy : ton écran verrouillé",
+                t_step5_text: "Ce bouton transforme la page en véritable écran verrouillé : grande horloge, date, et une grande carte de lecture avec pochette, égaliseur en direct et barre de progression devant un fond flouté et animé en douceur. Parfait sur la table de nuit pendant la charge.",
+                t_step6_title: 'Recherche Spotlight (⌘K)',
+                t_step6_text: 'Appuie sur Ctrl+K (ou Cmd+K sur Mac) et une vraie palette de commandes s\'ouvre - exactement comme sur Mac ! Tape simplement ce que tu cherches : "mode sombre", "paroles", "standby"... flèches pour naviguer, Entrée pour valider.',
+                t_step7_title: 'Installe-moi comme appli !',
+                t_step7_text: "Ce site génère sa propre icône d'application et peut être installé comme une vraie appli sur Android/Chrome en un clic (pas besoin de store) - sur iPhone ça se fait manuellement via \"Sur l'écran d'accueil\" dans le menu de partage. Après ça, on dirait une vraie appli native, sans aucune barre de navigateur.",
+                t_step8_title: 'Psst... 🤫 un secret',
+                t_step8_text: "Ce site cache quelques easter eggs. Indice : de vieux codes de triche de jeux vidéo, quelques mots à taper, ou simplement cliquer un peu partout. Pas de clavier sous la main (sur mobile par exemple) ? Les mots tapés fonctionnent aussi si tu les tapes dans la recherche Spotlight (bouton ⌘K). Amuse-toi bien à chercher !",
+                toast_install_ios: '📲 Appuie sur "Partager" ⬆️ en bas, puis "Sur l\'écran d\'accueil"',
+                toast_install_android_menu: '📲 Appuie sur les trois points ⋮ en haut à droite et choisis "Installer l\'appli" / "Ajouter à l\'écran d\'accueil"',
+                toast_install_desktop: '📲 Clique sur l\'icône d\'installation dans la barre d\'adresse, ou ouvre le menu ⋮ → "Installer Gamingpig..."',
+                toast_installed: 'Installé comme appli ! 🎉',
+                toast_island_hidden: 'Dynamic Island masquée – ré-affiche-la via ⌘K',
+                toast_island_back: 'La Dynamic Island est de retour 🏝️',
+                toast_sharecard_creating: 'Création de la carte à partager...',
+                toast_sharecard_saved: 'Carte enregistrée ! 🎴',
+                toast_sharecard_cors: "Impossible de charger la pochette (CORS) – carte créée sans image.",
+                toast_link_copied: '📋 Lien copié ! Tu peux le partager maintenant.',
+                toast_copy_failed: '⚠️ Impossible de copier. Lien : ',
+                toast_copy_unsupported: '⚠️ Ton navigateur ne supporte pas ça. Lien : ',
+                toast_konami: '🎉 Code Konami détecté ! Hyperfocus activé !',
+                toast_oink: '🐷 Oink oink ! Qui a appelé ça ?',
+                toast_forza: '🏎️ Vrooom ! Mode Forza Horizon 5 !',
+                toast_fokus: "🧠⚡ Hyperfocus activé ! Plus rien ne se perd maintenant.",
+                toast_matrix: '💻 Réveille-toi, Neo...',
+                toast_disco: '👀 Tu as cliqué cinq fois... Mode disco !',
+                toast_search_hint: '💡 Astuce : tape des mots ici - certains déclenchent des surprises...',
+                cp_placeholder: 'Rechercher une commande ou dans la page...',
+                cp_placeholder_tiktok: 'Quel compte TikTok ?',
+                cp_empty: (q) => `Aucune commande trouvée pour "${q}"`,
+                cp_scroll_top: 'Remonter en haut', cp_scroll_cards: 'Aller à formation & quotidien', cp_scroll_music: 'Aller au tableau de bord musique', cp_scroll_footer: 'Aller au pied de page / contact',
+                cp_open_dashboard: 'Ouvrir le tableau de bord musique', cp_open_lyrics: 'Afficher les paroles',
+                cp_toggle_dark: 'Basculer le mode sombre', cp_toggle_glass: 'Basculer le mode Liquid Glass', cp_toggle_perf: 'Basculer le mode basse consommation',
+                cp_standby: 'Démarrer le mode StandBy', cp_ambient: 'Basculer Ambient Color', cp_tilt: 'Basculer Spatial Tilt',
+                cp_sharecard: 'Créer & télécharger la carte à partager', cp_tutorial: 'Démarrer le tutoriel', cp_tiktok: 'Ouvrir mon TikTok',
+                cp_island_back: 'Réafficher la Dynamic Island', cp_copy_link: 'Copier le lien de la page', cp_reload: 'Recharger la page',
+                cp_change_lang: '🌐 Changer de langue / Change language',
+                settings_ambient: 'Ambient Color', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
+                on_label: 'ON', off_label: 'OFF',
+                standby_idle_title: "C'est calme pour le moment...", standby_idle_subtitle: 'Profite du silence', standby_hint: 'Toucher pour quitter',
+                install_btn: '📲 Installer l\'appli',
+                aria_dark: 'Mode sombre', aria_glass: 'Mode Liquid Glass', aria_perf: 'Mode performance', aria_standby: 'Mode StandBy',
+                                mini_click_to_open: 'Cliquer pour ouvrir', mini_click_to_close: 'Cliquer pour fermer',
+                aria_cp: 'Ouvrir la palette de commandes', aria_install: 'Installer comme appli', aria_island: 'Ouvrir les détails du morceau, glisser vers le haut pour masquer'
+            },
+            pt: {
+                onboard_title: 'Escolha seu idioma',
+                onboard_subtitle: 'Você pode mudar isso quando quiser',
+                tutorial_next: 'Próximo', tutorial_back: 'Voltar', tutorial_finish: 'Concluir', tutorial_skip: 'Pular',
+                tutorial_step: (n, total) => `Passo ${n}/${total}`,
+                t_step1_title: 'Bem-vindo ao meu mundo!',
+                t_step1_text: 'Este é meu portfólio pessoal. Aqui você descobre tudo sobre mim, meu caminho na integração de sistemas e o que me motiva. Meu hiperfoco é o protagonista aqui!',
+                t_step2_title: 'Sua central de controle',
+                t_step2_text: 'No canto superior direito você tem controle total: ative o modo insano "Apple Liquid Glass" (cuidado, consome desempenho!), mude para o modo escuro, ative o modo de baixo desempenho se seu aparelho travar, ative o modo StandBy, ou reinicie este tutorial.',
+                t_step3_title: 'Aprofundando: quem sou eu?',
+                t_step3_text: 'Clique nesses cartões interativos. Eles abrem janelas detalhadas onde conto mais sobre minha configuração de áudio, minha stack de tecnologia, meus projetos de homelab e meu tempo livre.',
+                t_step4_title: 'Integração musical em tempo real',
+                t_step4_text: 'A parte mais louca: o painel mostra em tempo real o que estou ouvindo! Uma pequena Dynamic Island fica sempre visível no topo - toque para expandir, toque de novo para recolher, deslize para cima para ocultar completamente. Clique no cartão para letras sincronizadas com mais de 30 estilos de animação malucos. O ícone de engrenagem nas letras também tem Ambient Color, Spatial Tilt e o gerador de cartão para compartilhar.',
+                t_step5_title: 'StandBy: sua tela de bloqueio',
+                t_step5_text: 'Este botão transforma a página em uma tela de bloqueio de verdade: relógio grande, data e um grande cartão do que está tocando, com capa, equalizador ao vivo e barra de progresso na frente de um fundo animado e desfocado. Perfeito para o criado-mudo enquanto carrega.',
+                t_step6_title: 'Busca Spotlight (⌘K)',
+                t_step6_text: 'Aperte Ctrl+K (ou Cmd+K no Mac) e uma paleta de comandos de verdade se abre - igualzinho ao Mac! É só digitar o que procura: "modo escuro", "letras", "standby"... setas para navegar, Enter para executar.',
+                t_step7_title: 'Me instale como app!',
+                t_step7_text: 'Este site gera seu próprio ícone de app e pode ser instalado como um app de verdade no Android/Chrome com um clique (sem loja necessária) - no iPhone isso é feito manualmente via "Adicionar à Tela de Início" no menu de compartilhar. Depois disso parece um app nativo, sem nenhuma barra de navegador.',
+                t_step8_title: 'Psst... 🤫 um segredo',
+                t_step8_text: 'Este site tem alguns easter eggs escondidos. Dica: códigos antigos de videogame, algumas palavras de teclado, ou simplesmente clicar em tudo. Sem teclado à mão (por exemplo no celular)? As palavras digitadas também funcionam se você as digitar na busca Spotlight (botão ⌘K). Divirta-se procurando!',
+                toast_install_ios: '📲 Toque em "Compartilhar" ⬆️ embaixo e depois em "Adicionar à Tela de Início"',
+                toast_install_android_menu: '📲 Toque nos três pontinhos ⋮ no canto superior direito e escolha "Instalar app" / "Adicionar à tela inicial"',
+                toast_install_desktop: '📲 Clique no ícone de instalação na barra de endereço, ou abra o menu ⋮ → "Instalar Gamingpig..."',
+                toast_installed: 'Instalado como app! 🎉',
+                toast_island_hidden: 'Dynamic Island ocultada – traga de volta pelo ⌘K',
+                toast_island_back: 'A Dynamic Island está de volta 🏝️',
+                toast_sharecard_creating: 'Criando cartão para compartilhar...',
+                toast_sharecard_saved: 'Cartão salvo! 🎴',
+                toast_sharecard_cors: 'Não foi possível carregar a capa (CORS) – cartão criado sem imagem.',
+                toast_link_copied: '📋 Link copiado! Já pode compartilhar.',
+                toast_copy_failed: '⚠️ Não foi possível copiar. Link: ',
+                toast_copy_unsupported: '⚠️ Seu navegador não suporta isso. Link: ',
+                toast_konami: '🎉 Código Konami detectado! Hiperfoco ativado!',
+                toast_oink: '🐷 Oink oink! Quem chamou?',
+                toast_forza: '🏎️ Vrooom! Modo Forza Horizon 5!',
+                toast_fokus: '🧠⚡ Hiperfoco ativado! Agora nada se perde.',
+                toast_matrix: '💻 Acorda, Neo...',
+                toast_disco: '👀 Você clicou cinco vezes... Modo disco!',
+                toast_search_hint: '💡 Dica: digite palavras aqui - algumas desbloqueiam surpresas...',
+                cp_placeholder: 'Buscar um comando ou na página...',
+                cp_placeholder_tiktok: 'Qual conta do TikTok?',
+                cp_empty: (q) => `Nenhum comando encontrado para "${q}"`,
+                cp_scroll_top: 'Rolar para o topo', cp_scroll_cards: 'Ir para formação & dia a dia', cp_scroll_music: 'Ir para o painel de música', cp_scroll_footer: 'Ir para rodapé / contato',
+                cp_open_dashboard: 'Abrir painel de música', cp_open_lyrics: 'Mostrar letras',
+                cp_toggle_dark: 'Alternar modo escuro', cp_toggle_glass: 'Alternar modo Liquid Glass', cp_toggle_perf: 'Alternar modo de baixo desempenho',
+                cp_standby: 'Iniciar modo StandBy', cp_ambient: 'Alternar Ambient Color', cp_tilt: 'Alternar Spatial Tilt',
+                cp_sharecard: 'Criar & baixar cartão para compartilhar', cp_tutorial: 'Iniciar tutorial', cp_tiktok: 'Abrir meu TikTok',
+                cp_island_back: 'Mostrar Dynamic Island novamente', cp_copy_link: 'Copiar link da página', cp_reload: 'Recarregar página',
+                cp_change_lang: '🌐 Mudar idioma / Change language',
+                settings_ambient: 'Ambient Color', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
+                on_label: 'LIGADO', off_label: 'DESLIGADO',
+                standby_idle_title: 'Está tudo quieto agora...', standby_idle_subtitle: 'Aproveite o silêncio', standby_hint: 'Toque para sair',
+                install_btn: '📲 Instalar app',
+                aria_dark: 'Modo escuro', aria_glass: 'Modo Liquid Glass', aria_perf: 'Modo desempenho', aria_standby: 'Modo StandBy',
+                                mini_click_to_open: 'Clique para abrir', mini_click_to_close: 'Clique para fechar',
+                aria_cp: 'Abrir paleta de comandos', aria_install: 'Instalar como app', aria_island: 'Abrir detalhes da música, deslize para cima para ocultar'
+            },
+            tr: {
+                onboard_title: 'Dilini seç',
+                onboard_subtitle: 'Bunu istediğin zaman değiştirebilirsin',
+                tutorial_next: 'İleri', tutorial_back: 'Geri', tutorial_finish: 'Bitir', tutorial_skip: 'Atla',
+                tutorial_step: (n, total) => `Adım ${n}/${total}`,
+                t_step1_title: 'Dünyama hoş geldin!',
+                t_step1_text: 'Bu benim kişisel portfolyom. Burada benim hakkımda, sistem entegrasyonuna giden yolum ve beni neyin motive ettiği hakkında her şeyi öğreneceksin. Hiperodağım burada başrolde!',
+                t_step2_title: 'Kontrol merkezin',
+                t_step2_text: 'Sağ üstte tüm kontrol sende: çılgın "Apple Liquid Glass" modunu aç (dikkat, performans yer!), karanlık moda geç, cihazın yavaşsa düşük performans modunu aç, StandBy modunu etkinleştir veya bu eğitimi yeniden başlat.',
+                t_step3_title: 'Derinlemesine: ben kimim?',
+                t_step3_text: 'Bu etkileşimli kartlara tıkla. Ses düzenim, teknoloji yığınım, homelab projelerim ve boş zamanım hakkında daha fazla bilgi veren detaylı pencereler açılıyor.',
+                t_step4_title: 'Gerçek zamanlı müzik entegrasyonu',
+                t_step4_text: "En çılgın kısım: panel şu anda ne dinlediğimi gerçek zamanlı gösteriyor! Üstte küçük bir Dynamic Island her zaman görünür kalır - dokun genişlesin, tekrar dokun küçülsün, yukarı kaydır tamamen gizlensin. Senkronize şarkı sözleri için karta tıkla, 30'dan fazla çılgın animasyon stiliyle. Şarkı sözlerindeki dişli simgesinde ayrıca Ambient Color, Spatial Tilt ve paylaşım kartı oluşturucu var.",
+                t_step5_title: 'StandBy: kilit ekranın',
+                t_step5_text: 'Bu buton sayfayı gerçek bir kilit ekranına dönüştürür: büyük saat, tarih ve kapak resmi, canlı ekolayzır ve ilerleme çubuğuyla büyük bir "şimdi çalıyor" kartı, yumuşakça hareket eden bulanık bir arka plan önünde. Şarj olurken komodinde durması için mükemmel.',
+                t_step6_title: 'Spotlight arama (⌘K)',
+                t_step6_text: 'Ctrl+K (Mac\'te Cmd+K) tuşuna bas ve gerçek bir komut paleti açılsın - tıpkı Mac\'teki gibi! Ne aradığını yaz: "karanlık mod", "şarkı sözleri", "standby"... gezinmek için ok tuşları, çalıştırmak için Enter.',
+                t_step7_title: 'Beni uygulama olarak yükle!',
+                t_step7_text: 'Bu site kendi uygulama simgesini oluşturur ve Android/Chrome\'da tek tıkla gerçek bir uygulama olarak yüklenebilir (mağaza gerekmez) - iPhone\'da bu, paylaş menüsündeki "Ana Ekrana Ekle" ile manuel yapılır. Sonrasında tarayıcı çubuğu olmadan gerçek bir uygulama gibi hissettirir.',
+                t_step8_title: 'Pist... 🤫 bir sır',
+                t_step8_text: 'Bu sitede birkaç gizli easter egg var. İpucu: eski video oyunu hile kodları, birkaç klavye kelimesi veya sadece etrafa vahşice tıklamak. Elinde klavye yok mu (örneğin telefonda)? Yazılan kelimeler Spotlight arama kutusuna (⌘K butonu) yazılırsa da çalışır. Aramak eğlenceli olsun!',
+                toast_install_ios: '📲 Altta "Paylaş" ⬆️ dokun, sonra "Ana Ekrana Ekle"',
+                toast_install_android_menu: '📲 Sağ üstteki üç noktaya ⋮ dokun ve "Uygulamayı yükle" / "Ana ekrana ekle" seç',
+                toast_install_desktop: '📲 Adres çubuğundaki yükleme simgesine tıkla veya ⋮ menüsünü aç → "Gamingpig\'i yükle..."',
+                toast_installed: 'Uygulama olarak yüklendi! 🎉',
+                toast_island_hidden: 'Dynamic Island gizlendi – ⌘K ile geri getir',
+                toast_island_back: 'Dynamic Island geri döndü 🏝️',
+                toast_sharecard_creating: 'Paylaşım kartı oluşturuluyor...',
+                toast_sharecard_saved: 'Paylaşım kartı kaydedildi! 🎴',
+                toast_sharecard_cors: 'Kapak resmi yüklenemedi (CORS) – kart resimsiz oluşturuldu.',
+                toast_link_copied: '📋 Bağlantı kopyalandı! Şimdi paylaşabilirsin.',
+                toast_copy_failed: '⚠️ Kopyalanamadı. Bağlantı: ',
+                toast_copy_unsupported: '⚠️ Tarayıcın bunu desteklemiyor. Bağlantı: ',
+                toast_konami: '🎉 Konami kodu algılandı! Hiperodak etkinleştirildi!',
+                toast_oink: '🐷 Oink oink! Kim seslendi?',
+                toast_forza: '🏎️ Vrooom! Forza Horizon 5 modu!',
+                toast_fokus: '🧠⚡ Hiperodak etkinleştirildi! Artık hiçbir şey kaybolmuyor.',
+                toast_matrix: '💻 Uyan, Neo...',
+                toast_disco: '👀 Beş kez tıkladın... Disko modu!',
+                toast_search_hint: '💡 İpucu: buraya kelimeler yaz - bazıları sürpriz açar...',
+                cp_placeholder: 'Komut ara veya sayfada ara...',
+                cp_placeholder_tiktok: 'Hangi TikTok hesabı?',
+                cp_empty: (q) => `"${q}" için komut bulunamadı`,
+                cp_scroll_top: 'Başa dön', cp_scroll_cards: 'Eğitim & günlük hayata git', cp_scroll_music: 'Müzik paneline git', cp_scroll_footer: 'Alt bilgi / iletişime git',
+                cp_open_dashboard: 'Müzik panelini aç', cp_open_lyrics: 'Şarkı sözlerini göster',
+                cp_toggle_dark: 'Karanlık modu değiştir', cp_toggle_glass: 'Liquid Glass modunu değiştir', cp_toggle_perf: 'Düşük performans modunu değiştir',
+                cp_standby: 'StandBy modunu başlat', cp_ambient: 'Ambient Color değiştir', cp_tilt: 'Spatial Tilt değiştir',
+                cp_sharecard: 'Paylaşım kartı oluştur & indir', cp_tutorial: 'Eğitimi başlat', cp_tiktok: "TikTok'umu aç",
+                cp_island_back: "Dynamic Island'ı tekrar göster", cp_copy_link: 'Sayfa bağlantısını kopyala', cp_reload: 'Sayfayı yenile',
+                cp_change_lang: '🌐 Dili değiştir / Change language',
+                settings_ambient: 'Ambient Color', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
+                on_label: 'AÇIK', off_label: 'KAPALI',
+                standby_idle_title: 'Şu an sessiz...', standby_idle_subtitle: 'Sessizliğin tadını çıkar', standby_hint: 'Çıkmak için dokun',
+                install_btn: '📲 Uygulamayı yükle',
+                aria_dark: 'Karanlık mod', aria_glass: 'Liquid Glass modu', aria_perf: 'Performans modu', aria_standby: 'StandBy modu',
+                                mini_click_to_open: 'Açmak için tıkla', mini_click_to_close: 'Kapatmak için tıkla',
+                aria_cp: 'Komut paletini aç', aria_install: 'Uygulama olarak yükle', aria_island: 'Şarkı detaylarını aç, gizlemek için yukarı kaydır'
+            }
+        };
+
+        let currentLang = localStorage.getItem('selectedLanguage') || null;
+        function t(key, ...args) {
+            const langDict = translations[currentLang || 'de'] || translations.de;
+            const val = langDict[key] !== undefined ? langDict[key] : translations.de[key];
+            if (typeof val === 'function') return val(...args);
+            return val !== undefined ? val : key;
+        }
+
+        // --- Sprachauswahl-Overlay (Setup-Assistent-Stil) ---
+        function renderLanguagePicker() {
+            const grid = document.getElementById('lang-picker-grid');
+            if (!grid) return;
+            grid.innerHTML = SUPPORTED_LANGUAGES.map(l => `
+                <button class="lang-picker-btn" onclick="selectLanguage('${l.code}')">
+                    <span class="lang-flag">${l.flag}</span>
+                    <span class="lang-name">${l.name}</span>
+                </button>`).join('');
+        }
+
+        window.openLanguagePicker = function() {
+            const overlay = document.getElementById('language-picker-overlay');
+            if (!overlay) return;
+            overlay.classList.remove('hidden');
+            void overlay.offsetWidth;
+            requestAnimationFrame(() => overlay.classList.add('lp-active'));
+        };
+
+        window.selectLanguage = function(code) {
+            if (typeof haptic === 'function') haptic(10);
+            applyLanguage(code);
+            const overlay = document.getElementById('language-picker-overlay');
+            if (overlay) {
+                overlay.classList.remove('lp-active');
+                setTimeout(() => overlay.classList.add('hidden'), 550);
+            }
+        };
+
+        // Aktualisiert alle übersetzbaren Bedienelemente auf der Seite. Persönliche
+        // Bio-Texte (details-Objekt) werden hier bewusst NICHT angefasst.
+        function applyLanguage(lang) {
+            if (!translations[lang]) lang = 'de';
+            currentLang = lang;
+            localStorage.setItem('selectedLanguage', lang);
+            document.documentElement.setAttribute('lang', lang);
+
+            const cpInput = document.getElementById('cp-input');
+            if (cpInput && !document.getElementById('command-palette-overlay').classList.contains('cp-active')) {
+                cpInput.placeholder = t('cp_placeholder');
+            }
+
+            const standbyHintEl = document.getElementById('standby-hint');
+            if (standbyHintEl) standbyHintEl.textContent = t('standby_hint');
+
+            // Idle-Texte nur überschreiben, wenn gerade wirklich kein Track aktiv ist
+            const npCard = document.getElementById('standby-nowplaying');
+            if (npCard && npCard.classList.contains('standby-idle')) {
+                const stt = document.getElementById('standby-track-title');
+                const sta = document.getElementById('standby-track-artist');
+                if (stt) stt.textContent = t('standby_idle_title');
+                if (sta) sta.textContent = t('standby_idle_subtitle');
+            }
+            if (typeof currentTrackId !== 'undefined' && !currentTrackId) {
+                const mTitleEl = document.getElementById('track-title');
+                const mArtistEl = document.getElementById('track-artist');
+                if (mTitleEl) mTitleEl.innerText = t('standby_idle_title');
+                if (mArtistEl) mArtistEl.innerText = t('standby_idle_subtitle');
+            }
+
+            // Settings-Menü Toggle-Labels neu rendern
+            if (typeof ambientColorEnabled !== 'undefined' && typeof applyAmbientColorMode === 'function') applyAmbientColorMode(ambientColorEnabled);
+            if (typeof tiltEnabled !== 'undefined' && typeof applyTiltMode === 'function') applyTiltMode(tiltEnabled);
+            const btnCanvasEl = document.getElementById('btn-toggle-canvas');
+            if (btnCanvasEl && typeof canvasEnabled !== 'undefined') {
+                btnCanvasEl.innerText = t('settings_canvas') + ': ' + (canvasEnabled ? t('on_label') : t('off_label'));
+            }
+
+            // Buttons: aria-label / title
+            const setAria = (id, label, title) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                if (label) el.setAttribute('aria-label', label);
+                if (title) el.setAttribute('title', title);
+            };
+            setAria('theme-toggle', t('aria_dark'));
+            setAria('liquid-glass-toggle', t('aria_glass'));
+            setAria('perf-toggle', t('aria_perf'));
+            setAria('standby-toggle', t('aria_standby'), t('aria_standby'));
+            setAria('cp-trigger', t('aria_cp'));
+            setAria('pwa-install-btn', t('aria_install'));
+            setAria('dynamic-island', t('aria_island'));
+
+            const pwaBtn = document.getElementById('pwa-install-btn');
+            if (pwaBtn) pwaBtn.innerHTML = t('install_btn');
+
+            const skipBtn = document.getElementById('tutorial-skip');
+            if (skipBtn) skipBtn.innerText = t('tutorial_skip');
+
+            // Falls Tutorial gerade offen ist, aktuellen Schritt neu übersetzen
+            const tw = document.getElementById('tutorial-wrapper');
+            if (tw && !tw.classList.contains('hidden') && typeof currentStepIndex !== 'undefined' && typeof showTutorialStep === 'function') {
+                showTutorialStep(currentStepIndex);
+            }
+        }
+
+        function getTutorialSteps() {
+            return [
+                { targetId: 'header-section', title: t('t_step1_title'), text: t('t_step1_text') },
+                { targetId: 'ui-controls', title: t('t_step2_title'), text: t('t_step2_text') },
+                { targetId: 'cards-section', title: t('t_step3_title'), text: t('t_step3_text') },
+                { targetId: 'music-section', title: t('t_step4_title'), text: t('t_step4_text') },
+                { targetId: 'standby-toggle', title: t('t_step5_title'), text: t('t_step5_text') },
+                { targetId: 'cp-trigger', title: t('t_step6_title'), text: t('t_step6_text') },
+                { targetId: 'pwa-install-btn', title: t('t_step7_title'), text: t('t_step7_text') },
+                { targetId: 'footer-section', title: t('t_step8_title'), text: t('t_step8_text') }
+            ];
+        }
 
         const details = {
             status: { title: "Ausbildung & Fokus", content: "Ich absolviere aktuell meine Ausbildung zum Fachinformatiker für Systemintegration. Technik und Systeme sind meine Welt. Ich liebe es, Server aufzusetzen, Netzwerke zu konfigurieren und alles am Laufen zu halten. Mein Hyperfokus hilft mir dabei, tief in komplexe IT-Strukturen einzutauchen und Fehler zu finden, bevor sie zum Problem werden." },
-            background: { title: "Hintergrund & Weg", content: "Ich bin im Jugendalter und mache aktuell eine Ausbildung zum Fachinformatiker für System Integration. Das hat mich früh gelehrt, unabhängig zu sein und meinen eigenen Weg zu gehen. Ich sehe Herausforderungen nicht als Hindernis, sondern als Chance, zu wachsen und meine eigene Zukunft zu gestalten." },
+            background: { title: "Hintergrund & Weg", content: "Ich bin im Jugendalter und absolviere aktuell eine Ausbildung zum Fachinformatiker für Systemintegration. Das hat mich früh gelehrt, unabhängig zu sein und meinen eigenen Weg zu gehen. Ich sehe Herausforderungen nicht als Hindernis, sondern als Chance, zu wachsen und meine eigene Zukunft zu gestalten." },
             freizeit: { title: "Gaming & Content", content: "Wenn die Server laufen, bin ich bei Forza Horizon 5 anzutreffen. Ich streame live auf TikTok und teile meine Leidenschaft für Gaming und Technik mit der Community. Es geht mir um den Vibe, den Austausch und das Meistern neuer Challenges." },
             menschen: { title: "Meine Wahlfamilie", content: "Da ich ohne Eltern aufgewachsen bin, sind Freunde meine gewählte Familie. Loyalität und Vertrauen stehen für mich an erster Stelle. Meine neuen Anker sind Danilo, Jakob und Lukas, aber Tom bleibt es mit ihnen gemeinsam – wir gehen den Weg zusammen." },
             techstack: { title: "Tech Stack & Skills", content: "Als angehender Systemintegrator kenne ich mich mit dem Setup und Wartung von IT-Infrastrukturen aus. Dazu gehören Windows Server, Linux-Distributionen, generelle Netzwerkkonfigurationen und intensives Hardware-Troubleshooting. Egal ob Laptops, PCs oder Smartphones – wenn was defekt ist, finde ich den Fehler." },
@@ -1882,7 +2376,7 @@
             ambientColorEnabled = isActive;
             document.body.classList.toggle('ambient-color-active', isActive);
             const btn = document.getElementById('btn-toggle-ambient');
-            if (btn) btn.textContent = 'Ambient Color: ' + (isActive ? 'AN' : 'AUS');
+            if (btn) btn.textContent = t('settings_ambient') + ': ' + (isActive ? t('on_label') : t('off_label'));
             if (isActive && lastAmbientArtUrl) extractDominantColor(lastAmbientArtUrl);
         }
         window.toggleAmbientColor = function() {
@@ -1937,7 +2431,7 @@
             tiltEnabled = isActive;
             document.body.classList.toggle('tilt-active', isActive);
             const btn = document.getElementById('btn-toggle-tilt');
-            if (btn) btn.textContent = 'Spatial Tilt: ' + (isActive ? 'AN' : 'AUS');
+            if (btn) btn.textContent = t('settings_tilt') + ': ' + (isActive ? t('on_label') : t('off_label'));
             if (isActive) requestTiltPermissionIfNeeded();
         }
         window.toggleTilt = function() {
@@ -2096,15 +2590,15 @@
             // Kein natives Prompt verfügbar - manuelle Anleitung zeigen (zuverlässigster Weg ohne Service Worker)
             if (typeof showToast !== 'function') return;
             if (isIOSDevice) {
-                showToast('📲 Tippe unten auf "Teilen" ⬆️ und dann auf "Zum Home-Bildschirm"', 6000);
+                showToast(t('toast_install_ios'), 6000);
             } else if (window.innerWidth < 768) {
-                showToast('📲 Tippe oben rechts auf die drei Punkte ⋮ und wähle "App installieren" bzw. "Zum Startbildschirm hinzufügen"', 6500);
+                showToast(t('toast_install_android_menu'), 6500);
             } else {
-                showToast('📲 Klicke oben rechts in der Adressleiste auf das Installieren-Symbol, oder öffne das Menü ⋮ → "Gamingpig installieren..."', 6500);
+                showToast(t('toast_install_desktop'), 6500);
             }
         };
         window.addEventListener('appinstalled', () => {
-            if (typeof showToast === 'function') showToast('Als App installiert! 🎉');
+            if (typeof showToast === 'function') showToast(t('toast_installed'));
         });
 
         // --- NEW: DYNAMIC ISLAND 2.0 LOGIC (persistent, tap-to-expand, swipe-to-dismiss) ---
@@ -2179,7 +2673,7 @@
             localStorage.setItem('islandDismissed', 'true');
             haptic([10, 20, 10]);
             updateIslandRing();
-            if (typeof showToast === 'function') showToast('Dynamic Island ausgeblendet – über ⌘K wieder einblendbar');
+            if (typeof showToast === 'function') showToast(t('toast_island_hidden'));
         }
 
         // --- Swipe-/Tap-Erkennung (Touch + Maus) ---
@@ -2240,11 +2734,11 @@
             const titleEl = document.getElementById('track-title');
             const artistEl = document.getElementById('track-artist');
             const artworkEl = document.getElementById('artwork');
-            const title = (titleEl && titleEl.innerText) ? titleEl.innerText : 'Aktuell ist es ruhig...';
-            const artist = (artistEl && artistEl.innerText) ? artistEl.innerText : 'Genieße die Stille';
+            const title = (titleEl && titleEl.innerText) ? titleEl.innerText : t('standby_idle_title');
+            const artist = (artistEl && artistEl.innerText) ? artistEl.innerText : t('standby_idle_subtitle');
             const artSrc = artworkEl ? artworkEl.getAttribute('src') : null;
 
-            if (typeof showToast === 'function') showToast('Share Card wird erstellt...');
+            if (typeof showToast === 'function') showToast(t('toast_sharecard_creating'));
 
             const draw = (artImg) => {
                 try {
@@ -2316,9 +2810,9 @@
                     document.body.appendChild(a);
                     a.click();
                     a.remove();
-                    if (typeof showToast === 'function') showToast('Share Card gespeichert! 🎴');
+                    if (typeof showToast === 'function') showToast(t('toast_sharecard_saved'));
                 } catch (err) {
-                    if (typeof showToast === 'function') showToast('Konnte kein Bild vom Cover laden (CORS) – Card ohne Artwork erzeugt.');
+                    if (typeof showToast === 'function') showToast(t('toast_sharecard_cors'));
                 }
             };
 
@@ -2369,32 +2863,33 @@
 
         function getCommandActions() {
             return [
-                { icon: '🏠', label: 'Zum Anfang scrollen', keywords: 'header start oben top', action: () => window.scrollTo({ top: 0, behavior: 'smooth' }) },
-                { icon: '🎓', label: 'Zu Ausbildung & Alltag springen', keywords: 'cards ausbildung skills karten', action: () => scrollToId('cards-section') },
-                { icon: '🎵', label: 'Zum Musik-Dashboard springen', keywords: 'music song track player', action: () => scrollToId('music-section') },
-                { icon: '📬', label: 'Zum Footer / Kontakt springen', keywords: 'footer contact kontakt ende', action: () => scrollToId('footer-section') },
-                { icon: '📖', label: 'Musik-Dashboard öffnen', keywords: 'dashboard aufklappen open music', action: () => { if (!isDashboardOpen) toggleDashboard(); scrollToId('music-section'); } },
-                { icon: '🎤', label: 'Lyrics anzeigen', keywords: 'lyrics songtext text', action: () => { if (!isDashboardOpen) toggleDashboard(); setTimeout(() => toggleLyrics(true), 400); } },
-                { icon: '🌗', label: 'Dark Mode umschalten', keywords: 'dark light theme hell dunkel modus', action: () => themeToggle && themeToggle.click() },
-                { icon: '💧', label: 'Liquid Glass Modus umschalten', keywords: 'liquid glass apple design', action: () => liquidGlassToggle && liquidGlassToggle.click() },
-                { icon: '⚡', label: 'Low-End / Performance Modus umschalten', keywords: 'performance low end animationen aus', action: () => perfToggle && perfToggle.click() },
-                { icon: '📱', label: 'StandBy Modus starten', keywords: 'standby ambient lockscreen uhr', action: () => toggleStandBy() },
-                { icon: '🎨', label: 'Ambient Color umschalten', keywords: 'ambient color farbe cover', action: () => toggleAmbientColor() },
-                { icon: '🪞', label: 'Spatial Tilt umschalten', keywords: 'tilt gyroskop 3d parallax neigen', action: () => toggleTilt() },
-                { icon: '🎴', label: 'Share Card erstellen & herunterladen', keywords: 'share card teilen bild download', action: () => generateShareCard() },
-                { icon: '🧭', label: 'Tutorial starten', keywords: 'tutorial hilfe guide anleitung', action: () => btnStartTutorial && btnStartTutorial.click() },
-                { icon: '🐷', label: 'Mein TikTok öffnen', keywords: 'tiktok social gamingpig', action: () => window.open('https://www.tiktok.com/@gamingpig900', '_blank') },
-                { icon: '🏝️', label: 'Dynamic Island wieder einblenden', keywords: 'dynamic island zeigen einblenden reset ausgeblendet wisch', action: () => {
+                { icon: '🏠', label: t('cp_scroll_top'), keywords: 'header start oben top', action: () => window.scrollTo({ top: 0, behavior: 'smooth' }) },
+                { icon: '🎓', label: t('cp_scroll_cards'), keywords: 'cards ausbildung skills karten', action: () => scrollToId('cards-section') },
+                { icon: '🎵', label: t('cp_scroll_music'), keywords: 'music song track player', action: () => scrollToId('music-section') },
+                { icon: '📬', label: t('cp_scroll_footer'), keywords: 'footer contact kontakt ende', action: () => scrollToId('footer-section') },
+                { icon: '📖', label: t('cp_open_dashboard'), keywords: 'dashboard aufklappen open music', action: () => { if (!isDashboardOpen) toggleDashboard(); scrollToId('music-section'); } },
+                { icon: '🎤', label: t('cp_open_lyrics'), keywords: 'lyrics songtext text', action: () => { if (!isDashboardOpen) toggleDashboard(); setTimeout(() => toggleLyrics(true), 400); } },
+                { icon: '🌗', label: t('cp_toggle_dark'), keywords: 'dark light theme hell dunkel modus', action: () => themeToggle && themeToggle.click() },
+                { icon: '💧', label: t('cp_toggle_glass'), keywords: 'liquid glass apple design', action: () => liquidGlassToggle && liquidGlassToggle.click() },
+                { icon: '⚡', label: t('cp_toggle_perf'), keywords: 'performance low end animationen aus', action: () => perfToggle && perfToggle.click() },
+                { icon: '📱', label: t('cp_standby'), keywords: 'standby ambient lockscreen uhr', action: () => toggleStandBy() },
+                { icon: '🎨', label: t('cp_ambient'), keywords: 'ambient color farbe cover', action: () => toggleAmbientColor() },
+                { icon: '🪞', label: t('cp_tilt'), keywords: 'tilt gyroskop 3d parallax neigen', action: () => toggleTilt() },
+                { icon: '🎴', label: t('cp_sharecard'), keywords: 'share card teilen bild download', action: () => generateShareCard() },
+                { icon: '🧭', label: t('cp_tutorial'), keywords: 'tutorial hilfe guide anleitung', action: () => btnStartTutorial && btnStartTutorial.click() },
+                { icon: '🐷', label: t('cp_tiktok'), keywords: 'tiktok social gamingpig', action: () => window.open('https://www.tiktok.com/@gamingpig900', '_blank') },
+                { icon: '🏝️', label: t('cp_island_back'), keywords: 'dynamic island zeigen einblenden reset ausgeblendet wisch', action: () => {
                     islandDismissed = false;
                     localStorage.setItem('islandDismissed', 'false');
-                    const t = document.getElementById('track-title');
-                    const a = document.getElementById('track-artist');
+                    const titleEl = document.getElementById('track-title');
+                    const artistEl = document.getElementById('track-artist');
                     const art = document.getElementById('artwork');
-                    showIslandPersistent(t ? t.innerText : '', a ? a.innerText : '', art ? art.getAttribute('src') : null);
-                    if (typeof showToast === 'function') showToast('Dynamic Island ist wieder da 🏝️');
+                    showIslandPersistent(titleEl ? titleEl.innerText : '', artistEl ? artistEl.innerText : '', art ? art.getAttribute('src') : null);
+                    if (typeof showToast === 'function') showToast(t('toast_island_back'));
                 } },
-                { icon: '📋', label: 'Link zur Seite kopieren', keywords: 'copy link teilen share url', action: () => { if (typeof copyPageLink === 'function') copyPageLink(); } },
-                { icon: '🔄', label: 'Seite neu laden', keywords: 'reload refresh neu laden', action: () => window.location.reload() },
+                { icon: '📋', label: t('cp_copy_link'), keywords: 'copy link teilen share url', action: () => { if (typeof copyPageLink === 'function') copyPageLink(); } },
+                { icon: '🔄', label: t('cp_reload'), keywords: 'reload refresh neu laden', action: () => window.location.reload() },
+                { icon: '🌐', label: t('cp_change_lang'), keywords: 'language sprache language change idioma langue idioma dil', keepOpen: true, action: () => openLanguagePicker(true) },
             ];
         }
 
@@ -2412,7 +2907,7 @@
             cpSelectedIndex = 0;
 
             if (cpFilteredActions.length === 0) {
-                resultsEl.innerHTML = `<div class="cp-empty">Keine Befehle gefunden für "${escapeHTML(query)}"</div>`;
+                resultsEl.innerHTML = `<div class="cp-empty">${t('cp_empty', escapeHTML(query))}</div>`;
                 return;
             }
             resultsEl.innerHTML = cpFilteredActions.map((a, i) => `
@@ -2455,7 +2950,7 @@
             pushOverlayHistory();
             overlay.classList.add('cp-active');
             input.value = '';
-            input.placeholder = 'Befehl suchen oder Seite durchsuchen...';
+            input.placeholder = t('cp_placeholder');
             renderCommandPalette('');
             setTimeout(() => input.focus(), 50);
         };
@@ -2589,16 +3084,16 @@
         }
 
         function syncStandByTrackInfo(title, artist, artUrl) {
-            const t = document.getElementById('standby-track-title');
-            const a = document.getElementById('standby-track-artist');
+            const titleEl = document.getElementById('standby-track-title');
+            const artistEl = document.getElementById('standby-track-artist');
             const img = document.getElementById('standby-track-art');
             const bg = document.getElementById('standby-bg');
             const npCard = document.getElementById('standby-nowplaying');
             const isIdle = !title;
 
             if (npCard) npCard.classList.toggle('standby-idle', isIdle);
-            if (t) t.textContent = title || 'Aktuell ist es ruhig...';
-            if (a) a.textContent = artist || 'Genieße die Stille';
+            if (titleEl) titleEl.textContent = title || t('standby_idle_title');
+            if (artistEl) artistEl.textContent = artist || t('standby_idle_subtitle');
 
             if (isIdle) {
                 if (img) img.removeAttribute('src');
@@ -2699,12 +3194,13 @@
 
         function showTutorialStep(index) {
             clearTutorialHighlights();
-            if (index >= tutorialSteps.length) {
+            const steps = getTutorialSteps();
+            if (index >= steps.length) {
                 endTutorial();
                 return;
             }
 
-            const step = tutorialSteps[index];
+            const step = steps[index];
             activeTutorialTarget = document.getElementById(step.targetId);
             
             if (activeTutorialTarget) {
@@ -2712,15 +3208,15 @@
                 activeTutorialTarget.scrollIntoView({ behavior: 'auto', block: 'center' });
             }
 
-            if (stepIndicator) stepIndicator.innerText = `Schritt ${index + 1}/${tutorialSteps.length}`;
+            if (stepIndicator) stepIndicator.innerText = t('tutorial_step', index + 1, steps.length);
             if (tutorialTitle) tutorialTitle.innerText = step.title;
             if (tutorialText) tutorialText.innerText = step.text;
 
             if (btnNext) {
-                if (index === tutorialSteps.length - 1) {
-                    btnNext.innerText = 'Abschließen';
+                if (index === steps.length - 1) {
+                    btnNext.innerText = t('tutorial_finish');
                 } else {
-                    btnNext.innerText = 'Weiter';
+                    btnNext.innerText = t('tutorial_next');
                 }
             }
         }
@@ -2886,14 +3382,14 @@
         window.copyPageLink = function(btn) {
             const url = window.location.href;
             const done = () => {
-                showToast('📋 Link kopiert! Kannst ihn jetzt teilen.');
+                showToast(t('toast_link_copied'));
             };
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(url).then(done).catch(() => {
-                    showToast('⚠️ Kopieren hat nicht geklappt. Link: ' + url, 5000);
+                    showToast(t('toast_copy_failed') + url, 5000);
                 });
             } else {
-                showToast('⚠️ Dein Browser unterstützt das nicht. Link: ' + url, 5000);
+                showToast(t('toast_copy_unsupported') + url, 5000);
             }
         };
 
@@ -3007,7 +3503,7 @@
                 if (konamiProgress === KONAMI_SEQUENCE.length) {
                     konamiProgress = 0;
                     launchConfetti();
-                    showToast('🎉 Konami-Code erkannt! Hyperfokus aktiviert!');
+                    showToast(t('toast_konami'));
                 }
             } else {
                 konamiProgress = (key === KONAMI_SEQUENCE[0]) ? 1 : 0;
@@ -3022,7 +3518,7 @@
         function checkSecretWordBuffer(buffer) {
             if (buffer.endsWith('oink')) {
                 launchEmojiRain(['🐷', '🐽'], 45);
-                showToast('🐷 Oink oink! Wer hat da gerufen?');
+                showToast(t('toast_oink'));
                 return true;
             }
             if (buffer.endsWith('forza')) {
@@ -3033,7 +3529,7 @@
                     document.body.appendChild(car);
                     setTimeout(() => car.remove(), 1700);
                 }
-                showToast('🏎️ Vroooom! Forza Horizon 5 Modus!');
+                showToast(t('toast_forza'));
                 return true;
             }
             if (buffer.endsWith('fokus') || buffer.endsWith('hyperfokus')) {
@@ -3041,12 +3537,12 @@
                     document.body.classList.add('hyperfokus-mode');
                     setTimeout(() => document.body.classList.remove('hyperfokus-mode'), 3600);
                 }
-                showToast('🧠⚡ Hyperfokus aktiviert! Jetzt geht nichts mehr verloren.');
+                showToast(t('toast_fokus'));
                 return true;
             }
             if (buffer.endsWith('matrix')) {
                 launchMatrixRain();
-                showToast('💻 Wake up, Neo...');
+                showToast(t('toast_matrix'));
                 return true;
             }
             return false;
@@ -3110,7 +3606,7 @@
                         setTimeout(() => document.body.classList.remove('disco-mode'), 2500);
                     }
                     launchEmojiRain(['✨', '🎮', '⚡', '🐷'], 35);
-                    showToast('👀 Du hast fünfmal geklickt... Disco-Modus!');
+                    showToast(t('toast_disco'));
                 }
             });
         }
@@ -3169,7 +3665,7 @@
                 }, 1200);
                 
                 if (musicChevron) musicChevron.style.transform = 'rotate(180deg)';
-                if (miniStatus) miniStatus.innerText = "Klicken zum Schließen";
+                if (miniStatus) miniStatus.innerText = t('mini_click_to_close');
             } else {
                 if (musicCardWrapper) {
                     musicCardWrapper.classList.remove('dashboard-opening');
@@ -3187,16 +3683,16 @@
                 }, 900); 
                 
                 if (mainMusicCard && mainMusicCard.classList.contains('offline')) {
-                    if (miniStatus) miniStatus.innerText = "Klicken zum Öffnen";
+                    if (miniStatus) miniStatus.innerText = t('mini_click_to_open');
                 } else {
-                    if (miniStatus) miniStatus.innerText = "Klicken zum Schließen";
+                    if (miniStatus) miniStatus.innerText = t('mini_click_to_close');
                     setTimeout(() => { 
                         if(!isDashboardOpen && miniStatus) {
-                            miniStatus.innerText = "Klicken zum Öffnen";
+                            miniStatus.innerText = t('mini_click_to_open');
                             
                             statusTextTimeout = setTimeout(() => {
                                 if(!isDashboardOpen && miniStatus) {
-                                    miniStatus.innerText = mArtist && mArtist.innerText !== "Genieße die Stille" ? mArtist.innerText : "Klicken zum Öffnen";
+                                    miniStatus.innerText = mArtist && mArtist.innerText !== t('standby_idle_subtitle') ? mArtist.innerText : t('mini_click_to_open');
                                 }
                             }, 5000);
                         } 
@@ -3260,7 +3756,7 @@
                 btn.classList.add('opacity-50', 'pointer-events-none', 'animate-pulse');
             }
             
-            if (title && artist && title !== "Aktuell ist es ruhig...") {
+            if (title && artist && title !== t('standby_idle_title')) {
                 await fetchExternalLyrics(title, artist, totalMs);
             }
             
@@ -3345,12 +3841,12 @@
             if (canvasEnabled) {
                 canvasVideo.classList.remove('opacity-0');
                 canvasVideo.play().catch(()=>{});
-                btnToggleCanvas.innerText = "Canvas: AN";
+                btnToggleCanvas.innerText = t('settings_canvas') + ': ' + t('on_label');
                 btnToggleCanvas.classList.add('text-green-400');
                 btnToggleCanvas.classList.remove('text-slate-400');
             } else {
                 canvasVideo.classList.add('opacity-0');
-                btnToggleCanvas.innerText = "Canvas: AUS";
+                btnToggleCanvas.innerText = t('settings_canvas') + ': ' + t('off_label');
                 btnToggleCanvas.classList.add('text-slate-400');
                 btnToggleCanvas.classList.remove('text-green-400');
             }
@@ -4052,8 +4548,8 @@
                             if(mainMusicCard.classList.contains('lyrics-open')) toggleLyrics(false);
                         }
                         if (mHeader) mHeader.innerText = "Gamingpig is Offline";
-                        if (mTitle) mTitle.innerText = "Aktuell ist es ruhig...";
-                        if (mArtist) mArtist.innerText = "Genieße die Stille";
+                        if (mTitle) mTitle.innerText = t('standby_idle_title');
+                        if (mArtist) mArtist.innerText = t('standby_idle_subtitle');
                         if (mAmbient) mAmbient.style.backgroundImage = "none";
                         if (mGlow) mGlow.style.backgroundImage = "none";
                         if (mArtwork) mArtwork.removeAttribute('src');
@@ -4061,7 +4557,7 @@
                         if (mText) mText.innerText = "Zen Mode";
                         if (miniTitle) miniTitle.innerText = "Dashboard minimiert";
                         if (miniIconBg) miniIconBg.className = "w-8 h-8 xxs:w-10 xxs:h-10 sm:w-12 sm:h-12 shrink-0 rounded-lg xxs:rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center transition-colors";
-                        if(!isDashboardOpen && miniStatus) miniStatus.innerText = "Klicken zum Öffnen";
+                        if(!isDashboardOpen && miniStatus) miniStatus.innerText = t('mini_click_to_open');
                         
                         if (lyricsMiniTitle) lyricsMiniTitle.innerText = "Offline";
                         if (lyricsMiniArtist) lyricsMiniArtist.innerText = "Keine Musik";
@@ -4075,7 +4571,7 @@
                         if (btnToggleCanvas) {
                             btnToggleCanvas.classList.add('opacity-50', 'cursor-not-allowed', 'text-slate-400');
                             btnToggleCanvas.classList.remove('text-green-400');
-                            btnToggleCanvas.innerText = "Canvas Video (N/A)";
+                            btnToggleCanvas.innerText = t('settings_canvas') + ' Video (N/A)';
                         }
                         
                         currentTrackId = "";
@@ -4197,7 +4693,7 @@
                         if (btnToggleCanvas) btnToggleCanvas.classList.remove('opacity-50', 'cursor-not-allowed', 'text-slate-400');
                         if (canvasEnabled) {
                             if (btnToggleCanvas) {
-                                btnToggleCanvas.innerText = "Canvas: AN";
+                                btnToggleCanvas.innerText = t('settings_canvas') + ': ' + t('on_label');
                                 btnToggleCanvas.classList.add('text-green-400');
                             }
                             if (canvasVideo) {
@@ -4206,7 +4702,7 @@
                             }
                         } else {
                             if (btnToggleCanvas) {
-                                btnToggleCanvas.innerText = "Canvas: AUS";
+                                btnToggleCanvas.innerText = t('settings_canvas') + ': ' + t('off_label');
                                 btnToggleCanvas.classList.add('text-slate-400');
                             }
                         }
@@ -4218,7 +4714,7 @@
                         if (btnToggleCanvas) {
                             btnToggleCanvas.classList.add('opacity-50', 'cursor-not-allowed', 'text-slate-400');
                             btnToggleCanvas.classList.remove('text-green-400');
-                            btnToggleCanvas.innerText = "Canvas Video (N/A)";
+                            btnToggleCanvas.innerText = t('settings_canvas') + ' Video (N/A)';
                         }
                     }
                 }
@@ -4538,6 +5034,15 @@
             fetchMusicData();
             setInterval(syncWorldwideTime, 600000);
         })();
+
+        // NEW: Sprachauswahl - beim allerersten Besuch als Setup-Assistent zeigen,
+        // sonst gespeicherte Sprache sofort auf alle Bedienelemente anwenden.
+        renderLanguagePicker();
+        if (!currentLang) {
+            openLanguagePicker();
+        } else {
+            applyLanguage(currentLang);
+        }
     </script>
 </body>
 </html>
