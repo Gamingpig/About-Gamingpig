@@ -707,6 +707,17 @@
         .tutorial-active-element:not(#ui-controls):not(#cp-trigger):not(#pwa-install-btn):not(#standby-toggle) { position: relative !important; background: white; }
         .dark .tutorial-active-element:not(#ui-controls):not(#cp-trigger):not(#pwa-install-btn):not(#standby-toggle) { background: #0f172a; }
         #ui-controls.tutorial-active-element { position: fixed !important; background: transparent !important; border-radius: 1rem; }
+        /* NEW: Bug-Fix - schwebende Elemente (Dynamic Island, Puls-Ring, Such-Hinweis) haben
+           einen höheren z-index als die Tutorial-Abdunkelung und schienen deshalb während
+           JEDES Schritts durch, nicht nur in ihrem eigenen. Jetzt während des ganzen Tutorials
+           ausgeblendet, außer genau das Element ist gerade der hervorgehobene Schritt. */
+        body.tutorial-mode #dynamic-island:not(.tutorial-active-element),
+        body.tutorial-mode #dynamic-island-ring,
+        body.tutorial-mode #search-hint-bubble,
+        body.tutorial-mode #pwa-install-btn:not(.tutorial-active-element),
+        body.tutorial-mode #cp-trigger:not(.tutorial-active-element) {
+            opacity: 0 !important; pointer-events: none !important;
+        }
         /* NEW: cp-trigger und pwa-install-btn sind selbst position:fixed (keine ui-controls-Kinder) -
            müssen das während des Tutorials bleiben, sonst werden sie aus ihrer Position gerissen. */
         #cp-trigger.tutorial-active-element, #pwa-install-btn.tutorial-active-element {
@@ -838,7 +849,7 @@
             padding: 0; opacity: 0; pointer-events: none; cursor: pointer; touch-action: none;
             -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
             -webkit-tap-highlight-color: transparent;
-            transition: width 0.7s var(--liquid-fluid), height 0.7s var(--liquid-fluid), border-radius 0.6s var(--liquid-fluid), opacity 0.4s ease, padding 0.7s var(--liquid-fluid), box-shadow 0.4s ease;
+            transition: width 0.7s var(--liquid-fluid), height 0.7s var(--liquid-fluid), border-radius 0.6s var(--liquid-fluid), opacity 0.4s ease, padding 0.7s var(--liquid-fluid), box-shadow 0.4s ease, top 0.4s ease, left 0.4s ease;
         }
         #dynamic-island.di-visible { opacity: 1; pointer-events: auto; }
         /* NEW: Im StandBy-Modus soll die Insel nicht zu sehen sein (überlagert sonst den Lockscreen) */
@@ -930,9 +941,20 @@
             display: flex; flex-direction: column; align-items: center; justify-content: space-between;
             opacity: 0; visibility: hidden; pointer-events: none; cursor: pointer;
             transition: opacity 0.6s var(--apple-ease), visibility 0.6s;
+            /*
+              NEW: Einheitlicher, geräteunabhängiger Skalierungsfaktor für die gesamte
+              StandBy-Ansicht. Basiert auf vmin (kleinere Seite des Viewports) statt vw,
+              damit auch extreme Seitenverhältnisse (sehr schmal+niedrig wie eine
+              Smartwatch, sehr breit wie ein 8K-Fernseher) proportional bleiben statt an
+              starre px-Ober-/Untergrenzen zu stoßen. "400" ist der Referenz-vmin-Wert
+              eines normalen Handys/Desktops (dort ist der Faktor = 1, das bisherige
+              Design). calc(100vmin / 1px) wandelt die Viewport-Länge in eine reine Zahl
+              um, damit sie sich unten mit calc(var(--sb-scale) * Npx) mit px verrechnen lässt.
+            */
+            --sb-scale: clamp(0.4, calc(100vmin / 1px / 400), 4);
         }
         #standby-overlay.standby-active { opacity: 1; visibility: visible; pointer-events: auto; }
-        /* NEW: Anti-Burn-in - der gesamte Inhalt verschiebt sich alle ~45s minimal (paar Pixel),
+        /* NEW: Anti-Burn-in - der gesamte Inhalt verschiebt sich alle ~10min minimal,
            damit bei langem Stehenlassen (z.B. Handy an der Ladestation) kein Einbrennen
            auf OLED-Screens passiert. Layout/Abstände bleiben dabei unverändert, nur eine
            dezente transform-Verschiebung. */
@@ -950,33 +972,56 @@
         body.low-end #standby-bg { filter: brightness(0.35); animation: none; }
         @keyframes standby-kenburns { 0% { transform: scale(1.2) translate(0,0); } 100% { transform: scale(1.32) translate(-1.5%, -1.5%); } }
 
-        #standby-clockzone { position: relative; z-index: 2; text-align: center; padding: 48px 20px 0; }
-        #standby-clock { font-family: 'JetBrains Mono', monospace; font-weight: 800; color: #fff; font-size: clamp(2.6rem, 13vw, 6rem); line-height: 1; letter-spacing: -2px; text-shadow: 0 0 60px rgba(255,255,255,0.25); }
-        #standby-date { color: rgba(255,255,255,0.6); font-size: clamp(0.75rem, 2.8vw, 1rem); font-weight: 600; margin-top: 6px; text-transform: capitalize; }
+        #standby-clockzone { position: relative; z-index: 2; text-align: center; padding: calc(var(--sb-scale) * 48px) calc(var(--sb-scale) * 20px) 0; }
+        #standby-clock { font-family: 'JetBrains Mono', monospace; font-weight: 800; color: #fff; font-size: calc(var(--sb-scale) * 64px); line-height: 1; letter-spacing: -0.03em; text-shadow: 0 0 60px rgba(255,255,255,0.25); }
+        #standby-date { color: rgba(255,255,255,0.6); font-size: calc(var(--sb-scale) * 15px); font-weight: 600; margin-top: calc(var(--sb-scale) * 6px); text-transform: capitalize; }
 
         /* --- Große Now-Playing Lockscreen-Karte --- */
         #standby-nowplaying {
-            position: relative; z-index: 2; width: min(94vw, 520px); margin-bottom: 40px;
+            position: relative; z-index: 2; width: min(94vw, calc(var(--sb-scale) * 520px)); margin-bottom: calc(var(--sb-scale) * 40px);
             background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14);
             backdrop-filter: blur(30px) saturate(150%); -webkit-backdrop-filter: blur(30px) saturate(150%);
-            border-radius: 32px; padding: 26px; box-shadow: 0 20px 60px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.15);
+            border-radius: calc(var(--sb-scale) * 32px); padding: calc(var(--sb-scale) * 26px);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.15);
+            transition: width 0.5s var(--apple-bounce);
         }
-        #standby-track { display: flex; align-items: center; gap: 20px; }
-        #standby-track-art-wrap { position: relative; width: clamp(120px, 34vw, 190px); height: clamp(120px, 34vw, 190px); flex-shrink: 0; border-radius: 28px; overflow: hidden; box-shadow: 0 14px 40px rgba(0,0,0,0.65); }
+        #standby-track { display: flex; align-items: center; gap: calc(var(--sb-scale) * 20px); transition: flex-direction 0.1s, gap 0.5s var(--apple-bounce); }
+        #standby-track-art-wrap {
+            position: relative; width: calc(var(--sb-scale) * 168px); height: calc(var(--sb-scale) * 168px); flex-shrink: 0;
+            border-radius: calc(var(--sb-scale) * 28px); overflow: hidden; box-shadow: 0 14px 40px rgba(0,0,0,0.65); cursor: pointer;
+            transition: width 0.5s var(--apple-bounce), height 0.5s var(--apple-bounce), border-radius 0.4s ease, box-shadow 0.5s ease;
+        }
+        #standby-track-art-wrap:active { transform: scale(0.97); }
         #standby-track-art { width: 100%; height: 100%; object-fit: cover; display: block; }
-        #standby-eq { position: absolute; bottom: 8px; left: 8px; display: flex; align-items: flex-end; gap: 3.5px; height: 20px; background: rgba(0,0,0,0.4); padding: 4px 7px; border-radius: 8px; }
-        #standby-eq span { width: 4px; background: #fff; border-radius: 2px; animation: di-eq-bounce 0.9s ease-in-out infinite; }
+        #standby-eq { position: absolute; bottom: calc(var(--sb-scale) * 8px); left: calc(var(--sb-scale) * 8px); display: flex; align-items: flex-end; gap: calc(var(--sb-scale) * 3.5px); height: calc(var(--sb-scale) * 20px); background: rgba(0,0,0,0.4); padding: calc(var(--sb-scale) * 4px) calc(var(--sb-scale) * 7px); border-radius: calc(var(--sb-scale) * 8px); }
+        #standby-eq span { width: calc(var(--sb-scale) * 4px); background: #fff; border-radius: 2px; animation: di-eq-bounce 0.9s ease-in-out infinite; }
         #standby-eq span:nth-child(1) { animation-delay: -0.6s; } #standby-eq span:nth-child(2) { animation-delay: -0.3s; } #standby-eq span:nth-child(3) { animation-delay: -0.9s; }
         body.low-end #standby-eq { display: none; }
-        #standby-track-text { min-width: 0; flex: 1; }
-        #standby-track-title { color: #fff; font-size: clamp(19px, 5.6vw, 28px); font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; letter-spacing: -0.3px; }
-        #standby-track-artist { color: rgba(255,255,255,0.65); font-size: clamp(14px, 4vw, 18px); font-weight: 600; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        #standby-progress-wrap { margin-top: 24px; }
-        #standby-progress-track { width: 100%; height: 6px; background: rgba(255,255,255,0.15); border-radius: 999px; overflow: hidden; }
+        #standby-track-text { min-width: 0; flex: 1; transition: opacity 0.35s ease, max-height 0.4s ease, margin 0.4s ease; }
+        #standby-track-title { color: #fff; font-size: calc(var(--sb-scale) * 24px); font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; letter-spacing: -0.02em; transition: font-size 0.5s var(--apple-bounce), text-align 0.1s; }
+        #standby-track-artist { color: rgba(255,255,255,0.65); font-size: calc(var(--sb-scale) * 16px); font-weight: 600; margin-top: calc(var(--sb-scale) * 4px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transition: font-size 0.5s var(--apple-bounce), text-align 0.1s; }
+        #standby-progress-wrap { margin-top: calc(var(--sb-scale) * 24px); }
+        #standby-progress-track { width: 100%; height: calc(var(--sb-scale) * 6px); background: rgba(255,255,255,0.15); border-radius: 999px; overflow: hidden; }
         #standby-progress-bar { height: 100%; width: 0%; background: #fff; border-radius: 999px; transition: width 0.3s linear; }
-        #standby-progress-times { display: flex; justify-content: space-between; margin-top: 9px; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.5); }
+        #standby-progress-times { display: flex; justify-content: space-between; margin-top: calc(var(--sb-scale) * 9px); font-family: 'JetBrains Mono', monospace; font-size: calc(var(--sb-scale) * 13px); font-weight: 600; color: rgba(255,255,255,0.5); }
+
+        /* --- NEW: Tap-to-Expand fürs Cover, wie beim echten iOS-Lockscreen --- */
+        #standby-nowplaying.art-expanded { width: min(94vw, calc(var(--sb-scale) * 380px)); }
+        #standby-nowplaying.art-expanded #standby-track { flex-direction: column; gap: calc(var(--sb-scale) * 22px); }
+        #standby-nowplaying.art-expanded #standby-track-art-wrap {
+            width: min(74vw, calc(var(--sb-scale) * 320px)); height: min(74vw, calc(var(--sb-scale) * 320px)); border-radius: calc(var(--sb-scale) * 36px);
+            box-shadow: 0 26px 60px rgba(0,0,0,0.75);
+        }
+        #standby-nowplaying.art-expanded #standby-track-text { text-align: center; width: 100%; }
+        #standby-nowplaying.art-expanded #standby-track-title,
+        #standby-nowplaying.art-expanded #standby-track-artist { text-align: center; white-space: normal; }
+        #standby-nowplaying.art-expanded #standby-track-title { font-size: calc(var(--sb-scale) * 30px); }
+        #standby-nowplaying.art-expanded #standby-track-artist { font-size: calc(var(--sb-scale) * 19px); }
+        /* Idle-Zustand: kein Cover vorhanden, Antippen soll dort nichts expandieren */
+        #standby-nowplaying.standby-idle.art-expanded { width: min(94vw, calc(var(--sb-scale) * 520px)); }
+        #standby-nowplaying.standby-idle.art-expanded #standby-track { flex-direction: row; }
         #standby-hint {
-            position: relative; z-index: 2; color: rgba(255,255,255,0.3); font-size: 10px; text-transform: uppercase; letter-spacing: 2px; font-weight: 700; padding-bottom: 24px;
+            position: relative; z-index: 2; color: rgba(255,255,255,0.3); font-size: calc(var(--sb-scale) * 10px); text-transform: uppercase; letter-spacing: 0.15em; font-weight: 700; padding-bottom: calc(var(--sb-scale) * 24px);
             transform: translate(var(--standby-shift-x, 0px), var(--standby-shift-y, 0px));
             transition: transform 2.5s ease-in-out;
         }
@@ -1173,7 +1218,7 @@
             </div>
             <div id="standby-nowplaying" class="standby-idle">
                 <div id="standby-track">
-                    <div id="standby-track-art-wrap">
+                    <div id="standby-track-art-wrap" onclick="toggleStandbyArtExpanded(event)" role="button" tabindex="0" aria-label="Cover vergrößern/verkleinern">
                         <img id="standby-track-art" alt="">
                         <div id="standby-eq"><span></span><span></span><span></span></div>
                     </div>
@@ -1800,15 +1845,15 @@
                 t_step1_title: 'Willkommen in meiner Welt!',
                 t_step1_text: 'Das ist mein persönliches Portfolio. Hier erfährst du alles Wichtige über mich, meinen Weg in die Systemintegration und was mich antreibt. Mein Hyperfokus ist hier Programm!',
                 t_step2_title: 'Dein Kontrollzentrum',
-                t_step2_text: 'Oben rechts hast du die volle Macht: Aktiviere den krassen "Apple Liquid Glass" Modus (Achtung: frisst Leistung!), wechsle in den Darkmode, schalte den Low-End-Modus ein, falls dein Gerät laggt, aktiviere den StandBy-Modus, oder starte dieses Tutorial neu.',
+                t_step2_text: 'Oben rechts hast du die volle Kontrolle: "Apple Liquid Glass" schaltet den edlen, aber leistungshungrigen Blur-Look ein, Dark Mode wechselt zwischen hell/dunkel, Low-End-Modus deaktiviert aufwendige Animationen für ältere/langsamere Geräte, StandBy öffnet den Lockscreen-Modus, und der letzte Button startet dieses Tutorial jederzeit neu.',
                 t_step3_title: 'Deep Dive: Wer bin ich?',
                 t_step3_text: 'Klicke auf diese interaktiven Karten. Sie öffnen detaillierte Popups, in denen ich dir mehr über mein Audio-Setup, meinen Tech-Stack, meine Homelab-Projekte und meine Freizeit erzähle.',
                 t_step4_title: 'Echtzeit Musik Integration',
-                t_step4_text: 'Der wildeste Part: Das Dashboard zeigt in Echtzeit, was ich gerade höre! Oben bleibt dabei immer eine kleine Dynamic Island sichtbar - antippen klappt sie auf, nochmal antippen klappt sie wieder zu, nach oben wischen blendet sie ganz aus. Klicke auf die Karte für synchronisierte Lyrics mit über 30 verrückten Shader-Stilen. Über das Zahnrad-Icon in den Lyrics findest du außerdem Ambient Color, Spatial Tilt und den Share-Card-Generator.',
+                t_step4_text: 'Der wildeste Part: Das Dashboard zeigt in Echtzeit, was ich gerade höre! Oben bleibt dabei immer eine kleine Dynamic Island sichtbar, solange Musik läuft - antippen klappt sie auf, nochmal antippen klappt sie wieder zu, nach oben wischen blendet sie komplett aus (über die Spotlight-Suche holst du sie zurück). Klicke auf die Karte für synchronisierte Lyrics mit über 30 verrückten Animationsstilen. Über das Zahnrad-Icon in den Lyrics findest du zusätzlich: Ambient Color (färbt den Seitenhintergrund passend zum Cover ein), Spatial Tilt (3D-Neigeeffekt aufs Cover) und den Share-Card-Generator (lädt ein Bild zum Teilen herunter).',
                 t_step5_title: 'StandBy: Dein Lockscreen',
-                t_step5_text: 'Dieser Button verwandelt die Seite in einen echten Lockscreen: große Uhrzeit, Datum und eine große Now-Playing-Karte mit Cover, Live-EQ und Fortschrittsbalken vor einem sanft animierten, geblurten Hintergrund. Perfekt fürs Nachttischhandy beim Laden.',
+                t_step5_text: 'Dieser Button verwandelt die Seite in einen echten Lockscreen: große Uhrzeit, Datum und eine große Now-Playing-Karte mit Cover, Live-EQ und Fortschrittsbalken vor einem sanft animierten, geblurten Hintergrund. Alles verschiebt sich alle paar Minuten minimal, damit nichts auf OLED-Displays einbrennt - perfekt fürs Nachttischhandy beim Laden.',
                 t_step6_title: 'Spotlight-Suche (⌘K)',
-                t_step6_text: 'Drück Strg+K (oder Cmd+K auf dem Mac) und eine echte Befehlspalette öffnet sich - genau wie auf dem Mac! Tippe einfach, was du suchst: "Dark Mode", "Lyrics", "StandBy"... Pfeiltasten zum Navigieren, Enter zum Ausführen.',
+                t_step6_text: 'Drück Strg+K (oder Cmd+K auf dem Mac) und eine echte Befehlspalette öffnet sich - genau wie auf dem Mac! Tippe einfach, was du suchst: "Dark Mode", "Lyrics", "StandBy", oder sogar "Sprache" um die Sprache zu wechseln. Pfeiltasten zum Navigieren, Enter zum Ausführen. Auf dem Handy ohne Tastatur? Auch hier tippst du einfach in das Suchfeld.',
                 t_step7_title: 'Installier mich als App!',
                 t_step7_text: 'Diese Seite erzeugt sich ihr eigenes App-Icon und lässt sich auf Android/Chrome per Klick als richtige App installieren (kein Store nötig) - auf dem iPhone geht das manuell über "Zum Home-Bildschirm" im Teilen-Menü. Fühlt sich danach an wie eine native App, ganz ohne Browserleiste.',
                 t_step8_title: 'Psst... 🤫 Ein Geheimnis',
@@ -1858,15 +1903,15 @@
                 t_step1_title: 'Welcome to my world!',
                 t_step1_text: "This is my personal portfolio. Here you'll learn everything about me, my path into systems integration, and what drives me. My hyperfocus is the whole point here!",
                 t_step2_title: 'Your control center',
-                t_step2_text: 'Top right you have full control: turn on the wild "Apple Liquid Glass" mode (careful, it eats performance!), switch to dark mode, enable low-end mode if your device lags, activate StandBy mode, or restart this tutorial.',
+                t_step2_text: 'Top right you have full control: "Apple Liquid Glass" turns on the fancy but performance-hungry blur look, Dark Mode switches between light/dark, Low-End Mode disables heavy animations for older/slower devices, StandBy opens lock-screen mode, and the last button restarts this tutorial anytime.',
                 t_step3_title: 'Deep dive: who am I?',
                 t_step3_text: 'Click these interactive cards. They open detailed popups where I tell you more about my audio setup, my tech stack, my homelab projects, and my free time.',
                 t_step4_title: 'Real-time music integration',
-                t_step4_text: "The wildest part: the dashboard shows in real time what I'm currently listening to! A small Dynamic Island always stays visible up top - tap to expand, tap again to collapse, swipe up to dismiss it completely. Click the card for synced lyrics with over 30 crazy shader styles. The gear icon in the lyrics view also has Ambient Color, Spatial Tilt, and the Share Card generator.",
+                t_step4_text: "The wildest part: the dashboard shows in real time what I'm currently listening to! A small Dynamic Island always stays visible up top while music is playing - tap to expand, tap again to collapse, swipe up to dismiss it completely (bring it back via the Spotlight search). Click the card for synced lyrics with over 30 crazy animation styles. The gear icon in the lyrics view also gives you: Ambient Color (tints the page background to match the cover), Spatial Tilt (a 3D tilt effect on the cover), and the Share Card generator (downloads a shareable image).",
                 t_step5_title: 'StandBy: your lock screen',
-                t_step5_text: 'This button turns the page into a real lock screen: a big clock, date, and a large now-playing card with cover art, a live EQ, and a progress bar in front of a gently animated, blurred background. Perfect for your nightstand while charging.',
+                t_step5_text: 'This button turns the page into a real lock screen: a big clock, date, and a large now-playing card with cover art, a live EQ, and a progress bar in front of a gently animated, blurred background. Everything shifts slightly every few minutes so nothing burns into OLED screens - perfect for your nightstand while charging.',
                 t_step6_title: 'Spotlight search (⌘K)',
-                t_step6_text: 'Press Ctrl+K (or Cmd+K on Mac) and a real command palette opens - just like on a Mac! Just type what you\'re looking for: "dark mode", "lyrics", "standby"... arrow keys to navigate, Enter to run.',
+                t_step6_text: 'Press Ctrl+K (or Cmd+K on Mac) and a real command palette opens - just like on a Mac! Just type what you\'re looking for: "dark mode", "lyrics", "standby", or even "language" to switch languages. Arrow keys to navigate, Enter to run. No keyboard on mobile? Just tap into the search box instead.',
                 t_step7_title: 'Install me as an app!',
                 t_step7_text: 'This site generates its own app icon and can be installed as a real app on Android/Chrome with one click (no store needed) - on iPhone that\'s done manually via "Add to Home Screen" in the share menu. Afterwards it feels like a native app, with no browser bar at all.',
                 t_step8_title: "Psst... 🤫 a secret",
@@ -1916,15 +1961,15 @@
                 t_step1_title: '¡Bienvenido a mi mundo!',
                 t_step1_text: 'Este es mi portafolio personal. Aquí descubrirás todo sobre mí, mi camino hacia la integración de sistemas y qué me motiva. ¡Mi hiperfoco es el protagonista aquí!',
                 t_step2_title: 'Tu centro de control',
-                t_step2_text: 'Arriba a la derecha tienes el control total: activa el modo "Apple Liquid Glass" (¡cuidado, consume rendimiento!), cambia al modo oscuro, activa el modo de bajo rendimiento si tu dispositivo va lento, activa el modo StandBy o reinicia este tutorial.',
+                t_step2_text: 'Arriba a la derecha tienes el control total: "Apple Liquid Glass" activa el elegante pero exigente efecto de desenfoque, Modo Oscuro cambia entre claro/oscuro, Modo de Bajo Rendimiento desactiva animaciones pesadas para dispositivos más antiguos/lentos, StandBy abre el modo de pantalla de bloqueo, y el último botón reinicia este tutorial cuando quieras.',
                 t_step3_title: 'A fondo: ¿quién soy?',
                 t_step3_text: 'Haz clic en estas tarjetas interactivas. Abren ventanas detalladas donde te cuento más sobre mi equipo de audio, mi stack tecnológico, mis proyectos de homelab y mi tiempo libre.',
                 t_step4_title: 'Música en tiempo real',
-                t_step4_text: 'La parte más loca: ¡el panel muestra en tiempo real lo que estoy escuchando! Arriba siempre queda visible una pequeña Dynamic Island - tócala para expandirla, tócala de nuevo para cerrarla, deslízala hacia arriba para ocultarla del todo. Haz clic en la tarjeta para ver letras sincronizadas con más de 30 estilos de animación. El icono de ajustes en las letras también tiene Ambient Color, Spatial Tilt y el generador de tarjetas para compartir.',
+                t_step4_text: 'La parte más loca: ¡el panel muestra en tiempo real lo que estoy escuchando! Una pequeña Dynamic Island permanece siempre visible arriba mientras suena música - tócala para expandirla, tócala de nuevo para cerrarla, deslízala hacia arriba para ocultarla del todo (recupérala desde la búsqueda Spotlight). Haz clic en la tarjeta para ver letras sincronizadas con más de 30 estilos de animación. El icono de ajustes en las letras también tiene: Ambient Color (tiñe el fondo de la página según la portada), Spatial Tilt (efecto de inclinación 3D en la portada), y el generador de tarjetas para compartir (descarga una imagen para compartir).',
                 t_step5_title: 'StandBy: tu pantalla de bloqueo',
-                t_step5_text: 'Este botón convierte la página en una verdadera pantalla de bloqueo: hora grande, fecha y una gran tarjeta de reproducción con portada, ecualizador en vivo y barra de progreso frente a un fondo animado y difuminado. Perfecto para la mesita de noche mientras carga.',
+                t_step5_text: 'Este botón convierte la página en una verdadera pantalla de bloqueo: hora grande, fecha y una gran tarjeta de reproducción con portada, ecualizador en vivo y barra de progreso frente a un fondo animado y difuminado. Todo se desplaza ligeramente cada pocos minutos para que nada se queme en pantallas OLED - perfecto para la mesita de noche mientras carga.',
                 t_step6_title: 'Búsqueda Spotlight (⌘K)',
-                t_step6_text: 'Presiona Ctrl+K (o Cmd+K en Mac) y se abre una paleta de comandos real, ¡igual que en Mac! Simplemente escribe lo que buscas: "modo oscuro", "letras", "standby"... flechas para navegar, Enter para ejecutar.',
+                t_step6_text: 'Presiona Ctrl+K (o Cmd+K en Mac) y se abre una paleta de comandos real, ¡igual que en Mac! Simplemente escribe lo que buscas: "modo oscuro", "letras", "standby", o incluso "idioma" para cambiar de idioma. Flechas para navegar, Enter para ejecutar. ¿Sin teclado en el móvil? Simplemente toca el cuadro de búsqueda.',
                 t_step7_title: '¡Instálame como app!',
                 t_step7_text: 'Esta página genera su propio icono de app y se puede instalar como una app de verdad en Android/Chrome con un clic (sin tienda necesaria) - en iPhone se hace manualmente con "Añadir a pantalla de inicio" en el menú compartir. Después se siente como una app nativa, sin barra de navegador.',
                 t_step8_title: 'Psst... 🤫 un secreto',
@@ -1974,15 +2019,15 @@
                 t_step1_title: 'Bienvenue dans mon monde !',
                 t_step1_text: "C'est mon portfolio personnel. Tu y découvriras tout sur moi, mon parcours vers l'intégration de systèmes et ce qui me motive. Mon hyperfocus est ici au centre de tout !",
                 t_step2_title: 'Ton centre de contrôle',
-                t_step2_text: 'En haut à droite, tu as le contrôle total : active le mode "Apple Liquid Glass" (attention, ça consomme des ressources !), passe en mode sombre, active le mode basse consommation si ton appareil rame, active le mode StandBy, ou relance ce tutoriel.',
+                t_step2_text: 'En haut à droite, tu as le contrôle total : "Apple Liquid Glass" active le look flou chic mais gourmand en performances, le mode sombre bascule entre clair/sombre, le mode basse consommation désactive les animations lourdes pour les appareils plus anciens/lents, StandBy ouvre le mode écran verrouillé, et le dernier bouton relance ce tutoriel à tout moment.',
                 t_step3_title: 'Plongée en profondeur : qui suis-je ?',
                 t_step3_text: "Clique sur ces cartes interactives. Elles ouvrent des fenêtres détaillées où je te parle de mon setup audio, ma stack technique, mes projets de homelab et mon temps libre.",
                 t_step4_title: 'Intégration musicale en temps réel',
-                t_step4_text: "La partie la plus folle : le tableau de bord affiche en temps réel ce que j'écoute ! Une petite Dynamic Island reste toujours visible en haut - appuie pour l'agrandir, réappuie pour la réduire, glisse vers le haut pour la masquer complètement. Clique sur la carte pour des paroles synchronisées avec plus de 30 styles d'animation dingues. L'icône d'engrenage dans les paroles propose aussi Ambient Color, Spatial Tilt et le générateur de carte à partager.",
+                t_step4_text: "La partie la plus folle : le tableau de bord affiche en temps réel ce que j'écoute ! Une petite Dynamic Island reste toujours visible en haut tant que la musique joue - appuie pour l'agrandir, réappuie pour la réduire, glisse vers le haut pour la masquer complètement (récupère-la via la recherche Spotlight). Clique sur la carte pour des paroles synchronisées avec plus de 30 styles d'animation. L'icône d'engrenage dans les paroles propose aussi : Ambient Color (teinte le fond de la page selon la pochette), Spatial Tilt (effet d'inclinaison 3D sur la pochette), et le générateur de carte à partager (télécharge une image à partager).",
                 t_step5_title: "StandBy : ton écran verrouillé",
-                t_step5_text: "Ce bouton transforme la page en véritable écran verrouillé : grande horloge, date, et une grande carte de lecture avec pochette, égaliseur en direct et barre de progression devant un fond flouté et animé en douceur. Parfait sur la table de nuit pendant la charge.",
+                t_step5_text: "Ce bouton transforme la page en véritable écran verrouillé : grande horloge, date, et une grande carte de lecture avec pochette, égaliseur en direct et barre de progression devant un fond flouté animé en douceur. Tout se décale légèrement toutes les quelques minutes pour éviter la marque d'écran sur les écrans OLED - parfait sur la table de nuit pendant la charge.",
                 t_step6_title: 'Recherche Spotlight (⌘K)',
-                t_step6_text: 'Appuie sur Ctrl+K (ou Cmd+K sur Mac) et une vraie palette de commandes s\'ouvre - exactement comme sur Mac ! Tape simplement ce que tu cherches : "mode sombre", "paroles", "standby"... flèches pour naviguer, Entrée pour valider.',
+                t_step6_text: 'Appuie sur Ctrl+K (ou Cmd+K sur Mac) et une vraie palette de commandes s\'ouvre - exactement comme sur Mac ! Tape simplement ce que tu cherches : "mode sombre", "paroles", "standby", ou même "langue" pour changer de langue. Flèches pour naviguer, Entrée pour valider. Pas de clavier sur mobile ? Touche simplement le champ de recherche.',
                 t_step7_title: 'Installe-moi comme appli !',
                 t_step7_text: "Ce site génère sa propre icône d'application et peut être installé comme une vraie appli sur Android/Chrome en un clic (pas besoin de store) - sur iPhone ça se fait manuellement via \"Sur l'écran d'accueil\" dans le menu de partage. Après ça, on dirait une vraie appli native, sans aucune barre de navigateur.",
                 t_step8_title: 'Psst... 🤫 un secret',
@@ -2032,15 +2077,15 @@
                 t_step1_title: 'Bem-vindo ao meu mundo!',
                 t_step1_text: 'Este é meu portfólio pessoal. Aqui você descobre tudo sobre mim, meu caminho na integração de sistemas e o que me motiva. Meu hiperfoco é o protagonista aqui!',
                 t_step2_title: 'Sua central de controle',
-                t_step2_text: 'No canto superior direito você tem controle total: ative o modo insano "Apple Liquid Glass" (cuidado, consome desempenho!), mude para o modo escuro, ative o modo de baixo desempenho se seu aparelho travar, ative o modo StandBy, ou reinicie este tutorial.',
+                t_step2_text: 'No canto superior direito você tem controle total: "Apple Liquid Glass" ativa o visual desfocado chique mas pesado, Modo Escuro alterna entre claro/escuro, Modo de Baixo Desempenho desativa animações pesadas para aparelhos mais antigos/lentos, StandBy abre o modo tela de bloqueio, e o último botão reinicia este tutorial quando quiser.',
                 t_step3_title: 'Aprofundando: quem sou eu?',
                 t_step3_text: 'Clique nesses cartões interativos. Eles abrem janelas detalhadas onde conto mais sobre minha configuração de áudio, minha stack de tecnologia, meus projetos de homelab e meu tempo livre.',
                 t_step4_title: 'Integração musical em tempo real',
-                t_step4_text: 'A parte mais louca: o painel mostra em tempo real o que estou ouvindo! Uma pequena Dynamic Island fica sempre visível no topo - toque para expandir, toque de novo para recolher, deslize para cima para ocultar completamente. Clique no cartão para letras sincronizadas com mais de 30 estilos de animação malucos. O ícone de engrenagem nas letras também tem Ambient Color, Spatial Tilt e o gerador de cartão para compartilhar.',
+                t_step4_text: 'A parte mais louca: o painel mostra em tempo real o que estou ouvindo! Uma pequena Dynamic Island fica sempre visível no topo enquanto a música toca - toque para expandir, toque de novo para recolher, deslize para cima para ocultar completamente (traga de volta pela busca Spotlight). Clique no cartão para letras sincronizadas com mais de 30 estilos de animação. O ícone de engrenagem nas letras também tem: Ambient Color (tinge o fundo da página conforme a capa), Spatial Tilt (efeito de inclinação 3D na capa), e o gerador de cartão para compartilhar (baixa uma imagem para compartilhar).',
                 t_step5_title: 'StandBy: sua tela de bloqueio',
-                t_step5_text: 'Este botão transforma a página em uma tela de bloqueio de verdade: relógio grande, data e um grande cartão do que está tocando, com capa, equalizador ao vivo e barra de progresso na frente de um fundo animado e desfocado. Perfeito para o criado-mudo enquanto carrega.',
+                t_step5_text: 'Este botão transforma a página em uma tela de bloqueio de verdade: relógio grande, data e um grande cartão do que está tocando, com capa, equalizador ao vivo e barra de progresso na frente de um fundo animado e desfocado. Tudo se desloca levemente a cada poucos minutos para não queimar telas OLED - perfeito para o criado-mudo enquanto carrega.',
                 t_step6_title: 'Busca Spotlight (⌘K)',
-                t_step6_text: 'Aperte Ctrl+K (ou Cmd+K no Mac) e uma paleta de comandos de verdade se abre - igualzinho ao Mac! É só digitar o que procura: "modo escuro", "letras", "standby"... setas para navegar, Enter para executar.',
+                t_step6_text: 'Aperte Ctrl+K (ou Cmd+K no Mac) e uma paleta de comandos de verdade se abre - igualzinho ao Mac! É só digitar o que procura: "modo escuro", "letras", "standby", ou até "idioma" para mudar o idioma. Setas para navegar, Enter para executar. Sem teclado no celular? É só tocar na caixa de busca.',
                 t_step7_title: 'Me instale como app!',
                 t_step7_text: 'Este site gera seu próprio ícone de app e pode ser instalado como um app de verdade no Android/Chrome com um clique (sem loja necessária) - no iPhone isso é feito manualmente via "Adicionar à Tela de Início" no menu de compartilhar. Depois disso parece um app nativo, sem nenhuma barra de navegador.',
                 t_step8_title: 'Psst... 🤫 um segredo',
@@ -2090,15 +2135,15 @@
                 t_step1_title: 'Dünyama hoş geldin!',
                 t_step1_text: 'Bu benim kişisel portfolyom. Burada benim hakkımda, sistem entegrasyonuna giden yolum ve beni neyin motive ettiği hakkında her şeyi öğreneceksin. Hiperodağım burada başrolde!',
                 t_step2_title: 'Kontrol merkezin',
-                t_step2_text: 'Sağ üstte tüm kontrol sende: çılgın "Apple Liquid Glass" modunu aç (dikkat, performans yer!), karanlık moda geç, cihazın yavaşsa düşük performans modunu aç, StandBy modunu etkinleştir veya bu eğitimi yeniden başlat.',
+                t_step2_text: 'Sağ üstte tüm kontrol sende: "Apple Liquid Glass" şık ama performans yiyen bulanıklık görünümünü açar, Karanlık Mod açık/koyu arasında geçiş yapar, Düşük Performans Modu eski/yavaş cihazlar için ağır animasyonları kapatır, StandBy kilit ekranı modunu açar, ve son buton bu eğitimi istediğin zaman yeniden başlatır.',
                 t_step3_title: 'Derinlemesine: ben kimim?',
                 t_step3_text: 'Bu etkileşimli kartlara tıkla. Ses düzenim, teknoloji yığınım, homelab projelerim ve boş zamanım hakkında daha fazla bilgi veren detaylı pencereler açılıyor.',
                 t_step4_title: 'Gerçek zamanlı müzik entegrasyonu',
-                t_step4_text: "En çılgın kısım: panel şu anda ne dinlediğimi gerçek zamanlı gösteriyor! Üstte küçük bir Dynamic Island her zaman görünür kalır - dokun genişlesin, tekrar dokun küçülsün, yukarı kaydır tamamen gizlensin. Senkronize şarkı sözleri için karta tıkla, 30'dan fazla çılgın animasyon stiliyle. Şarkı sözlerindeki dişli simgesinde ayrıca Ambient Color, Spatial Tilt ve paylaşım kartı oluşturucu var.",
+                t_step4_text: "En çılgın kısım: panel şu anda ne dinlediğimi gerçek zamanlı gösteriyor! Müzik çalarken üstte küçük bir Dynamic Island her zaman görünür kalır - dokun genişlesin, tekrar dokun küçülsün, yukarı kaydır tamamen gizlensin (Spotlight aramasıyla geri getir). Senkronize şarkı sözleri için karta tıkla, 30'dan fazla animasyon stiliyle. Şarkı sözlerindeki dişli simgesi ayrıca şunları sunar: Ambient Color (sayfa arka planını kapak resmine göre boyar), Spatial Tilt (kapak resminde 3D eğim efekti), ve paylaşım kartı oluşturucu (paylaşılabilir bir resim indirir).",
                 t_step5_title: 'StandBy: kilit ekranın',
-                t_step5_text: 'Bu buton sayfayı gerçek bir kilit ekranına dönüştürür: büyük saat, tarih ve kapak resmi, canlı ekolayzır ve ilerleme çubuğuyla büyük bir "şimdi çalıyor" kartı, yumuşakça hareket eden bulanık bir arka plan önünde. Şarj olurken komodinde durması için mükemmel.',
+                t_step5_text: 'Bu buton sayfayı gerçek bir kilit ekranına dönüştürür: büyük saat, tarih ve kapak resmi, canlı ekolayzır ve ilerleme çubuğuyla büyük bir "şimdi çalıyor" kartı, yumuşakça hareket eden bulanık bir arka plan önünde. OLED ekranlarda iz bırakmaması için her şey birkaç dakikada bir hafifçe kayar - şarj olurken komodinde durması için mükemmel.',
                 t_step6_title: 'Spotlight arama (⌘K)',
-                t_step6_text: 'Ctrl+K (Mac\'te Cmd+K) tuşuna bas ve gerçek bir komut paleti açılsın - tıpkı Mac\'teki gibi! Ne aradığını yaz: "karanlık mod", "şarkı sözleri", "standby"... gezinmek için ok tuşları, çalıştırmak için Enter.',
+                t_step6_text: 'Ctrl+K (Mac\'te Cmd+K) tuşuna bas ve gerçek bir komut paleti açılsın - tıpkı Mac\'teki gibi! Ne aradığını yaz: "karanlık mod", "şarkı sözleri", "standby", hatta dili değiştirmek için "dil" bile yazabilirsin. Gezinmek için ok tuşları, çalıştırmak için Enter. Telefonda klavye yok mu? Arama kutusuna dokunman yeterli.',
                 t_step7_title: 'Beni uygulama olarak yükle!',
                 t_step7_text: 'Bu site kendi uygulama simgesini oluşturur ve Android/Chrome\'da tek tıkla gerçek bir uygulama olarak yüklenebilir (mağaza gerekmez) - iPhone\'da bu, paylaş menüsündeki "Ana Ekrana Ekle" ile manuel yapılır. Sonrasında tarayıcı çubuğu olmadan gerçek bir uygulama gibi hissettirir.',
                 t_step8_title: 'Pist... 🤫 bir sır',
@@ -2605,6 +2650,36 @@
 
         // Aktualisiert Inhalt + zeigt die Insel dauerhaft (klein) an, solange ein Track aktiv ist.
         // Wird bei JEDEM Musik-Update aufgerufen, nicht nur bei Songwechsel.
+        // NEW: Positioniert die Dynamic Island IMMER kollisionsfrei zur echten Kontrollleiste
+        // (#ui-controls), egal welche Bildschirmgröße - misst deren tatsächliche, live
+        // gerenderte Position/Größe (statt starrer Media-Query-Werte), da diese sich je nach
+        // Breakpoint/Sprache/Inhalt unterscheiden kann. Wird unterhalb + links davon zentriert,
+        // sodass auf breiten Screens viel Platz bleibt (Insel bleibt dann schön mittig-links),
+        // auf schmalen Screens (z.B. iPhone) aber garantiert kein Overlap mehr entsteht.
+        function positionDynamicIsland() {
+            const island = document.getElementById('dynamic-island');
+            const ring = document.getElementById('dynamic-island-ring');
+            const uiControls = document.getElementById('ui-controls');
+            if (!island || !uiControls) return;
+
+            const uiRect = uiControls.getBoundingClientRect();
+
+            // Vertikal: mindestens so weit unten wie die Kontrollleiste + Puffer, nie höher als die 40px-Basis
+            const minTopFromSafeArea = (parseFloat(getComputedStyle(island).top) || 40);
+            const topPx = Math.max(uiRect.bottom + 10, minTopFromSafeArea);
+
+            // Horizontal: mittig im Bereich LINKS von der Kontrollleiste (mit 12px Puffer davor),
+            // fällt automatisch auf echte Bildschirmmitte zurück, wenn dort genug Platz ist.
+            const rightBound = Math.max(uiRect.left - 12, window.innerWidth * 0.25);
+            const leftPx = rightBound / 2;
+
+            island.style.top = topPx + 'px';
+            island.style.left = leftPx + 'px';
+            if (ring) { ring.style.top = topPx + 'px'; ring.style.left = leftPx + 'px'; }
+        }
+        window.addEventListener('resize', () => { clearTimeout(window._diPosTimeout); window._diPosTimeout = setTimeout(positionDynamicIsland, 120); });
+        window.addEventListener('orientationchange', () => setTimeout(positionDynamicIsland, 200));
+
         function updateIslandRing() {
             const ring = document.getElementById('dynamic-island-ring');
             const island = document.getElementById('dynamic-island');
@@ -3055,6 +3130,8 @@
                 clearInterval(standByShiftInterval);
                 document.documentElement.style.setProperty('--standby-shift-x', '0px');
                 document.documentElement.style.setProperty('--standby-shift-y', '0px');
+                const npCardReset = document.getElementById('standby-nowplaying');
+                if (npCardReset) npCardReset.classList.remove('art-expanded'); // NEW: nächstes Mal wieder klein starten
                 // NEW: Dynamic Island nach Verlassen von StandBy wieder zulassen
                 const island = document.getElementById('dynamic-island');
                 if (island) island.classList.remove('di-hidden-by-standby');
@@ -3083,6 +3160,17 @@
             document.documentElement.style.setProperty('--standby-shift-y', pos.y + 'px');
         }
 
+        // NEW: Tap-to-Expand fürs Cover im StandBy - wie beim echten iOS-Lockscreen.
+        // stopPropagation() ist wichtig, sonst würde der Tap zusätzlich den onclick des
+        // gesamten Overlays auslösen und StandBy direkt wieder verlassen.
+        window.toggleStandbyArtExpanded = function(event) {
+            if (event) event.stopPropagation();
+            const npCard = document.getElementById('standby-nowplaying');
+            if (!npCard || npCard.classList.contains('standby-idle')) return; // kein Track -> nichts zum Vergrößern
+            haptic(10);
+            npCard.classList.toggle('art-expanded');
+        };
+
         function syncStandByTrackInfo(title, artist, artUrl) {
             const titleEl = document.getElementById('standby-track-title');
             const artistEl = document.getElementById('standby-track-artist');
@@ -3092,6 +3180,7 @@
             const isIdle = !title;
 
             if (npCard) npCard.classList.toggle('standby-idle', isIdle);
+            if (isIdle && npCard) npCard.classList.remove('art-expanded'); // kein Track mehr -> vergrößerte Ansicht zurücksetzen
             if (titleEl) titleEl.textContent = title || t('standby_idle_title');
             if (artistEl) artistEl.textContent = artist || t('standby_idle_subtitle');
 
@@ -3160,6 +3249,7 @@
         }
 
         function endTutorial() {
+            document.body.classList.remove('tutorial-mode');
             if (tutorialBox) {
                 clearTimeout(tutorialTimeout);
                 tutorialBox.classList.remove('tutorial-opening');
@@ -3225,6 +3315,7 @@
         function startTutorial() {
             currentStepIndex = 0;
             originalPerfModeState = localStorage.getItem('perfMode');
+            document.body.classList.add('tutorial-mode');
             
             applyPerformanceMode(true);
             
@@ -5038,6 +5129,8 @@
         // NEW: Sprachauswahl - beim allerersten Besuch als Setup-Assistent zeigen,
         // sonst gespeicherte Sprache sofort auf alle Bedienelemente anwenden.
         renderLanguagePicker();
+        positionDynamicIsland();
+        setTimeout(positionDynamicIsland, 400); // Nachlauf, falls Fonts/Layout sich noch verschieben
         if (!currentLang) {
             openLanguagePicker();
         } else {
