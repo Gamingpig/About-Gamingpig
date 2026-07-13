@@ -1,4 +1,47 @@
 <!DOCTYPE html>
+<!--
+    ================================================================
+    DEV CHANGELOG - für automatische Release-Notes-Generierung
+    ================================================================
+    Dieser Block ist für Tools wie GitHub Copilot gedacht, die aus
+    diesem Repo Release Notes erzeugen. Bei jeder inhaltlichen
+    Änderung bitte hier oben einen neuen Eintrag ergänzen:
+    [BUGFIX] oder [PERFORMANCE] oder [FEATURE] als Tag, dann kurz
+    Symptom/Ziel, Ursache, Fix, und der beobachtbare Effekt.
+    Neueste Einträge oben.
+    ================================================================
+
+    [BUGFIX] Lukas' TikTok-Link zeigte auf den falschen Account
+      - Vorher: @lukas_1838 (falsch)
+      - Jetzt:  @luk.ki65 (korrekt)
+      - Betroffen: Lukas' TikTok-Karte in der Social-Links-Sektion.
+
+    [BUGFIX] Schließen der Lyrics-Ansicht schloss versehentlich auch
+             das komplette Musik-Dashboard mit, wenn beide offen waren.
+      - Ursache: popOverlayHistory() rief history.back() auf (für den
+        Android-Zurück-Button), was einen zusätzlichen popstate-Event
+        auslöste. Dieser rief closeTopmostOverlay() ein zweites Mal
+        auf - da Lyrics zu dem Zeitpunkt schon geschlossen war, wurde
+        stattdessen das nächste Overlay darunter (Dashboard) geschlossen.
+      - Fix: suppressPopHandling-Flag wird jetzt VOR dem history.back()-
+        Aufruf gesetzt (statt erst im popstate-Handler), wodurch der
+        selbst ausgelöste Folge-Event korrekt ignoriert wird. Der echte
+        Zurück-Button funktioniert weiterhin normal und schließt weiterhin
+        korrekt ein Overlay nach dem anderen.
+
+    [PERFORMANCE] updateProgressUI() cachte DOM-Elemente nicht
+      - Vorher: 5x document.getElementById() bei JEDEM Animation-Frame
+        (~60x/Sekunde) für die StandBy- und Dynamic-Island-Fortschritts-
+        anzeigen (Progressbar, Zeit-Labels, EQ-Balken).
+      - Jetzt: Einmalig beim Laden gecacht (sbProgressBarEl,
+        sbTimeCurrentEl, sbTimeTotalEl, sbEqEl, diProgressBarEl),
+        analog zu den bereits bestehenden gecachten Referenzen
+        (timeCurrentEl, progressBar) weiter oben im Script.
+      - Effekt: ~300 unnötige DOM-Lookups pro Sekunde eingespart,
+        solange Musik läuft und StandBy oder die Dynamic Island
+        sichtbar sind - spürbar auf schwächeren/älteren Geräten.
+    ================================================================
+-->
 <html lang="de" id="html-root">
 <head>
     <meta charset="UTF-8">
@@ -1741,7 +1784,7 @@
                     </div>
                     <h2 class="text-base xxs:text-xl xs:text-2xl sm:text-3xl font-bold">Lukas' TikTok</h2>
                 </div>
-                <a href="https://www.tiktok.com/@lukas_1838?_r=1&_t=ZG-95Q77G17ixE" target="_blank" rel="noopener noreferrer" class="group/link inline-flex items-center gap-1.5 xxs:gap-2 sm:gap-3 text-sm xxs:text-base sm:text-xl text-blue-500 hover:text-blue-600 font-bold transition-all">
+                <a href="https://www.tiktok.com/@luk.ki65?_r=1&_t=ZG-9800yjq2GLx" target="_blank" rel="noopener noreferrer" class="group/link inline-flex items-center gap-1.5 xxs:gap-2 sm:gap-3 text-sm xxs:text-base sm:text-xl text-blue-500 hover:text-blue-600 font-bold transition-all">
                     <span id="cta-lukas">Hier geht's zu Lukas' Kanal</span>
                     <div class="p-0.5 xxs:p-1 sm:p-1.5 bg-blue-500/10 rounded xxs:rounded-md sm:rounded-lg group-hover/link:translate-x-1 transition-transform">
                         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-4 xxs:h-4 sm:w-5 sm:h-5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
@@ -1822,6 +1865,14 @@
         const timeCurrentEl = document.getElementById('time-current');
         const timeTotalEl = document.getElementById('time-total');
         const progressBar = document.getElementById('progress-bar');
+        // NEW: Performance-Fix - diese 5 Elemente wurden vorher bei JEDEM Animation-Frame
+        // (~60x/Sekunde) neu per getElementById gesucht, obwohl sie statisch sind. Jetzt
+        // einmalig gecacht wie die anderen Referenzen hier oben.
+        const sbProgressBarEl = document.getElementById('standby-progress-bar');
+        const sbTimeCurrentEl = document.getElementById('standby-time-current');
+        const sbTimeTotalEl = document.getElementById('standby-time-total');
+        const sbEqEl = document.getElementById('standby-eq');
+        const diProgressBarEl = document.getElementById('di-progress-bar');
         const lyricsContent = document.getElementById('lyrics-content');
         const lyricsMiniArt = document.getElementById('lyrics-mini-art');
         const lyricsMiniTitle = document.getElementById('lyrics-mini-title');
@@ -4891,18 +4942,14 @@
                     progressBar.style.width = '0%';
                 }
             }
-            // NEW: StandBy + Dynamic Island Progress synchron mitziehen
+            // NEW: StandBy + Dynamic Island Progress synchron mitziehen (jetzt mit gecachten
+            // Element-Referenzen statt getElementById bei jedem Frame - siehe Performance-Fix oben)
             const pct = totalMs > 0 ? Math.min((currentMs / totalMs) * 100, 100) : 0;
-            const sbBar = document.getElementById('standby-progress-bar');
-            const sbCur = document.getElementById('standby-time-current');
-            const sbTot = document.getElementById('standby-time-total');
-            const sbEq = document.getElementById('standby-eq');
-            if (sbBar) sbBar.style.width = pct + '%';
-            if (sbCur) sbCur.innerText = formatTime(currentMs);
-            if (sbTot) sbTot.innerText = formatTime(totalMs);
-            if (sbEq) sbEq.style.display = trackIsPlaying ? 'flex' : 'none';
-            const diBar = document.getElementById('di-progress-bar');
-            if (diBar) diBar.style.width = pct + '%';
+            if (sbProgressBarEl) sbProgressBarEl.style.width = pct + '%';
+            if (sbTimeCurrentEl) sbTimeCurrentEl.innerText = formatTime(currentMs);
+            if (sbTimeTotalEl) sbTimeTotalEl.innerText = formatTime(totalMs);
+            if (sbEqEl) sbEqEl.style.display = trackIsPlaying ? 'flex' : 'none';
+            if (diProgressBarEl) diProgressBarEl.style.width = pct + '%';
         }
 
         function getCharWeight(char, isLastWord, isVowel) {
