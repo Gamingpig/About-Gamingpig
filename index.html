@@ -11,6 +11,19 @@
     Neueste Einträge oben.
     ================================================================
 
+    [BUGFIX] Alte, gecachte Versionen der Seite blieben auf manchen Geräten (v.a. iPhone
+             mit "Zum Home-Bildschirm hinzugefügt") hartnäckig sichtbar, obwohl neue
+             Commits bereits erfolgreich deployed waren.
+      - Ursache: Der Service Worker (sw.js) nutzte `fetch()` ohne explizite Cache-
+        Einstellung. Dadurch konnte der interne HTTP-Cache des Browsers eine veraltete
+        Antwort liefern, obwohl die Fetch-Strategie eigentlich "network-first" sein
+        sollte. Zusätzlich behielt der Cache-Name ("v1") über mehrere Deployments hinweg
+        denselben Wert, wodurch alte Cache-Einträge nie zwangsweise invalidiert wurden.
+      - Fix: CACHE_NAME auf "v2" hochgezählt (erzwingt Löschen alter Caches beim nächsten
+        activate-Event) und `fetch(event.request, { cache: "no-store" })` gesetzt, damit
+        wirklich jedes Mal über das Netzwerk geholt wird. Zusätzlich Cache-Control/
+        Pragma/Expires Meta-Tags in der HTML ergänzt, um Caching zusätzlich zu bremsen.
+
     [BUGFIX] Tutorial startete gleichzeitig mit der Sprachauswahl beim allerersten Besuch
       - Symptom: Für Erstbesucher poppten Sprachauswahl-Bildschirm UND Tutorial ("Schritt
         1/8 - Willkommen in meiner Welt!") gleichzeitig übereinander auf, weil das Tutorial
@@ -64,6 +77,10 @@
     <title> Gamingpig | Portfolio</title>
 
     <!-- NEW: PWA / "Add to Home Screen" Support -->
+    <!-- NEW: Cache-Control-Hinweise gegen zu aggressives Caching (siehe DEV CHANGELOG) -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <meta name="theme-color" content="#020617">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
