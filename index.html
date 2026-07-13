@@ -11,6 +11,21 @@
     Neueste Einträge oben.
     ================================================================
 
+    [BUGFIX] Tutorial startete gleichzeitig mit der Sprachauswahl beim allerersten Besuch
+      - Symptom: Für Erstbesucher poppten Sprachauswahl-Bildschirm UND Tutorial ("Schritt
+        1/8 - Willkommen in meiner Welt!") gleichzeitig übereinander auf, weil das Tutorial
+        einen höheren z-index (99999) hat als die Sprachauswahl (1000) und somit darüber
+        gerendert wurde - siehe Bugreport-Screenshot.
+      - Ursache: Der Tutorial-Autostart (`if (!localStorage.getItem('tutorialCompleted'))
+        setTimeout(startTutorial, 500)`) lief komplett unabhängig von der Sprachauswahl-
+        Logik und feuerte immer 500ms nach Seitenload, egal ob gerade noch keine Sprache
+        gewählt wurde.
+      - Fix: Der alte Autostart läuft jetzt nur noch, wenn bereits eine Sprache gewählt
+        wurde (`&& currentLang`) - also für wiederkehrende Besucher. Für Erstbesucher
+        wurde der Autostart stattdessen in `selectLanguage()` verschoben und feuert erst
+        700ms NACHDEM die Sprachauswahl geschlossen wurde. Tutorial und Sprachauswahl
+        können sich dadurch nicht mehr überlappen.
+
     [BUGFIX] Lukas' TikTok-Link zeigte auf den falschen Account
       - Vorher: @lukas_1838 (falsch)
       - Jetzt:  @luk.ki65 (korrekt)
@@ -2826,6 +2841,11 @@
                 overlay.classList.remove('lp-active');
                 setTimeout(() => overlay.classList.add('hidden'), 550);
             }
+            // NEW: Bugfix - Tutorial-Autostart darf erst NACH der Sprachauswahl kommen,
+            // nie gleichzeitig (siehe Kommentar bei der alten if-Abfrage weiter unten).
+            if (!localStorage.getItem('tutorialCompleted')) {
+                setTimeout(startTutorial, 700);
+            }
         };
 
         // Aktualisiert alle übersetzbaren Bedienelemente auf der Seite. Persönliche
@@ -4258,7 +4278,13 @@
         if (btnSkip) btnSkip.addEventListener('click', endTutorial);
         if (btnStartTutorial) btnStartTutorial.addEventListener('click', startTutorial);
 
-        if (!localStorage.getItem('tutorialCompleted')) {
+        // NEW: Bugfix - vorher lief dieser Autostart komplett unabhängig von der
+        // Sprachauswahl, wodurch das Tutorial gleichzeitig mit dem Sprachauswahl-
+        // Bildschirm aufpoppen konnte (siehe Screenshot-Bugreport). Jetzt nur noch für
+        // wiederkehrende Besucher, die schon eine Sprache gewählt haben - für Erstbesucher
+        // passiert der Autostart stattdessen in selectLanguage(), NACHDEM die Sprache
+        // gewählt wurde (siehe dort).
+        if (!localStorage.getItem('tutorialCompleted') && currentLang) {
             setTimeout(startTutorial, 500);
         }
 
