@@ -11,6 +11,42 @@
     Neueste Einträge oben.
     ================================================================
 
+    [PERFORMANCE] Weitere Effizienz-Verbesserungen nach erstem Performance-Audit
+      1) Alle 3 Fortschrittsbalken (Haupt-Dashboard, StandBy, Dynamic Island) animierten
+         `width` statt `transform`. Jetzt `transform: scaleX()` (GPU statt Layout-Reflow),
+         analog zum bereits gefixten EQ-Balken-Problem.
+      2) StandBy-Hintergrund: Blur-Radius von 50px auf 36px reduziert (kaum sichtbarer
+         Unterschied, spürbar günstiger für die GPU) und Ken-Burns-Zyklus von 20s auf 26s
+         verlangsamt - relevant, weil StandBy potenziell stundenlang offen bleibt.
+
+    [FEATURE] Intelligente Auto-Erkennung für den Low-End-Modus
+      - Vorher: Nur die Bildschirmbreite (<360px) wurde geprüft - trifft auf starke, aber
+        gerade überlastete Geräte (z.B. Pixel 8 Pro mit vielen Hintergrund-Apps) gar nicht zu.
+      - Jetzt: Zusätzlich echte Geräte-Hinweise (navigator.deviceMemory, hardwareConcurrency)
+        UND ein Live-Selbsttest der tatsächlichen Bildwiederholrate direkt nach dem Laden
+        (24 Frames gemessen, bei >= 8 "ruckeligen" Frames wird ein einmaliger Hinweis-Toast
+        gezeigt, der den Low-End-Modus vorschlägt). Erzwingt nichts automatisch bei diesem
+        Test - nur eine Empfehlung, damit die Entscheidung beim Nutzer bleibt.
+
+    [PERFORMANCE] Mehrere Ursachen für Lags/Erhitzung auf schwächeren/thermisch
+                  empfindlichen Geräten (z.B. Pixel 8 Pro) gefunden und behoben
+      1) EQ-Balken (Dynamic Island + StandBy) animierten `height` statt `transform`.
+         Height-Animationen lösen bei JEDEM Frame ein Layout-Reflow aus (CPU-teuer),
+         liefen dabei ununterbrochen, solange irgendein Track spielte - vermutlich die
+         größte Einzelursache. Jetzt `transform: scaleY()` (GPU-only, praktisch kostenlos).
+      2) Der Gyroskop-Handler für Spatial Tilt lief nach einmal erteilter Berechtigung
+         DAUERHAFT im Hintergrund weiter (auch bei gesperrtem Screen/Tab im Hintergrund/
+         geschlossenem Dashboard), da deviceorientation mit bis zu 60Hz feuert. Jetzt:
+         früher Ausstieg bei nicht sichtbarem Tab + Mindest-Schwellenwert (0.6°), damit
+         Sensor-Rauschen nicht ständig neue Frames anstößt.
+      3) Sämtliche Endlos-Animationen (Blob-Hintergrund, Ken-Burns, Puls-Ring, Ambient-
+         Drift, Lyrics-Shader) liefen permanent weiter, auch im Hintergrund. Neue globale
+         body.page-hidden-Klasse (via visibilitychange) pausiert jetzt ALLE Animationen
+         komplett, sobald der Tab/Bildschirm nicht sichtbar ist - CSS-Animationen behalten
+         beim Pausieren ihren Zustand und laufen beim Zurückkehren nahtlos weiter.
+      - Effekt: Deutlich weniger kontinuierliche CPU/GPU-Auslastung während Musik läuft,
+        kein unnötiger Hintergrund-Betrieb mehr bei gesperrtem Bildschirm/Tab-Wechsel.
+
     [BUGFIX] Alte, gecachte Versionen der Seite blieben auf manchen Geräten (v.a. iPhone
              mit "Zum Home-Bildschirm hinzugefügt") hartnäckig sichtbar, obwohl neue
              Commits bereits erfolgreich deployed waren.
@@ -947,6 +983,15 @@
         @media (min-width: 475px) { #ui-controls { top: calc(env(safe-area-inset-top, 0px) + 1rem) !important; } }
         @media (min-width: 640px) { #ui-controls { top: calc(env(safe-area-inset-top, 0px) + 1.5rem) !important; } }
 
+        /* NEW: Performance-Fix - pausiert ALLE Endlos-Animationen komplett, sobald der
+           Tab/Bildschirm nicht sichtbar ist (siehe visibilitychange-Handler im Script).
+           Betrifft: Blob-Hintergrund, Ken-Burns, Puls-Ring, EQ-Balken, Ambient-Drift,
+           Lyrics-Shader-Animationen. Läuft beim Zurückkehren nahtlos weiter, da CSS
+           Animationen ihren Zustand beim Pausieren beibehalten. */
+        body.page-hidden *, body.page-hidden *::before, body.page-hidden *::after {
+            animation-play-state: paused !important;
+        }
+
         /* ========================================================= */
         /* --- NEW: SPRACHAUSWAHL (Setup-Assistent-Stil) ------------ */
         /* ========================================================= */
@@ -998,14 +1043,19 @@
         #dynamic-island .di-artist { color: rgba(255,255,255,0.6); font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         #dynamic-island .di-eq { display: flex; align-items: flex-end; gap: 2px; height: 14px; flex-shrink: 0; opacity: 0; transition: opacity 0.3s ease 0.3s; }
         #dynamic-island.di-expanded .di-eq { opacity: 1; }
-        #dynamic-island .di-eq span { width: 2.5px; background: #3b82f6; border-radius: 2px; animation: di-eq-bounce 0.9s ease-in-out infinite; }
+        #dynamic-island .di-eq span { width: 2.5px; height: 13px; background: #3b82f6; border-radius: 2px; transform-origin: bottom; will-change: transform; animation: di-eq-bounce 0.9s ease-in-out infinite; }
         #dynamic-island .di-eq span:nth-child(1) { animation-delay: -0.6s; }
         #dynamic-island .di-eq span:nth-child(2) { animation-delay: -0.3s; }
         #dynamic-island .di-eq span:nth-child(3) { animation-delay: -0.9s; }
         #dynamic-island #di-progress-track { width: 100%; height: 2.5px; background: rgba(255,255,255,0.18); border-radius: 999px; margin-top: 7px; overflow: hidden; opacity: 0; flex-shrink: 0; transition: opacity 0.3s ease 0.3s; }
         #dynamic-island.di-expanded #di-progress-track { opacity: 1; }
-        #dynamic-island #di-progress-bar { height: 100%; width: 0%; background: #3b82f6; border-radius: 999px; transition: width 0.3s linear; }
-        @keyframes di-eq-bounce { 0%, 100% { height: 3px; } 50% { height: 13px; } }
+        #dynamic-island #di-progress-bar { height: 100%; width: 100%; transform: scaleX(0); transform-origin: left; background: #3b82f6; border-radius: 999px; transition: transform 0.3s linear; }
+        /* NEW: Performance-Fix - animiert jetzt transform:scaleY() statt height. Height-
+           Animationen lösen bei JEDEM Frame ein Layout-Reflow aus (teuer, CPU-gebunden);
+           transform läuft komplett auf der GPU und kostet praktisch nichts. Das lief
+           vorher ununterbrochen, solange Musik spielte - einer der Hauptgründe für
+           Lags/Hitze auf schwächeren bzw. thermisch empfindlichen Geräten. */
+        @keyframes di-eq-bounce { 0%, 100% { transform: scaleY(0.23); } 50% { transform: scaleY(1); } }
         body.low-end #dynamic-island { transition: none !important; animation: none !important; }
 
         /* ========================================================= */
@@ -1030,11 +1080,16 @@
         }
         #standby-bg {
             position: absolute; inset: -30px; background-size: cover; background-position: center;
-            filter: blur(50px) brightness(0.4) saturate(160%); transform: scale(1.2);
-            transition: background-image 0.8s ease; animation: standby-kenburns 20s ease-in-out infinite alternate;
+            filter: blur(36px) brightness(0.4) saturate(160%); transform: scale(1.2);
+            will-change: transform; transition: background-image 0.8s ease;
+            animation: standby-kenburns 26s ease-in-out infinite alternate;
         }
+        /* NEW: Performance-Fix - Blur-Radius von 50px auf 36px reduziert (spürbar günstiger
+           für die GPU, kaum sichtbarer Unterschied) und Ken-Burns-Zyklus von 20s auf 26s
+           verlangsamt (weniger Bewegungs-/Repaint-Arbeit pro Sekunde). Relevant, da der
+           StandBy-Modus potenziell stundenlang offen bleibt (z.B. Nachttisch beim Laden). */
         body.low-end #standby-bg { filter: brightness(0.35); animation: none; }
-        @keyframes standby-kenburns { 0% { transform: scale(1.2) translate(0,0); } 100% { transform: scale(1.32) translate(-1.5%, -1.5%); } }
+        @keyframes standby-kenburns { 0% { transform: scale(1.2) translate(0,0); } 100% { transform: scale(1.3) translate(-1.2%, -1.2%); } }
 
         #standby-clockzone { position: relative; z-index: 2; text-align: center; padding: 48px 20px 0; }
         #standby-clock { font-family: 'JetBrains Mono', monospace; font-weight: 800; color: #fff; font-size: clamp(2.6rem, 13vw, 6rem); line-height: 1; letter-spacing: -2px; text-shadow: 0 0 60px rgba(255,255,255,0.25); }
@@ -1051,7 +1106,7 @@
         #standby-track-art-wrap { position: relative; width: clamp(120px, 34vw, 190px); height: clamp(120px, 34vw, 190px); flex-shrink: 0; border-radius: 28px; overflow: hidden; box-shadow: 0 14px 40px rgba(0,0,0,0.65); }
         #standby-track-art { width: 100%; height: 100%; object-fit: cover; display: block; }
         #standby-eq { position: absolute; bottom: 8px; left: 8px; display: flex; align-items: flex-end; gap: 3.5px; height: 20px; background: rgba(0,0,0,0.4); padding: 4px 7px; border-radius: 8px; }
-        #standby-eq span { width: 4px; background: #fff; border-radius: 2px; animation: di-eq-bounce 0.9s ease-in-out infinite; }
+        #standby-eq span { width: 4px; height: 13px; background: #fff; border-radius: 2px; transform-origin: bottom; will-change: transform; animation: di-eq-bounce 0.9s ease-in-out infinite; }
         #standby-eq span:nth-child(1) { animation-delay: -0.6s; } #standby-eq span:nth-child(2) { animation-delay: -0.3s; } #standby-eq span:nth-child(3) { animation-delay: -0.9s; }
         body.low-end #standby-eq { display: none; }
         #standby-track-text { min-width: 0; flex: 1; }
@@ -1059,7 +1114,7 @@
         #standby-track-artist { color: rgba(255,255,255,0.65); font-size: clamp(14px, 4vw, 18px); font-weight: 600; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         #standby-progress-wrap { margin-top: 24px; }
         #standby-progress-track { width: 100%; height: 6px; background: rgba(255,255,255,0.15); border-radius: 999px; overflow: hidden; }
-        #standby-progress-bar { height: 100%; width: 0%; background: #fff; border-radius: 999px; transition: width 0.3s linear; }
+        #standby-progress-bar { height: 100%; width: 100%; transform: scaleX(0); transform-origin: left; background: #fff; border-radius: 999px; transition: transform 0.3s linear; }
         #standby-progress-times { display: flex; justify-content: space-between; margin-top: 9px; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.5); }
         #standby-hint {
             position: relative; z-index: 2; color: rgba(255,255,255,0.3); font-size: 10px; text-transform: uppercase; letter-spacing: 2px; font-weight: 700; padding-bottom: 24px;
@@ -1688,7 +1743,7 @@
                                 <span id="time-total">0:00</span>
                             </div>
                             <div class="h-0.5 xxs:h-1 sm:h-1.5 w-full bg-white/10 rounded-full overflow-hidden relative">
-                                <div id="progress-bar" class="absolute top-0 left-0 h-full bg-white w-0 transition-all duration-300 ease-linear rounded-full"></div>
+                                <div id="progress-bar" class="absolute top-0 left-0 h-full w-full bg-white rounded-full" style="transform: scaleX(0); transform-origin: left; transition: transform 0.3s linear;"></div>
                             </div>
                         </div>
 
@@ -2073,6 +2128,7 @@
                 greeting_evening: '🌆 Guten Abend! Viel Spaß beim Stöbern.',
                 greeting_late_night: '🌙 Nachteule, wie ich sehe. Willkommen!',
                                 label_unsynced: 'Unsynced',
+                                toast_perf_suggestion: '📉 Läuft gerade etwas ruckelig? Aktivier den Low-End-Modus oben rechts für mehr Flüssigkeit.',
                 mini_click_to_open: 'Klicken zum Öffnen', mini_click_to_close: 'Klicken zum Schließen',
                 aria_cp: 'Befehlspalette öffnen', aria_install: 'Als App installieren', aria_island: 'Song-Details öffnen, nach oben wischen zum Ausblenden'
             },
@@ -2222,6 +2278,7 @@
                 greeting_evening: '🌆 Good evening! Have fun browsing around.',
                 greeting_late_night: '🌙 A night owl, I see. Welcome!',
                                 label_unsynced: 'Unsynced',
+                                toast_perf_suggestion: '📉 Feeling a bit choppy? Turn on Low-End Mode (top right) for smoother performance.',
                 mini_click_to_open: 'Click to open', mini_click_to_close: 'Click to close',
                 aria_cp: 'Open command palette', aria_install: 'Install as app', aria_island: 'Open song details, swipe up to dismiss'
             },
@@ -2371,6 +2428,7 @@
                 greeting_evening: '🌆 ¡Buenas tardes! Que disfrutes explorando.',
                 greeting_late_night: '🌙 Búho nocturno, por lo que veo. ¡Bienvenido!',
                                 label_unsynced: 'Sin sincronizar',
+                                toast_perf_suggestion: '📉 ¿Va un poco lento? Activa el Modo de Bajo Rendimiento (arriba a la derecha) para más fluidez.',
                 mini_click_to_open: 'Clic para abrir', mini_click_to_close: 'Clic para cerrar',
                 aria_cp: 'Abrir paleta de comandos', aria_install: 'Instalar como app', aria_island: 'Abrir detalles de la canción, desliza arriba para ocultar'
             },
@@ -2520,6 +2578,7 @@
                 greeting_evening: '🌆 Bonsoir ! Amuse-toi bien à explorer.',
                 greeting_late_night: '🌙 Un oiseau de nuit, à ce que je vois. Bienvenue !',
                                 label_unsynced: 'Non synchronisé',
+                                toast_perf_suggestion: '📉 Un peu saccadé ? Active le mode basse consommation (en haut à droite) pour plus de fluidité.',
                 mini_click_to_open: 'Cliquer pour ouvrir', mini_click_to_close: 'Cliquer pour fermer',
                 aria_cp: 'Ouvrir la palette de commandes', aria_install: 'Installer comme appli', aria_island: 'Ouvrir les détails du morceau, glisser vers le haut pour masquer'
             },
@@ -2669,6 +2728,7 @@
                 greeting_evening: '🌆 Boa noite! Aproveite pra dar uma olhada por aqui.',
                 greeting_late_night: '🌙 Uma coruja noturna, pelo visto. Seja bem-vindo!',
                                 label_unsynced: 'Não sincronizado',
+                                toast_perf_suggestion: '📉 Meio travando? Ative o Modo de Baixo Desempenho (canto superior direito) pra ficar mais suave.',
                 mini_click_to_open: 'Clique para abrir', mini_click_to_close: 'Clique para fechar',
                 aria_cp: 'Abrir paleta de comandos', aria_install: 'Instalar como app', aria_island: 'Abrir detalhes da música, deslize para cima para ocultar'
             },
@@ -2818,6 +2878,7 @@
                 greeting_evening: '🌆 İyi akşamlar! Gezinmenin tadını çıkar.',
                 greeting_late_night: '🌙 Anlaşılan gece kuşusun. Hoş geldin!',
                                 label_unsynced: 'Senkronize Değil',
+                                toast_perf_suggestion: '📉 Biraz takılıyor mu? Daha akıcı olması için sağ üstteki Düşük Performans Modunu aç.',
                 mini_click_to_open: 'Açmak için tıkla', mini_click_to_close: 'Kapatmak için tıkla',
                 aria_cp: 'Komut paletini aç', aria_install: 'Uygulama olarak yükle', aria_island: 'Şarkı detaylarını aç, gizlemek için yukarı kaydır'
             }
@@ -3124,14 +3185,42 @@
             }
         }
 
-        if (window.innerWidth < 360 && !localStorage.getItem('perfMode')) {
-            applyPerformanceMode(true);
-            localStorage.setItem('perfMode', 'true');
+        // NEW: Erweiterte Auto-Erkennung - prüft nicht nur die Bildschirmbreite, sondern
+        // auch echte Geräte-Hinweise (RAM, CPU-Kerne) UND macht direkt nach dem Laden einen
+        // kurzen Live-Selbsttest der tatsächlichen Bildwiederholrate. So werden auch
+        // eigentlich starke Geräte erkannt, die gerade aus anderen Gründen (Hintergrund-
+        // Apps, Wärme, etc.) tatsächlich ruckeln - statt nur nach rohen Spezifikationen zu raten.
+        // Greift nur ein, wenn der Nutzer noch nie manuell eine Einstellung getroffen hat.
+        if (!localStorage.getItem('perfMode')) {
+            const weakScreen = window.innerWidth < 360;
+            const lowMemory = typeof navigator.deviceMemory === 'number' && navigator.deviceMemory <= 3;
+            const fewCores = typeof navigator.hardwareConcurrency === 'number' && navigator.hardwareConcurrency <= 4;
+            if (weakScreen || (lowMemory && fewCores)) {
+                applyPerformanceMode(true);
+                localStorage.setItem('perfMode', 'true');
+            } else {
+                runPerfSelfTest();
+            }
         } else {
             const savedPerfMode = localStorage.getItem('perfMode');
             if (savedPerfMode === 'true') {
                 applyPerformanceMode(true);
             }
+        }
+
+        function runPerfSelfTest() {
+            let frameCount = 0, slowFrames = 0, lastT = performance.now();
+            function tick(now) {
+                const delta = now - lastT; lastT = now; frameCount++;
+                if (delta > 33) slowFrames++; // entspricht < ~30fps für diesen Frame
+                if (frameCount < 24) { requestAnimationFrame(tick); return; }
+                // Mind. ein Drittel ruckelige Frames direkt beim Laden -> Vorschlag anzeigen (nur 1x pro Browser)
+                if (slowFrames >= 8 && !localStorage.getItem('perfMode') && !localStorage.getItem('perfSuggestionShown')) {
+                    localStorage.setItem('perfSuggestionShown', 'true');
+                    if (typeof showToast === 'function') showToast(t('toast_perf_suggestion'), 7000);
+                }
+            }
+            requestAnimationFrame(tick);
         }
 
         if (perfToggle) {
@@ -3228,14 +3317,24 @@
         }
 
         let deviceTiltRafPending = false;
+        let lastTiltX = 0, lastTiltY = 0;
         function handleDeviceTilt(e) {
+            // NEW: Performance-Fix - vorher lief dieser Handler dauerhaft im Hintergrund
+            // weiter (auch bei gesperrtem Bildschirm / Tab im Hintergrund / Dashboard
+            // geschlossen), da deviceorientation kontinuierlich mit bis zu 60Hz feuert.
+            // Jetzt: früher Ausstieg, wenn die Seite gerade nicht sichtbar ist, und ein
+            // kleiner Schwellenwert, damit winziges Sensor-Rauschen nicht ständig neue
+            // Frames anstößt.
             if (!tiltEnabled || document.body.classList.contains('low-end')) return;
+            if (document.visibilityState !== 'visible') return;
             if (deviceTiltRafPending) return;
+            const gamma = Math.max(-24, Math.min(24, e.gamma || 0));
+            const beta = Math.max(-24, Math.min(24, (e.beta || 0) - 45));
+            if (Math.abs(gamma - lastTiltX) < 0.6 && Math.abs(beta - lastTiltY) < 0.6) return;
+            lastTiltX = gamma; lastTiltY = beta;
             deviceTiltRafPending = true;
             requestAnimationFrame(() => {
                 deviceTiltRafPending = false;
-                const gamma = Math.max(-24, Math.min(24, e.gamma || 0));
-                const beta = Math.max(-24, Math.min(24, (e.beta || 0) - 45));
                 document.documentElement.style.setProperty('--tilt-x', (gamma / 24 * 14).toFixed(2));
                 document.documentElement.style.setProperty('--tilt-y', (beta / 24 * 14).toFixed(2));
             });
@@ -4979,20 +5078,20 @@
             if (timeCurrentEl) timeCurrentEl.innerText = formatTime(currentMs);
             if (progressBar) {
                 if (totalMs > 0) {
-                    const percentage = (currentMs / totalMs) * 100;
-                    progressBar.style.width = `${Math.min(percentage, 100)}%`;
+                    const percentage = Math.min((currentMs / totalMs) * 100, 100);
+                    progressBar.style.transform = `scaleX(${percentage / 100})`;
                 } else {
-                    progressBar.style.width = '0%';
+                    progressBar.style.transform = 'scaleX(0)';
                 }
             }
             // NEW: StandBy + Dynamic Island Progress synchron mitziehen (jetzt mit gecachten
             // Element-Referenzen statt getElementById bei jedem Frame - siehe Performance-Fix oben)
             const pct = totalMs > 0 ? Math.min((currentMs / totalMs) * 100, 100) : 0;
-            if (sbProgressBarEl) sbProgressBarEl.style.width = pct + '%';
+            if (sbProgressBarEl) sbProgressBarEl.style.transform = `scaleX(${pct / 100})`;
             if (sbTimeCurrentEl) sbTimeCurrentEl.innerText = formatTime(currentMs);
             if (sbTimeTotalEl) sbTimeTotalEl.innerText = formatTime(totalMs);
             if (sbEqEl) sbEqEl.style.display = trackIsPlaying ? 'flex' : 'none';
-            if (diProgressBarEl) diProgressBarEl.style.width = pct + '%';
+            if (diProgressBarEl) diProgressBarEl.style.transform = `scaleX(${pct / 100})`;
         }
 
         function getCharWeight(char, isLastWord, isVowel) {
@@ -5975,6 +6074,13 @@
         setInterval(fetchMusicData, 5000);
 
         document.addEventListener("visibilitychange", () => {
+            // NEW: Performance-Fix - alle Endlos-Animationen (Blob-Hintergrund, Ken-Burns,
+            // Puls-Ring, EQ-Balken, etc.) laufen bisher IMMER weiter, auch wenn der Tab
+            // im Hintergrund ist oder der Bildschirm gesperrt wurde. Das kostet
+            // durchgehend CPU/GPU/Akku ohne jeden sichtbaren Nutzen. Jetzt werden sie
+            // per CSS-Klasse komplett pausiert, sobald die Seite nicht sichtbar ist, und
+            // laufen beim Zurückkehren nahtlos weiter.
+            document.body.classList.toggle('page-hidden', document.visibilityState !== 'visible');
             if (document.visibilityState === "visible") {
                 syncWorldwideTime();
                 fetchMusicData();
