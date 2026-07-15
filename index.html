@@ -11,6 +11,50 @@
     Neueste Einträge oben.
     ================================================================
 
+    [PERFORMANCE] Weitere Wärme-/Lag-Ursache gefunden: mehrere dauerhaft aktive,
+                  großflächige Weichzeichner-Effekte, komplett unabhängig von Lyrics
+      - Symptom: Nutzer berichtete, dass Erhitzung/Ruckeln auch dann noch auftraten, wenn
+        für einen Song gar keine Lyrics gefunden wurden (also unabhängig vom vorherigen
+        Lyrics-Sync-Fix).
+      - Ursache: #ambilight-glow (Blur bis 75px auf Desktop), #ambient-bg (35px) und
+        #lyrics-ambient-bg (50px) laufen alle DAUERHAFT, sobald ein Track spielt bzw. die
+        Lyrics-Ansicht offen ist - komplett unabhängig davon, ob Songtext gefunden wurde.
+        Große Blur-Radien gehören zu den teuersten CSS-Operationen für die GPU, vor allem
+        auf Mobilgeräten und bei kontinuierlicher Nutzung.
+      - Fix: Blur-Radien spürbar reduziert (Ambilight-Glow 35px/75px -> 22px/46px,
+        Ambient-Hintergrund 35px -> 22px, Lyrics-Hintergrund 50px -> 32px), kaum
+        wahrnehmbarer optischer Unterschied. Zusätzlich Partikel-Glow-Radius reduziert
+        (10px -> 6px) und die Liquid-Glass-Blobs explizit in die Low-End-Modus-
+        Deaktivierung mit aufgenommen (waren vorher nicht davon erfasst).
+
+    [BUGFIX] WhatsApp/Messenger-Link-Vorschau (Bild/Titel) fehlte komplett
+      - Symptom: Beim Teilen des Links z.B. in WhatsApp wurde kein Vorschaubild und kein
+        Titel mehr angezeigt, obwohl das früher mal funktioniert hatte.
+      - Ursache: Es gab überhaupt keine Open-Graph-Meta-Tags (og:title, og:image, etc.) in
+        der Seite. WhatsApp & Co. führen kein JavaScript aus - sie lesen ausschließlich die
+        rohen HTML-Meta-Tags, um eine Vorschau zu bauen. Das zur Laufzeit im Browser per
+        Canvas generierte App-Icon kann von diesen Crawlern grundsätzlich nicht gesehen werden.
+      - Fix: Echte, statische Open-Graph- und Twitter-Card-Meta-Tags ergänzt, die auf die
+        echte, feste icon-512.png-Datei verweisen (nicht auf das Laufzeit-generierte Icon).
+
+    [PERFORMANCE] Größter bisher gefundener Performance-Bug: Lyrics-Synchronisation
+                  durchlief bei JEDEM Frame den kompletten bisherigen Song erneut
+      - Symptom: App wurde nach längerem Musikhören spürbar langsamer/heißer (Pixel 8 Pro),
+        obwohl die vorherige Performance-Runde (EQ-Balken, Gyroskop, etc.) bereits half.
+      - Ursache: syncLyricsUI() lief mit ~60 Aufrufen/Sekunde und iterierte dabei jedes Mal
+        über ALLE bereits gesungenen Zeilen des kompletten Songs, und für jede davon über
+        jedes einzelne Wort UND jeden einzelnen Buchstaben - inklusive erneutem
+        document.getElementById() pro Buchstabe. Je weiter der Song fortgeschritten war,
+        desto mehr "bereits gesungene" Zeilen gab es und desto teurer wurde jeder einzelne
+        Frame - ein klassischer, mit der Zeit eskalierender Performance-Bug.
+      - Fix: Komplett umgebaut. Bereits gesungene Zeilen werden nur noch GENAU EINMAL, im
+        Moment des Zeilen-Übergangs, final markiert (neue Funktionen markLineFullyPassed()
+        und resetLineProgress()). Der pro-Frame-Aufwand ist dadurch unabhängig von der
+        Songlänge/-fortschritt immer konstant klein (nur noch die aktuelle Zeile wird pro
+        Frame feingranular animiert), statt mit der Zeit immer größer zu werden.
+      - Effekt: Das war vermutlich die Hauptursache für die anhaltenden Lags/Erhitzung, die
+        auch nach der ersten Performance-Runde noch spürbar waren.
+
     [PERFORMANCE] Weitere Effizienz-Verbesserungen nach erstem Performance-Audit
       1) Alle 3 Fortschrittsbalken (Haupt-Dashboard, StandBy, Dynamic Island) animierten
          `width` statt `transform`. Jetzt `transform: scaleX()` (GPU statt Layout-Reflow),
@@ -112,6 +156,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title> Gamingpig | Portfolio</title>
 
+    <!-- NEW: Open Graph / Twitter Card Meta-Tags - ohne diese kann WhatsApp (und andere
+         Messenger/Social-Apps) keine Link-Vorschau (Titel/Bild/Beschreibung) bauen, da
+         diese Crawler kein JavaScript ausführen und nur die reinen HTML-Meta-Tags lesen.
+         Das generierte Canvas-Icon (siehe weiter unten im Script) reicht dafür NICHT,
+         weil es erst zur Laufzeit im Browser entsteht - hier wird bewusst die echte,
+         feste Icon-Datei referenziert. -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Gamingpig | Portfolio">
+    <meta property="og:description" content="Ausbildung, Musik-Dashboard, Homelab & mehr - das persönliche Portfolio von Gamingpig.">
+    <meta property="og:image" content="https://gamingpig.github.io/About-Gamingpig/icon-512.png">
+    <meta property="og:url" content="https://gamingpig.github.io/About-Gamingpig/">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Gamingpig | Portfolio">
+    <meta name="twitter:description" content="Ausbildung, Musik-Dashboard, Homelab & mehr - das persönliche Portfolio von Gamingpig.">
+    <meta name="twitter:image" content="https://gamingpig.github.io/About-Gamingpig/icon-512.png">
+
     <!-- NEW: PWA / "Add to Home Screen" Support -->
     <!-- NEW: Cache-Control-Hinweise gegen zu aggressives Caching (siehe DEV CHANGELOG) -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -198,7 +258,7 @@
             backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
             will-change: auto !important; 
         }
-        body.low-end .mesh-gradient, body.low-end #ambient-bg, body.low-end #ambilight-glow, body.low-end #particles-container, body.low-end #canvas-video { display: none !important; }
+        body.low-end .mesh-gradient, body.low-end #ambient-bg, body.low-end #ambilight-glow, body.low-end #particles-container, body.low-end #canvas-video, body.low-end .blob-container { display: none !important; }
         body.low-end .reveal { opacity: 1 !important; transform: none !important; }
         body.low-end .glass-card:not(#main-music-card):not(#mini-player-toggle):hover { transform: none !important; box-shadow: none !important; border-radius: inherit !important; }
         
@@ -511,10 +571,14 @@
         /* --- AMBILIGHT GLOW EFFEKT --- */
         #ambilight-glow {
             position: absolute; inset: -15px; z-index: -1; background-size: cover; background-position: center;
-            filter: blur(35px) saturate(2.0) brightness(1.2); opacity: 0; transition: opacity 1.5s ease, transform 1s ease;
+            filter: blur(22px) saturate(2.0) brightness(1.2); opacity: 0; transition: opacity 1.5s ease, transform 1s ease;
             pointer-events: none; will-change: transform, opacity; border-radius: inherit; transform: translate3d(0,0,0);
         }
-        @media (min-width: 640px) { #ambilight-glow { inset: -60px; filter: blur(75px) saturate(2.5) brightness(1.2); } }
+        /* NEW: Performance-Fix - Blur-Radius reduziert (mobil 35px->22px, Desktop 75px->46px).
+           Dieser Effekt läuft DAUERHAFT, sobald ein Track spielt - komplett unabhängig davon,
+           ob Songtext gefunden wurde oder nicht. Kaum sichtbarer optischer Unterschied,
+           spürbar günstiger für die GPU, gerade bei kontinuierlicher Nutzung. */
+        @media (min-width: 640px) { #ambilight-glow { inset: -60px; filter: blur(46px) saturate(2.5) brightness(1.2); } }
         .playing #ambilight-glow { animation: ambilight-pulse 6s infinite alternate ease-in-out; opacity: 0.8; }
         .dark .playing #ambilight-glow { opacity: 0.6; }
         @keyframes ambilight-pulse { 0% { transform: scale(1) translate3d(0,0,0); opacity: 0.6; } 100% { transform: scale(1.05) translate3d(0,0,0); opacity: 0.9; } }
@@ -522,20 +586,20 @@
         /* --- PARTICLES --- */
         #particles-container { position: absolute; inset: -100px; z-index: -1; overflow: hidden; pointer-events: none; opacity: 0; transition: opacity 1s ease; transform: translate3d(0,0,0); }
         .playing #particles-container { opacity: 1; }
-        .particle { position: absolute; bottom: 0; width: 4px; height: 4px; background: rgba(255, 255, 255, 0.4); border-radius: 50%; box-shadow: 0 0 10px rgba(255, 255, 255, 0.8); animation: float-up linear infinite; opacity: 0; transform: translate3d(0,0,0); }
+        .particle { position: absolute; bottom: 0; width: 4px; height: 4px; background: rgba(255, 255, 255, 0.4); border-radius: 50%; box-shadow: 0 0 6px rgba(255, 255, 255, 0.7); animation: float-up linear infinite; opacity: 0; transform: translate3d(0,0,0); }
         @keyframes float-up { 0% { transform: translate3d(0,0,0) scale(1); opacity: 0; } 50% { opacity: 1; } 100% { transform: translate3d(0, -300px, 0) scale(0); opacity: 0; } }
         .p1 { left: 10%; animation-duration: 4s; animation-delay: 0s; } .p2 { left: 30%; animation-duration: 5s; animation-delay: 1s; width: 6px; height: 6px; }
         .p3 { left: 50%; animation-duration: 3.5s; animation-delay: 2s; } .p4 { left: 70%; animation-duration: 6s; animation-delay: 0.5s; width: 3px; height: 3px; }
         .p5 { left: 90%; animation-duration: 4.5s; animation-delay: 1.5s; } .p6 { left: 20%; animation-duration: 5.5s; animation-delay: 3s; }
         .p7 { left: 80%; animation-duration: 4s; animation-delay: 2.5s; width: 5px; height: 5px; } .p8 { left: 40%; animation-duration: 6.5s; animation-delay: 0.8s; }
 
-        #ambient-bg { position: absolute; inset: -50px; z-index: 0; background-size: cover; background-position: center; filter: blur(35px) brightness(0.75) saturate(1.8); opacity: 0; transition: opacity 1s ease; transform: scale(1.1) translate3d(0,0,0); pointer-events: none; will-change: transform, opacity; }
+        #ambient-bg { position: absolute; inset: -50px; z-index: 0; background-size: cover; background-position: center; filter: blur(22px) brightness(0.75) saturate(1.8); opacity: 0; transition: opacity 1s ease; transform: scale(1.1) translate3d(0,0,0); pointer-events: none; will-change: transform, opacity; }
 
         /* Apple Music-Feeling: unscharfer, treibender Album-Cover-Hintergrund hinter den Lyrics */
         #lyrics-ambient-bg {
             position: absolute; inset: -25px; z-index: -1;
             background-size: cover; background-position: center;
-            filter: blur(50px) saturate(2.3) brightness(0.5);
+            filter: blur(32px) saturate(2.3) brightness(0.5);
             opacity: 0; transform: scale(1.2);
             transition: opacity 1.2s ease, background-image 0.6s ease;
             pointer-events: none; will-change: transform, opacity;
@@ -5353,6 +5417,51 @@
             });
         }
 
+        // NEW: Performance-Fix - markiert eine komplette Zeile (alle Wörter + Buchstaben)
+        // EINMALIG als fertig durchgesungen. Ersetzt die vorherige Logik, die bei JEDEM
+        // Animation-Frame erneut ALLE bereits gesungenen Zeilen des kompletten Songs
+        // durchlief und pro Wort/Buchstabe erneut document.getElementById() aufrief -
+        // das wurde mit fortschreitender Songdauer immer teurer (mehr bereits gesungene
+        // Zeilen = mehr unnötige Arbeit pro Frame) und war vermutlich die Hauptursache
+        // für spürbare Ruckler und Geräte-Erhitzung bei längerem Musikhören.
+        function markLineFullyPassed(idx) {
+            const line = parsedLyrics[idx];
+            if (!line) return;
+            line.tokens.forEach((tok, wIdx) => {
+                const wordSpan = document.getElementById(`word-${idx}-${wIdx}`);
+                if (wordSpan) {
+                    wordSpan.style.setProperty('--fill-percent', '100%');
+                    wordSpan.classList.add('word-passed');
+                    wordSpan.classList.remove('word-active');
+                }
+                for (let cIdx = 0; cIdx < tok.cleanText.length; cIdx++) {
+                    const charSpan = document.getElementById(`char-${idx}-${wIdx}-${cIdx}`);
+                    if (charSpan) {
+                        charSpan.classList.add('char-passed');
+                        charSpan.classList.remove('char-active');
+                    }
+                }
+            });
+        }
+
+        // NEW: Setzt eine Zeile einmalig zurück auf "noch nicht gesungen" - wird nur
+        // gebraucht, wenn rückwärts gesprungen wird (z.B. Song neu gestartet/zurückgespult).
+        function resetLineProgress(idx) {
+            const line = parsedLyrics[idx];
+            if (!line) return;
+            line.tokens.forEach((tok, wIdx) => {
+                const wordSpan = document.getElementById(`word-${idx}-${wIdx}`);
+                if (wordSpan) {
+                    wordSpan.style.setProperty('--fill-percent', '0%');
+                    wordSpan.classList.remove('word-active', 'word-passed');
+                }
+                for (let cIdx = 0; cIdx < tok.cleanText.length; cIdx++) {
+                    const charSpan = document.getElementById(`char-${idx}-${wIdx}-${cIdx}`);
+                    if (charSpan) charSpan.classList.remove('char-passed', 'char-active');
+                }
+            });
+        }
+
         function syncLyricsUI(forceScroll = false, forceRefresh = false) {
             if (parsedLyrics.length === 0 || (!mainMusicCard || (!mainMusicCard.classList.contains('lyrics-open') && !forceRefresh))) return;
 
@@ -5367,8 +5476,31 @@
                 }
             }
 
-            if (newActiveIdx !== currentLyricIndex || forceScroll || forceRefresh) {
+            const lineChanged = (newActiveIdx !== currentLyricIndex);
+
+            if (lineChanged || forceScroll || forceRefresh) {
                 document.querySelectorAll('.lyric-line.active').forEach(el => el.classList.remove('active'));
+
+                if (!document.body.classList.contains('low-end')) {
+                    if (forceRefresh) {
+                        // Einmaliger kompletter Abgleich (z.B. beim Öffnen der Lyrics-Ansicht
+                        // oder nach Ändern des Sync-Offsets) - unkritisch, da das nur selten
+                        // passiert, nicht bei jedem einzelnen Frame.
+                        for (let i = 0; i < parsedLyrics.length; i++) {
+                            if (i < newActiveIdx) markLineFullyPassed(i);
+                            else if (i > newActiveIdx) resetLineProgress(i);
+                        }
+                    } else if (lineChanged && currentLyricIndex !== -1) {
+                        // Normaler Fortschritt: nur die tatsächlich betroffenen Zeilen
+                        // werden einmalig angefasst, nicht der ganze Song erneut.
+                        if (newActiveIdx > currentLyricIndex) {
+                            for (let i = currentLyricIndex; i < newActiveIdx; i++) markLineFullyPassed(i);
+                        } else {
+                            for (let i = newActiveIdx + 1; i <= currentLyricIndex; i++) resetLineProgress(i);
+                        }
+                    }
+                }
+
                 currentLyricIndex = newActiveIdx;
                 if (currentLyricIndex !== -1) {
                     const activeEl = document.getElementById(`lyric-line-${currentLyricIndex}`);
@@ -5380,92 +5512,66 @@
             }
 
             if (document.body.classList.contains('low-end')) return;
+            if (currentLyricIndex === -1 || !parsedLyrics[currentLyricIndex]) return;
 
-            parsedLyrics.forEach((line, idx) => {
-                if (idx < currentLyricIndex) {
-                    line.tokens.forEach((tok, wIdx) => {
-                        const wordSpan = document.getElementById(`word-${idx}-${wIdx}`);
-                        if (wordSpan) {
-                            wordSpan.style.setProperty('--fill-percent', '100%');
-                            wordSpan.classList.add('word-passed');
-                            wordSpan.classList.remove('word-active');
-                        }
-                        for(let cIdx=0; cIdx<tok.cleanText.length; cIdx++) {
-                            const charSpan = document.getElementById(`char-${idx}-${wIdx}-${cIdx}`);
-                            if(charSpan && !charSpan.classList.contains('char-passed')) {
-                                charSpan.classList.add('char-passed');
-                                charSpan.classList.remove('char-active');
-                            }
-                        }
-                    });
-                } else if (idx === currentLyricIndex) {
-                    line.tokens.forEach((tok, wIdx) => {
-                        const wordSpan = document.getElementById(`word-${idx}-${wIdx}`);
-                        if (!wordSpan) return;
+            // NEW: Ab hier läuft die feingranulare, laufende Pro-Frame-Animation nur noch
+            // für die AKTUELLE Zeile - das ist unabhängig von der Songlänge immer ein
+            // kleiner, konstanter Aufwand statt mit der Zeit immer größer zu werden.
+            const idx = currentLyricIndex;
+            const line = parsedLyrics[idx];
+            line.tokens.forEach((tok, wIdx) => {
+                const wordSpan = document.getElementById(`word-${idx}-${wIdx}`);
+                if (!wordSpan) return;
 
-                        let tokProgress = 0;
-                        if (syncMs >= tok.timeMs + tok.duration) {
-                            tokProgress = 1; 
-                        } else if (syncMs > tok.timeMs) {
-                            tokProgress = (syncMs - tok.timeMs) / tok.duration; 
-                        }
-                        
-                        if (tokProgress > 0 && tokProgress < 1) {
-                            wordSpan.classList.add('word-active');
-                            wordSpan.classList.remove('word-passed');
-                        } else if (tokProgress >= 1) {
-                            wordSpan.classList.remove('word-active');
-                            wordSpan.classList.add('word-passed');
-                        } else {
-                            wordSpan.classList.remove('word-active', 'word-passed');
-                        }
-
-                        let tokLen = tok.cleanText.length;
-                        let currentTokWeightPassed = 0;
-                        
-                        for(let cIdx=0; cIdx<tokLen; cIdx++) {
-                            let cChar = tok.cleanText[cIdx];
-                            let cWeight = 0;
-                            if (!/[.,!?]/.test(cChar)) {
-                                cWeight = getCharWeight(cChar, tok.isPhraseEnd, /[aeiouy]/.test(cChar.toLowerCase()));
-                            }
-                            if (cWeight === 0 && tok.rawWeight > 0) cWeight = tok.rawWeight * 0.05; 
-                            
-                            let charStartRatio = tok.rawWeight > 0 ? (currentTokWeightPassed / tok.rawWeight) : 0;
-                            let charEndRatio = tok.rawWeight > 0 ? ((currentTokWeightPassed + cWeight) / tok.rawWeight) : 1;
-                            
-                            const charSpan = document.getElementById(`char-${idx}-${wIdx}-${cIdx}`);
-                            if(charSpan) {
-                                if (tokProgress === 0) {
-                                    charSpan.classList.remove('char-passed', 'char-active');
-                                } else if (tokProgress >= charEndRatio) {
-                                    charSpan.classList.add('char-passed');
-                                    charSpan.classList.remove('char-active');
-                                } else if (tokProgress >= charStartRatio && tokProgress < charEndRatio) {
-                                    charSpan.classList.add('char-active');
-                                    charSpan.classList.remove('char-passed');
-                                } else {
-                                    charSpan.classList.remove('char-passed', 'char-active');
-                                }
-                            }
-                            currentTokWeightPassed += cWeight;
-                        }
-                        
-                        wordSpan.style.setProperty('--fill-percent', `${tokProgress * 100}%`);
-                    });
-                } else {
-                    line.tokens.forEach((tok, wIdx) => {
-                        const wordSpan = document.getElementById(`word-${idx}-${wIdx}`);
-                        if (wordSpan) {
-                            wordSpan.style.setProperty('--fill-percent', '0%');
-                            wordSpan.classList.remove('word-active', 'word-passed');
-                        }
-                        for(let cIdx=0; cIdx<tok.cleanText.length; cIdx++) {
-                            const charSpan = document.getElementById(`char-${idx}-${wIdx}-${cIdx}`);
-                            if(charSpan) charSpan.classList.remove('char-passed', 'char-active');
-                        }
-                    });
+                let tokProgress = 0;
+                if (syncMs >= tok.timeMs + tok.duration) {
+                    tokProgress = 1; 
+                } else if (syncMs > tok.timeMs) {
+                    tokProgress = (syncMs - tok.timeMs) / tok.duration; 
                 }
+                
+                if (tokProgress > 0 && tokProgress < 1) {
+                    wordSpan.classList.add('word-active');
+                    wordSpan.classList.remove('word-passed');
+                } else if (tokProgress >= 1) {
+                    wordSpan.classList.remove('word-active');
+                    wordSpan.classList.add('word-passed');
+                } else {
+                    wordSpan.classList.remove('word-active', 'word-passed');
+                }
+
+                let tokLen = tok.cleanText.length;
+                let currentTokWeightPassed = 0;
+                
+                for(let cIdx=0; cIdx<tokLen; cIdx++) {
+                    let cChar = tok.cleanText[cIdx];
+                    let cWeight = 0;
+                    if (!/[.,!?]/.test(cChar)) {
+                        cWeight = getCharWeight(cChar, tok.isPhraseEnd, /[aeiouy]/.test(cChar.toLowerCase()));
+                    }
+                    if (cWeight === 0 && tok.rawWeight > 0) cWeight = tok.rawWeight * 0.05; 
+                    
+                    let charStartRatio = tok.rawWeight > 0 ? (currentTokWeightPassed / tok.rawWeight) : 0;
+                    let charEndRatio = tok.rawWeight > 0 ? ((currentTokWeightPassed + cWeight) / tok.rawWeight) : 1;
+                    
+                    const charSpan = document.getElementById(`char-${idx}-${wIdx}-${cIdx}`);
+                    if(charSpan) {
+                        if (tokProgress === 0) {
+                            charSpan.classList.remove('char-passed', 'char-active');
+                        } else if (tokProgress >= charEndRatio) {
+                            charSpan.classList.add('char-passed');
+                            charSpan.classList.remove('char-active');
+                        } else if (tokProgress >= charStartRatio && tokProgress < charEndRatio) {
+                            charSpan.classList.add('char-active');
+                            charSpan.classList.remove('char-passed');
+                        } else {
+                            charSpan.classList.remove('char-passed', 'char-active');
+                        }
+                    }
+                    currentTokWeightPassed += cWeight;
+                }
+                
+                wordSpan.style.setProperty('--fill-percent', `${tokProgress * 100}%`);
             });
         }
 
