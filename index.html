@@ -79,6 +79,19 @@
          Unterschied, spürbar günstiger für die GPU) und Ken-Burns-Zyklus von 20s auf 26s
          verlangsamt - relevant, weil StandBy potenziell stundenlang offen bleibt.
 
+    [FEATURE] Sichtbare Versionsnummer hinzugefügt
+      - Damit sich bei künftigen Cache-/Deployment-Problemen sofort nachvollziehen lässt,
+        welche Version man gerade tatsächlich sieht, zeigt die Seite jetzt an zwei Stellen
+        eine Versionsnummer an: im Lyrics-Einstellungsmenü (unter "Features") und im
+        Footer. Beide Textstellen sind zum einfachen Kopieren markierbar (select-all).
+        Bitte SITE_VERSION im Script bei jedem größeren Update mit hochzählen.
+
+    [BUGFIX] Service-Worker-Cache erneut auf v3 hochgezählt
+      - Gleiches Vorgehen wie beim vorherigen Cache-Fix (siehe Eintrag weiter unten):
+        CACHE_NAME in sw.js erhöht, um sicherzustellen, dass alle Geräte (v.a. iPhone mit
+        installierter Version) beim nächsten Aufruf zuverlässig auf die neueste Version
+        wechseln, statt an einer alten, gecachten Version hängen zu bleiben.
+
     [FEATURE] Intelligente Auto-Erkennung für den Low-End-Modus
       - Vorher: Nur die Bildschirmbreite (<360px) wurde geprüft - trifft auf starke, aber
         gerade überlastete Geräte (z.B. Pixel 8 Pro mit vielen Hintergrund-Apps) gar nicht zu.
@@ -1360,6 +1373,11 @@
     </style>
     
     <script>
+        // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
+        // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
+        // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
+        const SITE_VERSION = 'v20.2 · 2026-07-15';
+
         const DEFAULT_SYNC_OFFSET = -800; 
     </script>
 </head>
@@ -1770,6 +1788,9 @@
                                         <button onclick="toggleAmbientColor()" id="btn-toggle-ambient" class="text-left text-[10px] xxs:text-xs sm:text-sm text-cyan-400 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">Ambient Color: AN</button>
                                         <button onclick="toggleTilt()" id="btn-toggle-tilt" class="text-left text-[10px] xxs:text-xs sm:text-sm text-purple-400 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">Spatial Tilt: AN</button>
                                         <button onclick="generateShareCard()" id="btn-share-card" class="text-left text-[10px] xxs:text-xs sm:text-sm text-pink-400 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">🎴 Share Card erstellen</button>
+                                        <!-- NEW: Versionsnummer, damit sich immer nachvollziehen lässt, welche Version
+                                             man gerade sieht (v.a. hilfreich bei Cache-/Deployment-Problemen) -->
+                                        <p id="settings-version-label" class="text-left text-[9px] xxs:text-[10px] text-slate-500 px-2 py-1.5 font-mono select-all">Version —</p>
                                         
                                         <div class="h-px w-full bg-slate-700 my-1"></div>
                                         <div class="flex justify-between items-center px-1 mb-1">
@@ -1965,6 +1986,9 @@
                 <span id="footer-established" class="text-[8px] xxs:text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-400">Established 2026</span>
                 <div class="hidden sm:block h-4 w-px bg-slate-300 dark:bg-slate-700"></div>
                 <p id="footer-created-by" class="font-bold text-[10px] xxs:text-xs sm:text-sm text-slate-800 dark:text-white">Erstellt von Gamingpig</p>
+                <div class="hidden sm:block h-4 w-px bg-slate-300 dark:bg-slate-700"></div>
+                <!-- NEW: Versionsnummer im Footer, immer sichtbar ohne Menüs öffnen zu müssen -->
+                <p id="footer-version-label" class="text-[8px] xxs:text-[10px] font-mono text-slate-500 dark:text-slate-500 select-all">v—</p>
             </div>
         </footer>
     </main>
@@ -6305,6 +6329,12 @@
 
         // NEW: Sprachauswahl - beim allerersten Besuch als Setup-Assistent zeigen,
         // sonst gespeicherte Sprache sofort auf alle Bedienelemente anwenden.
+        // NEW: Versionsnummer sichtbar machen (Settings-Menü + Footer)
+        const settingsVersionEl = document.getElementById('settings-version-label');
+        if (settingsVersionEl) settingsVersionEl.textContent = 'Version ' + SITE_VERSION;
+        const footerVersionEl = document.getElementById('footer-version-label');
+        if (footerVersionEl) footerVersionEl.textContent = SITE_VERSION;
+
         renderLanguagePicker();
         positionDynamicIsland();
         setTimeout(positionDynamicIsland, 400); // Nachlauf, falls Fonts/Layout sich noch verschieben
