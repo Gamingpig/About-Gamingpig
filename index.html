@@ -11,6 +11,22 @@
     Neueste Einträge oben.
     ================================================================
 
+    [PERFORMANCE] extractDominantColor() (Ambient Color) lief bei JEDEM Musik-Poll neu,
+                  nicht nur bei echtem Cover-Wechsel - komplett unabhängig von Lyrics
+      - Symptom: Trotz vorheriger Blur-Radius-Reduzierungen berichtete der Nutzer weiterhin
+        von Erhitzung/Ruckeln, ausdrücklich auch dann, wenn für einen Song gar keine Lyrics
+        gefunden wurden - also unabhängig vom Lyrics-Sync-Fix und den CSS-Blur-Fixes.
+      - Ursache: fetchMusicData() pollt alle 5 Sekunden, solange Musik läuft. Der Aufruf
+        von extractDominantColor(imgUrl) lag dabei ungeschützt im normalen Update-Pfad und
+        lief bei JEDEM einzelnen Poll erneut - Bild neu laden, auf ein Canvas zeichnen,
+        Pixel auslesen - komplett unabhängig davon, ob sich das Cover-Bild seit dem letzten
+        Poll überhaupt geändert hatte (was beim selben, weiterlaufenden Song die Regel ist).
+        Das lief kontinuierlich alle 5 Sekunden, für die gesamte Dauer der Wiedergabe, egal
+        ob Lyrics-Ansicht offen war oder nicht.
+      - Fix: Früher Ausstieg direkt am Funktionsanfang, wenn die übergebene Cover-URL exakt
+        der beim letzten Aufruf verarbeiteten entspricht. Die Funktion tut jetzt nur noch
+        etwas, wenn sich das Cover tatsächlich geändert hat (also bei echtem Songwechsel).
+
     [PERFORMANCE] Weitere Wärme-/Lag-Ursache gefunden: mehrere dauerhaft aktive,
                   großflächige Weichzeichner-Effekte, komplett unabhängig von Lyrics
       - Symptom: Nutzer berichtete, dass Erhitzung/Ruckeln auch dann noch auftraten, wenn
@@ -3314,6 +3330,14 @@
 
         function extractDominantColor(imgUrl) {
             if (!ambientColorEnabled || !imgUrl) return;
+            // NEW: Performance-Fix - lief vorher bei JEDEM Musik-Poll (alle 5 Sekunden)
+            // erneut, komplett unabhängig davon, ob sich das Cover überhaupt geändert hat.
+            // Bild neu laden + auf Canvas zeichnen + Pixel auslesen ist zwar pro Aufruf
+            // klein, summiert sich aber bei kontinuierlicher Wiederholung über die Zeit -
+            // und lief komplett unabhängig von Lyrics, was die "auch ohne Songtext wird's
+            // heiß"-Beobachtung erklärt. Jetzt: früher Ausstieg, wenn sich die Cover-URL
+            // seit dem letzten Aufruf gar nicht geändert hat.
+            if (imgUrl === lastAmbientArtUrl) return;
             lastAmbientArtUrl = imgUrl;
             try {
                 const img = new Image();
