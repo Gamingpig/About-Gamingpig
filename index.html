@@ -79,6 +79,19 @@
          Unterschied, spürbar günstiger für die GPU) und Ken-Burns-Zyklus von 20s auf 26s
          verlangsamt - relevant, weil StandBy potenziell stundenlang offen bleibt.
 
+    [PERFORMANCE] Low-End-Modus überschrieb Liquid-Glass-Effekte nicht vollständig
+      - Symptom: Nutzer berichtete anhaltend laggende Animationen, ausdrücklich zusätzlich
+        zu einem bekannten, unabhängigen Pixel-Software-Bug bei Akku/Hitze.
+      - Ursache: Falls "Liquid Glass"-Modus aktiv ist, läuft eine 8-Sekunden-Endlos-
+        animation, die border-radius und box-shadow animiert - beides keine GPU-Eigen-
+        schaften, erzwingt bei jedem Animationsschritt ein echtes Neu-Zeichnen (Paint),
+        kombiniert mit 30px Blur bei hoher Sättigung auf den großen Karten. Der Low-End-
+        Modus deaktivierte bisher nur den Hintergrund-Blob-Effekt, nicht aber diese
+        Idle-Animation und den hohen Blur-Wert selbst, falls beides gleichzeitig aktiv war.
+      - Fix: Low-End-Modus überschreibt jetzt zusätzlich auch die Idle-Animation
+        (komplett deaktiviert) und reduziert den Blur auf denselben Wert wie die
+        normalen, kleinen Karten (8px statt 30px).
+
     [FEATURE] Sichtbare Versionsnummer hinzugefügt
       - Damit sich bei künftigen Cache-/Deployment-Problemen sofort nachvollziehen lässt,
         welche Version man gerade tatsächlich sieht, zeigt die Seite jetzt an zwei Stellen
@@ -351,9 +364,25 @@
         .glass-card {
             background: rgba(255, 255, 255, 0.9); border: 1px solid rgba(0, 0, 0, 0.05);
             transition: transform 0.4s var(--apple-spring), border-color 0.4s ease, box-shadow 0.4s ease, border-radius 0.4s ease, background-color 0.6s var(--apple-ease);
-            transform: translate3d(0,0,0); will-change: transform, background-color; backface-visibility: hidden;
+            transform: translate3d(0,0,0); backface-visibility: hidden;
+            /* NEW: Performance-Fix - will-change wurde vorher DAUERHAFT auf JEDER einzelnen
+               Karte gesetzt (teils über 10 Karten gleichzeitig auf der Seite). Das zwingt
+               den Browser, für jede einzelne davon eine eigene, permanente GPU-Ebene
+               vorzuhalten - das kostet GPU-Speicher/Bandbreite kontinuierlich, auch wenn
+               gerade gar nichts animiert, und ist ein bekannter Anti-Pattern (will-change
+               sollte laut Spezifikation nur kurz vor einer echten Animation gesetzt und
+               danach wieder entfernt werden). Jetzt nur noch beim tatsächlichen Hover
+               aktiv (siehe Regel weiter unten), nicht mehr permanent.
+               Zusätzlich: content-visibility überspringt Layout/Render-Arbeit für Karten,
+               die gerade gar nicht im sichtbaren Bereich sind - spürbar weniger Arbeit
+               beim Scrollen über viele Karten hinweg. */
+            content-visibility: auto;
+            contain-intrinsic-size: auto 220px;
         }
         .dark .glass-card { background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255, 255, 255, 0.05); }
+        @media (hover: hover) and (pointer: fine) {
+            .glass-card:hover { will-change: transform, background-color; }
+        }
 
         body.liquid-glass-active .glass-card {
             position: relative;
@@ -379,6 +408,19 @@
             transition: transform 0.6s var(--apple-spring), box-shadow 0.6s var(--apple-spring), border-radius 0.4s var(--apple-ease), background-color 0.4s ease, backdrop-filter 0.4s ease !important;
         }
         
+        /* NEW: Performance-Fix - Low-End-Modus überschreibt jetzt AUCH die teure
+           card-liquid-idle-Animation (animiert border-radius/box-shadow - keine
+           GPU-Eigenschaften, erzwingt bei jedem Schritt ein Neu-Zeichnen) sowie den
+           30px-Blur der großen Liquid-Glass-Karten. Vorher war nur der Hintergrund-
+           Blob-Effekt abgedeckt, falls Liquid Glass UND Low-End gleichzeitig aktiv waren. */
+        body.low-end.liquid-glass-active #main-music-card,
+        body.low-end.liquid-glass-active #mini-player-toggle,
+        body.low-end.liquid-glass-active .modal-content {
+            animation: none !important;
+            -webkit-backdrop-filter: blur(8px) saturate(120%) !important;
+            backdrop-filter: blur(8px) saturate(120%) !important;
+        }
+
         .dark body.liquid-glass-active .glass-card {
             background: linear-gradient(120deg, rgba(15, 23, 42, 0.3) 0%, rgba(255, 255, 255, 0.01) 35%, rgba(255, 255, 255, 0.12) 50%, rgba(255, 255, 255, 0.01) 65%, rgba(15, 23, 42, 0.2) 100%) !important;
             border-top: 1px solid rgba(255, 255, 255, 0.25) !important;
@@ -1376,7 +1418,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v20.2 · 2026-07-15';
+        const SITE_VERSION = 'v20.3 · 2026-07-15';
 
         const DEFAULT_SYNC_OFFSET = -800; 
     </script>
