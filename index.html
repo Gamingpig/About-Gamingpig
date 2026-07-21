@@ -79,6 +79,16 @@
          Unterschied, spürbar günstiger für die GPU) und Ken-Burns-Zyklus von 20s auf 26s
          verlangsamt - relevant, weil StandBy potenziell stundenlang offen bleibt.
 
+    [FEATURE] Glow-Effekt manuell abschaltbar gemacht + weitere Partikel-Reduzierung
+      - Nutzer bemerkte, dass der Ambilight-Glow-Effekt nach der letzten Blur-Reduzierung
+        viel dezenter wirkte, und wünschte sich einen echten Ein/Aus-Schalter dafür, um
+        bei Bedarf zusätzliche Leistung zu sparen.
+      - Neuer Toggle im Lyrics-Einstellungsmenü ("Glow-Effekt: AN/AUS", Standard: AN,
+        ändert am gewohnten Look nichts, außer man schaltet ihn selbst aus). Deaktiviert
+        Ambilight-Glow, Ambient-Hintergrund und Lyrics-Hintergrund-Glow komplett.
+      - Zusätzlich: Anzahl der schwebenden Partikel-Elemente (laufen dauerhaft, sobald
+        Musik spielt, jedes mit eigenem Leucht-Schatten) von 12 auf 6 reduziert.
+
     [PERFORMANCE] Low-End-Modus überschrieb Liquid-Glass-Effekte nicht vollständig
       - Symptom: Nutzer berichtete anhaltend laggende Animationen, ausdrücklich zusätzlich
         zu einem bekannten, unabhängigen Pixel-Software-Bug bei Akku/Hitze.
@@ -301,6 +311,10 @@
             will-change: auto !important; 
         }
         body.low-end .mesh-gradient, body.low-end #ambient-bg, body.low-end #ambilight-glow, body.low-end #particles-container, body.low-end #canvas-video, body.low-end .blob-container { display: none !important; }
+        /* NEW: Glow-Effekt manuell abschaltbar (Ambilight-Glow ums Cover + Ambient-
+           Hintergrund-Glow), unabhängig vom Low-End-Modus - für Nutzer, die die restliche
+           Optik behalten, aber gezielt diesen speziellen Effekt sparen wollen. */
+        body.glow-disabled #ambilight-glow, body.glow-disabled #ambient-bg, body.glow-disabled #lyrics-ambient-bg { display: none !important; }
         body.low-end .reveal { opacity: 1 !important; transform: none !important; }
         body.low-end .glass-card:not(#main-music-card):not(#mini-player-toggle):hover { transform: none !important; box-shadow: none !important; border-radius: inherit !important; }
         
@@ -1418,7 +1432,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v20.3 · 2026-07-15';
+        const SITE_VERSION = 'v20.4 · 2026-07-18';
 
         const DEFAULT_SYNC_OFFSET = -800; 
     </script>
@@ -1745,11 +1759,6 @@
                         <div class="particle p1"></div><div class="particle p2"></div>
                         <div class="particle p3"></div><div class="particle p4"></div>
                         <div class="particle p5"></div><div class="particle p6"></div>
-                        <div class="particle p7"></div><div class="particle p8"></div>
-                        <div class="particle p1" style="left:15%; animation-delay:1.2s"></div>
-                        <div class="particle p3" style="left:65%; animation-delay:2.7s"></div>
-                        <div class="particle p5" style="left:85%; animation-delay:0.3s"></div>
-                        <div class="particle p8" style="left:45%; animation-delay:3.1s"></div>
                     </div>
 
                     <!-- Das Lyrics Fenster -->
@@ -1828,6 +1837,7 @@
                                         <p id="label-features" class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1 px-1">Features</p>
                                         <button onclick="toggleCanvasVideo()" id="btn-toggle-canvas" class="text-left text-[10px] xxs:text-xs sm:text-sm text-green-400 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">Canvas: AN</button>
                                         <button onclick="toggleAmbientColor()" id="btn-toggle-ambient" class="text-left text-[10px] xxs:text-xs sm:text-sm text-cyan-400 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">Ambient Color: AN</button>
+                                        <button onclick="toggleGlowEffect()" id="btn-toggle-glow" class="text-left text-[10px] xxs:text-xs sm:text-sm text-orange-400 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">Glow-Effekt: AN</button>
                                         <button onclick="toggleTilt()" id="btn-toggle-tilt" class="text-left text-[10px] xxs:text-xs sm:text-sm text-purple-400 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">Spatial Tilt: AN</button>
                                         <button onclick="generateShareCard()" id="btn-share-card" class="text-left text-[10px] xxs:text-xs sm:text-sm text-pink-400 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">🎴 Share Card erstellen</button>
                                         <!-- NEW: Versionsnummer, damit sich immer nachvollziehen lässt, welche Version
@@ -2178,7 +2188,7 @@
                 cp_sharecard: 'Share Card erstellen & herunterladen', cp_tutorial: 'Tutorial starten', cp_tiktok: 'Mein TikTok öffnen',
                 cp_island_back: 'Dynamic Island wieder einblenden', cp_copy_link: 'Link zur Seite kopieren', cp_reload: 'Seite neu laden',
                 cp_change_lang: '🌐 Sprache ändern / Change language',
-                settings_ambient: 'Ambient Color', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
+                settings_ambient: 'Ambient Color', settings_glow: 'Glow-Effekt', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
                 on_label: 'AN', off_label: 'AUS',
                 standby_idle_title: 'Aktuell ist es ruhig...', standby_idle_subtitle: 'Genieße die Stille', standby_hint: 'Zum Verlassen tippen',
                 install_btn: '📲 App installieren',
@@ -2328,7 +2338,7 @@
                 cp_sharecard: 'Create & download share card', cp_tutorial: 'Start tutorial', cp_tiktok: 'Open my TikTok',
                 cp_island_back: 'Show Dynamic Island again', cp_copy_link: 'Copy link to this page', cp_reload: 'Reload page',
                 cp_change_lang: '🌐 Sprache ändern / Change language',
-                settings_ambient: 'Ambient Color', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
+                settings_ambient: 'Ambient Color', settings_glow: 'Glow Effect', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
                 on_label: 'ON', off_label: 'OFF',
                 standby_idle_title: "It's quiet right now...", standby_idle_subtitle: 'Enjoy the silence', standby_hint: 'Tap to exit',
                 install_btn: '📲 Install app',
@@ -2478,7 +2488,7 @@
                 cp_sharecard: 'Crear y descargar tarjeta', cp_tutorial: 'Iniciar tutorial', cp_tiktok: 'Abrir mi TikTok',
                 cp_island_back: 'Mostrar Dynamic Island de nuevo', cp_copy_link: 'Copiar enlace de la página', cp_reload: 'Recargar página',
                 cp_change_lang: '🌐 Cambiar idioma / Change language',
-                settings_ambient: 'Ambient Color', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
+                settings_ambient: 'Ambient Color', settings_glow: 'Efecto de Brillo', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
                 on_label: 'ON', off_label: 'OFF',
                 standby_idle_title: 'Todo tranquilo por ahora...', standby_idle_subtitle: 'Disfruta del silencio', standby_hint: 'Toca para salir',
                 install_btn: '📲 Instalar app',
@@ -2628,7 +2638,7 @@
                 cp_sharecard: 'Créer & télécharger la carte à partager', cp_tutorial: 'Démarrer le tutoriel', cp_tiktok: 'Ouvrir mon TikTok',
                 cp_island_back: 'Réafficher la Dynamic Island', cp_copy_link: 'Copier le lien de la page', cp_reload: 'Recharger la page',
                 cp_change_lang: '🌐 Changer de langue / Change language',
-                settings_ambient: 'Ambient Color', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
+                settings_ambient: 'Ambient Color', settings_glow: 'Effet de Lueur', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
                 on_label: 'ON', off_label: 'OFF',
                 standby_idle_title: "C'est calme pour le moment...", standby_idle_subtitle: 'Profite du silence', standby_hint: 'Toucher pour quitter',
                 install_btn: '📲 Installer l\'appli',
@@ -2778,7 +2788,7 @@
                 cp_sharecard: 'Criar & baixar cartão para compartilhar', cp_tutorial: 'Iniciar tutorial', cp_tiktok: 'Abrir meu TikTok',
                 cp_island_back: 'Mostrar Dynamic Island novamente', cp_copy_link: 'Copiar link da página', cp_reload: 'Recarregar página',
                 cp_change_lang: '🌐 Mudar idioma / Change language',
-                settings_ambient: 'Ambient Color', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
+                settings_ambient: 'Ambient Color', settings_glow: 'Efeito de Brilho', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
                 on_label: 'LIGADO', off_label: 'DESLIGADO',
                 standby_idle_title: 'Está tudo quieto agora...', standby_idle_subtitle: 'Aproveite o silêncio', standby_hint: 'Toque para sair',
                 install_btn: '📲 Instalar app',
@@ -2928,7 +2938,7 @@
                 cp_sharecard: 'Paylaşım kartı oluştur & indir', cp_tutorial: 'Eğitimi başlat', cp_tiktok: "TikTok'umu aç",
                 cp_island_back: "Dynamic Island'ı tekrar göster", cp_copy_link: 'Sayfa bağlantısını kopyala', cp_reload: 'Sayfayı yenile',
                 cp_change_lang: '🌐 Dili değiştir / Change language',
-                settings_ambient: 'Ambient Color', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
+                settings_ambient: 'Ambient Color', settings_glow: 'Parlama Efekti', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
                 on_label: 'AÇIK', off_label: 'KAPALI',
                 standby_idle_title: 'Şu an sessiz...', standby_idle_subtitle: 'Sessizliğin tadını çıkar', standby_hint: 'Çıkmak için dokun',
                 install_btn: '📲 Uygulamayı yükle',
@@ -3393,6 +3403,25 @@
             applyAmbientColorMode(next);
         };
         applyAmbientColorMode(ambientColorEnabled);
+
+        // NEW: Glow-Effekt (Ambilight um das Cover + Ambient-Hintergrund) komplett
+        // abschaltbar machen, um zusätzliche Performance zu sparen. Standardmäßig AN,
+        // damit sich am gewohnten Look nichts ändert, außer der Nutzer schaltet es
+        // selbst aus.
+        let glowEffectEnabled = localStorage.getItem('glowEffect') !== 'false';
+        function applyGlowEffectMode(isActive) {
+            glowEffectEnabled = isActive;
+            document.body.classList.toggle('glow-disabled', !isActive);
+            const btn = document.getElementById('btn-toggle-glow');
+            if (btn) btn.textContent = t('settings_glow') + ': ' + (isActive ? t('on_label') : t('off_label'));
+        }
+        window.toggleGlowEffect = function() {
+            haptic(10);
+            const next = !glowEffectEnabled;
+            localStorage.setItem('glowEffect', next);
+            applyGlowEffectMode(next);
+        };
+        applyGlowEffectMode(glowEffectEnabled);
 
         function extractDominantColor(imgUrl) {
             if (!ambientColorEnabled || !imgUrl) return;
