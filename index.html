@@ -150,6 +150,27 @@
       - "Sticker": Verspielter Aufkleber-Look mit Washi-Tape-Streifen, leicht schräg
         gestelltem Cover und kleinen runden Sticker-Dekorationen
 
+    [FEATURE] StandBy aktiviert jetzt echten Vollbildmodus + blendet die Scrollbar aus
+      - Beim Betreten von StandBy: Browser-Vollbildmodus wird angefragt (mit graceful
+        Fallback, falls der Browser/Kontext das verweigert, z.B. iOS Safari) und die
+        Seiten-Scrollbar wird komplett ausgeblendet (overflow:hidden auf html+body).
+      - Beim Verlassen von StandBy: beides wird sauber wieder rückgängig gemacht.
+      - Zusätzlich: Ein fullscreenchange-Listener sorgt dafür, dass StandBy automatisch
+        mit verlassen wird, falls der Nutzer den Vollbildmodus direkt verlässt (z.B. per
+        Escape-Taste oder Browser-eigenem "Vollbild verlassen"-Button), statt in einem
+        inkonsistenten Zwischenzustand hängen zu bleiben.
+      - Effekt: StandBy fühlt sich jetzt wirklich wie ein echter, vollflächiger Lockscreen
+        an, ohne Browser-Chrome oder sichtbare Scrollbar drumherum.
+
+    [BUGFIX] StandBy-Regler machte das Falsche - Ein-/Ausblenden statt Weichzeichner-Grad
+      - Nutzer stellte klar: Der Regler sollte nicht die Sichtbarkeit des Covers per
+        Deckkraft ein-/ausblenden, sondern den Weichzeichner-Grad steuern - höher gedreht
+        soll das Bild klarer/schärfer sichtbar werden, nicht komplett durchscheinend.
+      - Fix: Komplett umgebaut. Der Regler steuert jetzt direkt den Blur-Radius von
+        #standby-bg (0% = wie bisher stark verwischt mit 36px Blur, 100% = komplett
+        scharf mit 0px Blur). Umbenannt zu "StandBy-Bild schärfer", Standardwert auf 0%
+        gesetzt, damit sich am gewohnten Look nichts ändert, bis man selbst nachschärft.
+
     [BUGFIX] StandBy-Transparenz-Regler wirkte überhaupt nicht sichtbar
       - Ursache: Der Regler steuerte nur die Deckkraft von #standby-overlay selbst. Sobald
         aber ein Track lief (also praktisch immer), lag die blickdichte, verwischte Cover-
@@ -489,6 +510,10 @@
         
         body.low-end #main-music-card.lyrics-open { background: #0f172a !important; border-color: #1e293b !important; box-shadow: none !important; }
         body.low-end .lyrics-open #lyrics-overlay { background: #020617 !important; opacity: 1 !important; visibility: visible !important; transform: none !important; }
+        /* NEW: Scrollbar komplett ausblenden, solange StandBy aktiv ist - fühlt sich
+           dadurch wirklich wie ein echter, vollflächiger Lockscreen an, ohne dass am
+           Rand noch die Seiten-Scrollbar durchscheint. */
+        html.standby-fullscreen-lock, html.standby-fullscreen-lock body { overflow: hidden !important; height: 100% !important; }
         
         body.low-end .lyric-word, 
         body.low-end .lyric-char {
@@ -1422,12 +1447,12 @@
         /* --- NEW: STANDBY / AMBIENT MODE (Lockscreen-Style) ------- */
         /* ========================================================= */
         #standby-overlay {
-            position: fixed; inset: 0; z-index: 400; background: rgba(0, 0, 0, var(--standby-bg-opacity, 1));
+            position: fixed; inset: 0; z-index: 400; background: #000;
             display: flex; flex-direction: column; align-items: center; justify-content: space-between;
             opacity: 0; visibility: hidden; pointer-events: none; cursor: pointer;
-            transition: opacity 0.6s var(--apple-ease), visibility 0.6s, background-color 0.3s ease;
+            transition: opacity 0.6s var(--apple-ease), visibility 0.6s;
         }
-        /* NEW: --standby-bg-opacity ist einstellbar über den neuen "StandBy-Transparenz"-
+        /* NEW: --standby-bg-blur ist einstellbar über den "StandBy-Bild schärfer"-Regler im
            Regler im Einstellungsmenü (0 = komplett durchsichtig, nur der Hintergrund-Glow
            bleibt sichtbar; 1 = komplett blickdicht schwarz, wie bisher). */
         #standby-overlay.standby-active { opacity: 1; visibility: visible; pointer-events: auto; }
@@ -1451,16 +1476,12 @@
         }
         #standby-bg {
             position: absolute; inset: -30px; background-size: cover; background-position: center;
-            filter: blur(36px) brightness(0.4) saturate(160%); transform: scale(1.2);
-            will-change: transform, opacity; transition: background-image 0.8s ease, opacity 0.3s ease;
+            filter: blur(var(--standby-bg-blur, 36px)) brightness(0.4) saturate(160%); transform: scale(1.2);
+            will-change: transform; transition: background-image 0.8s ease, filter 0.3s ease;
             animation: standby-kenburns 26s ease-in-out infinite alternate;
-            /* NEW: Bugfix - die Transparenz-Einstellung wirkte vorher nur auf den
-               darunterliegenden #standby-overlay-Hintergrund, der aber praktisch immer von
-               DIESER blickdichten, verwischten Cover-Ebene komplett verdeckt wird, sobald
-               ein Song läuft (also fast immer). Der Regler blieb dadurch effektiv wirkungslos.
-               Jetzt steuert er stattdessen direkt die Deckkraft dieser tatsächlich sichtbaren
-               Ebene, wodurch echtes Durchscheinen auf den schwarzen Hintergrund entsteht. */
-            opacity: var(--standby-bg-opacity, 1);
+            /* NEW: Korrektur - der Regler soll NICHT ein-/ausblenden (Opazität), sondern
+               den Weichzeichner-Grad steuern: höherer Regler-Wert = weniger Blur = das
+               Cover-Bild wird klarer/schärfer sichtbar, statt komplett zu verschwinden. */
         }
         /* NEW: Performance-Fix - Blur-Radius von 50px auf 36px reduziert (spürbar günstiger
            für die GPU, kaum sichtbarer Unterschied) und Ken-Burns-Zyklus von 20s auf 26s
@@ -1661,7 +1682,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v21.5 · 2026-07-22';
+        const SITE_VERSION = 'v21.7 · 2026-07-22';
 
         const DEFAULT_SYNC_OFFSET = -800; 
     </script>
@@ -2079,10 +2100,10 @@
                                              Hintergrund im StandBy-/Lockscreen-Modus ist. -->
                                         <div class="px-2 py-1.5">
                                             <div class="flex items-center justify-between mb-1">
-                                                <label for="standby-opacity-slider" id="label-standby-opacity" class="text-[9px] xxs:text-[10px] sm:text-xs font-bold text-slate-300">StandBy-Transparenz</label>
-                                                <span id="standby-opacity-value" class="text-[9px] xxs:text-[10px] font-mono text-slate-400">100%</span>
+                                                <label for="standby-opacity-slider" id="label-standby-opacity" class="text-[9px] xxs:text-[10px] sm:text-xs font-bold text-slate-300">StandBy-Bild schärfer</label>
+                                                <span id="standby-opacity-value" class="text-[9px] xxs:text-[10px] font-mono text-slate-400">0%</span>
                                             </div>
-                                            <input type="range" id="standby-opacity-slider" min="30" max="100" step="5" value="100" class="w-full accent-blue-500" oninput="updateStandbyOpacity(this.value)">
+                                            <input type="range" id="standby-opacity-slider" min="0" max="100" step="5" value="0" class="w-full accent-blue-500" oninput="updateStandbyOpacity(this.value)">
                                         </div>
                                         <p id="settings-version-label" class="text-left text-[9px] xxs:text-[10px] text-slate-500 px-2 py-1.5 font-mono select-all">Version —</p>
                                         
@@ -5107,19 +5128,20 @@
             if (dateEl) dateEl.textContent = now.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' });
         }
 
-        // NEW: StandBy-Transparenz - steuert die Blickdichte des schwarzen Hintergrunds
-        // im StandBy-/Lockscreen-Modus über eine CSS-Variable. Wert wird gespeichert und
-        // beim nächsten Besuch automatisch wieder angewendet.
+        // NEW: StandBy-Bild schärfer - steuert den Weichzeichner-Grad des Cover-Hintergrunds
+        // im StandBy-/Lockscreen-Modus. Höherer Regler-Wert = WENIGER Blur = das Cover wird
+        // klarer/schärfer sichtbar (0% = wie bisher stark verwischt, 100% = komplett scharf).
         window.updateStandbyOpacity = function(value) {
             const pct = parseInt(value, 10);
-            document.documentElement.style.setProperty('--standby-bg-opacity', (pct / 100).toFixed(2));
+            const blurPx = Math.round(36 * (1 - pct / 100));
+            document.documentElement.style.setProperty('--standby-bg-blur', blurPx + 'px');
             const label = document.getElementById('standby-opacity-value');
             if (label) label.textContent = pct + '%';
             localStorage.setItem('standbyOpacity', pct);
         };
         (function initStandbyOpacity() {
             const saved = localStorage.getItem('standbyOpacity');
-            const pct = saved !== null ? parseInt(saved, 10) : 100;
+            const pct = saved !== null ? parseInt(saved, 10) : 0;
             const slider = document.getElementById('standby-opacity-slider');
             if (slider) slider.value = pct;
             updateStandbyOpacity(pct);
@@ -5149,6 +5171,15 @@
                 if (island) island.classList.add('di-hidden-by-standby');
                 updateIslandRing();
                 scheduleStandbyDeepDim(); // NEW: Tiefen-Dimmung nach 30min ununterbrochenem StandBy planen
+                // NEW: Vollbildmodus aktivieren + Scrollbar komplett ausblenden, damit
+                // StandBy sich wirklich wie ein echter Lockscreen anfühlt, ohne Browser-UI
+                // oder sichtbare Scrollbar drumherum.
+                document.documentElement.classList.add('standby-fullscreen-lock');
+                const fsEl = document.documentElement;
+                const requestFs = fsEl.requestFullscreen || fsEl.webkitRequestFullscreen || fsEl.msRequestFullscreen;
+                if (requestFs) {
+                    requestFs.call(fsEl).catch(() => {}); // manche Browser/Kontexte verweigern das (z.B. iOS Safari) - kein Problem, wird einfach übersprungen
+                }
             } else {
                 clearInterval(standByInterval);
                 clearInterval(standByShiftInterval);
@@ -5160,6 +5191,12 @@
                 const island = document.getElementById('dynamic-island');
                 if (island) island.classList.remove('di-hidden-by-standby');
                 updateIslandRing();
+                // NEW: Vollbildmodus wieder verlassen + Scrollbar wieder zulassen
+                document.documentElement.classList.remove('standby-fullscreen-lock');
+                if (document.fullscreenElement || document.webkitFullscreenElement) {
+                    const exitFs = document.exitFullscreen || document.webkitExitFullscreen;
+                    if (exitFs) exitFs.call(document).catch(() => {});
+                }
             }
         };
 
@@ -7173,6 +7210,18 @@
         }
 
         setInterval(fetchMusicData, 5000);
+
+        // NEW: Falls der Nutzer den Vollbildmodus direkt verlässt (z.B. Escape-Taste,
+        // Browser-eigenes Vollbild-Verlassen-UI), soll StandBy synchron mit verlassen
+        // werden, statt in einem inkonsistenten Zwischenzustand hängen zu bleiben.
+        ['fullscreenchange', 'webkitfullscreenchange'].forEach(evt => {
+            document.addEventListener(evt, () => {
+                const inFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement);
+                if (!inFullscreen && standByActive) {
+                    toggleStandBy(false);
+                }
+            });
+        });
 
         document.addEventListener("visibilitychange", () => {
             // NEW: Performance-Fix - alle Endlos-Animationen (Blob-Hintergrund, Ken-Burns,
