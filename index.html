@@ -150,6 +150,19 @@
       - "Sticker": Verspielter Aufkleber-Look mit Washi-Tape-Streifen, leicht schräg
         gestelltem Cover und kleinen runden Sticker-Dekorationen
 
+    [BUGFIX] StandBy-Uhr zeigte eine falsche, um mehrere Minuten abweichende Uhrzeit an
+      - Symptom: Nutzer berichtete, die StandBy-Uhr zeige rund 10 Minuten vor der echten
+        aktuellen Uhrzeit an.
+      - Ursache: Die beiden externen Zeit-Synchronisations-APIs (timeapi.io,
+        worldtimeapi.org) wurden ohne Cache-Busting-Parameter und ohne explizite
+        Cache-Einstellung aufgerufen. Dadurch konnte der normale HTTP-Cache des Browsers
+        eine bereits einmal abgerufene Antwort derselben URL wiederverwenden, statt
+        wirklich erneut über das Netzwerk zu fragen - mit der Zeit wuchs die Abweichung
+        zwischen der (gecachten, veralteten) Zeitquelle und der echten aktuellen Uhrzeit an.
+      - Fix: Beide Anfragen bekommen jetzt einen Cache-Buster-Query-Parameter (aktueller
+        Zeitstempel) sowie die explizite Fetch-Option {cache: "no-store"}, wodurch
+        garantiert bei jeder Synchronisation wirklich frisch über das Netzwerk geholt wird.
+
     [FEATURE] StandBy aktiviert jetzt echten Vollbildmodus + blendet die Scrollbar aus
       - Beim Betreten von StandBy: Browser-Vollbildmodus wird angefragt (mit graceful
         Fallback, falls der Browser/Kontext das verweigert, z.B. iOS Safari) und die
@@ -1682,7 +1695,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v21.7 · 2026-07-22';
+        const SITE_VERSION = 'v21.8 · 2026-07-22';
 
         const DEFAULT_SYNC_OFFSET = -800; 
     </script>
@@ -6119,17 +6132,24 @@
         async function syncWorldwideTime() {
             // NTP-artiger Ansatz: mehrere Messungen nehmen und die mit der geringsten
             // Round-Trip-Zeit verwenden (die genaueste), statt blind die erste zu nehmen.
+            // NEW: Bugfix - beide Anfragen bekommen jetzt einen Cache-Buster-Query-Parameter
+            // (aktueller Zeitstempel) UND {cache: "no-store"}. Vorher konnte der normale
+            // HTTP-Cache des Browsers eine bereits einmal abgerufene Antwort dieser exakt
+            // gleichen URL wiederverwenden, statt wirklich erneut über das Netzwerk zu
+            // fragen - das führte mit der Zeit zu einer immer größer werdenden Abweichung
+            // der StandBy-Uhr gegenüber der echten aktuellen Uhrzeit.
+            const cacheBuster = Date.now();
             const timeSources = [
                 async () => {
                     const t0 = performance.now();
-                    const res = await fetch('https://timeapi.io/api/Time/current/zone?timeZone=UTC');
+                    const res = await fetch(`https://timeapi.io/api/Time/current/zone?timeZone=UTC&_=${cacheBuster}`, { cache: 'no-store' });
                     const data = await res.json();
                     const rtt = performance.now() - t0;
                     return { trueTime: new Date(data.dateTime + "Z").getTime(), rtt };
                 },
                 async () => {
                     const t0 = performance.now();
-                    const res = await fetch('https://worldtimeapi.org/api/timezone/Etc/UTC');
+                    const res = await fetch(`https://worldtimeapi.org/api/timezone/Etc/UTC?_=${cacheBuster}`, { cache: 'no-store' });
                     const data = await res.json();
                     const rtt = performance.now() - t0;
                     return { trueTime: new Date(data.datetime).getTime(), rtt };
