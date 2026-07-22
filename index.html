@@ -102,6 +102,170 @@
         (komplett deaktiviert) und reduziert den Blur auf denselben Wert wie die
         normalen, kleinen Karten (8px statt 30px).
 
+    [FEATURE] Neues eigenständiges Kart-Dashboard hinzugefügt (statt Bio-Karte)
+      - Auf Wunsch des Nutzers als eigenes Dashboard umgesetzt (analog zum Musik-
+        Dashboard), statt als einfache Bio-Karte - da hier zukünftig ein eigener
+        Raspberry Pi als selbstgehosteter API-Server live Rundenzeiten von Kartland
+        Sinn liefern soll.
+      - Da diese Anbindung noch nicht existiert, zeigt der Bereich bewusst einen klaren
+        "Feature in Arbeit"-Zustand (Status-Badge mit Puls-Animation, erklärender Text)
+        statt Platzhalter- oder Fantasiewerte vorzugaukeln. Drei Stat-Kacheln (Bestzeit,
+        Sessions, Seit) sind strukturell schon vorbereitet, zeigen aber bewusst "--"
+        statt erfundener Zahlen, bis echte Daten vom Pi ankommen.
+      - Komplett in allen 6 Sprachen übersetzt, fügt sich nahtlos in bestehendes
+        Reveal-on-Scroll-System ein.
+      - Die zuvor als Bio-Karte hinzugefügte Kartfahren-Karte wurde dafür wieder entfernt.
+
+    [FEATURE] Neue Bio-Karte "Kartfahren" hinzugefügt (alle 6 Sprachen)
+      - 9. Karte in der Bio-Sektion, gleicher Aufbau wie die anderen 8 (Vorschautext +
+        aufklappbares Detail-Popup).
+      - Enthält Platzhalter für Bestzeit ("[wird noch ergänzt]"), da die genutzte
+        "Kartland App" von Kartland Sinn keine öffentliche Schnittstelle hat, über die
+        sich Rundenzeiten automatisch abrufen ließen - recherchiert und bestätigt: es
+        gibt nur eine private, an der Kasse freigeschaltete App ohne dokumentierte API.
+      - Lösung: Manuell gepflegte Karte statt Live-Anbindung. Platzhalter-Werte (Bestzeit,
+        Datum der ersten Session) können jederzeit auf Zuruf aktualisiert werden.
+
+    [CONTENT] Forza Horizon 5 -> Forza Horizon 6 (neuerer, besserer Titel laut Nutzer) +
+              Livestream-Ankündigung für die Kartbahn ergänzt (alle 6 Sprachen)
+      - Alle 27 Erwähnungen von "Forza Horizon 5" auf "Forza Horizon 6" aktualisiert
+        (Karten-Vorschautext, Detail-Popup, Tutorial-Texte).
+      - Freizeit-Detail-Text ergänzt um die Ankündigung, dass die Community sich auf
+        Livestreams direkt von der Kartbahn freuen kann.
+
+    [CONTENT] Freizeit-Bio-Text um neue Leidenschaft "Kartfahren" ergänzt (alle 6 Sprachen)
+      - Seit dem 19.07.2026 (erstes Mal auf einer Kartbahn) hat Kartfahren einen deutlich
+        größeren Stellenwert in der Freizeit-Beschreibung bekommen, Forza Horizon 6 wird
+        jetzt als "gelegentlich" statt als Hauptaktivität beschrieben.
+      - Betroffen: Karten-Vorschautext ("Kartfahren & Forza Horizon 6..." statt "Forza
+        Horizon 5 & Streaming...") und der ausführliche Text im Freizeit-Detail-Popup,
+        in allen 6 Sprachen konsistent aktualisiert.
+
+    [FEATURE] Share Card Generator: 4 weitere Designs hinzugefügt (insgesamt jetzt 10)
+      - "Terminal": Retro-Hacker-/Konsolen-Look mit Ampel-Punkten, grünem Monospace-Text
+        und Grayscale-Cover-Filter - passend zum IT-Ausbildungs-Thema der Seite
+      - "Cassette": Retro-Kassetten-Look mit zwei gezeichneten Spulen und Label-Fenster
+      - "Wave": Moderner Look mit fließenden, unscharfen Farbverläufen im Hintergrund
+        und Farbverlauf-Typografie
+      - "Sticker": Verspielter Aufkleber-Look mit Washi-Tape-Streifen, leicht schräg
+        gestelltem Cover und kleinen runden Sticker-Dekorationen
+
+    [BUGFIX] StandBy-Transparenz-Regler wirkte überhaupt nicht sichtbar
+      - Ursache: Der Regler steuerte nur die Deckkraft von #standby-overlay selbst. Sobald
+        aber ein Track lief (also praktisch immer), lag die blickdichte, verwischte Cover-
+        Hintergrund-Ebene (#standby-bg) direkt darüber und verdeckte diese Ebene komplett -
+        der Regler blieb dadurch faktisch wirkungslos.
+      - Fix: Die Transparenz-Variable steuert jetzt zusätzlich direkt die Deckkraft von
+        #standby-bg selbst, wodurch tatsächlich ein sichtbarer Durchscheineffekt entsteht.
+
+    [FEATURE] Vier weitere Share-Card-Designs hinzugefügt (jetzt 10 insgesamt)
+      - Terminal: Code-Editor-/Terminal-Fenster-Look mit Ampel-Punkten und Monospace-Schrift
+      - Cassette: Retro-Kassetten-Design
+      - Wave: Wellenform-/Equalizer-inspiriertes Design
+      - Sticker: Aufkleber-Look mit gezacktem Rand
+
+    [BUGFIX] Kart-Dashboard Schließen-Animation griff nie - falscher CSS-Selektor
+      - Symptom: Direkt nach der letzten Runde (bei der die Animation überhaupt erst
+        eingebaut wurde) funktionierte die Schließen-Animation des Kart-Dashboards
+        weiterhin nicht sichtbar.
+      - Ursache: Die JS-Klassen kart-dashboard-opening/kart-dashboard-closing werden per
+        JavaScript direkt auf #kart-card-wrapper selbst gesetzt. Die zugehörige CSS-Regel
+        war jedoch fälschlicherweise als Nachfahren-Selektor geschrieben
+        (".kart-dashboard-closing #kart-card-wrapper" mit Leerzeichen, was "ein Kind-
+        Element davon" bedeutet), obwohl Klasse und ID auf demselben Element sitzen.
+        Ein Selektor mit Leerzeichen kann so niemals auf dasselbe Element treffen, auf
+        dem die Klasse gesetzt wird - die Regel griff dadurch schlicht nie.
+      - Fix: Auf einen zusammengesetzten Selektor ohne Leerzeichen umgestellt
+        (#kart-card-wrapper.kart-dashboard-closing), analog auch für die Öffnen-Variante
+        und die zugehörige Low-End-Override-Regel korrigiert.
+
+    [BUGFIX] Schließen-Animationen beider Dashboards analysiert und korrigiert (inkl.
+             Performance-Modus)
+      - Kernbefund: Die Öffnen-Animation des Musik-Dashboards wurde im Performance-Modus
+        korrekt übersprungen (sofortiges Erscheinen ohne Transform/Opacity-Animation), die
+        Schließen-Animation dagegen NICHT - es gab schlicht keine entsprechende Low-End-
+        CSS-Regel dafür. Dadurch spielte das Schließen im Performance-Modus trotzdem noch
+        die volle Animation ab, obwohl das Öffnen bereits übersprungen wurde - inkonsistent
+        und unnötig teuer für genau den Modus, der Leistung sparen soll.
+      - Fix: Passende Low-End-Override-Regel für die Schließen-Animation ergänzt.
+        Zusätzlich wurden die zugehörigen JavaScript-Timeouts (die vor dem eigentlichen
+        Verstecken/Aufräumen künstlich auf das Ende der Animation warten) im Performance-
+        Modus von 900ms/1200ms auf 50ms verkürzt, da dort ja gar keine Animation mehr
+        abzuwarten ist.
+      - Kart-Dashboard hatte bisher überhaupt keine eigene Pop-In/Pop-Out-Animation (nur
+        den reinen Höhen-Trick des Wrappers) - jetzt mit denselben Animationen wie das
+        Musik-Dashboard versehen, inklusive passendem Low-End-Override und denselben
+        Timeout-Anpassungen.
+      - Nebenbei behoben: Race-Condition-Schutz verstärkt (alte Timeouts werden jetzt in
+        beiden Dashboards zuverlässig zuerst gelöscht), damit schnelles Hin-und-Her-Klicken
+        (auf/zu/auf/zu) nicht dazu führen kann, dass ein verzögerter, alter Timeout die
+        Karte nachträglich fälschlicherweise wieder versteckt.
+
+    [FEATURE/BUGFIX] StandBy-Transparenz-Regler + Kart-Dashboard schließbar + Anti-Burn-in
+                     verschärft + Tutorial-Skip-Rate-Optimierung
+      - StandBy-Transparenz: Neuer Regler im Einstellungsmenü, steuert per CSS-Variable
+        die Blickdichte des schwarzen StandBy-Hintergrunds (30%-100%), Wert wird
+        gespeichert und beim nächsten Besuch automatisch wieder angewendet.
+      - Kart-Dashboard: Von einer immer sichtbaren, statischen Karte auf eine auf-/
+        zuklappbare Mini-Leiste umgebaut, exakt gleiches Prinzip wie das Musik-Dashboard.
+      - Anti-Burn-in verschärft: Shift-Intervall von 5 auf 3 Minuten reduziert, Anzahl der
+        Verschiebe-Positionen von 15 auf 21 erhöht, Deep-Dim-Schwelle von 30 auf 20 Minuten
+        gesenkt. WICHTIGER BUGFIX dabei gefunden: Die CSS-Klasse für den Deep-Dim-Effekt
+        wurde zwar korrekt per JS nach Zeitablauf gesetzt, hatte aber überhaupt keine
+        zugehörige CSS-Regel und damit bisher NULL visuellen Effekt - jetzt ergänzt.
+      - Tutorial-Optimierung gegen die extrem hohe Überspringen-Rate: Echte visuelle
+        Fortschrittspunkte statt nur Text "Schritt X/Y" (vermittelt auf einen Blick, wie
+        kurz das Tutorial tatsächlich ist), Schritt 1 erwähnt jetzt eine 30-Sekunden-
+        Zeitangabe plus einen Easter-Egg-Hinweis als Neugier-Anreiz direkt zu Beginn, und
+        der Überspringen-Button wurde optisch noch weiter zurückgenommen (kleiner, blasser),
+        damit "Weiter" eindeutig als der naheliegende Weg wahrgenommen wird.
+
+    [BUGFIX] Cover-Glow war laut Screenshot-Beweis technisch vorhanden, aber viel zu subtil
+      - Nutzer schickte einen Screenshot des offenen Music Dashboards. Der Glow war darauf
+        tatsächlich zu erkennen (leichter unscharfer Rand um die Karte), aber so schwach,
+        dass er nicht als eigenständiger "Glow-Effekt" wahrgenommen wurde.
+      - Deutlich kräftiger gemacht: Bleed-Radius verdoppelt (inset -15px/-60px ->
+        -30px/-90px), Blur-Radius erhöht (30px/60px -> 45px/85px), mehr Sättigung/
+        Helligkeit, Ziel-Opazität von 0.6-0.8 auf 0.85-1.0 angehoben.
+
+    [BUGFIX] Cover-Glow wirkte nach der letzten Blur-Reduzierung praktisch unsichtbar
+      - Nutzer berichtete, der Effekt sei "immer noch nicht wieder da", obwohl der neue
+        Cover-Glow-Schalter korrekt implementiert war und standardmäßig an ist.
+      - Ursache: Der Blur-Radius war in der letzten Performance-Runde zu stark reduziert
+        worden (35px/75px -> 22px/46px), wodurch der Effekt zwar technisch noch lief,
+        aber optisch kaum mehr wahrnehmbar war.
+      - Fix: Als Kompromiss auf 30px/60px angehoben - deutlich sichtbar, aber immer noch
+        günstiger als das ursprüngliche 35px/75px. Der Cover-Glow-Schalter bleibt zusätzlich
+        bestehen, falls jemand ihn trotzdem komplett und kostenlos abschalten möchte.
+
+    [FEATURE] Share Card Generator: Wasserzeichen vereinheitlicht + 2 neue Designs
+      - Alle Wasserzeichen auf allen Designs zeigen jetzt konsistent "🐷 GAMINGPIG HÖRT
+        GERADE" statt der vorherigen, uneinheitlichen Kurzformen ("gamingpig",
+        "gamingpig · now playing", "GAMINGPIG RECORDS").
+      - Zwei neue Designs hinzugefügt (insgesamt jetzt 6 zur Auswahl):
+        - "Neon": Cyberpunk-/Retro-Wave-Look mit perspektivischem Raster und
+          leuchtenden Pink/Cyan-Farbtönen
+        - "Polaroid": Sofortbild-Look mit weißem Rahmen und handschriftartiger
+          Bildunterschrift, leicht schräg gestellte Notiz am unteren Rand
+
+    [FEATURE/BUGFIX] Glow-Effekte in zwei unabhängige Schalter aufgeteilt + Haptic-Lücken
+                     geschlossen + Tutorial um Performance-Hinweis zum Einstellungsmenü erweitert
+      - Nutzer stellte klar, dass mit "Glow-Effekt" eigentlich der Leuchtring direkt um das
+        geöffnete Music Dashboard (#ambilight-glow) gemeint war, nicht der Ambient-/Lyrics-
+        Hintergrund-Glow, den der vorherige Schalter abdeckte.
+      - Fix: Zwei komplett unabhängige Schalter im Lyrics-Einstellungsmenü - "Hintergrund-
+        Glow" (bisheriger Schalter, jetzt nur noch Ambient-/Lyrics-Hintergrund) und neu
+        "Cover-Glow" (steuert #ambilight-glow separat). Bei "aus" wirklich display:none
+        (null Rendering-Kosten) UND JS überspringt zusätzlich das Laden/Setzen des Cover-
+        Bilds für den Effekt komplett, statt nur die Sichtbarkeit zu verstecken.
+      - Haptic-Feedback fehlte an drei Stellen (copyPageLink, toggleCanvasVideo,
+        resetSyncOffset) - an allen dreien ergänzt, damit Vibrations-Feedback jetzt
+        konsistent bei praktisch jeder Umschalt-Interaktion auftritt (Android/Chrome).
+      - Tutorial (Schritt 4, alle 6 Sprachen) erklärt jetzt explizit alle Schalter im
+        Zahnrad-Menü der Lyrics-Ansicht (Ambient Color, Cover-Glow, Hintergrund-Glow,
+        Spatial Tilt, Share Card) und weist ausdrücklich darauf hin, dass diese
+        mittlerweile echte Performance-Schalter sind, nicht nur Optik.
+
     [FEATURE] Sichtbare Versionsnummer hinzugefügt
       - Damit sich bei künftigen Cache-/Deployment-Problemen sofort nachvollziehen lässt,
         welche Version man gerade tatsächlich sieht, zeigt die Seite jetzt an zwei Stellen
@@ -314,7 +478,12 @@
         /* NEW: Glow-Effekt manuell abschaltbar (Ambilight-Glow ums Cover + Ambient-
            Hintergrund-Glow), unabhängig vom Low-End-Modus - für Nutzer, die die restliche
            Optik behalten, aber gezielt diesen speziellen Effekt sparen wollen. */
-        body.glow-disabled #ambilight-glow, body.glow-disabled #ambient-bg, body.glow-disabled #lyrics-ambient-bg { display: none !important; }
+        /* NEW: Cover-Glow (der Glow-Ring um das geöffnete Music Dashboard/Cover herum,
+           #ambilight-glow) jetzt als EIGENER, unabhängiger Schalter - zusätzlich zum
+           bereits bestehenden Hintergrund-Glow-Schalter. Bei "aus" wirklich display:none,
+           also null Rendering-Kosten, nicht nur unsichtbar. */
+        body.cover-glow-disabled #ambilight-glow { display: none !important; }
+        body.glow-disabled #ambient-bg, body.glow-disabled #lyrics-ambient-bg { display: none !important; }
         body.low-end .reveal { opacity: 1 !important; transform: none !important; }
         body.low-end .glass-card:not(#main-music-card):not(#mini-player-toggle):hover { transform: none !important; box-shadow: none !important; border-radius: inherit !important; }
         
@@ -331,6 +500,23 @@
 
         body.low-end .modal-opening .modal-content, body.low-end .picker-opening, body.low-end .settings-opening, body.low-end .tutorial-opening, body.low-end .dashboard-opening #main-music-card {
             opacity: 1 !important; visibility: visible !important; transform: none !important;
+        }
+        /* NEW: Bugfix - die Schließen-Animation (dashboard-closing) hatte bisher KEIN
+           entsprechendes Low-End-Override, obwohl die Öffnen-Animation eins hatte. Dadurch
+           spielte die Schließen-Animation im Performance-Modus trotzdem noch die volle
+           Transform/Opacity-Animation ab - inkonsistent und unnötig teuer für genau den
+           Modus, der eigentlich Leistung sparen soll. Jetzt für beide Richtungen und
+           beide Dashboards (Musik + Kart) einheitlich abgedeckt. */
+        body.low-end .modal-closing .modal-content, body.low-end .picker-closing, body.low-end .settings-closing, body.low-end .tutorial-closing,
+        body.low-end .dashboard-closing #main-music-card, body.low-end .dashboard-closing #kart-status-badge {
+            opacity: 1 !important; visibility: visible !important; transform: none !important; animation: none !important;
+        }
+        /* NEW: Kart-Dashboard nutzte bisher gar keine eigene Öffnen/Schließen-Animations-
+           klasse (nur den grid-template-rows-Trick des Wrappers) - jetzt konsistent mit
+           dem Musik-Dashboard über dieselben std-pop-in/std-pop-out-Keyframes versehen,
+           inklusive Low-End-Override. */
+        body.low-end #kart-card-layout-wrapper, body.low-end #kart-card-wrapper {
+            transition: none !important;
         }
 
         html:not(.dark) body.liquid-glass-active main p,
@@ -539,6 +725,17 @@
         #music-card-layout-wrapper.is-open { grid-template-rows: 1fr; padding-top: 1.5rem; }
         #music-card-wrapper { min-height: 0; width: 100%; display: flex; justify-content: center; align-items: flex-start; overflow: visible; }
 
+        /* NEW: Kart-Dashboard Auf-/Zuklapp-Wrapper, exakt gleiches Prinzip wie beim
+           Musik-Dashboard (grid-template-rows 0fr <-> 1fr Trick für flüssige Höhen-
+           Animation ohne feste Pixel-Höhen angeben zu müssen). */
+        #kart-card-layout-wrapper {
+            display: grid; grid-template-rows: 0fr; width: 100%; padding-top: 0;
+            transition: grid-template-rows 0.6s var(--apple-spring), padding 0.6s var(--apple-spring);
+        }
+        #kart-card-layout-wrapper.hidden { display: none !important; }
+        #kart-card-layout-wrapper.is-open { grid-template-rows: 1fr; padding-top: 1.5rem; }
+        #kart-card-wrapper { min-height: 0; width: 100%; display: flex; justify-content: center; align-items: flex-start; overflow: visible; }
+
         body.liquid-glass-active .modal-opening .modal-content,
         body.liquid-glass-active .lyrics-open #lyrics-overlay,
         body.liquid-glass-active .settings-opening,
@@ -603,6 +800,20 @@
         .modal-closing .modal-content, .picker-closing, .tutorial-closing, .settings-closing { animation: std-pop-out 0.4s var(--apple-ease) forwards; }
         .dashboard-opening #main-music-card { animation: std-pop-in 0.5s var(--apple-spring) forwards; transform-origin: top center; }
         .dashboard-closing #main-music-card { animation: std-pop-out 0.4s var(--apple-ease) forwards; transform-origin: top center; }
+        /* NEW: Kart-Dashboard bekommt dieselben Pop-In/Pop-Out-Animationen wie das Musik-
+           Dashboard, statt nur auf den grid-template-rows-Trick des Wrappers angewiesen
+           zu sein - sorgt für ein einheitliches, "fertig" wirkendes Schließverhalten. */
+        /* NEW: Bugfix - die JS-Klassen kart-dashboard-opening/-closing werden direkt auf
+           #kart-card-wrapper selbst gesetzt (anders als beim Musik-Dashboard, wo die
+           Klasse auf einem umschließenden Wrapper-Element sitzt). Die Selektoren waren
+           fälschlicherweise als Nachfahren-Selektoren geschrieben (Leerzeichen = "Kind-
+           Element davon"), wodurch sie nie griffen. Jetzt als zusammengesetzter Selektor
+           auf demselben Element (kein Leerzeichen). */
+        #kart-card-wrapper.kart-dashboard-opening { animation: std-pop-in 0.5s var(--apple-spring) forwards; transform-origin: top center; }
+        #kart-card-wrapper.kart-dashboard-closing { animation: std-pop-out 0.4s var(--apple-ease) forwards; transform-origin: top center; }
+        body.low-end #kart-card-wrapper.kart-dashboard-opening, body.low-end #kart-card-wrapper.kart-dashboard-closing {
+            opacity: 1 !important; visibility: visible !important; transform: none !important; animation: none !important;
+        }
         .lyrics-open #lyrics-overlay { animation: std-pop-in 0.5s var(--apple-spring) forwards; }
         .lyrics-closing-state #lyrics-overlay { animation: std-pop-out 0.4s var(--apple-ease) forwards; }
 
@@ -655,17 +866,17 @@
 
         /* --- AMBILIGHT GLOW EFFEKT --- */
         #ambilight-glow {
-            position: absolute; inset: -15px; z-index: -1; background-size: cover; background-position: center;
-            filter: blur(22px) saturate(2.0) brightness(1.2); opacity: 0; transition: opacity 1.5s ease, transform 1s ease;
+            position: absolute; inset: -30px; z-index: -1; background-size: cover; background-position: center;
+            filter: blur(45px) saturate(2.6) brightness(1.35); opacity: 0; transition: opacity 1.5s ease, transform 1s ease;
             pointer-events: none; will-change: transform, opacity; border-radius: inherit; transform: translate3d(0,0,0);
         }
-        /* NEW: Performance-Fix - Blur-Radius reduziert (mobil 35px->22px, Desktop 75px->46px).
-           Dieser Effekt läuft DAUERHAFT, sobald ein Track spielt - komplett unabhängig davon,
-           ob Songtext gefunden wurde oder nicht. Kaum sichtbarer optischer Unterschied,
-           spürbar günstiger für die GPU, gerade bei kontinuierlicher Nutzung. */
-        @media (min-width: 640px) { #ambilight-glow { inset: -60px; filter: blur(46px) saturate(2.5) brightness(1.2); } }
-        .playing #ambilight-glow { animation: ambilight-pulse 6s infinite alternate ease-in-out; opacity: 0.8; }
-        .dark .playing #ambilight-glow { opacity: 0.6; }
+        /* NEW: Nutzer bestätigte per Screenshot, dass der Effekt zwar technisch lief, aber
+           viel zu subtil war, um überhaupt als "Glow" wahrgenommen zu werden. Deutlich
+           kräftiger gemacht: größerer Bleed-Radius (inset -15px/-60px -> -30px/-90px),
+           mehr Blur, mehr Sättigung/Helligkeit, höhere Ziel-Opazität. */
+        @media (min-width: 640px) { #ambilight-glow { inset: -90px; filter: blur(85px) saturate(2.8) brightness(1.3); } }
+        .playing #ambilight-glow { animation: ambilight-pulse 6s infinite alternate ease-in-out; opacity: 1; }
+        .dark .playing #ambilight-glow { opacity: 0.85; }
         @keyframes ambilight-pulse { 0% { transform: scale(1) translate3d(0,0,0); opacity: 0.6; } 100% { transform: scale(1.05) translate3d(0,0,0); opacity: 0.9; } }
 
         /* --- PARTICLES --- */
@@ -1211,12 +1422,23 @@
         /* --- NEW: STANDBY / AMBIENT MODE (Lockscreen-Style) ------- */
         /* ========================================================= */
         #standby-overlay {
-            position: fixed; inset: 0; z-index: 400; background: #000;
+            position: fixed; inset: 0; z-index: 400; background: rgba(0, 0, 0, var(--standby-bg-opacity, 1));
             display: flex; flex-direction: column; align-items: center; justify-content: space-between;
             opacity: 0; visibility: hidden; pointer-events: none; cursor: pointer;
-            transition: opacity 0.6s var(--apple-ease), visibility 0.6s;
+            transition: opacity 0.6s var(--apple-ease), visibility 0.6s, background-color 0.3s ease;
         }
+        /* NEW: --standby-bg-opacity ist einstellbar über den neuen "StandBy-Transparenz"-
+           Regler im Einstellungsmenü (0 = komplett durchsichtig, nur der Hintergrund-Glow
+           bleibt sichtbar; 1 = komplett blickdicht schwarz, wie bisher). */
         #standby-overlay.standby-active { opacity: 1; visibility: visible; pointer-events: auto; }
+        /* NEW: Fehlende CSS-Regel ergänzt - .standby-deep-dim wurde bereits per JS gesetzt
+           (nach AOD_DEEP_DIM_AFTER_MS Minuten sehr langer StandBy-Nutzung am Stück), hatte
+           aber bisher überhaupt keinen visuellen Effekt, da die zugehörige CSS-Regel fehlte.
+           Zusätzliche Abdunkelung reduziert die Helligkeit der hellsten (am stärksten
+           einbrenn-gefährdeten) Bereiche - Uhrzeit und Cover - weiter ab. */
+        #standby-overlay.standby-deep-dim #standby-clock { opacity: 0.55; }
+        #standby-overlay.standby-deep-dim #standby-nowplaying { opacity: 0.7; }
+        #standby-overlay.standby-deep-dim #standby-bg { filter: brightness(0.28) blur(36px) saturate(160%) !important; }
         /* NEW: Anti-Burn-in - der gesamte Inhalt verschiebt sich alle ~10min minimal,
            damit bei langem Stehenlassen (z.B. Handy an der Ladestation) kein Einbrennen
            auf OLED-Screens passiert. Layout/Abstände bleiben dabei unverändert, nur eine
@@ -1230,8 +1452,15 @@
         #standby-bg {
             position: absolute; inset: -30px; background-size: cover; background-position: center;
             filter: blur(36px) brightness(0.4) saturate(160%); transform: scale(1.2);
-            will-change: transform; transition: background-image 0.8s ease;
+            will-change: transform, opacity; transition: background-image 0.8s ease, opacity 0.3s ease;
             animation: standby-kenburns 26s ease-in-out infinite alternate;
+            /* NEW: Bugfix - die Transparenz-Einstellung wirkte vorher nur auf den
+               darunterliegenden #standby-overlay-Hintergrund, der aber praktisch immer von
+               DIESER blickdichten, verwischten Cover-Ebene komplett verdeckt wird, sobald
+               ein Song läuft (also fast immer). Der Regler blieb dadurch effektiv wirkungslos.
+               Jetzt steuert er stattdessen direkt die Deckkraft dieser tatsächlich sichtbaren
+               Ebene, wodurch echtes Durchscheinen auf den schwarzen Hintergrund entsteht. */
+            opacity: var(--standby-bg-opacity, 1);
         }
         /* NEW: Performance-Fix - Blur-Radius von 50px auf 36px reduziert (spürbar günstiger
            für die GPU, kaum sichtbarer Unterschied) und Ken-Burns-Zyklus von 20s auf 26s
@@ -1432,7 +1661,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v20.4 · 2026-07-18';
+        const SITE_VERSION = 'v21.5 · 2026-07-22';
 
         const DEFAULT_SYNC_OFFSET = -800; 
     </script>
@@ -1587,11 +1816,16 @@
     <!-- Das Tutorial Fenster -->
     <div id="tutorial-wrapper" class="fixed inset-0 z-[310] hidden items-center justify-center pointer-events-none">
         <div id="tutorial-box" class="flex-col bg-white dark:bg-slate-800 border-2 border-blue-500 rounded-[2rem] pointer-events-auto p-6 sm:p-8 w-[95%] max-w-sm relative shadow-2xl">
+            <!-- NEW: Echte visuelle Fortschrittsanzeige statt nur Text - vermittelt auf
+                 einen Blick, wie kurz das Tutorial tatsächlich ist, und wie wenig davon
+                 noch übrig ist. Fühlt sich dadurch weniger nach einer langen Verpflichtung
+                 an, was hoffentlich die extrem hohe Überspringen-Rate senkt. -->
+            <div class="flex gap-1 mb-3" id="tutorial-progress-dots"></div>
             <div class="text-[10px] font-black uppercase tracking-widest text-blue-500 mb-2" id="tutorial-step-indicator">Schritt 1/4</div>
             <h3 id="tutorial-title" class="text-xl sm:text-2xl font-extrabold mb-2 text-slate-900 dark:text-white">Willkommen in meiner Welt!</h3>
             <p id="tutorial-text" class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mb-8 font-medium">Das ist mein persönliches Portfolio. Hier erfährst du alles Wichtige über mich, meinen Weg in die Systemintegration und was mich antreibt. Mein Hyperfokus ist hier Programm!</p>
             <div class="flex justify-between items-center mt-auto">
-                <button id="tutorial-skip" class="text-[10px] sm:text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-bold transition-colors">Überspringen</button>
+                <button id="tutorial-skip" class="text-[9px] sm:text-[11px] text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-400 font-medium transition-colors">Überspringen</button>
                 <button id="tutorial-next" class="bg-blue-600 text-white px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-500/30 transition-all active:scale-95">Weiter</button>
             </div>
         </div>
@@ -1662,7 +1896,7 @@
                     </div>
                     <div>
                         <h3 id="card-title-freizeit" class="font-bold text-sm xxs:text-base sm:text-lg mb-0.5 xxs:mb-1">Freizeit</h3>
-                        <p id="card-teaser-freizeit" class="text-slate-700 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">Forza Horizon 5 & Streaming...</p>
+                        <p id="card-teaser-freizeit" class="text-slate-700 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">Forza Horizon 6 & Streaming...</p>
                     </div>
                 </div>
 
@@ -1837,11 +2071,19 @@
                                         <p id="label-features" class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1 px-1">Features</p>
                                         <button onclick="toggleCanvasVideo()" id="btn-toggle-canvas" class="text-left text-[10px] xxs:text-xs sm:text-sm text-green-400 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">Canvas: AN</button>
                                         <button onclick="toggleAmbientColor()" id="btn-toggle-ambient" class="text-left text-[10px] xxs:text-xs sm:text-sm text-cyan-400 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">Ambient Color: AN</button>
-                                        <button onclick="toggleGlowEffect()" id="btn-toggle-glow" class="text-left text-[10px] xxs:text-xs sm:text-sm text-orange-400 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">Glow-Effekt: AN</button>
+                                        <button onclick="toggleGlowEffect()" id="btn-toggle-glow" class="text-left text-[10px] xxs:text-xs sm:text-sm text-orange-400 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">Hintergrund-Glow: AN</button>
+                                        <button onclick="toggleCoverGlow()" id="btn-toggle-cover-glow" class="text-left text-[10px] xxs:text-xs sm:text-sm text-yellow-400 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">Cover-Glow: AN</button>
                                         <button onclick="toggleTilt()" id="btn-toggle-tilt" class="text-left text-[10px] xxs:text-xs sm:text-sm text-purple-400 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">Spatial Tilt: AN</button>
                                         <button onclick="generateShareCard()" id="btn-share-card" class="text-left text-[10px] xxs:text-xs sm:text-sm text-pink-400 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">🎴 Share Card erstellen</button>
-                                        <!-- NEW: Versionsnummer, damit sich immer nachvollziehen lässt, welche Version
-                                             man gerade sieht (v.a. hilfreich bei Cache-/Deployment-Problemen) -->
+                                        <!-- NEW: StandBy-Transparenz-Regler - steuert, wie blickdicht der schwarze
+                                             Hintergrund im StandBy-/Lockscreen-Modus ist. -->
+                                        <div class="px-2 py-1.5">
+                                            <div class="flex items-center justify-between mb-1">
+                                                <label for="standby-opacity-slider" id="label-standby-opacity" class="text-[9px] xxs:text-[10px] sm:text-xs font-bold text-slate-300">StandBy-Transparenz</label>
+                                                <span id="standby-opacity-value" class="text-[9px] xxs:text-[10px] font-mono text-slate-400">100%</span>
+                                            </div>
+                                            <input type="range" id="standby-opacity-slider" min="30" max="100" step="5" value="100" class="w-full accent-blue-500" oninput="updateStandbyOpacity(this.value)">
+                                        </div>
                                         <p id="settings-version-label" class="text-left text-[9px] xxs:text-[10px] text-slate-500 px-2 py-1.5 font-mono select-all">Version —</p>
                                         
                                         <div class="h-px w-full bg-slate-700 my-1"></div>
@@ -1912,6 +2154,64 @@
                             <button onclick="toggleLyrics(true)" id="btn-lyrics-show" aria-label="Lyrics anzeigen" class="p-1 xxs:p-1.5 xs:p-2 text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all" title="Lyrics anzeigen">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-4 xxs:h-4 xs:w-5 xs:h-5"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
                             </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- NEW: KART DASHBOARD - vorbereitet für die zukünftige Live-Anbindung an den
+             eigenen Raspberry-Pi-API-Server. Bis dahin zeigt es einen klaren "in Arbeit"-
+             Zustand statt Platzhalter-/Fantasiewerte vorzugaukeln. -->
+        <section id="kart-section" class="mb-12 xxs:mb-16 xs:mb-20 sm:mb-24 reveal relative rounded-3xl">
+            <h2 id="kart-section-title" class="text-lg xxs:text-xl xs:text-2xl sm:text-3xl font-bold mb-1.5 xxs:mb-2 text-red-600 dark:text-red-500 border-b-2 sm:border-b-4 border-red-600 dark:border-red-500 pb-1.5 xxs:pb-2 sm:pb-3 inline-block break-words">
+                Kart-Dashboard
+            </h2>
+            <p id="kart-section-note" class="text-[8px] xxs:text-[10px] xs:text-xs text-slate-600 dark:text-slate-400 mb-4 xxs:mb-6 sm:mb-10">Live-Daten kommen bald direkt von meinem eigenen Raspberry-Pi-API-Server.</p>
+
+            <!-- NEW: Mini-Toggle-Leiste, klappt den Inhalt darunter auf/zu (gleiches Prinzip
+                 wie beim Musik-Dashboard) -->
+            <div id="kart-mini-toggle" onclick="toggleKartDashboard()" role="button" tabindex="0" class="glass-card w-full max-w-[500px] mx-auto p-2 xxs:p-3 sm:p-4 rounded-[1.2rem] xxs:rounded-2xl sm:rounded-[2rem] flex items-center justify-between cursor-pointer group mb-3 xxs:mb-4 sm:mb-6 relative z-20 hover:scale-[1.01] transition-all">
+                <div class="flex items-center gap-2 xxs:gap-3 sm:gap-4 flex-1 min-w-0">
+                    <div class="w-8 h-8 xxs:w-10 xxs:h-10 sm:w-12 sm:h-12 shrink-0 rounded-lg xxs:rounded-xl bg-red-500/10 text-red-600 dark:text-red-500 flex items-center justify-center transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="M4 22V4a1 1 0 0 1 1-1h5a1 1 0 0 1 .78.375L12.7 5.5a1 1 0 0 0 .78.375H19a1 1 0 0 1 1 1V16a1 1 0 0 1-1 1h-6.5a1 1 0 0 1-.78-.375L10.8 14.9a1 1 0 0 0-.78-.375H5"/></svg>
+                    </div>
+                    <div class="text-left flex-1 min-w-0 py-0.5 xxs:py-1">
+                        <p id="kart-mini-title" class="text-[10px] xxs:text-xs sm:text-sm font-bold text-slate-900 dark:text-white break-words whitespace-normal leading-snug transition-colors">Kart-Dashboard minimiert</p>
+                        <p id="kart-mini-status" class="text-[8px] xxs:text-[10px] sm:text-xs text-slate-600 dark:text-slate-400 break-words whitespace-normal mt-0.5 leading-snug transition-colors">Klicken zum Öffnen</p>
+                    </div>
+                </div>
+                <div class="p-1 xxs:p-1.5 sm:p-2 shrink-0 bg-slate-200/50 dark:bg-white/5 text-slate-700 dark:text-slate-400 rounded-full group-hover:bg-red-500/10 group-hover:text-red-500 transition-colors ml-1 xxs:ml-2">
+                    <svg id="kart-chevron" class="transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] xxs:w-4 xxs:h-4 sm:w-5 sm:h-5" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                </div>
+            </div>
+
+            <div id="kart-card-layout-wrapper" class="hidden">
+                <div id="kart-card-wrapper" class="relative origin-top flex justify-center w-full">
+                    <div class="glass-card w-full max-w-[500px] mx-auto p-4 xxs:p-6 sm:p-10 rounded-[1.5rem] xxs:rounded-3xl sm:rounded-[3rem] text-center relative overflow-hidden">
+                        <div class="w-14 h-14 xxs:w-16 xxs:h-16 sm:w-20 sm:h-20 mx-auto mb-4 xxs:mb-5 sm:mb-6 rounded-2xl xxs:rounded-3xl bg-red-500/10 text-red-500 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-8 xxs:h-8 sm:w-10 sm:h-10"><path d="M4 22V4a1 1 0 0 1 1-1h5a1 1 0 0 1 .78.375L12.7 5.5a1 1 0 0 0 .78.375H19a1 1 0 0 1 1 1V16a1 1 0 0 1-1 1h-6.5a1 1 0 0 1-.78-.375L10.8 14.9a1 1 0 0 0-.78-.375H5"/></svg>
+                        </div>
+                        <div id="kart-status-badge" class="inline-flex items-center gap-1.5 xxs:gap-2 px-2.5 xxs:px-3 py-1 xxs:py-1.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-full text-[9px] xxs:text-[10px] sm:text-xs font-black uppercase tracking-widest mb-3 xxs:mb-4">
+                            <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                            <span id="kart-status-label">Feature in Arbeit</span>
+                        </div>
+                        <h3 id="kart-placeholder-title" class="text-lg xxs:text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white mb-2 xxs:mb-3">Kartland Sinn - Live-Anbindung folgt</h3>
+                        <p id="kart-placeholder-text" class="text-slate-600 dark:text-slate-300 text-xs xxs:text-sm sm:text-base leading-relaxed max-w-md mx-auto">An diesem Feature wird gerade gearbeitet. Bald verbindet sich diese Seite live mit meinem eigenen Raspberry Pi, der als eigener API-Server meine Rundenzeiten von Kartland Sinn direkt hier anzeigt - inklusive Bestzeit, Session-Historie und mehr. Schau bald wieder vorbei!</p>
+
+                        <div class="grid grid-cols-3 gap-2 xxs:gap-3 sm:gap-4 mt-5 xxs:mt-6 sm:mt-8 max-w-sm mx-auto">
+                            <div class="p-2 xxs:p-3 rounded-xl xxs:rounded-2xl bg-slate-500/5 border border-slate-500/10">
+                                <p id="kart-stat-besttime-label" class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1">Bestzeit</p>
+                                <p class="text-sm xxs:text-base sm:text-lg font-black text-slate-400">--:--</p>
+                            </div>
+                            <div class="p-2 xxs:p-3 rounded-xl xxs:rounded-2xl bg-slate-500/5 border border-slate-500/10">
+                                <p id="kart-stat-sessions-label" class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1">Sessions</p>
+                                <p class="text-sm xxs:text-base sm:text-lg font-black text-slate-400">--</p>
+                            </div>
+                            <div class="p-2 xxs:p-3 rounded-xl xxs:rounded-2xl bg-slate-500/5 border border-slate-500/10">
+                                <p id="kart-stat-since-label" class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1">Seit</p>
+                                <p class="text-sm xxs:text-base sm:text-lg font-black text-slate-400">19.07.26</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -2144,13 +2444,13 @@
                 tutorial_next: 'Weiter', tutorial_back: 'Zurück', tutorial_finish: 'Fertig', tutorial_skip: 'Überspringen',
                 tutorial_step: (n, total) => `Schritt ${n}/${total}`,
                 t_step1_title: 'Willkommen in meiner Welt!',
-                t_step1_text: 'Das ist mein persönliches Portfolio. Hier erfährst du alles Wichtige über mich, meinen Weg in die Systemintegration und was mich antreibt. Mein Hyperfokus ist hier Programm!',
+                t_step1_text: 'Dauert nur 30 Sekunden, versprochen! Das ist mein persönliches Portfolio - und ja, es gibt hier auch versteckte Easter Eggs zu entdecken. Lohnt sich wirklich.',
                 t_step2_title: 'Dein Kontrollzentrum',
                 t_step2_text: 'Oben rechts hast du die volle Kontrolle: "Apple Liquid Glass" schaltet den edlen, aber leistungshungrigen Blur-Look ein, Dark Mode wechselt zwischen hell/dunkel, Low-End-Modus deaktiviert aufwendige Animationen für ältere/langsamere Geräte, StandBy öffnet den Lockscreen-Modus, und der letzte Button startet dieses Tutorial jederzeit neu.',
                 t_step3_title: 'Deep Dive: Wer bin ich?',
                 t_step3_text: 'Klicke auf diese interaktiven Karten. Sie öffnen detaillierte Popups, in denen ich dir mehr über mein Audio-Setup, meinen Tech-Stack, meine Homelab-Projekte und meine Freizeit erzähle.',
                 t_step4_title: 'Echtzeit Musik Integration',
-                t_step4_text: 'Der wildeste Part: Das Dashboard zeigt in Echtzeit, was ich gerade höre! Oben bleibt dabei immer eine kleine Dynamic Island sichtbar, solange Musik läuft - antippen klappt sie auf, nochmal antippen klappt sie wieder zu, nach oben wischen blendet sie komplett aus (über die Spotlight-Suche holst du sie zurück). Klicke auf die Karte für synchronisierte Lyrics mit über 30 verrückten Animationsstilen. Über das Zahnrad-Icon in den Lyrics findest du zusätzlich: Ambient Color (färbt den Seitenhintergrund passend zum Cover ein), Spatial Tilt (3D-Neigeeffekt aufs Cover) und den Share-Card-Generator (lädt ein Bild zum Teilen herunter).',
+                t_step4_text: 'Der wildeste Part: Das Dashboard zeigt in Echtzeit, was ich gerade höre! Oben bleibt dabei immer eine kleine Dynamic Island sichtbar, solange Musik läuft - antippen klappt sie auf, nochmal antippen klappt sie wieder zu, nach oben wischen blendet sie komplett aus (über die Spotlight-Suche holst du sie zurück). Klicke auf die Karte für synchronisierte Lyrics mit über 30 verrückten Animationsstilen. Über das Zahnrad-Icon in den Lyrics findest du zusätzlich: Ambient Color, Cover-Glow, Hintergrund-Glow, Spatial Tilt und den Share-Card-Generator. Wichtig: Diese Schalter sind mittlerweile nicht nur Optik, sondern auch echte Leistungsschalter - schalte einzelne davon aus, wenn dein Gerät mal warm wird oder ruckelt.',
                 t_step5_title: 'StandBy: Dein Lockscreen',
                 t_step5_text: 'Dieser Button verwandelt die Seite in einen echten Lockscreen: große Uhrzeit, Datum und eine große Now-Playing-Karte mit Cover, Live-EQ und Fortschrittsbalken vor einem sanft animierten, geblurten Hintergrund. Alles verschiebt sich alle paar Minuten minimal, damit nichts auf OLED-Displays einbrennt - perfekt fürs Nachttischhandy beim Laden.',
                 t_step6_title: 'Spotlight-Suche (⌘K)',
@@ -2173,7 +2473,7 @@
                 toast_copy_unsupported: '⚠️ Dein Browser unterstützt das nicht. Link: ',
                 toast_konami: '🎉 Konami-Code erkannt! Hyperfokus aktiviert!',
                 toast_oink: '🐷 Oink oink! Wer hat da gerufen?',
-                toast_forza: '🏎️ Vroooom! Forza Horizon 5 Modus!',
+                toast_forza: '🏎️ Vroooom! Forza Horizon 6 Modus!',
                 toast_fokus: '🧠⚡ Hyperfokus aktiviert! Jetzt geht nichts mehr verloren.',
                 toast_matrix: '💻 Wake up, Neo...',
                 toast_disco: '👀 Du hast fünfmal geklickt... Disco-Modus!',
@@ -2188,7 +2488,7 @@
                 cp_sharecard: 'Share Card erstellen & herunterladen', cp_tutorial: 'Tutorial starten', cp_tiktok: 'Mein TikTok öffnen',
                 cp_island_back: 'Dynamic Island wieder einblenden', cp_copy_link: 'Link zur Seite kopieren', cp_reload: 'Seite neu laden',
                 cp_change_lang: '🌐 Sprache ändern / Change language',
-                settings_ambient: 'Ambient Color', settings_glow: 'Glow-Effekt', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
+                settings_ambient: 'Ambient Color', settings_glow: 'Glow-Effekt', settings_cover_glow: 'Cover-Glow', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
                 on_label: 'AN', off_label: 'AUS',
                 standby_idle_title: 'Aktuell ist es ruhig...', standby_idle_subtitle: 'Genieße die Stille', standby_hint: 'Zum Verlassen tippen',
                 install_btn: '📲 App installieren',
@@ -2207,7 +2507,7 @@
                 card_title_contact: 'Kontakt',
                 card_teaser_status: 'Ausbildung zum Fachinformatiker...',
                 card_teaser_background: 'Im Jugendalter & in Ausbildung...',
-                card_teaser_freizeit: 'Forza Horizon 5 & Streaming...',
+                card_teaser_freizeit: 'Kartfahren & Forza Horizon 6...',
                 card_teaser_menschen: 'Tom, Danilo, Jakob & Lukas...',
                 card_teaser_techstack: 'Hardware, Linux, Windows...',
                 card_teaser_setup: 'DT 770 Pro & Rockster Cross...',
@@ -2223,7 +2523,7 @@
                 detail_background_title: 'Hintergrund & Weg',
                 detail_background_content: 'Ich bin im Jugendalter und absolviere aktuell eine Ausbildung zum Fachinformatiker für Systemintegration. Das hat mich früh gelehrt, unabhängig zu sein und meinen eigenen Weg zu gehen. Ich sehe Herausforderungen nicht als Hindernis, sondern als Chance, zu wachsen und meine eigene Zukunft zu gestalten.',
                 detail_freizeit_title: 'Gaming & Content',
-                detail_freizeit_content: 'Wenn die Server laufen, bin ich bei Forza Horizon 5 anzutreffen. Ich streame live auf TikTok und teile meine Leidenschaft für Gaming und Technik mit der Community. Es geht mir um den Vibe, den Austausch und das Meistern neuer Challenges.',
+                detail_freizeit_content: 'Seit dem 19.07.2026 hat mich eine neue Leidenschaft komplett gepackt: Kartfahren! Mein allererstes Mal auf der Kartbahn und ich war sofort Feuer und Flamme - das wird für mich immer mehr zum Hauptding. Forza Horizon 6 zocke ich zwischendurch zwar noch gelegentlich, aber Kartfahren übernimmt gerade eindeutig den ersten Platz. Ich streame live auf TikTok und teile meine Leidenschaft für Gaming, Technik und jetzt auch Motorsport mit der Community. Die Community kann sich also schon auf coole Livestreams direkt von der Kartbahn freuen! Es geht mir um den Vibe, den Austausch und das Meistern neuer Challenges.',
                 detail_menschen_title: 'Meine Wahlfamilie',
                 detail_menschen_content: 'Da ich ohne Eltern aufgewachsen bin, sind Freunde meine gewählte Familie. Loyalität und Vertrauen stehen für mich an erster Stelle. Meine neuen Anker sind Danilo, Jakob und Lukas, aber Tom bleibt es mit ihnen gemeinsam – wir gehen den Weg zusammen.',
                 detail_techstack_title: 'Tech Stack & Skills',
@@ -2240,7 +2540,7 @@
                 fallback_4: 'Hmm. Wir kennen den Text für diesen Song nicht.',
                 fallback_5: 'Leider kein Text am Start. Einfach den Vibe genießen!',
                 secret_1: '🔧 Nächstes Projekt: noch mehr Homelab-Chaos im Docker-Stack.',
-                secret_2: '🎮 Aktueller Highscore in Forza Horizon 5: geheim. Frag nicht.',
+                secret_2: '🎮 Aktueller Highscore in Forza Horizon 6: geheim. Frag nicht.',
                 secret_3: '☕ Diese Seite wurde mit sehr viel Hyperfokus und noch mehr Kaffee gebaut.',
                 secret_4: '🐛 Bugs sind einfach ungeplante Features. Punkt.',
                 secret_5: '💙 Danke fürs Neugierig-Sein und Herumklicken!',
@@ -2285,6 +2585,18 @@
                 greeting_late_night: '🌙 Nachteule, wie ich sehe. Willkommen!',
                                 label_unsynced: 'Unsynced',
                                 toast_perf_suggestion: '📉 Läuft gerade etwas ruckelig? Aktivier den Low-End-Modus oben rechts für mehr Flüssigkeit.',
+                                card_title_karting: 'Kartfahren',
+                card_teaser_karting: 'Kartland Sinn seit 19.07.2026...',
+                detail_karting_title: 'Kartfahren',
+                detail_karting_content: 'Meine neueste und aktuell größte Leidenschaft! Seit dem 19.07.2026 fahre ich im Kartland Sinn - mein allererstes Mal auf einer Kartbahn überhaupt, und es hat mich sofort komplett gepackt. Hier meine Werte (werden laufend aktualisiert): 🏁 Bestzeit: [wird noch ergänzt] · 📅 Erste Session: 19.07.2026 · 🏎️ Bahn: Kartland Sinn. Freu dich schon auf coole Livestreams direkt von der Kartbahn!',
+                                kart_section_title: 'Kart-Dashboard',
+                kart_section_note: 'Live-Daten kommen bald direkt von meinem eigenen Raspberry-Pi-API-Server.',
+                kart_status_label: 'Feature in Arbeit',
+                kart_placeholder_title: 'Kartland Sinn - Live-Anbindung folgt',
+                kart_placeholder_text: 'An diesem Feature wird gerade gearbeitet. Bald verbindet sich diese Seite live mit meinem eigenen Raspberry Pi, der als eigener API-Server meine Rundenzeiten von Kartland Sinn direkt hier anzeigt - inklusive Bestzeit, Session-Historie und mehr. Schau bald wieder vorbei!',
+                kart_stat_besttime: 'Bestzeit',
+                kart_stat_sessions: 'Sessions',
+                kart_stat_since: 'Seit',
                 mini_click_to_open: 'Klicken zum Öffnen', mini_click_to_close: 'Klicken zum Schließen',
                 aria_cp: 'Befehlspalette öffnen', aria_install: 'Als App installieren', aria_island: 'Song-Details öffnen, nach oben wischen zum Ausblenden'
             },
@@ -2294,13 +2606,13 @@
                 tutorial_next: 'Next', tutorial_back: 'Back', tutorial_finish: 'Done', tutorial_skip: 'Skip',
                 tutorial_step: (n, total) => `Step ${n}/${total}`,
                 t_step1_title: 'Welcome to my world!',
-                t_step1_text: "This is my personal portfolio. Here you'll learn everything about me, my path into systems integration, and what drives me. My hyperfocus is the whole point here!",
+                t_step1_text: "Only takes 30 seconds, promise! This is my personal portfolio - and yes, there are hidden Easter eggs to find here too. Genuinely worth it.",
                 t_step2_title: 'Your control center',
                 t_step2_text: 'Top right you have full control: "Apple Liquid Glass" turns on the fancy but performance-hungry blur look, Dark Mode switches between light/dark, Low-End Mode disables heavy animations for older/slower devices, StandBy opens lock-screen mode, and the last button restarts this tutorial anytime.',
                 t_step3_title: 'Deep dive: who am I?',
                 t_step3_text: 'Click these interactive cards. They open detailed popups where I tell you more about my audio setup, my tech stack, my homelab projects, and my free time.',
                 t_step4_title: 'Real-time music integration',
-                t_step4_text: "The wildest part: the dashboard shows in real time what I'm currently listening to! A small Dynamic Island always stays visible up top while music is playing - tap to expand, tap again to collapse, swipe up to dismiss it completely (bring it back via the Spotlight search). Click the card for synced lyrics with over 30 crazy animation styles. The gear icon in the lyrics view also gives you: Ambient Color (tints the page background to match the cover), Spatial Tilt (a 3D tilt effect on the cover), and the Share Card generator (downloads a shareable image).",
+                t_step4_text: "The wildest part: the dashboard shows in real time what I'm currently listening to! A small Dynamic Island always stays visible up top while music is playing - tap to expand, tap again to collapse, swipe up to dismiss it completely (bring it back via the Spotlight search). Click the card for synced lyrics with over 30 crazy animation styles. The gear icon in the lyrics view also gives you: Ambient Color, Cover Glow, Background Glow, Spatial Tilt, and the Share Card generator. Important: these toggles aren't just visual anymore - they're real performance switches. Turn individual ones off if your device gets warm or starts lagging.",
                 t_step5_title: 'StandBy: your lock screen',
                 t_step5_text: 'This button turns the page into a real lock screen: a big clock, date, and a large now-playing card with cover art, a live EQ, and a progress bar in front of a gently animated, blurred background. Everything shifts slightly every few minutes so nothing burns into OLED screens - perfect for your nightstand while charging.',
                 t_step6_title: 'Spotlight search (⌘K)',
@@ -2323,7 +2635,7 @@
                 toast_copy_unsupported: "⚠️ Your browser doesn't support that. Link: ",
                 toast_konami: '🎉 Konami code detected! Hyperfocus activated!',
                 toast_oink: '🐷 Oink oink! Who called for that?',
-                toast_forza: '🏎️ Vrooom! Forza Horizon 5 mode!',
+                toast_forza: '🏎️ Vrooom! Forza Horizon 6 mode!',
                 toast_fokus: "🧠⚡ Hyperfocus activated! Nothing gets lost now.",
                 toast_matrix: '💻 Wake up, Neo...',
                 toast_disco: '👀 You clicked five times... Disco mode!',
@@ -2338,7 +2650,7 @@
                 cp_sharecard: 'Create & download share card', cp_tutorial: 'Start tutorial', cp_tiktok: 'Open my TikTok',
                 cp_island_back: 'Show Dynamic Island again', cp_copy_link: 'Copy link to this page', cp_reload: 'Reload page',
                 cp_change_lang: '🌐 Sprache ändern / Change language',
-                settings_ambient: 'Ambient Color', settings_glow: 'Glow Effect', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
+                settings_ambient: 'Ambient Color', settings_glow: 'Glow Effect', settings_cover_glow: 'Cover Glow', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
                 on_label: 'ON', off_label: 'OFF',
                 standby_idle_title: "It's quiet right now...", standby_idle_subtitle: 'Enjoy the silence', standby_hint: 'Tap to exit',
                 install_btn: '📲 Install app',
@@ -2357,7 +2669,7 @@
                 card_title_contact: 'Contact',
                 card_teaser_status: 'Training as a systems integration IT specialist...',
                 card_teaser_background: 'A teenager & in training...',
-                card_teaser_freizeit: 'Forza Horizon 5 & streaming...',
+                card_teaser_freizeit: 'Karting & Forza Horizon 6...',
                 card_teaser_menschen: 'Tom, Danilo, Jakob & Lukas...',
                 card_teaser_techstack: 'Hardware, Linux, Windows...',
                 card_teaser_setup: 'DT 770 Pro & Rockster Cross...',
@@ -2373,7 +2685,7 @@
                 detail_background_title: 'Background & Path',
                 detail_background_content: 'I\'m a teenager and currently training as a systems integration IT specialist. That taught me early on to be independent and go my own way. I don\'t see challenges as obstacles, but as a chance to grow and shape my own future.',
                 detail_freizeit_title: 'Gaming & Content',
-                detail_freizeit_content: 'When the servers are running, you\'ll find me playing Forza Horizon 5. I stream live on TikTok and share my passion for gaming and tech with the community. It\'s all about the vibe, connecting with others, and mastering new challenges.',
+                detail_freizeit_content: 'Since 07/19/2026, a brand new passion has completely taken over: go-karting! My very first time on a kart track and I was instantly hooked - it\'s quickly becoming the main thing for me. I still play Forza Horizon 6 here and there, but karting is clearly taking the top spot now. I stream live on TikTok and share my passion for gaming, tech, and now motorsport with the community. So get ready, community - cool livestreams straight from the kart track are coming! It\'s all about the vibe, connecting with others, and mastering new challenges.',
                 detail_menschen_title: 'My Chosen Family',
                 detail_menschen_content: 'Since I grew up without parents, friends are my chosen family. Loyalty and trust come first for me. My new anchors are Danilo, Jakob, and Lukas, but Tom stays right there with them - we\'re walking this path together.',
                 detail_techstack_title: 'Tech Stack & Skills',
@@ -2390,7 +2702,7 @@
                 fallback_4: 'Hmm. We don\'t know the lyrics for this song.',
                 fallback_5: 'No lyrics available, unfortunately. Just enjoy the vibe!',
                 secret_1: '🔧 Next project: even more homelab chaos in the Docker stack.',
-                secret_2: '🎮 Current Forza Horizon 5 high score: classified. Don\'t ask.',
+                secret_2: '🎮 Current Forza Horizon 6 high score: classified. Don\'t ask.',
                 secret_3: '☕ This site was built with a lot of hyperfocus and even more coffee.',
                 secret_4: '🐛 Bugs are just unplanned features. Period.',
                 secret_5: '💙 Thanks for being curious and clicking around!',
@@ -2435,6 +2747,18 @@
                 greeting_late_night: '🌙 A night owl, I see. Welcome!',
                                 label_unsynced: 'Unsynced',
                                 toast_perf_suggestion: '📉 Feeling a bit choppy? Turn on Low-End Mode (top right) for smoother performance.',
+                                card_title_karting: 'Go-Karting',
+                card_teaser_karting: 'Kartland Sinn since 07/19/2026...',
+                detail_karting_title: 'Go-Karting',
+                detail_karting_content: 'My newest and currently biggest passion! I\'ve been racing at Kartland Sinn since 07/19/2026 - my very first time on a kart track ever, and it hooked me instantly. Here are my stats (updated regularly): 🏁 Personal best: [to be added] · 📅 First session: 07/19/2026 · 🏎️ Track: Kartland Sinn. Get ready for cool livestreams straight from the kart track!',
+                                kart_section_title: 'Kart Dashboard',
+                kart_section_note: 'Live data is coming soon, straight from my own Raspberry Pi API server.',
+                kart_status_label: 'Feature in progress',
+                kart_placeholder_title: 'Kartland Sinn - Live connection coming',
+                kart_placeholder_text: 'This feature is currently being built. Soon this page will connect live to my own Raspberry Pi, running as its own API server to display my lap times from Kartland Sinn right here - including personal best, session history, and more. Check back soon!',
+                kart_stat_besttime: 'Best Time',
+                kart_stat_sessions: 'Sessions',
+                kart_stat_since: 'Since',
                 mini_click_to_open: 'Click to open', mini_click_to_close: 'Click to close',
                 aria_cp: 'Open command palette', aria_install: 'Install as app', aria_island: 'Open song details, swipe up to dismiss'
             },
@@ -2444,13 +2768,13 @@
                 tutorial_next: 'Siguiente', tutorial_back: 'Atrás', tutorial_finish: 'Listo', tutorial_skip: 'Omitir',
                 tutorial_step: (n, total) => `Paso ${n}/${total}`,
                 t_step1_title: '¡Bienvenido a mi mundo!',
-                t_step1_text: 'Este es mi portafolio personal. Aquí descubrirás todo sobre mí, mi camino hacia la integración de sistemas y qué me motiva. ¡Mi hiperfoco es el protagonista aquí!',
+                t_step1_text: '¡Solo toma 30 segundos, lo prometo! Este es mi portafolio personal - y sí, también hay Easter eggs escondidos por descubrir. Vale la pena de verdad.',
                 t_step2_title: 'Tu centro de control',
                 t_step2_text: 'Arriba a la derecha tienes el control total: "Apple Liquid Glass" activa el elegante pero exigente efecto de desenfoque, Modo Oscuro cambia entre claro/oscuro, Modo de Bajo Rendimiento desactiva animaciones pesadas para dispositivos más antiguos/lentos, StandBy abre el modo de pantalla de bloqueo, y el último botón reinicia este tutorial cuando quieras.',
                 t_step3_title: 'A fondo: ¿quién soy?',
                 t_step3_text: 'Haz clic en estas tarjetas interactivas. Abren ventanas detalladas donde te cuento más sobre mi equipo de audio, mi stack tecnológico, mis proyectos de homelab y mi tiempo libre.',
                 t_step4_title: 'Música en tiempo real',
-                t_step4_text: 'La parte más loca: ¡el panel muestra en tiempo real lo que estoy escuchando! Una pequeña Dynamic Island permanece siempre visible arriba mientras suena música - tócala para expandirla, tócala de nuevo para cerrarla, deslízala hacia arriba para ocultarla del todo (recupérala desde la búsqueda Spotlight). Haz clic en la tarjeta para ver letras sincronizadas con más de 30 estilos de animación. El icono de ajustes en las letras también tiene: Ambient Color (tiñe el fondo de la página según la portada), Spatial Tilt (efecto de inclinación 3D en la portada), y el generador de tarjetas para compartir (descarga una imagen para compartir).',
+                t_step4_text: 'La parte más loca: ¡el panel muestra en tiempo real lo que estoy escuchando! Una pequeña Dynamic Island permanece siempre visible arriba mientras suena música - tócala para expandirla, tócala de nuevo para cerrarla, deslízala hacia arriba para ocultarla del todo (recupérala desde la búsqueda Spotlight). Haz clic en la tarjeta para ver letras sincronizadas con más de 30 estilos de animación. El icono de ajustes en las letras también tiene: Ambient Color, Brillo de Portada, Brillo de Fondo, Spatial Tilt, y el generador de tarjetas para compartir. Importante: estos interruptores ya no son solo estéticos, sino interruptores reales de rendimiento - apaga alguno si tu dispositivo se calienta o va lento.',
                 t_step5_title: 'StandBy: tu pantalla de bloqueo',
                 t_step5_text: 'Este botón convierte la página en una verdadera pantalla de bloqueo: hora grande, fecha y una gran tarjeta de reproducción con portada, ecualizador en vivo y barra de progreso frente a un fondo animado y difuminado. Todo se desplaza ligeramente cada pocos minutos para que nada se queme en pantallas OLED - perfecto para la mesita de noche mientras carga.',
                 t_step6_title: 'Búsqueda Spotlight (⌘K)',
@@ -2473,7 +2797,7 @@
                 toast_copy_unsupported: '⚠️ Tu navegador no soporta esto. Enlace: ',
                 toast_konami: '🎉 ¡Código Konami detectado! ¡Hiperfoco activado!',
                 toast_oink: '🐷 ¡Oink oink! ¿Quién llamó?',
-                toast_forza: '🏎️ ¡Vrooom! ¡Modo Forza Horizon 5!',
+                toast_forza: '🏎️ ¡Vrooom! ¡Modo Forza Horizon 6!',
                 toast_fokus: '🧠⚡ ¡Hiperfoco activado! Ahora no se pierde nada.',
                 toast_matrix: '💻 Despierta, Neo...',
                 toast_disco: '👀 Hiciste clic cinco veces... ¡Modo disco!',
@@ -2488,7 +2812,7 @@
                 cp_sharecard: 'Crear y descargar tarjeta', cp_tutorial: 'Iniciar tutorial', cp_tiktok: 'Abrir mi TikTok',
                 cp_island_back: 'Mostrar Dynamic Island de nuevo', cp_copy_link: 'Copiar enlace de la página', cp_reload: 'Recargar página',
                 cp_change_lang: '🌐 Cambiar idioma / Change language',
-                settings_ambient: 'Ambient Color', settings_glow: 'Efecto de Brillo', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
+                settings_ambient: 'Ambient Color', settings_glow: 'Efecto de Brillo', settings_cover_glow: 'Brillo de Portada', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
                 on_label: 'ON', off_label: 'OFF',
                 standby_idle_title: 'Todo tranquilo por ahora...', standby_idle_subtitle: 'Disfruta del silencio', standby_hint: 'Toca para salir',
                 install_btn: '📲 Instalar app',
@@ -2507,7 +2831,7 @@
                 card_title_contact: 'Contacto',
                 card_teaser_status: 'Formación como técnico en integración de sistemas...',
                 card_teaser_background: 'Adolescente y en formación...',
-                card_teaser_freizeit: 'Forza Horizon 5 y streaming...',
+                card_teaser_freizeit: 'Karting y Forza Horizon 6...',
                 card_teaser_menschen: 'Tom, Danilo, Jakob y Lukas...',
                 card_teaser_techstack: 'Hardware, Linux, Windows...',
                 card_teaser_setup: 'DT 770 Pro y Rockster Cross...',
@@ -2523,7 +2847,7 @@
                 detail_background_title: 'Trasfondo y Camino',
                 detail_background_content: 'Soy adolescente y actualmente me estoy formando como técnico en integración de sistemas. Eso me enseñó pronto a ser independiente y a seguir mi propio camino. No veo los desafíos como obstáculos, sino como una oportunidad para crecer y construir mi propio futuro.',
                 detail_freizeit_title: 'Gaming y Contenido',
-                detail_freizeit_content: 'Cuando los servidores están funcionando, me encuentras jugando a Forza Horizon 5. Hago streaming en directo en TikTok y comparto mi pasión por los videojuegos y la tecnología con la comunidad. Para mí se trata del ambiente, del intercambio y de superar nuevos retos.',
+                detail_freizeit_content: 'Desde el 19/07/2026 una nueva pasión me ha atrapado por completo: ¡el karting! Mi primera vez en un circuito de karts y quedé enganchado al instante - cada vez se está convirtiendo más en lo principal para mí. Todavía juego a Forza Horizon 6 de vez en cuando, pero el karting claramente está tomando el primer lugar. Hago streaming en directo en TikTok y comparto mi pasión por los videojuegos, la tecnología y ahora también el motorsport con la comunidad. ¡Así que la comunidad ya puede esperar transmisiones geniales directamente desde el circuito de karts! Para mí se trata del ambiente, del intercambio y de superar nuevos retos.',
                 detail_menschen_title: 'Mi Familia Elegida',
                 detail_menschen_content: 'Como crecí sin padres, mis amigos son mi familia elegida. La lealtad y la confianza son lo primero para mí. Mis nuevos pilares son Danilo, Jakob y Lukas, pero Tom sigue con ellos - recorremos este camino juntos.',
                 detail_techstack_title: 'Tech Stack y Habilidades',
@@ -2540,7 +2864,7 @@
                 fallback_4: 'Hmm. No conocemos la letra de esta canción.',
                 fallback_5: 'Lamentablemente no hay letra disponible. ¡Disfruta el ambiente!',
                 secret_1: '🔧 Próximo proyecto: todavía más caos de homelab en el stack de Docker.',
-                secret_2: '🎮 Récord actual en Forza Horizon 5: secreto. No preguntes.',
+                secret_2: '🎮 Récord actual en Forza Horizon 6: secreto. No preguntes.',
                 secret_3: '☕ Esta página se construyó con muchísimo hiperfoco y aún más café.',
                 secret_4: '🐛 Los bugs son simplemente funciones no planeadas. Punto.',
                 secret_5: '💙 ¡Gracias por ser curioso y andar haciendo clic por todos lados!',
@@ -2585,6 +2909,18 @@
                 greeting_late_night: '🌙 Búho nocturno, por lo que veo. ¡Bienvenido!',
                                 label_unsynced: 'Sin sincronizar',
                                 toast_perf_suggestion: '📉 ¿Va un poco lento? Activa el Modo de Bajo Rendimiento (arriba a la derecha) para más fluidez.',
+                                card_title_karting: 'Karting',
+                card_teaser_karting: 'Kartland Sinn desde el 19/07/2026...',
+                detail_karting_title: 'Karting',
+                detail_karting_content: 'Mi pasión más nueva y actualmente la más grande. Desde el 19/07/2026 corro en Kartland Sinn - mi primerísima vez en un circuito de karts, y me enganchó al instante. Aquí mis datos (se actualizan regularmente): 🏁 Mejor tiempo: [pendiente] · 📅 Primera sesión: 19/07/2026 · 🏎️ Circuito: Kartland Sinn. ¡Prepárate para transmisiones geniales directamente desde el circuito!',
+                                kart_section_title: 'Panel de Karting',
+                kart_section_note: 'Los datos en vivo llegarán pronto, directamente desde mi propio servidor API en Raspberry Pi.',
+                kart_status_label: 'Función en desarrollo',
+                kart_placeholder_title: 'Kartland Sinn - Conexión en vivo próximamente',
+                kart_placeholder_text: 'Esta función está en desarrollo. Pronto esta página se conectará en vivo con mi propia Raspberry Pi, que funcionará como servidor API propio para mostrar aquí mismo mis tiempos de vuelta de Kartland Sinn - incluyendo mejor tiempo, historial de sesiones y más. ¡Vuelve pronto!',
+                kart_stat_besttime: 'Mejor Tiempo',
+                kart_stat_sessions: 'Sesiones',
+                kart_stat_since: 'Desde',
                 mini_click_to_open: 'Clic para abrir', mini_click_to_close: 'Clic para cerrar',
                 aria_cp: 'Abrir paleta de comandos', aria_install: 'Instalar como app', aria_island: 'Abrir detalles de la canción, desliza arriba para ocultar'
             },
@@ -2594,13 +2930,13 @@
                 tutorial_next: 'Suivant', tutorial_back: 'Retour', tutorial_finish: 'Terminé', tutorial_skip: 'Passer',
                 tutorial_step: (n, total) => `Étape ${n}/${total}`,
                 t_step1_title: 'Bienvenue dans mon monde !',
-                t_step1_text: "C'est mon portfolio personnel. Tu y découvriras tout sur moi, mon parcours vers l'intégration de systèmes et ce qui me motive. Mon hyperfocus est ici au centre de tout !",
+                t_step1_text: "Ça ne prend que 30 secondes, promis ! C'est mon portfolio personnel - et oui, il y a aussi des easter eggs cachés à découvrir. Ça vaut vraiment le coup.",
                 t_step2_title: 'Ton centre de contrôle',
                 t_step2_text: 'En haut à droite, tu as le contrôle total : "Apple Liquid Glass" active le look flou chic mais gourmand en performances, le mode sombre bascule entre clair/sombre, le mode basse consommation désactive les animations lourdes pour les appareils plus anciens/lents, StandBy ouvre le mode écran verrouillé, et le dernier bouton relance ce tutoriel à tout moment.',
                 t_step3_title: 'Plongée en profondeur : qui suis-je ?',
                 t_step3_text: "Clique sur ces cartes interactives. Elles ouvrent des fenêtres détaillées où je te parle de mon setup audio, ma stack technique, mes projets de homelab et mon temps libre.",
                 t_step4_title: 'Intégration musicale en temps réel',
-                t_step4_text: "La partie la plus folle : le tableau de bord affiche en temps réel ce que j'écoute ! Une petite Dynamic Island reste toujours visible en haut tant que la musique joue - appuie pour l'agrandir, réappuie pour la réduire, glisse vers le haut pour la masquer complètement (récupère-la via la recherche Spotlight). Clique sur la carte pour des paroles synchronisées avec plus de 30 styles d'animation. L'icône d'engrenage dans les paroles propose aussi : Ambient Color (teinte le fond de la page selon la pochette), Spatial Tilt (effet d'inclinaison 3D sur la pochette), et le générateur de carte à partager (télécharge une image à partager).",
+                t_step4_text: "La partie la plus folle : le tableau de bord affiche en temps réel ce que j'écoute ! Une petite Dynamic Island reste toujours visible en haut tant que la musique joue - appuie pour l'agrandir, réappuie pour la réduire, glisse vers le haut pour la masquer complètement (récupère-la via la recherche Spotlight). Clique sur la carte pour des paroles synchronisées avec plus de 30 styles d'animation. L'icône d'engrenage dans les paroles propose aussi : Ambient Color, Lueur de Pochette, Lueur de Fond, Spatial Tilt, et le générateur de carte à partager. Important : ces interrupteurs ne sont plus juste esthétiques, ce sont de vrais interrupteurs de performance - désactive-en si ton appareil chauffe ou rame.",
                 t_step5_title: "StandBy : ton écran verrouillé",
                 t_step5_text: "Ce bouton transforme la page en véritable écran verrouillé : grande horloge, date, et une grande carte de lecture avec pochette, égaliseur en direct et barre de progression devant un fond flouté animé en douceur. Tout se décale légèrement toutes les quelques minutes pour éviter la marque d'écran sur les écrans OLED - parfait sur la table de nuit pendant la charge.",
                 t_step6_title: 'Recherche Spotlight (⌘K)',
@@ -2623,7 +2959,7 @@
                 toast_copy_unsupported: '⚠️ Ton navigateur ne supporte pas ça. Lien : ',
                 toast_konami: '🎉 Code Konami détecté ! Hyperfocus activé !',
                 toast_oink: '🐷 Oink oink ! Qui a appelé ça ?',
-                toast_forza: '🏎️ Vrooom ! Mode Forza Horizon 5 !',
+                toast_forza: '🏎️ Vrooom ! Mode Forza Horizon 6 !',
                 toast_fokus: "🧠⚡ Hyperfocus activé ! Plus rien ne se perd maintenant.",
                 toast_matrix: '💻 Réveille-toi, Neo...',
                 toast_disco: '👀 Tu as cliqué cinq fois... Mode disco !',
@@ -2638,7 +2974,7 @@
                 cp_sharecard: 'Créer & télécharger la carte à partager', cp_tutorial: 'Démarrer le tutoriel', cp_tiktok: 'Ouvrir mon TikTok',
                 cp_island_back: 'Réafficher la Dynamic Island', cp_copy_link: 'Copier le lien de la page', cp_reload: 'Recharger la page',
                 cp_change_lang: '🌐 Changer de langue / Change language',
-                settings_ambient: 'Ambient Color', settings_glow: 'Effet de Lueur', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
+                settings_ambient: 'Ambient Color', settings_glow: 'Effet de Lueur', settings_cover_glow: 'Lueur de Pochette', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
                 on_label: 'ON', off_label: 'OFF',
                 standby_idle_title: "C'est calme pour le moment...", standby_idle_subtitle: 'Profite du silence', standby_hint: 'Toucher pour quitter',
                 install_btn: '📲 Installer l\'appli',
@@ -2657,7 +2993,7 @@
                 card_title_contact: 'Contact',
                 card_teaser_status: 'Formation d\'informaticien en intégration de systèmes...',
                 card_teaser_background: 'Ado & en formation...',
-                card_teaser_freizeit: 'Forza Horizon 5 & streaming...',
+                card_teaser_freizeit: 'Karting & Forza Horizon 6...',
                 card_teaser_menschen: 'Tom, Danilo, Jakob & Lukas...',
                 card_teaser_techstack: 'Matériel, Linux, Windows...',
                 card_teaser_setup: 'DT 770 Pro & Rockster Cross...',
@@ -2673,7 +3009,7 @@
                 detail_background_title: 'Contexte & Parcours',
                 detail_background_content: 'Je suis ado et actuellement en formation d\'informaticien en intégration de systèmes. Cela m\'a appris tôt à être indépendant et à suivre mon propre chemin. Je ne vois pas les défis comme des obstacles, mais comme une chance de grandir et de construire mon propre avenir.',
                 detail_freizeit_title: 'Gaming & Contenu',
-                detail_freizeit_content: 'Quand les serveurs tournent, je suis sur Forza Horizon 5. Je stream en direct sur TikTok et je partage ma passion du gaming et de la tech avec la communauté. Ce qui compte pour moi, c\'est l\'ambiance, les échanges et relever de nouveaux défis.',
+                detail_freizeit_content: 'Depuis le 19/07/2026, une toute nouvelle passion m\'a complètement conquis : le karting ! Ma toute première fois sur un circuit de karting et j\'ai adoré instantanément - ça devient de plus en plus mon truc principal. Je joue encore parfois à Forza Horizon 6, mais le karting prend clairement la première place maintenant. Je stream en direct sur TikTok et je partage ma passion du gaming, de la tech et maintenant du sport automobile avec la communauté. La communauté peut donc déjà se réjouir de streams sympas directement depuis le circuit de karting ! Ce qui compte pour moi, c\'est l\'ambiance, les échanges et relever de nouveaux défis.',
                 detail_menschen_title: 'Ma Famille de Cœur',
                 detail_menschen_content: 'Comme j\'ai grandi sans parents, mes amis sont ma famille de cœur. La loyauté et la confiance passent avant tout pour moi. Mes nouveaux piliers sont Danilo, Jakob et Lukas, mais Tom reste avec eux - on avance ensemble sur ce chemin.',
                 detail_techstack_title: 'Tech Stack & Compétences',
@@ -2690,7 +3026,7 @@
                 fallback_4: 'Hmm. On ne connaît pas les paroles de cette chanson.',
                 fallback_5: 'Malheureusement pas de paroles disponibles. Profite juste de l\'ambiance !',
                 secret_1: '🔧 Prochain projet : encore plus de chaos homelab dans la stack Docker.',
-                secret_2: '🎮 Meilleur score actuel sur Forza Horizon 5 : secret. Ne demande pas.',
+                secret_2: '🎮 Meilleur score actuel sur Forza Horizon 6 : secret. Ne demande pas.',
                 secret_3: '☕ Ce site a été construit avec beaucoup d\'hyperfocus et encore plus de café.',
                 secret_4: '🐛 Les bugs, ce sont juste des fonctionnalités pas prévues. Point final.',
                 secret_5: '💙 Merci d\'être curieux et d\'avoir cliqué partout !',
@@ -2735,6 +3071,18 @@
                 greeting_late_night: '🌙 Un oiseau de nuit, à ce que je vois. Bienvenue !',
                                 label_unsynced: 'Non synchronisé',
                                 toast_perf_suggestion: '📉 Un peu saccadé ? Active le mode basse consommation (en haut à droite) pour plus de fluidité.',
+                                card_title_karting: 'Karting',
+                card_teaser_karting: 'Kartland Sinn depuis le 19/07/2026...',
+                detail_karting_title: 'Karting',
+                detail_karting_content: 'Ma toute nouvelle et actuellement plus grande passion ! Je roule à Kartland Sinn depuis le 19/07/2026 - ma toute première fois sur un circuit de karting, et j\'ai adoré instantanément. Voici mes stats (mises à jour régulièrement) : 🏁 Meilleur temps : [à venir] · 📅 Première session : 19/07/2026 · 🏎️ Circuit : Kartland Sinn. Prépare-toi pour des streams sympas directement depuis le circuit !',
+                                kart_section_title: 'Tableau de Bord Karting',
+                kart_section_note: 'Les données en direct arrivent bientôt, directement depuis mon propre serveur API Raspberry Pi.',
+                kart_status_label: 'Fonctionnalité en cours',
+                kart_placeholder_title: 'Kartland Sinn - Connexion en direct à venir',
+                kart_placeholder_text: 'Cette fonctionnalité est en cours de développement. Bientôt, cette page se connectera en direct à mon propre Raspberry Pi, qui fera office de serveur API pour afficher ici mes temps au tour à Kartland Sinn - meilleur temps, historique des sessions et plus encore. Reviens bientôt !',
+                kart_stat_besttime: 'Meilleur Temps',
+                kart_stat_sessions: 'Sessions',
+                kart_stat_since: 'Depuis',
                 mini_click_to_open: 'Cliquer pour ouvrir', mini_click_to_close: 'Cliquer pour fermer',
                 aria_cp: 'Ouvrir la palette de commandes', aria_install: 'Installer comme appli', aria_island: 'Ouvrir les détails du morceau, glisser vers le haut pour masquer'
             },
@@ -2744,13 +3092,13 @@
                 tutorial_next: 'Próximo', tutorial_back: 'Voltar', tutorial_finish: 'Concluir', tutorial_skip: 'Pular',
                 tutorial_step: (n, total) => `Passo ${n}/${total}`,
                 t_step1_title: 'Bem-vindo ao meu mundo!',
-                t_step1_text: 'Este é meu portfólio pessoal. Aqui você descobre tudo sobre mim, meu caminho na integração de sistemas e o que me motiva. Meu hiperfoco é o protagonista aqui!',
+                t_step1_text: 'Leva só 30 segundos, prometo! Este é meu portfólio pessoal - e sim, também tem easter eggs escondidos pra descobrir aqui. Vale muito a pena.',
                 t_step2_title: 'Sua central de controle',
                 t_step2_text: 'No canto superior direito você tem controle total: "Apple Liquid Glass" ativa o visual desfocado chique mas pesado, Modo Escuro alterna entre claro/escuro, Modo de Baixo Desempenho desativa animações pesadas para aparelhos mais antigos/lentos, StandBy abre o modo tela de bloqueio, e o último botão reinicia este tutorial quando quiser.',
                 t_step3_title: 'Aprofundando: quem sou eu?',
                 t_step3_text: 'Clique nesses cartões interativos. Eles abrem janelas detalhadas onde conto mais sobre minha configuração de áudio, minha stack de tecnologia, meus projetos de homelab e meu tempo livre.',
                 t_step4_title: 'Integração musical em tempo real',
-                t_step4_text: 'A parte mais louca: o painel mostra em tempo real o que estou ouvindo! Uma pequena Dynamic Island fica sempre visível no topo enquanto a música toca - toque para expandir, toque de novo para recolher, deslize para cima para ocultar completamente (traga de volta pela busca Spotlight). Clique no cartão para letras sincronizadas com mais de 30 estilos de animação. O ícone de engrenagem nas letras também tem: Ambient Color (tinge o fundo da página conforme a capa), Spatial Tilt (efeito de inclinação 3D na capa), e o gerador de cartão para compartilhar (baixa uma imagem para compartilhar).',
+                t_step4_text: 'A parte mais louca: o painel mostra em tempo real o que estou ouvindo! Uma pequena Dynamic Island fica sempre visível no topo enquanto a música toca - toque para expandir, toque de novo para recolher, deslize para cima para ocultar completamente (traga de volta pela busca Spotlight). Clique no cartão para letras sincronizadas com mais de 30 estilos de animação. O ícone de engrenagem nas letras também tem: Ambient Color, Brilho da Capa, Brilho de Fundo, Spatial Tilt, e o gerador de cartão para compartilhar. Importante: essas opções não são mais só visuais - são interruptores reais de desempenho. Desative alguma se seu aparelho esquentar ou travar.',
                 t_step5_title: 'StandBy: sua tela de bloqueio',
                 t_step5_text: 'Este botão transforma a página em uma tela de bloqueio de verdade: relógio grande, data e um grande cartão do que está tocando, com capa, equalizador ao vivo e barra de progresso na frente de um fundo animado e desfocado. Tudo se desloca levemente a cada poucos minutos para não queimar telas OLED - perfeito para o criado-mudo enquanto carrega.',
                 t_step6_title: 'Busca Spotlight (⌘K)',
@@ -2773,7 +3121,7 @@
                 toast_copy_unsupported: '⚠️ Seu navegador não suporta isso. Link: ',
                 toast_konami: '🎉 Código Konami detectado! Hiperfoco ativado!',
                 toast_oink: '🐷 Oink oink! Quem chamou?',
-                toast_forza: '🏎️ Vrooom! Modo Forza Horizon 5!',
+                toast_forza: '🏎️ Vrooom! Modo Forza Horizon 6!',
                 toast_fokus: '🧠⚡ Hiperfoco ativado! Agora nada se perde.',
                 toast_matrix: '💻 Acorda, Neo...',
                 toast_disco: '👀 Você clicou cinco vezes... Modo disco!',
@@ -2788,7 +3136,7 @@
                 cp_sharecard: 'Criar & baixar cartão para compartilhar', cp_tutorial: 'Iniciar tutorial', cp_tiktok: 'Abrir meu TikTok',
                 cp_island_back: 'Mostrar Dynamic Island novamente', cp_copy_link: 'Copiar link da página', cp_reload: 'Recarregar página',
                 cp_change_lang: '🌐 Mudar idioma / Change language',
-                settings_ambient: 'Ambient Color', settings_glow: 'Efeito de Brilho', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
+                settings_ambient: 'Ambient Color', settings_glow: 'Efeito de Brilho', settings_cover_glow: 'Brilho da Capa', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
                 on_label: 'LIGADO', off_label: 'DESLIGADO',
                 standby_idle_title: 'Está tudo quieto agora...', standby_idle_subtitle: 'Aproveite o silêncio', standby_hint: 'Toque para sair',
                 install_btn: '📲 Instalar app',
@@ -2807,7 +3155,7 @@
                 card_title_contact: 'Contato',
                 card_teaser_status: 'Formação técnica em integração de sistemas...',
                 card_teaser_background: 'Adolescente & em formação...',
-                card_teaser_freizeit: 'Forza Horizon 5 & streaming...',
+                card_teaser_freizeit: 'Kart & Forza Horizon 6...',
                 card_teaser_menschen: 'Tom, Danilo, Jakob & Lukas...',
                 card_teaser_techstack: 'Hardware, Linux, Windows...',
                 card_teaser_setup: 'DT 770 Pro & Rockster Cross...',
@@ -2823,7 +3171,7 @@
                 detail_background_title: 'Contexto & Caminho',
                 detail_background_content: 'Sou adolescente e atualmente faço minha formação técnica em integração de sistemas. Isso me ensinou cedo a ser independente e seguir meu próprio caminho. Não vejo desafios como obstáculos, mas como uma chance de crescer e construir meu próprio futuro.',
                 detail_freizeit_title: 'Gaming & Conteúdo',
-                detail_freizeit_content: 'Quando os servidores estão rodando, você me encontra jogando Forza Horizon 5. Faço streaming ao vivo no TikTok e compartilho minha paixão por games e tecnologia com a comunidade. Pra mim é sobre o clima, a troca e superar novos desafios.',
+                detail_freizeit_content: 'Desde 19/07/2026 uma nova paixão me conquistou completamente: kart! Minha primeira vez numa pista de kart e eu já fiquei totalmente viciado - isso está virando cada vez mais a coisa principal pra mim. Ainda jogo Forza Horizon 6 de vez em quando, mas o kart claramente está assumindo o primeiro lugar agora. Faço streaming ao vivo no TikTok e compartilho minha paixão por games, tecnologia e agora também automobilismo com a comunidade. Então a galera já pode esperar streams incríveis direto da pista de kart! Pra mim é sobre o clima, a troca e superar novos desafios.',
                 detail_menschen_title: 'Minha Família Escolhida',
                 detail_menschen_content: 'Como cresci sem pais, meus amigos são minha família escolhida. Lealdade e confiança vêm em primeiro lugar pra mim. Meus novos pilares são Danilo, Jakob e Lukas, mas o Tom continua junto com eles - seguimos esse caminho juntos.',
                 detail_techstack_title: 'Tech Stack & Habilidades',
@@ -2840,7 +3188,7 @@
                 fallback_4: 'Hmm. Não conhecemos a letra dessa música.',
                 fallback_5: 'Infelizmente não tem letra disponível. Aproveita o vibe!',
                 secret_1: '🔧 Próximo projeto: ainda mais caos de homelab na stack do Docker.',
-                secret_2: '🎮 Recorde atual no Forza Horizon 5: segredo. Não pergunta.',
+                secret_2: '🎮 Recorde atual no Forza Horizon 6: segredo. Não pergunta.',
                 secret_3: '☕ Este site foi feito com muito hiperfoco e ainda mais café.',
                 secret_4: '🐛 Bugs são só funcionalidades não planejadas. Ponto final.',
                 secret_5: '💙 Valeu por ser curioso e clicar em tudo por aí!',
@@ -2885,6 +3233,18 @@
                 greeting_late_night: '🌙 Uma coruja noturna, pelo visto. Seja bem-vindo!',
                                 label_unsynced: 'Não sincronizado',
                                 toast_perf_suggestion: '📉 Meio travando? Ative o Modo de Baixo Desempenho (canto superior direito) pra ficar mais suave.',
+                                card_title_karting: 'Kart',
+                card_teaser_karting: 'Kartland Sinn desde 19/07/2026...',
+                detail_karting_title: 'Kart',
+                detail_karting_content: 'Minha paixão mais nova e atualmente a maior! Desde 19/07/2026 corro no Kartland Sinn - minha primeiríssima vez numa pista de kart, e me conquistou na hora. Aqui estão meus dados (atualizados regularmente): 🏁 Melhor tempo: [em breve] · 📅 Primeira sessão: 19/07/2026 · 🏎️ Pista: Kartland Sinn. Se prepara pra streams incríveis direto da pista!',
+                                kart_section_title: 'Painel de Kart',
+                kart_section_note: 'Dados ao vivo chegando em breve, direto do meu próprio servidor API em Raspberry Pi.',
+                kart_status_label: 'Funcionalidade em desenvolvimento',
+                kart_placeholder_title: 'Kartland Sinn - Conexão ao vivo em breve',
+                kart_placeholder_text: 'Esta funcionalidade está sendo construída agora. Em breve esta página vai se conectar ao vivo com meu próprio Raspberry Pi, que funciona como servidor API próprio pra mostrar aqui meus tempos de volta do Kartland Sinn - incluindo melhor tempo, histórico de sessões e mais. Volte em breve!',
+                kart_stat_besttime: 'Melhor Tempo',
+                kart_stat_sessions: 'Sessões',
+                kart_stat_since: 'Desde',
                 mini_click_to_open: 'Clique para abrir', mini_click_to_close: 'Clique para fechar',
                 aria_cp: 'Abrir paleta de comandos', aria_install: 'Instalar como app', aria_island: 'Abrir detalhes da música, deslize para cima para ocultar'
             },
@@ -2894,13 +3254,13 @@
                 tutorial_next: 'İleri', tutorial_back: 'Geri', tutorial_finish: 'Bitir', tutorial_skip: 'Atla',
                 tutorial_step: (n, total) => `Adım ${n}/${total}`,
                 t_step1_title: 'Dünyama hoş geldin!',
-                t_step1_text: 'Bu benim kişisel portfolyom. Burada benim hakkımda, sistem entegrasyonuna giden yolum ve beni neyin motive ettiği hakkında her şeyi öğreneceksin. Hiperodağım burada başrolde!',
+                t_step1_text: 'Sadece 30 saniye sürüyor, söz veriyorum! Bu benim kişisel portfolyom - ve evet, burada keşfedilecek gizli easter egg\'ler de var. Gerçekten değer.',
                 t_step2_title: 'Kontrol merkezin',
                 t_step2_text: 'Sağ üstte tüm kontrol sende: "Apple Liquid Glass" şık ama performans yiyen bulanıklık görünümünü açar, Karanlık Mod açık/koyu arasında geçiş yapar, Düşük Performans Modu eski/yavaş cihazlar için ağır animasyonları kapatır, StandBy kilit ekranı modunu açar, ve son buton bu eğitimi istediğin zaman yeniden başlatır.',
                 t_step3_title: 'Derinlemesine: ben kimim?',
                 t_step3_text: 'Bu etkileşimli kartlara tıkla. Ses düzenim, teknoloji yığınım, homelab projelerim ve boş zamanım hakkında daha fazla bilgi veren detaylı pencereler açılıyor.',
                 t_step4_title: 'Gerçek zamanlı müzik entegrasyonu',
-                t_step4_text: "En çılgın kısım: panel şu anda ne dinlediğimi gerçek zamanlı gösteriyor! Müzik çalarken üstte küçük bir Dynamic Island her zaman görünür kalır - dokun genişlesin, tekrar dokun küçülsün, yukarı kaydır tamamen gizlensin (Spotlight aramasıyla geri getir). Senkronize şarkı sözleri için karta tıkla, 30'dan fazla animasyon stiliyle. Şarkı sözlerindeki dişli simgesi ayrıca şunları sunar: Ambient Color (sayfa arka planını kapak resmine göre boyar), Spatial Tilt (kapak resminde 3D eğim efekti), ve paylaşım kartı oluşturucu (paylaşılabilir bir resim indirir).",
+                t_step4_text: "En çılgın kısım: panel şu anda ne dinlediğimi gerçek zamanlı gösteriyor! Müzik çalarken üstte küçük bir Dynamic Island her zaman görünür kalır - dokun genişlesin, tekrar dokun küçülsün, yukarı kaydır tamamen gizlensin (Spotlight aramasıyla geri getir). Senkronize şarkı sözleri için karta tıkla, 30'dan fazla animasyon stiliyle. Şarkı sözlerindeki dişli simgesi ayrıca şunları sunar: Ambient Color, Kapak Parlaması, Arka Plan Parlaması, Spatial Tilt, ve paylaşım kartı oluşturucu. Önemli: bu düğmeler artık sadece görsel değil, gerçek performans düğmeleri - cihazın ısınırsa veya takılırsa bazılarını kapat.",
                 t_step5_title: 'StandBy: kilit ekranın',
                 t_step5_text: 'Bu buton sayfayı gerçek bir kilit ekranına dönüştürür: büyük saat, tarih ve kapak resmi, canlı ekolayzır ve ilerleme çubuğuyla büyük bir "şimdi çalıyor" kartı, yumuşakça hareket eden bulanık bir arka plan önünde. OLED ekranlarda iz bırakmaması için her şey birkaç dakikada bir hafifçe kayar - şarj olurken komodinde durması için mükemmel.',
                 t_step6_title: 'Spotlight arama (⌘K)',
@@ -2923,7 +3283,7 @@
                 toast_copy_unsupported: '⚠️ Tarayıcın bunu desteklemiyor. Bağlantı: ',
                 toast_konami: '🎉 Konami kodu algılandı! Hiperodak etkinleştirildi!',
                 toast_oink: '🐷 Oink oink! Kim seslendi?',
-                toast_forza: '🏎️ Vrooom! Forza Horizon 5 modu!',
+                toast_forza: '🏎️ Vrooom! Forza Horizon 6 modu!',
                 toast_fokus: '🧠⚡ Hiperodak etkinleştirildi! Artık hiçbir şey kaybolmuyor.',
                 toast_matrix: '💻 Uyan, Neo...',
                 toast_disco: '👀 Beş kez tıkladın... Disko modu!',
@@ -2938,7 +3298,7 @@
                 cp_sharecard: 'Paylaşım kartı oluştur & indir', cp_tutorial: 'Eğitimi başlat', cp_tiktok: "TikTok'umu aç",
                 cp_island_back: "Dynamic Island'ı tekrar göster", cp_copy_link: 'Sayfa bağlantısını kopyala', cp_reload: 'Sayfayı yenile',
                 cp_change_lang: '🌐 Dili değiştir / Change language',
-                settings_ambient: 'Ambient Color', settings_glow: 'Parlama Efekti', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
+                settings_ambient: 'Ambient Color', settings_glow: 'Parlama Efekti', settings_cover_glow: 'Kapak Parlaması', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
                 on_label: 'AÇIK', off_label: 'KAPALI',
                 standby_idle_title: 'Şu an sessiz...', standby_idle_subtitle: 'Sessizliğin tadını çıkar', standby_hint: 'Çıkmak için dokun',
                 install_btn: '📲 Uygulamayı yükle',
@@ -2957,7 +3317,7 @@
                 card_title_contact: 'İletişim',
                 card_teaser_status: 'Sistem entegrasyonu BT uzmanlığı eğitimi...',
                 card_teaser_background: 'Genç yaşta & eğitimde...',
-                card_teaser_freizeit: 'Forza Horizon 5 ve yayın...',
+                card_teaser_freizeit: 'Kart yarışı ve Forza Horizon 6...',
                 card_teaser_menschen: 'Tom, Danilo, Jakob ve Lukas...',
                 card_teaser_techstack: 'Donanım, Linux, Windows...',
                 card_teaser_setup: 'DT 770 Pro ve Rockster Cross...',
@@ -2973,7 +3333,7 @@
                 detail_background_title: 'Geçmiş ve Yol',
                 detail_background_content: 'Genç yaştayım ve şu anda sistem entegrasyonu alanında BT uzmanlığı eğitimi alıyorum. Bu bana erken yaşta bağımsız olmayı ve kendi yolumu çizmeyi öğretti. Zorlukları engel değil, büyümek ve kendi geleceğimi şekillendirmek için bir fırsat olarak görüyorum.',
                 detail_freizeit_title: 'Oyun ve İçerik',
-                detail_freizeit_content: 'Sunucular çalışırken beni Forza Horizon 5 oynarken bulabilirsin. TikTok\'ta canlı yayın açıyor ve oyun/teknoloji tutkumu toplulukla paylaşıyorum. Benim için önemli olan atmosfer, etkileşim ve yeni zorlukların üstesinden gelmek.',
+                detail_freizeit_content: '19.07.2026\'dan beri yepyeni bir tutku beni tamamen ele geçirdi: kart yarışı! Hayatımda ilk kez bir kart pistine çıktım ve anında bağlandım - bu benim için giderek asıl mesele haline geliyor. Arada bir hâlâ Forza Horizon 6 oynuyorum ama kart yarışı artık açıkça birinci sıraya geçiyor. TikTok\'ta canlı yayın açıyor ve oyun, teknoloji ve artık motor sporu tutkumu toplulukla paylaşıyorum. Yani topluluk kart pistinden harika canlı yayınlar bekleyebilir! Benim için önemli olan atmosfer, etkileşim ve yeni zorlukların üstesinden gelmek.',
                 detail_menschen_title: 'Seçtiğim Ailem',
                 detail_menschen_content: 'Ebeveynsiz büyüdüğüm için arkadaşlarım benim seçtiğim ailem. Benim için sadakat ve güven her şeyden önce gelir. Yeni dayanaklarım Danilo, Jakob ve Lukas, ama Tom da onlarla birlikte kalıyor - bu yolda birlikte ilerliyoruz.',
                 detail_techstack_title: 'Teknoloji Yığını ve Yetenekler',
@@ -2990,7 +3350,7 @@
                 fallback_4: 'Hmm. Bu şarkının sözlerini bilmiyoruz.',
                 fallback_5: 'Maalesef söz mevcut değil. Sadece atmosferin tadını çıkar!',
                 secret_1: '🔧 Sıradaki proje: Docker yığınında daha da fazla homelab kaosu.',
-                secret_2: '🎮 Forza Horizon 5\'teki güncel rekorum: gizli. Sorma.',
+                secret_2: '🎮 Forza Horizon 6\'teki güncel rekorum: gizli. Sorma.',
                 secret_3: '☕ Bu site çok fazla hiperodak ve daha da fazla kahveyle yapıldı.',
                 secret_4: '🐛 Hatalar sadece planlanmamış özelliklerdir. Nokta.',
                 secret_5: '💙 Meraklı olduğun ve etrafa tıkladığın için teşekkürler!',
@@ -3035,6 +3395,18 @@
                 greeting_late_night: '🌙 Anlaşılan gece kuşusun. Hoş geldin!',
                                 label_unsynced: 'Senkronize Değil',
                                 toast_perf_suggestion: '📉 Biraz takılıyor mu? Daha akıcı olması için sağ üstteki Düşük Performans Modunu aç.',
+                                card_title_karting: 'Kart Yarışı',
+                card_teaser_karting: '19.07.2026\'dan beri Kartland Sinn...',
+                detail_karting_title: 'Kart Yarışı',
+                detail_karting_content: '19.07.2026\'dan beri Kartland Sinn\'de yarışıyorum - hayatımda ilk kez bir kart pistine çıktım ve anında bağlandım. İşte istatistiklerim (düzenli güncellenir): 🏁 Kişisel en iyi: [eklenecek] · 📅 İlk seans: 19.07.2026 · 🏎️ Pist: Kartland Sinn. Pistten harika canlı yayınlar için hazır ol!',
+                                kart_section_title: 'Kart Paneli',
+                kart_section_note: 'Canlı veriler yakında kendi Raspberry Pi API sunucumdan gelecek.',
+                kart_status_label: 'Özellik geliştiriliyor',
+                kart_placeholder_title: 'Kartland Sinn - Canlı bağlantı geliyor',
+                kart_placeholder_text: 'Bu özellik şu anda geliştiriliyor. Yakında bu sayfa, kendi API sunucusu olarak çalışan Raspberry Pi\'ime canlı bağlanacak ve Kartland Sinn\'deki tur zamanlarımı - kişisel en iyi, seans geçmişi ve daha fazlasıyla - burada gösterecek. Yakında tekrar uğra!',
+                kart_stat_besttime: 'En İyi Süre',
+                kart_stat_sessions: 'Seanslar',
+                kart_stat_since: 'Beri',
                 mini_click_to_open: 'Açmak için tıkla', mini_click_to_close: 'Kapatmak için tıkla',
                 aria_cp: 'Komut paletini aç', aria_install: 'Uygulama olarak yükle', aria_island: 'Şarkı detaylarını aç, gizlemek için yukarı kaydır'
             }
@@ -3195,6 +3567,14 @@
 
             // NEW: Musik-Dashboard-Bereich
             setText('music-section-title', t('music_section_title'));
+            setText('kart-section-title', t('kart_section_title'));
+            setText('kart-section-note', t('kart_section_note'));
+            setText('kart-status-label', t('kart_status_label'));
+            setText('kart-placeholder-title', t('kart_placeholder_title'));
+            setText('kart-placeholder-text', t('kart_placeholder_text'));
+            setText('kart-stat-besttime-label', t('kart_stat_besttime'));
+            setText('kart-stat-sessions-label', t('kart_stat_sessions'));
+            setText('kart-stat-since-label', t('kart_stat_since'));
             setText('music-sync-note', t('music_sync_note'));
             setText('lyrics-synced-label', t('lyrics_synced_label'));
             setText('label-animation-style', t('label_animation_style'));
@@ -3404,10 +3784,8 @@
         };
         applyAmbientColorMode(ambientColorEnabled);
 
-        // NEW: Glow-Effekt (Ambilight um das Cover + Ambient-Hintergrund) komplett
-        // abschaltbar machen, um zusätzliche Performance zu sparen. Standardmäßig AN,
-        // damit sich am gewohnten Look nichts ändert, außer der Nutzer schaltet es
-        // selbst aus.
+        // NEW: Hintergrund-Glow (Ambient-Hintergrund + Lyrics-Hintergrund-Glow) manuell
+        // abschaltbar, um zusätzliche Performance zu sparen. Standardmäßig AN.
         let glowEffectEnabled = localStorage.getItem('glowEffect') !== 'false';
         function applyGlowEffectMode(isActive) {
             glowEffectEnabled = isActive;
@@ -3422,6 +3800,28 @@
             applyGlowEffectMode(next);
         };
         applyGlowEffectMode(glowEffectEnabled);
+
+        // NEW: Cover-Glow (#ambilight-glow, der Leuchtring direkt um das geöffnete Music
+        // Dashboard/Cover) als EIGENER, unabhängiger Schalter. Bei "aus" wird nicht nur
+        // display:none gesetzt (null Rendering-Kosten), sondern JS überspringt auch das
+        // Laden/Zeichnen des Cover-Bilds für diesen Effekt komplett - so wird bei
+        // deaktiviertem Cover-Glow wirklich gar keine Arbeit mehr dafür verrichtet.
+        let coverGlowEnabled = localStorage.getItem('coverGlow') !== 'false';
+        function applyCoverGlowMode(isActive) {
+            coverGlowEnabled = isActive;
+            document.body.classList.toggle('cover-glow-disabled', !isActive);
+            const btn = document.getElementById('btn-toggle-cover-glow');
+            if (btn) btn.textContent = t('settings_cover_glow') + ': ' + (isActive ? t('on_label') : t('off_label'));
+            if (!isActive && mGlow) mGlow.style.backgroundImage = 'none'; // vorhandenes Bild sofort freigeben
+            else if (isActive && mGlow && lastAmbientArtUrl) mGlow.style.backgroundImage = `url('${lastAmbientArtUrl}')`;
+        }
+        window.toggleCoverGlow = function() {
+            haptic(10);
+            const next = !coverGlowEnabled;
+            localStorage.setItem('coverGlow', next);
+            applyCoverGlowMode(next);
+        };
+        applyCoverGlowMode(coverGlowEnabled);
 
         function extractDominantColor(imgUrl) {
             if (!ambientColorEnabled || !imgUrl) return;
@@ -3845,7 +4245,13 @@
             { id: 'classic', label: 'Classic', draw: drawShareCardClassic },
             { id: 'minimal', label: 'Minimal', draw: drawShareCardMinimal },
             { id: 'poster', label: 'Poster', draw: drawShareCardPoster },
-            { id: 'vinyl', label: 'Vinyl', draw: drawShareCardVinyl }
+            { id: 'vinyl', label: 'Vinyl', draw: drawShareCardVinyl },
+            { id: 'neon', label: 'Neon', draw: drawShareCardNeon },
+            { id: 'polaroid', label: 'Polaroid', draw: drawShareCardPolaroid },
+            { id: 'terminal', label: 'Terminal', draw: drawShareCardTerminal },
+            { id: 'cassette', label: 'Cassette', draw: drawShareCardCassette },
+            { id: 'wave', label: 'Wave', draw: drawShareCardWave },
+            { id: 'sticker', label: 'Sticker', draw: drawShareCardSticker }
         ];
 
         function openSharecardPicker(artImg, title, artist) {
@@ -3966,9 +4372,9 @@
             ctx.fillStyle = 'rgba(59,130,246,0.9)';
             heights.forEach(h => { ctx.fillRect(bx, eqY - h, barW, h); bx += barW + gap; });
 
-            ctx.fillStyle = 'rgba(255,255,255,0.4)';
-            ctx.font = `700 ${20 * s}px Inter, sans-serif`;
-            ctx.fillText('gamingpig · now playing', W / 2, H - 50 * s);
+            ctx.fillStyle = 'rgba(255,255,255,0.5)';
+            ctx.font = `700 ${18 * s}px Inter, sans-serif`;
+            ctx.fillText('🐷 GAMINGPIG HÖRT GERADE', W / 2, H - 50 * s);
         }
 
         // --- Design 2: Minimal - flacher Hintergrund, kleineres Cover, große Typografie ---
@@ -4018,8 +4424,8 @@
             ctx.stroke();
 
             ctx.fillStyle = 'rgba(255,255,255,0.35)';
-            ctx.font = `700 ${17 * s}px Inter, sans-serif`;
-            ctx.fillText('gamingpig', W / 2, H - 60 * s);
+            ctx.font = `700 ${15 * s}px Inter, sans-serif`;
+            ctx.fillText('🐷 GAMINGPIG HÖRT GERADE', W / 2, H - 60 * s);
         }
 
         // --- Design 3: Poster - Cover als Vollflächen-Hintergrund, Text unten links ---
@@ -4046,9 +4452,9 @@
             ctx.fillText(artist, 44 * s, H - 60 * s);
 
             ctx.textAlign = 'right';
-            ctx.fillStyle = 'rgba(255,255,255,0.55)';
-            ctx.font = `700 ${16 * s}px Inter, sans-serif`;
-            ctx.fillText('gamingpig', W - 30 * s, 40 * s);
+            ctx.fillStyle = 'rgba(255,255,255,0.6)';
+            ctx.font = `700 ${14 * s}px Inter, sans-serif`;
+            ctx.fillText('🐷 GAMINGPIG HÖRT GERADE', W - 30 * s, 40 * s);
         }
 
         // --- Design 4: Vinyl - Retro-Look, Cover als Schallplatte ---
@@ -4107,7 +4513,368 @@
 
             ctx.fillStyle = 'rgba(243,231,211,0.4)';
             ctx.font = `700 ${15 * s}px 'JetBrains Mono', monospace`;
-            ctx.fillText('◈ GAMINGPIG RECORDS ◈', W / 2, H - 50 * s);
+            ctx.fillText('◈ GAMINGPIG HÖRT GERADE ◈', W / 2, H - 50 * s);
+        }
+
+        // --- Design 5: Neon - Cyberpunk-Look mit Raster-Linien und Leucht-Rahmen ---
+        function drawShareCardNeon(ctx, W, H, artImg, title, artist) {
+            const s = W / 720;
+            const grad = ctx.createLinearGradient(0, 0, 0, H);
+            grad.addColorStop(0, '#0d0221');
+            grad.addColorStop(1, '#1a0533');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, W, H);
+
+            // Perspektivisches Raster im unteren Bereich (klassischer Retro-Wave-Look)
+            ctx.save();
+            ctx.strokeStyle = 'rgba(236, 72, 153, 0.35)';
+            ctx.lineWidth = 1 * s;
+            const gridTop = H * 0.62;
+            for (let i = 0; i <= 10; i++) {
+                const x = (W / 10) * i;
+                ctx.beginPath();
+                ctx.moveTo(W / 2 + (x - W / 2) * 0.15, gridTop);
+                ctx.lineTo(x, H);
+                ctx.stroke();
+            }
+            for (let i = 0; i <= 6; i++) {
+                const y = gridTop + (H - gridTop) * (i / 6) * (i / 6);
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(W, y);
+                ctx.stroke();
+            }
+            ctx.restore();
+
+            const artSize = 380 * s;
+            const artX = (W - artSize) / 2;
+            const artY = 110 * s;
+            ctx.save();
+            ctx.shadowColor = 'rgba(236, 72, 153, 0.8)';
+            ctx.shadowBlur = 40 * s;
+            roundRectPath(ctx, artX, artY, artSize, artSize, 18 * s);
+            ctx.strokeStyle = '#ec4899';
+            ctx.lineWidth = 3 * s;
+            ctx.stroke();
+            ctx.restore();
+            ctx.save();
+            roundRectPath(ctx, artX, artY, artSize, artSize, 18 * s);
+            ctx.clip();
+            if (artImg) drawImageCover(ctx, artImg, artX, artY, artSize, artSize);
+            else { ctx.fillStyle = '#1a0533'; ctx.fill(); }
+            ctx.restore();
+
+            ctx.textAlign = 'center';
+            ctx.save();
+            ctx.shadowColor = 'rgba(34, 211, 238, 0.9)';
+            ctx.shadowBlur = 20 * s;
+            ctx.fillStyle = '#22d3ee';
+            ctx.font = `800 ${36 * s}px Inter, sans-serif`;
+            wrapText(ctx, title.toUpperCase(), W / 2, artY + artSize + 66 * s, W - 80 * s, 42 * s);
+            ctx.restore();
+
+            ctx.fillStyle = 'rgba(236, 72, 153, 0.85)';
+            ctx.font = `700 ${22 * s}px Inter, sans-serif`;
+            ctx.fillText(artist, W / 2, artY + artSize + 116 * s);
+
+            ctx.fillStyle = 'rgba(255,255,255,0.4)';
+            ctx.font = `700 ${14 * s}px 'JetBrains Mono', monospace`;
+            ctx.fillText('◢◤ GAMINGPIG HÖRT GERADE ◥◣', W / 2, H - 40 * s);
+        }
+
+        // --- Design 6: Polaroid - Sofortbild-Look mit weißem Rahmen und Handschrift-Bildunterschrift ---
+        function drawShareCardPolaroid(ctx, W, H, artImg, title, artist) {
+            const s = W / 720;
+            ctx.fillStyle = '#e8e4da';
+            ctx.fillRect(0, 0, W, H);
+
+            const frameX = 55 * s, frameY = 70 * s, frameW = W - 110 * s;
+            const photoSize = frameW;
+            ctx.save();
+            ctx.shadowColor = 'rgba(0,0,0,0.35)';
+            ctx.shadowBlur = 35 * s;
+            ctx.shadowOffsetY = 18 * s;
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(frameX, frameY, frameW, photoSize + 190 * s);
+            ctx.restore();
+
+            const padding = 22 * s;
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(frameX + padding, frameY + padding, photoSize - padding * 2, photoSize - padding * 2);
+            ctx.clip();
+            if (artImg) drawImageCover(ctx, artImg, frameX + padding, frameY + padding, photoSize - padding * 2, photoSize - padding * 2);
+            else { ctx.fillStyle = '#ccc'; ctx.fill(); }
+            ctx.restore();
+
+            // Handschrift-artige Bildunterschrift im unteren, weißen Polaroid-Streifen
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#2a2a2a';
+            ctx.font = `italic 700 ${30 * s}px Georgia, serif`;
+            wrapText(ctx, title, W / 2, frameY + photoSize + 55 * s, photoSize - 60 * s, 36 * s);
+
+            ctx.fillStyle = '#6b6b6b';
+            ctx.font = `italic 500 ${20 * s}px Georgia, serif`;
+            ctx.fillText(artist, W / 2, frameY + photoSize + 108 * s);
+
+            // Kleine handschriftliche Notiz am Rand, wie auf einem echten Polaroid
+            ctx.save();
+            ctx.translate(W / 2, frameY + photoSize + 150 * s);
+            ctx.rotate(-0.03);
+            ctx.fillStyle = '#9a8c78';
+            ctx.font = `italic 600 ${16 * s}px Georgia, serif`;
+            ctx.fillText('🐷 gamingpig hört gerade ~', 0, 0);
+            ctx.restore();
+        }
+
+        // --- Design 7: Terminal - Retro-Hacker-/Konsolen-Look (passend zum IT-Thema) ---
+        function drawShareCardTerminal(ctx, W, H, artImg, title, artist) {
+            const s = W / 720;
+            ctx.fillStyle = '#0a0e0a';
+            ctx.fillRect(0, 0, W, H);
+
+            // Terminal-Fenster-Rahmen
+            const winX = 40 * s, winY = 50 * s, winW = W - 80 * s, winH = H - 100 * s;
+            ctx.fillStyle = '#0d150d';
+            roundRectPath(ctx, winX, winY, winW, winH, 14 * s);
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(74, 222, 128, 0.4)';
+            ctx.lineWidth = 1.5 * s;
+            ctx.stroke();
+
+            // Titelleiste mit Ampel-Punkten
+            ctx.fillStyle = 'rgba(74, 222, 128, 0.08)';
+            roundRectPath(ctx, winX, winY, winW, 44 * s, 14 * s);
+            ctx.fill();
+            const dotColors = ['#ff5f56', '#ffbd2e', '#27c93f'];
+            dotColors.forEach((c, i) => {
+                ctx.beginPath();
+                ctx.arc(winX + 26 * s + i * 22 * s, winY + 22 * s, 6 * s, 0, Math.PI * 2);
+                ctx.fillStyle = c;
+                ctx.fill();
+            });
+            ctx.textAlign = 'center';
+            ctx.fillStyle = 'rgba(74, 222, 128, 0.5)';
+            ctx.font = `600 ${13 * s}px 'JetBrains Mono', monospace`;
+            ctx.fillText('gamingpig@nowplaying: ~', W / 2, winY + 27 * s);
+
+            // Cover als "eingebettetes" Bild mit grünem Rahmen
+            const artSize = 340 * s;
+            const artX = (W - artSize) / 2;
+            const artY = winY + 74 * s;
+            ctx.strokeStyle = 'rgba(74, 222, 128, 0.6)';
+            ctx.lineWidth = 2 * s;
+            ctx.strokeRect(artX, artY, artSize, artSize);
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(artX, artY, artSize, artSize);
+            ctx.clip();
+            if (artImg) { ctx.filter = 'grayscale(20%) contrast(1.05)'; drawImageCover(ctx, artImg, artX, artY, artSize, artSize); ctx.filter = 'none'; }
+            else { ctx.fillStyle = '#0d150d'; ctx.fill(); }
+            ctx.restore();
+
+            // Terminal-artige Textzeilen
+            ctx.textAlign = 'left';
+            ctx.fillStyle = '#4ade80';
+            ctx.font = `700 ${20 * s}px 'JetBrains Mono', monospace`;
+            ctx.fillText('$ now_playing --title', artX, artY + artSize + 40 * s);
+            ctx.fillStyle = '#e5e5e5';
+            wrapTextLeft(ctx, `> ${title}`, artX, artY + artSize + 72 * s, artSize, 28 * s);
+            ctx.fillStyle = 'rgba(74, 222, 128, 0.7)';
+            ctx.font = `500 ${17 * s}px 'JetBrains Mono', monospace`;
+            ctx.fillText(`> artist: ${artist}`, artX, artY + artSize + 128 * s);
+
+            ctx.textAlign = 'center';
+            ctx.fillStyle = 'rgba(74, 222, 128, 0.35)';
+            ctx.font = `600 ${13 * s}px 'JetBrains Mono', monospace`;
+            ctx.fillText('gamingpig hört gerade // process running _', W / 2, winY + winH - 20 * s);
+        }
+
+        // --- Design 8: Cassette - Retro-Kassette-Look ---
+        function drawShareCardCassette(ctx, W, H, artImg, title, artist) {
+            const s = W / 720;
+            const bgGrad = ctx.createLinearGradient(0, 0, W, H);
+            bgGrad.addColorStop(0, '#fef3c7');
+            bgGrad.addColorStop(1, '#fde68a');
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, W, H);
+
+            const capX = 60 * s, capY = 260 * s, capW = W - 120 * s, capH = 340 * s;
+            ctx.save();
+            ctx.shadowColor = 'rgba(0,0,0,0.25)';
+            ctx.shadowBlur = 30 * s;
+            ctx.shadowOffsetY = 15 * s;
+            ctx.fillStyle = '#1c1917';
+            roundRectPath(ctx, capX, capY, capW, capH, 20 * s);
+            ctx.fill();
+            ctx.restore();
+
+            // Label-Fenster
+            const labelX = capX + 30 * s, labelY = capY + 30 * s, labelW = capW - 60 * s, labelH = 130 * s;
+            ctx.fillStyle = '#fefaf0';
+            roundRectPath(ctx, labelX, labelY, labelW, labelH, 8 * s);
+            ctx.fill();
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#1c1917';
+            ctx.font = `800 ${26 * s}px 'JetBrains Mono', monospace`;
+            wrapText(ctx, title, W / 2, labelY + 48 * s, labelW - 30 * s, 32 * s);
+            ctx.fillStyle = '#78716c';
+            ctx.font = `600 ${17 * s}px 'JetBrains Mono', monospace`;
+            ctx.fillText(artist, W / 2, labelY + labelH - 20 * s);
+
+            // Zwei Spulen
+            const reelY = capY + labelH + 95 * s;
+            [capX + capW * 0.28, capX + capW * 0.72].forEach(cx => {
+                ctx.beginPath(); ctx.arc(cx, reelY, 55 * s, 0, Math.PI * 2);
+                ctx.fillStyle = '#292524'; ctx.fill();
+                ctx.beginPath(); ctx.arc(cx, reelY, 42 * s, 0, Math.PI * 2);
+                ctx.strokeStyle = '#57534e'; ctx.lineWidth = 2 * s; ctx.stroke();
+                for (let i = 0; i < 6; i++) {
+                    const ang = (i / 6) * Math.PI * 2;
+                    ctx.beginPath();
+                    ctx.moveTo(cx + Math.cos(ang) * 14 * s, reelY + Math.sin(ang) * 14 * s);
+                    ctx.lineTo(cx + Math.cos(ang) * 36 * s, reelY + Math.sin(ang) * 36 * s);
+                    ctx.strokeStyle = '#44403c'; ctx.lineWidth = 5 * s; ctx.stroke();
+                }
+                ctx.beginPath(); ctx.arc(cx, reelY, 10 * s, 0, Math.PI * 2);
+                ctx.fillStyle = '#a8a29e'; ctx.fill();
+            });
+
+            // Kleines Cover-Thumbnail unten im Band-Fenster
+            if (artImg) {
+                const thumbSize = 46 * s;
+                ctx.save();
+                roundRectPath(ctx, W / 2 - thumbSize / 2, reelY + 60 * s, thumbSize, thumbSize, 6 * s);
+                ctx.clip();
+                drawImageCover(ctx, artImg, W / 2 - thumbSize / 2, reelY + 60 * s, thumbSize, thumbSize);
+                ctx.restore();
+            }
+
+            ctx.fillStyle = 'rgba(28,25,23,0.55)';
+            ctx.font = `700 ${16 * s}px 'JetBrains Mono', monospace`;
+            ctx.fillText('◈ GAMINGPIG HÖRT GERADE ◈', W / 2, H - 55 * s);
+        }
+
+        // --- Design 9: Wave - Moderne, fließende Verlaufsformen mit großer Typografie ---
+        function drawShareCardWave(ctx, W, H, artImg, title, artist) {
+            const s = W / 720;
+            const bgGrad = ctx.createLinearGradient(0, 0, W, H);
+            bgGrad.addColorStop(0, '#1e1b4b');
+            bgGrad.addColorStop(1, '#0f0a2e');
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, W, H);
+
+            // Fließende, unscharfe Farbklekse im Hintergrund
+            const blobs = [
+                { x: W * 0.2, y: H * 0.18, r: 180 * s, c: 'rgba(139, 92, 246, 0.55)' },
+                { x: W * 0.85, y: H * 0.32, r: 150 * s, c: 'rgba(236, 72, 153, 0.45)' },
+                { x: W * 0.3, y: H * 0.85, r: 200 * s, c: 'rgba(59, 130, 246, 0.4)' }
+            ];
+            ctx.filter = `blur(${60 * s}px)`;
+            blobs.forEach(b => {
+                ctx.beginPath();
+                ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+                ctx.fillStyle = b.c;
+                ctx.fill();
+            });
+            ctx.filter = 'none';
+
+            const artSize = 300 * s;
+            const artX = (W - artSize) / 2;
+            const artY = 130 * s;
+            ctx.save();
+            ctx.shadowColor = 'rgba(139, 92, 246, 0.5)';
+            ctx.shadowBlur = 50 * s;
+            roundRectPath(ctx, artX, artY, artSize, artSize, 32 * s);
+            ctx.fillStyle = '#111';
+            ctx.fill();
+            ctx.restore();
+            ctx.save();
+            roundRectPath(ctx, artX, artY, artSize, artSize, 32 * s);
+            ctx.clip();
+            if (artImg) drawImageCover(ctx, artImg, artX, artY, artSize, artSize);
+            ctx.restore();
+
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#ffffff';
+            ctx.font = `800 ${42 * s}px Inter, sans-serif`;
+            wrapText(ctx, title, W / 2, artY + artSize + 76 * s, W - 90 * s, 48 * s);
+            const artistGrad = ctx.createLinearGradient(W / 2 - 100 * s, 0, W / 2 + 100 * s, 0);
+            artistGrad.addColorStop(0, '#a78bfa');
+            artistGrad.addColorStop(1, '#f472b6');
+            ctx.fillStyle = artistGrad;
+            ctx.font = `700 ${24 * s}px Inter, sans-serif`;
+            ctx.fillText(artist, W / 2, artY + artSize + 122 * s);
+
+            ctx.fillStyle = 'rgba(255,255,255,0.4)';
+            ctx.font = `700 ${15 * s}px Inter, sans-serif`;
+            ctx.fillText('🐷 GAMINGPIG HÖRT GERADE', W / 2, H - 45 * s);
+        }
+
+        // --- Design 10: Sticker - Verspielter Aufkleber-/Washi-Tape-Look ---
+        function drawShareCardSticker(ctx, W, H, artImg, title, artist) {
+            const s = W / 720;
+            ctx.fillStyle = '#fef9c3';
+            ctx.fillRect(0, 0, W, H);
+
+            const cardX = 55 * s, cardY = 90 * s, cardW = W - 110 * s, cardH = H - 220 * s;
+            ctx.save();
+            ctx.translate(cardX + cardW / 2, cardY + cardH / 2);
+            ctx.rotate(-0.02);
+            ctx.translate(-(cardX + cardW / 2), -(cardY + cardH / 2));
+            ctx.shadowColor = 'rgba(0,0,0,0.15)';
+            ctx.shadowBlur = 25 * s;
+            ctx.shadowOffsetY = 10 * s;
+            ctx.fillStyle = '#ffffff';
+            roundRectPath(ctx, cardX, cardY, cardW, cardH, 24 * s);
+            ctx.fill();
+            ctx.restore();
+
+            // "Washi Tape" Streifen oben
+            ctx.save();
+            ctx.translate(W / 2, cardY);
+            ctx.rotate(-0.05);
+            ctx.fillStyle = 'rgba(251, 113, 133, 0.75)';
+            ctx.fillRect(-90 * s, -18 * s, 180 * s, 36 * s);
+            ctx.restore();
+
+            const artSize = 260 * s;
+            const artX = (W - artSize) / 2;
+            const artY = cardY + 55 * s;
+            ctx.save();
+            ctx.translate(artX + artSize / 2, artY + artSize / 2);
+            ctx.rotate(0.015);
+            ctx.translate(-(artX + artSize / 2), -(artY + artSize / 2));
+            roundRectPath(ctx, artX, artY, artSize, artSize, 18 * s);
+            ctx.strokeStyle = '#fff'; ctx.lineWidth = 8 * s;
+            ctx.save(); ctx.clip();
+            if (artImg) drawImageCover(ctx, artImg, artX, artY, artSize, artSize);
+            else { ctx.fillStyle = '#ddd'; ctx.fill(); }
+            ctx.restore();
+            ctx.stroke();
+            ctx.restore();
+
+            // Kleine Sticker-Deko (Stern + Herz als einfache Formen)
+            ctx.fillStyle = '#fbbf24';
+            ctx.beginPath();
+            ctx.arc(artX - 20 * s, artY - 10 * s, 22 * s, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#f472b6';
+            ctx.beginPath();
+            ctx.arc(artX + artSize + 15 * s, artY + artSize + 5 * s, 18 * s, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#1c1917';
+            ctx.font = `800 ${32 * s}px Inter, sans-serif`;
+            wrapText(ctx, title, W / 2, artY + artSize + 70 * s, cardW - 60 * s, 38 * s);
+            ctx.fillStyle = '#78716c';
+            ctx.font = `600 ${20 * s}px Inter, sans-serif`;
+            ctx.fillText(artist, W / 2, artY + artSize + 116 * s);
+
+            ctx.fillStyle = 'rgba(28,25,23,0.5)';
+            ctx.font = `700 ${16 * s}px Inter, sans-serif`;
+            ctx.fillText('🐷 gamingpig hört gerade', W / 2, H - 50 * s);
         }
 
         function roundRectPath(ctx, x, y, w, h, r) {
@@ -4340,6 +5107,24 @@
             if (dateEl) dateEl.textContent = now.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' });
         }
 
+        // NEW: StandBy-Transparenz - steuert die Blickdichte des schwarzen Hintergrunds
+        // im StandBy-/Lockscreen-Modus über eine CSS-Variable. Wert wird gespeichert und
+        // beim nächsten Besuch automatisch wieder angewendet.
+        window.updateStandbyOpacity = function(value) {
+            const pct = parseInt(value, 10);
+            document.documentElement.style.setProperty('--standby-bg-opacity', (pct / 100).toFixed(2));
+            const label = document.getElementById('standby-opacity-value');
+            if (label) label.textContent = pct + '%';
+            localStorage.setItem('standbyOpacity', pct);
+        };
+        (function initStandbyOpacity() {
+            const saved = localStorage.getItem('standbyOpacity');
+            const pct = saved !== null ? parseInt(saved, 10) : 100;
+            const slider = document.getElementById('standby-opacity-slider');
+            if (slider) slider.value = pct;
+            updateStandbyOpacity(pct);
+        })();
+
         window.toggleStandBy = function(force) {
             const overlay = document.getElementById('standby-overlay');
             if (!overlay) return;
@@ -4363,9 +5148,12 @@
                 const island = document.getElementById('dynamic-island');
                 if (island) island.classList.add('di-hidden-by-standby');
                 updateIslandRing();
+                scheduleStandbyDeepDim(); // NEW: Tiefen-Dimmung nach 30min ununterbrochenem StandBy planen
             } else {
                 clearInterval(standByInterval);
                 clearInterval(standByShiftInterval);
+                clearTimeout(standByDeepDimTimeout);
+                overlay.classList.remove('standby-deep-dim');
                 document.documentElement.style.setProperty('--standby-shift-x', '0px');
                 document.documentElement.style.setProperty('--standby-shift-y', '0px');
                 // NEW: Dynamic Island nach Verlassen von StandBy wieder zulassen
@@ -4379,21 +5167,42 @@
         // kein reiner Zufall (der auch mal fast 0px ergeben könnte), sondern ein fester
         // Zyklus von Positionen mit garantiertem Mindestversatz, alle 10 Minuten - genau
         // wie echte Hardware-Displays das machen, damit wirklich andere Pixel angesteuert werden.
-        const AOD_SHIFT_INTERVAL_MS = 10 * 60 * 1000; // 10 Minuten, wie bei echten AOD-Systemen
+        // NEW: Anti-Burn-in verschärft, da der Nutzer explizit null Einbrenn-Risiko will:
+        // Intervall von 10 auf 5 Minuten halbiert (doppelt so oft verschoben), 15 statt 11
+        // Positionen mit größerer Streuung (bis zu 12px statt 10px), und zusätzlich eine
+        // "Tiefen-Dimmung" nach 30 Minuten ununterbrochenem StandBy: Helligkeit/Kontrast
+        // werden nochmal reduziert, was zusätzlich hilft, weil dauerhaft volle Helligkeit
+        // an denselben Pixelpositionen das größte Einbrenn-Risiko darstellt.
+        const AOD_SHIFT_INTERVAL_MS = 3 * 60 * 1000; // NEW: von 5min auf 3min verschärft - noch häufigeres Verschieben
+        const AOD_DEEP_DIM_AFTER_MS = 20 * 60 * 1000; // NEW: von 30min auf 20min verschärft - dunkelt früher zusätzlich ab
         const AOD_SHIFT_POSITIONS = [
             { x: 0, y: 0 },
-            { x: 10, y: 7 }, { x: -10, y: -7 },
-            { x: 9, y: -8 }, { x: -9, y: 8 },
-            { x: 7, y: 0 }, { x: -7, y: 0 },
-            { x: 0, y: 8 }, { x: 0, y: -8 },
-            { x: 6, y: 6 }, { x: -6, y: -6 }
+            { x: 12, y: 8 }, { x: -12, y: -8 },
+            { x: 11, y: -9 }, { x: -11, y: 9 },
+            { x: 8, y: 0 }, { x: -8, y: 0 },
+            { x: 0, y: 10 }, { x: 0, y: -10 },
+            { x: 7, y: 7 }, { x: -7, y: -7 },
+            { x: 10, y: -5 }, { x: -10, y: 5 },
+            { x: 5, y: 11 }, { x: -5, y: -11 },
+            { x: 13, y: 3 }, { x: -13, y: -3 },
+            { x: 3, y: -12 }, { x: -3, y: 12 },
+            { x: 9, y: -11 }, { x: -9, y: 11 }
         ];
         let standByShiftIndex = 0;
+        let standByDeepDimTimeout = null;
         function shiftStandbyContent() {
             standByShiftIndex = (standByShiftIndex + 1) % AOD_SHIFT_POSITIONS.length;
             const pos = AOD_SHIFT_POSITIONS[standByShiftIndex];
             document.documentElement.style.setProperty('--standby-shift-x', pos.x + 'px');
             document.documentElement.style.setProperty('--standby-shift-y', pos.y + 'px');
+        }
+        function scheduleStandbyDeepDim() {
+            clearTimeout(standByDeepDimTimeout);
+            const overlay = document.getElementById('standby-overlay');
+            if (overlay) overlay.classList.remove('standby-deep-dim');
+            standByDeepDimTimeout = setTimeout(() => {
+                if (overlay && standByActive) overlay.classList.add('standby-deep-dim');
+            }, AOD_DEEP_DIM_AFTER_MS);
         }
 
         function syncStandByTrackInfo(title, artist, artUrl) {
@@ -4523,6 +5332,12 @@
             }
 
             if (stepIndicator) stepIndicator.innerText = t('tutorial_step', index + 1, steps.length);
+            const progressDots = document.getElementById('tutorial-progress-dots');
+            if (progressDots) {
+                progressDots.innerHTML = steps.map((_, i) =>
+                    `<span class="h-1 flex-1 rounded-full transition-colors duration-300 ${i <= index ? 'bg-blue-500' : 'bg-slate-200 dark:bg-slate-700'}"></span>`
+                ).join('');
+            }
             if (tutorialTitle) tutorialTitle.innerText = step.title;
             if (tutorialText) tutorialText.innerText = step.text;
 
@@ -4701,6 +5516,7 @@
 
         // Copy-Link Button im Kontakt-Modal
         window.copyPageLink = function(btn) {
+            haptic(10);
             const url = window.location.href;
             const done = () => {
                 showToast(t('toast_link_copied'));
@@ -4960,6 +5776,60 @@
         let dashboardOpenTimeout;
         let statusTextTimeout;
 
+        // NEW: Kart-Dashboard auf-/zuklappbar machen (gleiches Prinzip wie beim
+        // Musik-Dashboard, aber einfacher, da noch kein Live-Zustand existiert).
+        let isKartDashboardOpen = false;
+        let kartDashboardTimeout = null;
+        let kartDashboardOpenTimeout = null;
+        window.toggleKartDashboard = function() {
+            haptic(10);
+            isKartDashboardOpen = !isKartDashboardOpen;
+            if (isKartDashboardOpen) { pushOverlayHistory(); } else { popOverlayHistory(); }
+            // NEW: Bugfix - alte, noch laufende Timeouts IMMER zuerst löschen, sonst kann
+            // schnelles Hin-und-Her-Klicken (auf/zu/auf/zu) dazu führen, dass ein älterer,
+            // verzögerter Timeout die Karte nachträglich fälschlicherweise wieder versteckt
+            // oder die Animationsklasse mitten in der neuen Animation entfernt.
+            clearTimeout(kartDashboardTimeout);
+            clearTimeout(kartDashboardOpenTimeout);
+
+            const wrapper = document.getElementById('kart-card-layout-wrapper');
+            const cardWrapper = document.getElementById('kart-card-wrapper');
+            const chevron = document.getElementById('kart-chevron');
+            const status = document.getElementById('kart-mini-status');
+            const isLowEnd = document.body.classList.contains('low-end');
+            // NEW: Im Performance-Modus läuft keine sichtbare Animation mehr, daher auch
+            // keinen Grund, künstlich lange auf sie zu warten, bevor aufgeräumt wird.
+            const popDuration = isLowEnd ? 0 : 500;
+
+            if (isKartDashboardOpen) {
+                if (wrapper) wrapper.classList.remove('hidden');
+                if (cardWrapper) {
+                    cardWrapper.classList.remove('kart-dashboard-closing');
+                    cardWrapper.classList.add('kart-dashboard-opening');
+                }
+                requestAnimationFrame(() => { if (wrapper) wrapper.classList.add('is-open'); });
+                kartDashboardOpenTimeout = setTimeout(() => {
+                    if (cardWrapper) cardWrapper.classList.remove('kart-dashboard-opening');
+                }, popDuration + 20);
+                if (chevron) chevron.style.transform = 'rotate(180deg)';
+                if (status) status.textContent = t('mini_click_to_close');
+            } else {
+                if (cardWrapper) {
+                    cardWrapper.classList.remove('kart-dashboard-opening');
+                    cardWrapper.classList.add('kart-dashboard-closing');
+                }
+                if (wrapper) wrapper.classList.remove('is-open');
+                if (chevron) chevron.style.transform = 'rotate(0deg)';
+                if (status) status.textContent = t('mini_click_to_open');
+                kartDashboardTimeout = setTimeout(() => {
+                    if (!isKartDashboardOpen) {
+                        if (wrapper) wrapper.classList.add('hidden');
+                        if (cardWrapper) cardWrapper.classList.remove('kart-dashboard-closing');
+                    }
+                }, isLowEnd ? 50 : 700);
+            }
+        };
+
         window.toggleDashboard = function() {
             isDashboardOpen = !isDashboardOpen;
             if (isDashboardOpen) { pushOverlayHistory(); } else { popOverlayHistory(); }
@@ -4980,7 +5850,7 @@
                 
                 dashboardOpenTimeout = setTimeout(() => {
                     if (musicCardWrapper) musicCardWrapper.classList.remove('dashboard-opening');
-                }, 1200);
+                }, document.body.classList.contains('low-end') ? 50 : 1200);
                 
                 if (musicChevron) musicChevron.style.transform = 'rotate(180deg)';
                 if (miniStatus) miniStatus.innerText = t('mini_click_to_close');
@@ -4993,12 +5863,16 @@
                 
                 if (musicChevron) musicChevron.style.transform = 'rotate(0deg)';
                 
+                // NEW: Bugfix - im Performance-Modus läuft (dank dem passenden Low-End-
+                // Override) keine sichtbare Schließen-Animation mehr, daher muss auch
+                // nicht mehr künstlich 900ms gewartet werden, bevor aufgeräumt wird.
+                const isLowEndClose = document.body.classList.contains('low-end');
                 dashboardTimeout = setTimeout(() => {
                     if (!isDashboardOpen) {
                         if (musicCardLayoutWrapper) musicCardLayoutWrapper.classList.add('hidden');
                         if (musicCardWrapper) musicCardWrapper.classList.remove('dashboard-closing');
                     }
-                }, 900); 
+                }, isLowEndClose ? 50 : 900); 
                 
                 if (mainMusicCard && mainMusicCard.classList.contains('offline')) {
                     if (miniStatus) miniStatus.innerText = t('mini_click_to_open');
@@ -5058,8 +5932,9 @@
         }
 
             window.resetSyncOffset = async function(btn) {
-            const title = mTitle ? mTitle.innerText : null;
-            let artist = mArtist ? mArtist.innerText : null;
+                haptic(10);
+                const title = mTitle ? mTitle.innerText : null;
+                let artist = mArtist ? mArtist.innerText : null;
             
             // FIX: Smart Shuffle Suffix entfernen (genau wie beim ersten Laden), 
             // sonst scheitert die API Suche beim Re-Sync!
@@ -5150,6 +6025,7 @@
         };
 
         window.toggleCanvasVideo = function() {
+            haptic(10);
             if (!currentCanvasUrl) return; 
             canvasEnabled = !canvasEnabled;
             localStorage.setItem('canvasEnabled', canvasEnabled);
@@ -6023,7 +6899,7 @@
                     mArtwork.onerror = function() {
                         this.src = fallbackImg;
                         if (mAmbient) mAmbient.style.backgroundImage = `url('${fallbackImg}')`;
-                        if (mGlow) mGlow.style.backgroundImage = `url('${fallbackImg}')`;
+                        if (mGlow && coverGlowEnabled) mGlow.style.backgroundImage = `url('${fallbackImg}')`;
                         if (lyricsMiniArt) lyricsMiniArt.src = fallbackImg;
                     };
                 }
@@ -6031,7 +6907,7 @@
                 if(mArtwork && mAmbient && mGlow && (mArtwork.getAttribute('src') !== imgUrl || mAmbient.style.backgroundImage === "none" || mAmbient.style.backgroundImage === "")) {
                     mArtwork.src = imgUrl; 
                     mAmbient.style.backgroundImage = `url('${imgUrl}')`;
-                    mGlow.style.backgroundImage = `url('${imgUrl}')`;
+                    if (coverGlowEnabled) mGlow.style.backgroundImage = `url('${imgUrl}')`; // NEW: überspringt Cover-Glow-Arbeit komplett, wenn ausgeschaltet
                     const lyricsAmbientBg = document.getElementById('lyrics-ambient-bg');
                     if (lyricsAmbientBg) lyricsAmbientBg.style.backgroundImage = `url('${imgUrl}')`;
                 }
