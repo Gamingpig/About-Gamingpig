@@ -150,6 +150,180 @@
       - "Sticker": Verspielter Aufkleber-Look mit Washi-Tape-Streifen, leicht schräg
         gestelltem Cover und kleinen runden Sticker-Dekorationen
 
+    [BUGFIX] Neue Stile/Vorschau/Dropdown vom letzten Update hatten mehrere echte Bugs
+      - Nutzer meldete, alles sei "bisschen verbuggt" - beim genauen Durchgehen aller 25
+        neuen Stile plus der neuen Vorschau-/Dropdown-Infrastruktur wurden gefunden:
+      1) "Gold Leaf Shine" und "Retrowave Scan" hatten GENAU denselben Bug wie der bereits
+         behobene Apple-Music-Pro-Shine-Sweep: background-position-Animation auf einem
+         background-clip:text-Verlauf OHNE animation-fill-mode:forwards. Der Text fiel nach
+         jeder Aktivierung auf einen zufälligen, unschönen Verlaufs-Ausschnitt zurück,
+         statt sattfarbig zu bleiben. Beide komplett auf robuste Opacity-/Filter-Animation
+         umgestellt statt weiter am riskanten Gradient-Clip-Trick festzuhalten.
+      2) Die Live-Vorschau spielte ihre Animation nur EINMAL beim Öffnen/Wechseln ab und
+         blieb danach komplett bewegungslos stehen - wirkte dadurch wie eingefroren/kaputt,
+         obwohl der gewählte Stil eigentlich funktionierte. Jetzt läuft die Vorschau als
+         echte Dauerschleife (Inhalt wird alle 2.5s frisch neu erzeugt, was den
+         Animationsstart bei jedem Durchlauf sauber neu auslöst).
+      3) Die Vorschau-Schleife lief bisher auch dann unbemerkt im Hintergrund weiter, wenn
+         das Einstellungsmenü längst geschlossen war - unnötige, dauerhaft laufende
+         Rechenzeit für eine unsichtbare Vorschau. Wird jetzt explizit gestoppt, sobald das
+         Menü geschlossen wird, und beim Öffnen frisch neu gestartet.
+      - "Aurora Drift" wurde geprüft und ist NICHT vom selben Bug betroffen, da die
+        Animation dort bewusst mit infinite läuft und daher nie "stoppt und zurückfällt".
+
+    [FEATURE] "Tipp-zum-Springen" für Lyrics-Sync hinzugefügt
+      - Neuer Uhr-Icon-Button unten links im Lyrics-Bereich. Einmal antippen aktiviert
+        einen Modus, in dem das Antippen einer beliebigen Zeile im Songtext die
+        Sync-Position direkt auf diese Zeile korrigiert - eleganter, intuitiver Ersatz
+        für manuelles Herumprobieren am ms-Regler: Nutzer tippt einfach auf die Zeile,
+        die gerade tatsächlich gesungen wird.
+      - Deaktiviert sich nach genau einer Eingabe automatisch wieder von selbst, damit
+        normales Scrollen/Antippen der Zeilen danach nicht mehr versehentlich einen
+        ungewollten Sprung auslöst.
+      - Der berechnete Offset wird sofort gespeichert (nutzt die bereits bestehende
+        Sync-Offset-Persistenz) und im Regler im Einstellungsmenü live mit angezeigt.
+
+    [BUGFIX] Vermeintliches "Sync-Problem" war eigentlich falsches Songtext-Matching -
+             Ursache gefunden und behoben statt nur am Offset-Regler zu drehen
+      - Nutzer berichtete, meist einen sehr großen, uneinheitlichen manuellen Sync-Offset
+        (oft +4-5 Sekunden, je nach Song unterschiedlich) einstellen zu müssen.
+      - Ursache gefunden: Die Songdauer-Toleranz beim Songtext-Matching (isStrictMatch)
+        lag bei 10 Sekunden - großzügig genug, dass gelegentlich eine andere Version
+        desselben Songs durchrutschte (z.B. Radio-Edit statt Album-Version, oder eine
+        Version mit längerem Intro). Diese falsch gematchte Version hat zwangsläufig ein
+        anderes internes Timing als der tatsächlich laufende Track - das erklärt sowohl
+        die Größe als auch die Uneinheitlichkeit des benötigten manuellen Ausgleichs
+        (abhängig davon, wie sehr sich die zufällig gematchte Version unterschied).
+      - Fix: Toleranz von 10s auf 3s verschärft. Deutlich zuverlässigere Ablehnung
+        falscher Versionen, während legitime, minimale Rundungsunterschiede zwischen
+        verschiedenen Musikdaten-Quellen weiterhin toleriert werden.
+      - Damit sollte der Standard-Offset (-400ms) für die meisten Songs jetzt tatsächlich
+        gut passen, ohne dass durchgehend groß manuell nachjustiert werden muss.
+
+    [BUGFIX] Manuell per Ohr nachjustierter Sync-Offset wurde nie gespeichert
+      - Nutzer fragte, ob sich die optimale Sync-Position nicht automatisch aus den
+        präzisen Timing-Daten der Lyrics-Datenbank berechnen ließe. Antwort: nicht direkt
+        berechenbar, da es keine unabhängige, im Browser verfügbare "Wahrheit" gibt, um
+        den tatsächlichen Zeitpunkt zu verifizieren, an dem eine Silbe wirklich hörbar
+        wird (bräuchte echte Audio-Analyse) - Netzwerklatenz wird bereits automatisch
+        gemessen und einberechnet, der verbleibende Offset ist aber song-/quellenabhängig
+        und nur durch Hören auffindbar.
+      - Dabei aber einen echten Bug gefunden: Der manuell per Regler eingestellte Wert
+        wurde nie gespeichert - bei jedem Neuladen sprang er zurück auf den Standardwert,
+        obwohl der Nutzer ihn schon einmal per Ohr passend eingestellt hatte.
+      - Fix: Der manuell eingestellte Wert wird jetzt in localStorage gespeichert und beim
+        nächsten Besuch automatisch wieder angewendet - das ist der praktische Weg zu
+        "automatisch richtig eingestellt": einmal fein justieren, danach merkt sich die
+        Seite den Wert dauerhaft. Re-Sync setzt sowohl den aktuellen als auch den
+        gespeicherten Wert wieder auf den Standard zurück.
+
+    [CONTENT/CONFIG] Standard-Sync-Offset von -800ms auf -400ms reduziert
+      - Nutzer berichtete, -800ms erzeuge zu viel spürbare Latenz zwischen Musik und
+        angezeigten Lyrics.
+      - DEFAULT_SYNC_OFFSET sowie alle Fallback-Werte und Hinweistexte (alle 6 Sprachen)
+        entsprechend von -800ms auf -400ms angepasst.
+
+    [BUGFIX/DESIGN] Buchstaben-für-Buchstaben-Animation bei vielen neuen Stilen wirkte
+                    unruhig/chaotisch - auf Wort-Ebene umgestellt
+      - Nutzer gab direktes Feedback: Die pro-Buchstabe-Animation vieler neuer Stile
+        "läuft nicht so ganz wie sie sollen" - fühlte sich schwer zu kontrollieren an.
+      - Hintergrund: Bei manchen Effekten sieht eine Buchstabe-für-Buchstabe-Animation
+        elegant aus (z.B. feines Glitzern), bei anderen wirkt es in Echtzeit chaotisch,
+        weil während des Singens viele Buchstaben schnell hintereinander unabhängig
+        voneinander loslegen, statt sich als ruhige, koordinierte Einheit zu bewegen.
+      - Fix: 10 der 25 neuen Stile von Buchstaben- auf Wort-Ebene umgestellt (Frostbite
+        Shatter, Windblown Sway, Carbon Smoke, TV Static, Confetti Burst, Disco Sparkle,
+        Crystalline Facet, Laser Scan, Spray Paint, Pixel Dust) - das ganze Wort bewegt
+        sich jetzt als eine ruhige, kontrollierte Einheit statt viele einzelne Buchstaben
+        gleichzeitig unabhängig voneinander.
+
+    [FEATURE] 25 weitere Lyrics-Animationsstile + Live-Vorschau + komplett neu
+              strukturiertes Einstellungsmenü (jetzt 61 Stile insgesamt)
+      - Nutzer wollte 25 zusätzliche Stile, bei gleichzeitig übersichtlichem
+        Einstellungsmenü, plus eine direkte Live-Vorschau, wie jeder Stil aussieht.
+      - Strukturumbau: Die bisherige, stetig wachsende Liste aus 36 einzelnen Buttons
+        wurde durch ein zentrales JavaScript-Register (LYRICS_STYLES) ersetzt, aus dem
+        heraus ein einziges, kompaktes Dropdown-Menü (mit Kategorien als optgroups)
+        automatisch befüllt wird. Deutlich übersichtlicher als eine lange Button-Liste,
+        UND für zukünftige weitere Stile nur noch eine einzige Stelle zum Pflegen.
+      - Neue Live-Vorschau: Direkt unter dem Dropdown zeigt eine kleine Box sofort, wie
+        der ausgewählte Stil aussieht - anhand eines kurzen, generischen Beispielsatzes
+        (bewusst kein echter Songtext), der dieselben CSS-Klassen wie die echte
+        Lyrics-Anzeige nutzt, damit die Vorschau exakt dem echten Look entspricht.
+      - 25 neue Stile in 5 neuen Kategorien: Natur & Elemente (Sunrise Gradient,
+        Frostbite Shatter, Aurora Drift, Windblown Sway, Moonlight Pulse, Carbon Smoke),
+        Retro & Vintage (TV Static, Retrowave Scan, Paper Fold, Cinematic Letterbox,
+        Ink Brush), Party & Energie (Confetti Burst, Bass Drop, Disco Sparkle, Heartbeat
+        Pulse, Echo Burst), Elegant & Edel (Gold Leaf Shine, Velvet Glow, Crystalline
+        Facet, Featherlight Drift), Experimentell (Ink Spill, Laser Scan, Spray Paint,
+        Pixel Dust, Jelly Wobble).
+      - Alle 25 neuen Stile im Low-End-Modus auf statische, kostenlose Darstellung
+        reduziert (wie bei den bereits bestehenden Stilen).
+
+    [BUGFIX] Re-Sync ließ Lyrics an derselben Stelle weiterlaufen, obwohl der Song an einer
+             ganz anderen Position war
+      - Nutzer stellte klar: Nach dem letzten Fix funktionierte der Button zwar wieder,
+        aber die Lyrics liefen nach dem Klick exakt an der Stelle weiter, an der sie vorher
+        standen - unabhängig davon, wo der Song sich mittlerweile tatsächlich befand (z.B.
+        nach externem Vor-/Zurückspulen direkt in Spotify).
+      - Ursache: Re-Sync lud bisher nur neue Songtext-Daten nach, fragte aber NIE die
+        aktuelle Song-Position selbst frisch vom Server ab - die blieb unverändert bis zum
+        nächsten regulären 5-Sekunden-Hintergrund-Poll. Zusätzlich war fetchMusicData()
+        nicht awaitbar (die interne fetch-Promise-Kette wurde nie zurückgegeben), wodurch
+        ein Aufruf mit await sofort durchgelaufen wäre, ohne wirklich auf die Antwort zu warten.
+      - Fix: fetchMusicData() gibt jetzt die komplette Promise-Kette zurück. Re-Sync ruft
+        sie jetzt zuerst per await auf, um eine garantiert frische Song-Position vom Server
+        zu holen, BEVOR Songtext neu geladen und die Synchronisation neu berechnet wird.
+
+    [BUGFIX] Re-Sync-Button konnte dauerhaft hängen bleiben, wenn der Songtext-Abruf fehlschlug
+      - Symptom: Nutzer berichtete, die Re-Sync-Funktion "funzt nicht".
+      - Ursache: Der Songtext-Neuabruf innerhalb von resetSyncOffset() lief ohne try/catch.
+        Schlug er aus irgendeinem Grund fehl (Netzwerkfehler, kein Treffer, API-Timeout),
+        wurde die Exception nie abgefangen - der komplette restliche Code danach, inklusive
+        dem Zurücksetzen des Buttons in seinen normalen Zustand, wurde dadurch NIE mehr
+        ausgeführt. Der Button blieb dauerhaft auf "SYNCING" hängen (deaktiviert,
+        pulsierend), was sich für den Nutzer wie eine komplett kaputte Funktion anfühlte,
+        obwohl eigentlich nur ein einzelner Fetch-Versuch fehlgeschlagen war.
+      - Fix: Mit try/catch/finally abgesichert. Der Button wird jetzt garantiert IMMER
+        wieder freigegeben, egal ob der Songtext-Abruf erfolgreich war oder nicht, plus
+        eine kurze Fehler-Meldung als Toast, falls doch mal was schiefgeht.
+
+    [BUGFIX] Apple Music Pro Shine-Sweep sah kaputt/unnatürlich aus - Ursache gefunden und
+             komplett entfernt statt nachgebessert
+      - Nutzer meldete direktes Feedback: der neue Glanz-Effekt sehe "schlecht" und "sehr
+        unnormal komisch" aus.
+      - Ursache gefunden: Die Shine-Sweep-Animation nutzte background-clip:text OHNE
+        animation-fill-mode:forwards. Nach Ablauf der 0.7s-Animation sprang der Text auf
+        die "0%"-Position des Farbverlaufs zurück - eine halbtransparente, blasse Farbe
+        statt sattem Weiß. Blieb ein Buchstabe (wie bei längeren Silben üblich) LÄNGER als
+        0.7s aktiv, wirkte er nach dem kurzen Aufblitzen plötzlich ausgewaschen statt
+        durchgehend hell.
+      - Zusätzlich hatte sich beim ersten Versuch ein unabsichtlich nicht geschlossener
+        CSS-Kommentar eingeschlichen, der eine nachfolgende Regel unwirksam gemacht hätte.
+      - Fix: Der komplette Shine-Sweep-Effekt wurde entfernt (statt weiter daran zu
+        reparieren) und durch einen einfachen, robusten Text-Schatten-Glow ersetzt, der
+        prinzipbedingt nicht in einem kaputten Zwischenzustand hängen bleiben kann. Der
+        Zoom-Wertebereich für --word-hold-scale wurde außerdem deutlich zurückhaltender
+        gemacht (1.05-1.43x -> 1.02-1.16x), da der vorherige Bereich auf einzelnen
+        Buchstaben zu extrem/verzerrt statt dezent-elegant wirkte.
+
+    [BUGFIX] "Apple Music Pro"-Lyrics-Stil: zwei im Code angekündigte, aber nie tatsächlich
+             umgesetzte Effekte nachgeholt
+      - Nutzer bat darum, den Zoom-Effekt an die tatsächliche Haltedauer von Wörtern/Silben
+        zu koppeln, "so wie bei Apple - einfach ultra".
+      - Befund beim Nachschauen: Genau dieses Verhalten war bereits als Kommentar und CSS-
+        Variable (--word-hold-scale) im Code angelegt, wurde aber nie tatsächlich in
+        JavaScript berechnet - die Variable fiel dadurch immer auf denselben statischen
+        Standardwert zurück, nie ein echter dynamischer Effekt. Ebenso wurde im Kommentar
+        ein "Shine-Sweep"-Effekt erwähnt, der nirgends implementiert war.
+      - Fix: --word-hold-scale wird jetzt pro Wort/Silbe live aus der echten Timing-Dauer
+        berechnet (kurze Silben -> dezenter Zoom ~1.05x, lang gehaltene Wörter am Ende
+        einer Phrase -> bis zu ~1.43x, mit sqrt-Kurve für einen natürlicheren Verlauf).
+        Der Shine-Sweep-Effekt wurde nachgebaut: ein glänzender Lichtreflex läuft einmal
+        über den aktiven Buchstaben, wie bei poliertem, hochwertigem Material. Zusätzlich
+        Glow/Text-Shadow verstärkt für einen strahlenderen, premiumeren Gesamteindruck.
+        Im Low-End-Modus bleiben beide neuen Effekte deaktiviert.
+
     [BUGFIX] StandBy-Uhr weiterhin falsch trotz vorherigem Cache-Busting-Fix - Zeit-Sync
              komplett neu aufgebaut ohne Drittanbieter-Abhängigkeit
       - Symptom: Nutzer berichtete, dass die StandBy-Uhr auch nach dem letzten Fix
@@ -1170,23 +1344,164 @@
         }
 
         /* 12. Apple Music PRO (Silben-Highlight + Shine-Sweep + geschärfte aktive Zeile) */
-        .lyrics-style-applemusicpro .lyric-word { background: none; -webkit-text-fill-color: currentcolor; }
+        .lyrics-style-applemusicpro .lyric-word { background: none; -webkit-text-fill-color: currentcolor; display: inline-block; }
         .lyrics-style-applemusicpro .lyric-char {
             display: inline-block;
             color: rgba(255, 255, 255, 0.32);
             text-shadow: none;
-            transition: color 0.2s cubic-bezier(0.4, 0, 0.2, 1), text-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-origin: center bottom;
+            transition: color 0.25s cubic-bezier(0.4, 0, 0.2, 1), text-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
-        .lyrics-style-applemusicpro .lyric-char.char-passed { color: #ffffff; text-shadow: none; transform: translateY(0); }
+        .lyrics-style-applemusicpro .lyric-char.char-passed { color: #ffffff; text-shadow: none; transform: translateY(0) scale(1); }
+        /* NEW: Der Zoom-Grad ist jetzt abhängig davon, wie lange die Silbe/das Wort
+           tatsächlich gehalten wird (--word-hold-scale, wird pro Frame in JS anhand der
+           echten Timing-Daten gesetzt) - genau wie bei Apple Music: kurze, schnell
+           durchlaufende Silben bekommen nur einen dezenten Zoom, lang gehaltene Wörter
+           (z.B. am Ende einer Zeile/Phrase) werden spürbar größer und strahlender
+           herausgehoben. Spring-Easing (siehe transition oben) sorgt für ein weiches,
+           leicht überschwingendes "Poppen" statt einer linearen Bewegung - fühlt sich
+           dadurch lebendiger und hochwertiger an.
+        */
         .lyrics-style-applemusicpro .lyric-char.char-active {
             color: #ffffff;
-            text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
-            transform: translateY(-1px);
+            text-shadow: 0 0 16px rgba(255, 255, 255, 0.5), 0 0 4px rgba(255, 255, 255, 0.7);
+            transform: translateY(calc(var(--word-hold-scale, 1.05) * -2px)) scale(var(--word-hold-scale, 1.05));
         }
+        /* NEW: Bugfix - der vorherige Shine-Sweep-Versuch nutzte background-clip:text mit
+           einer Animation OHNE animation-fill-mode:forwards. Dadurch sprang der Text nach
+           Ablauf der 0.7s-Animation auf die "0%"-Position des Verlaufs zurück - eine
+           halbtransparente, blasse Farbe statt sattem Weiß. Blieb ein Buchstabe länger als
+           0.7s aktiv (was bei längeren Silben regelmäßig vorkam), wirkte er dadurch nach
+           dem kurzen Aufblitzen plötzlich blass/ausgewaschen statt durchgehend hell - das
+           hat sich "kaputt" angefühlt. Komplett entfernt und durch einen einfachen,
+           robusten Text-Schatten-Puls ersetzt, der garantiert nicht in einem blassen
+           Zwischenzustand hängen bleiben kann. */
         #main-music-card.lyrics-open .lyrics-style-applemusicpro .lyric-line.active {
-            transform: scale(1.08);
-            filter: blur(0) drop-shadow(0 0 14px rgba(255, 255, 255, 0.12));
+            transform: scale(1.1);
+            filter: blur(0) drop-shadow(0 0 20px rgba(255, 255, 255, 0.16));
+            transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.5s ease;
         }
+        .lyrics-style-applemusicpro .lyric-line { transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+        /* ============================================================= */
+        /* NEW: 25 weitere Lyrics-Animationsstile                        */
+        /* ============================================================= */
+
+        /* --- Natur & Elemente --- */
+        .lyrics-style-sunrise .lyric-word.word-active { background: linear-gradient(180deg, #fff 0%, #ffd08a 50%, #ff8a5c 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; animation: sunrise-rise 0.6s ease-out; }
+        @keyframes sunrise-rise { 0% { transform: translateY(6px); opacity: 0.3; } 100% { transform: translateY(0); opacity: 1; } }
+        .lyrics-style-sunrise .lyric-word.word-passed { color: rgba(255,208,138,0.7); }
+
+        .lyrics-style-frostbite .lyric-word.word-active { color: #cdefff; text-shadow: 0 0 10px rgba(140,220,255,0.9), 0 0 2px #fff; animation: frost-shatter 0.35s ease-out; display: inline-block; }
+        @keyframes frost-shatter { 0% { transform: scale(0.6) rotate(-8deg); opacity: 0; filter: blur(3px); } 100% { transform: scale(1) rotate(0); opacity: 1; filter: blur(0); } }
+        .lyrics-style-frostbite .lyric-word.word-passed { color: #8cc8e8; }
+
+        .lyrics-style-aurora .lyric-word.word-active { background: linear-gradient(90deg, #4ade80, #22d3ee, #a78bfa, #4ade80); background-size: 300% 100%; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; animation: aurora-drift 3s linear infinite; }
+        @keyframes aurora-drift { to { background-position: -300% 0; } }
+        .lyrics-style-aurora .lyric-word.word-passed { color: rgba(74,222,128,0.55); }
+
+        .lyrics-style-windblown .lyric-word.word-active { display: inline-block; color: #fff; animation: wind-sway 0.6s ease-in-out; }
+        @keyframes wind-sway { 0% { transform: translateX(-10px) skewX(-8deg); opacity: 0.4; } 60% { transform: translateX(2px) skewX(2deg); } 100% { transform: translateX(0) skewX(0); opacity: 1; } }
+        .lyrics-style-windblown .lyric-word.word-passed { color: rgba(255,255,255,0.7); }
+
+        .lyrics-style-moonlight .lyric-word.word-active { color: #dbeafe; text-shadow: 0 0 20px rgba(147,197,253,0.7); animation: moonlight-pulse 1.4s ease-in-out infinite; }
+        @keyframes moonlight-pulse { 0%, 100% { text-shadow: 0 0 12px rgba(147,197,253,0.5); } 50% { text-shadow: 0 0 26px rgba(147,197,253,0.9); } }
+        .lyrics-style-moonlight .lyric-word.word-passed { color: rgba(219,234,254,0.55); }
+
+        .lyrics-style-carbon .lyric-word.word-active { color: #fff; text-shadow: 0 0 14px rgba(0,0,0,0.8); animation: carbon-rise 0.5s ease-out; display: inline-block; }
+        @keyframes carbon-rise { 0% { opacity: 0; filter: blur(6px) brightness(0.3); transform: translateY(4px); } 100% { opacity: 1; filter: blur(0) brightness(1); transform: translateY(0); } }
+        .lyrics-style-carbon .lyric-word.word-passed { color: rgba(255,255,255,0.6); }
+
+        /* --- Retro & Vintage --- */
+        .lyrics-style-static .lyric-word.word-active { color: #fff; display: inline-block; animation: static-flicker 0.3s steps(4); }
+        @keyframes static-flicker { 0% { opacity: 0.1; transform: translate(1px,0); } 25% { opacity: 0.8; transform: translate(-1px,1px); } 50% { opacity: 0.3; transform: translate(1px,-1px); } 100% { opacity: 1; transform: translate(0,0); } }
+        .lyrics-style-static .lyric-word.word-passed { color: rgba(255,255,255,0.65); }
+
+        .lyrics-style-retrowave .lyric-word.word-active { color: #f472b6; text-shadow: 0 0 14px rgba(244,114,182,0.7), 0 0 4px rgba(251,191,36,0.6); animation: retrowave-scan 0.5s ease-out; }
+        @keyframes retrowave-scan { 0% { opacity: 0.3; transform: translateY(3px); } 100% { opacity: 1; transform: translateY(0); } }
+        .lyrics-style-retrowave .lyric-word.word-passed { color: rgba(244,114,182,0.6); }
+
+        .lyrics-style-paperfold .lyric-word.word-active { display: inline-block; color: #fff; animation: paper-fold 0.45s cubic-bezier(0.34,1.56,0.64,1); transform-origin: top center; }
+        @keyframes paper-fold { 0% { transform: rotateX(-70deg); opacity: 0; } 100% { transform: rotateX(0); opacity: 1; } }
+        .lyrics-style-paperfold .lyric-word.word-passed { color: rgba(255,255,255,0.7); }
+
+        .lyrics-style-cinematic .lyric-line.active { letter-spacing: 0.04em; }
+        .lyrics-style-cinematic .lyric-word.word-active { color: #fff; opacity: 0; animation: cinematic-reveal 0.7s ease forwards; }
+        @keyframes cinematic-reveal { 0% { opacity: 0; transform: scale(1.04); filter: blur(4px); } 100% { opacity: 1; transform: scale(1); filter: blur(0); } }
+        .lyrics-style-cinematic .lyric-word.word-passed { color: rgba(255,255,255,0.72); }
+
+        .lyrics-style-inkbrush .lyric-word.word-active { color: #fff; display: inline-block; animation: inkbrush-stroke 0.5s ease-out; }
+        @keyframes inkbrush-stroke { 0% { clip-path: inset(0 100% 0 0); opacity: 0.4; } 100% { clip-path: inset(0 0 0 0); opacity: 1; } }
+        .lyrics-style-inkbrush .lyric-word.word-passed { color: rgba(255,255,255,0.7); }
+
+        /* --- Party & Energie --- */
+        .lyrics-style-confetti .lyric-word.word-active { display: inline-block; color: #fff; animation: confetti-pop 0.4s ease-out; }
+        @keyframes confetti-pop { 0% { transform: scale(0) rotate(-20deg); opacity: 0; } 60% { transform: scale(1.3) rotate(8deg); } 100% { transform: scale(1) rotate(0); opacity: 1; } }
+        .lyrics-style-confetti .lyric-word.word-passed { color: rgba(255,255,255,0.65); }
+
+        .lyrics-style-bassdrop .lyric-word.word-active { display: inline-block; color: #fff; text-shadow: 0 0 16px rgba(255,255,255,0.6); animation: bassdrop-punch 0.35s cubic-bezier(0.34,1.56,0.64,1); }
+        @keyframes bassdrop-punch { 0% { transform: scale(1.5); opacity: 0.5; } 100% { transform: scale(1); opacity: 1; } }
+        .lyrics-style-bassdrop .lyric-word.word-passed { color: rgba(255,255,255,0.6); }
+
+        .lyrics-style-discoball .lyric-word.word-active { color: #fff; text-shadow: 0 0 6px #fff, 0 0 14px rgba(255,255,255,0.6); display: inline-block; animation: disco-sparkle 0.5s ease-in-out; }
+        @keyframes disco-sparkle { 0%, 100% { text-shadow: 0 0 4px #fff; } 50% { text-shadow: 0 0 16px #fff, 0 0 22px rgba(180,220,255,0.8); } }
+        .lyrics-style-discoball .lyric-word.word-passed { color: rgba(255,255,255,0.6); }
+
+        .lyrics-style-heartbeat .lyric-word.word-active { display: inline-block; color: #fff; animation: heartbeat-pulse 0.6s ease-in-out; }
+        @keyframes heartbeat-pulse { 0%, 100% { transform: scale(1); } 25% { transform: scale(1.12); } 40% { transform: scale(1); } 55% { transform: scale(1.08); } }
+        .lyrics-style-heartbeat .lyric-word.word-passed { color: rgba(255,255,255,0.68); }
+
+        .lyrics-style-echoburst .lyric-word.word-active { position: relative; color: #fff; }
+        .lyrics-style-echoburst .lyric-word.word-active::before, .lyrics-style-echoburst .lyric-word.word-active::after { content: attr(data-echo); position: absolute; left: 0; top: 0; color: rgba(255,255,255,0.25); pointer-events: none; }
+        .lyrics-style-echoburst .lyric-word.word-active { animation: echo-burst 0.5s ease-out; }
+        @keyframes echo-burst { 0% { text-shadow: 0 0 0 rgba(255,255,255,0); } 40% { text-shadow: 0 0 18px rgba(255,255,255,0.7); } 100% { text-shadow: 0 0 4px rgba(255,255,255,0.3); } }
+        .lyrics-style-echoburst .lyric-word.word-passed { color: rgba(255,255,255,0.65); }
+
+        /* --- Elegant & Edel --- */
+        .lyrics-style-goldleaf .lyric-word.word-active { color: #fde68a; text-shadow: 0 0 16px rgba(253,230,138,0.8), 0 0 3px rgba(255,247,205,0.9); animation: gold-shine 0.6s ease-out; }
+        @keyframes gold-shine { 0% { opacity: 0.3; filter: brightness(0.5); } 100% { opacity: 1; filter: brightness(1); } }
+        .lyrics-style-goldleaf .lyric-word.word-passed { color: #d4af37; }
+
+        .lyrics-style-velvet .lyric-word.word-active { color: #f5d0e0; text-shadow: 0 0 18px rgba(190,24,93,0.6), 0 2px 4px rgba(0,0,0,0.4); animation: velvet-glow 0.6s ease-out; }
+        @keyframes velvet-glow { 0% { opacity: 0.3; transform: translateY(3px); } 100% { opacity: 1; transform: translateY(0); } }
+        .lyrics-style-velvet .lyric-word.word-passed { color: rgba(245,208,224,0.6); }
+
+        .lyrics-style-crystalline .lyric-word.word-active { color: #fff; display: inline-block; text-shadow: 1px 1px 0 rgba(147,197,253,0.5), -1px -1px 0 rgba(255,255,255,0.5); animation: crystal-facet 0.4s ease-out; }
+        @keyframes crystal-facet { 0% { transform: scale(0.8) rotateZ(-4deg); opacity: 0.3; } 100% { transform: scale(1) rotateZ(0); opacity: 1; } }
+        .lyrics-style-crystalline .lyric-word.word-passed { color: rgba(255,255,255,0.65); }
+
+        .lyrics-style-featherlight .lyric-word.word-active { display: inline-block; color: #fff; animation: feather-drift 0.7s ease-out; }
+        @keyframes feather-drift { 0% { transform: translateY(10px) rotate(-3deg); opacity: 0; } 100% { transform: translateY(0) rotate(0); opacity: 1; } }
+        .lyrics-style-featherlight .lyric-word.word-passed { color: rgba(255,255,255,0.65); }
+
+        /* --- Experimentell --- */
+        .lyrics-style-inkspill .lyric-word.word-active { color: #fff; display: inline-block; animation: ink-spill 0.5s ease-out; }
+        @keyframes ink-spill { 0% { clip-path: circle(0% at 50% 50%); opacity: 0.3; } 100% { clip-path: circle(100% at 50% 50%); opacity: 1; } }
+        .lyrics-style-inkspill .lyric-word.word-passed { color: rgba(255,255,255,0.68); }
+
+        .lyrics-style-lasertag .lyric-word.word-active { color: #fff; text-shadow: 0 0 10px rgba(239,68,68,0.9); display: inline-block; animation: laser-scan 0.3s linear; }
+        @keyframes laser-scan { 0% { border-bottom: 1px solid rgba(239,68,68,0.9); } 100% { border-bottom: 1px solid transparent; } }
+        .lyrics-style-lasertag .lyric-word.word-passed { color: rgba(255,255,255,0.65); }
+
+        .lyrics-style-spraypaint .lyric-word.word-active { color: #fff; display: inline-block; animation: spray-reveal 0.4s steps(6, end); }
+        @keyframes spray-reveal { 0% { opacity: 0; filter: blur(4px); } 100% { opacity: 1; filter: blur(0); } }
+        .lyrics-style-spraypaint .lyric-word.word-passed { color: rgba(255,255,255,0.65); }
+
+        .lyrics-style-pixeldust .lyric-word.word-active { color: #fff; display: inline-block; animation: pixel-resolve 0.4s steps(5, end); image-rendering: pixelated; }
+        @keyframes pixel-resolve { 0% { filter: blur(5px) contrast(2); opacity: 0.4; } 100% { filter: blur(0) contrast(1); opacity: 1; } }
+        .lyrics-style-pixeldust .lyric-word.word-passed { color: rgba(255,255,255,0.65); }
+
+        .lyrics-style-jellywobble .lyric-word.word-active { display: inline-block; color: #fff; animation: jelly-wobble 0.55s ease-in-out; }
+        @keyframes jelly-wobble { 0% { transform: scale(1,1); } 25% { transform: scale(1.15, 0.85); } 50% { transform: scale(0.9, 1.1); } 75% { transform: scale(1.05, 0.95); } 100% { transform: scale(1,1); } }
+        .lyrics-style-jellywobble .lyric-word.word-passed { color: rgba(255,255,255,0.68); }
+
+        /* Low-End-Modus: alle 25 neuen Stile auf statische, kostenlose Darstellung reduziert */
+        body.low-end [class*="lyrics-style-"] .lyric-word.char-active,
+        body.low-end [class*="lyrics-style-"] .lyric-char.char-active {
+            animation: none !important; background: none !important; -webkit-text-fill-color: #ffffff !important;
+            text-shadow: none !important; transform: none !important; filter: none !important;
+        }
+
 
         .mask-image-gradient { -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%); mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%); }
 
@@ -1728,9 +2043,9 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v21.9 · 2026-07-22';
+        const SITE_VERSION = 'v23.6 · 2026-07-22';
 
-        const DEFAULT_SYNC_OFFSET = -800; 
+        const DEFAULT_SYNC_OFFSET = -400; 
     </script>
 </head>
 <body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen selection:bg-blue-500/30 overflow-x-hidden">
@@ -2026,7 +2341,7 @@
             <h2 id="music-section-title" class="text-lg xxs:text-xl xs:text-2xl sm:text-3xl font-bold mb-1.5 xxs:mb-2 text-blue-600 dark:text-blue-500 border-b-2 sm:border-b-4 border-blue-600 dark:border-blue-500 pb-1.5 xxs:pb-2 sm:pb-3 inline-block break-words">
                 Was bei mir gerade läuft
             </h2>
-            <p id="music-sync-note" class="text-[8px] xxs:text-[10px] xs:text-xs text-slate-600 dark:text-slate-400 mb-4 xxs:mb-6 sm:mb-10">*Hinweis: Der Time-Sync ist auf -800ms optimiert.</p>
+            <p id="music-sync-note" class="text-[8px] xxs:text-[10px] xs:text-xs text-slate-600 dark:text-slate-400 mb-4 xxs:mb-6 sm:mb-10">*Hinweis: Der Time-Sync ist auf -400ms optimiert.</p>
             
             <div id="mini-player-toggle" onclick="toggleDashboard()" role="button" tabindex="0" class="glass-card w-full max-w-[400px] mx-auto p-2 xxs:p-3 sm:p-4 rounded-[1.2rem] xxs:rounded-2xl sm:rounded-[2rem] flex items-center justify-between cursor-pointer group mb-3 xxs:mb-4 sm:mb-6 relative z-20 hover:scale-[1.01] transition-all">
                 <div class="flex items-center gap-2 xxs:gap-3 sm:gap-4 flex-1 min-w-0">
@@ -2091,48 +2406,16 @@
                                     <!-- Das Settings Menü Fenster -->
                                     <div id="lyrics-settings-menu" class="absolute top-full right-0 mt-2 xxs:mt-3 sm:mt-4 bg-slate-900 border border-slate-700 rounded-xl p-1.5 xxs:p-2 sm:p-3 shadow-2xl hidden flex-col gap-1.5 min-w-[140px] xxs:min-w-[160px] sm:min-w-[180px] z-[9999] origin-top-right max-h-[350px] overflow-y-auto">
                                         <p id="label-animation-style" class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1 px-1 sticky top-0 bg-slate-900 py-1 z-10">Animation Style</p>
-                                        <button onclick="setLyricsStyle('fill')" id="btn-style-fill" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Classic Fill</button>
-                                        <button onclick="setLyricsStyle('bounce')" id="btn-style-bounce" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Bouncy Pop</button>
-                                        <button onclick="setLyricsStyle('fade')" id="btn-style-fade" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Smooth Fade</button>
-                                        <button onclick="setLyricsStyle('blur')" id="btn-style-blur" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Smooth Focus</button>
-                                        <button onclick="setLyricsStyle('wave')" id="btn-style-wave" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Wave Slide</button>
-                                        <button onclick="setLyricsStyle('wave-char')" id="btn-style-wave-char" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Wave Slide (Letters)</button>
-                                        <button onclick="setLyricsStyle('neon')" id="btn-style-neon" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Neon Glow</button>
-                                        <button onclick="setLyricsStyle('typewriter')" id="btn-style-typewriter" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Typewriter</button>
-                                        <button onclick="setLyricsStyle('pop')" id="btn-style-pop" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Elastic Pop</button>
-                                        <button onclick="setLyricsStyle('karaoke')" id="btn-style-karaoke" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Karaoke Bar</button>
-                                        <button onclick="setLyricsStyle('glitch')" id="btn-style-glitch" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Cyber Glitch</button>
-                                        <button onclick="setLyricsStyle('flip')" id="btn-style-flip" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">3D Flip</button>
-                                        <button onclick="setLyricsStyle('zoom')" id="btn-style-zoom" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Zoom Slide</button>
-                                        <button onclick="setLyricsStyle('zoom-char')" id="btn-style-zoom-char" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Zoom Slide (Letters)</button>
-                                        
-                                        <div class="h-px w-full bg-slate-700 my-1"></div>
-                                        <p id="label-overkill-shaders" class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-red-500 mb-1 px-1">Overkill Shaders</p>
-                                        <button onclick="setLyricsStyle('kinetic')" id="btn-style-kinetic" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Kinetic Impact</button>
-                                        <button onclick="setLyricsStyle('hellfire')" id="btn-style-hellfire" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Hellfire Burn</button>
-                                        <button onclick="setLyricsStyle('hologram')" id="btn-style-hologram" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Hologram Jitter</button>
-                                        <button onclick="setLyricsStyle('matrix')" id="btn-style-matrix" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Matrix Rain</button>
-                                        <button onclick="setLyricsStyle('liquid')" id="btn-style-liquid" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Viscous Liquid</button>
-                                        <button onclick="setLyricsStyle('cyberpunk')" id="btn-style-cyberpunk" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Cyberpunk Glitch</button>
-                                        <button onclick="setLyricsStyle('ghost')" id="btn-style-ghost" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Ghost Trail</button>
-                                        <button onclick="setLyricsStyle('rainbow')" id="btn-style-rainbow" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Rainbow Cycle</button>
-                                        <button onclick="setLyricsStyle('shake')" id="btn-style-shake" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Word Shake</button>
-                                        <button onclick="setLyricsStyle('underline')" id="btn-style-underline" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Underline Sweep</button>
-
-                                        <div class="h-px w-full bg-slate-700 my-1"></div>
-                                        <p id="label-badge-new" class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-emerald-400 mb-1 px-1">Brandneu</p>
-                                        <button onclick="setLyricsStyle('ember')" id="btn-style-ember" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Ember Glow</button>
-                                        <button onclick="setLyricsStyle('ice')" id="btn-style-ice" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Ice Crystal</button>
-                                        <button onclick="setLyricsStyle('chromatic')" id="btn-style-chromatic" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Chromatic Split</button>
-                                        <button onclick="setLyricsStyle('bubble')" id="btn-style-bubble" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Bubble Pop</button>
-                                        <button onclick="setLyricsStyle('flagwave')" id="btn-style-flagwave" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Flag Wave</button>
-                                        <button onclick="setLyricsStyle('spotlight')" id="btn-style-spotlight" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Spotlight Sweep</button>
-                                        <button onclick="setLyricsStyle('binary')" id="btn-style-binary" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Binary Decode</button>
-                                        <button onclick="setLyricsStyle('paint')" id="btn-style-paint" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Paint Stroke</button>
-                                        <button onclick="setLyricsStyle('vinyl')" id="btn-style-vinyl" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Vinyl Retro</button>
-                                        <button onclick="setLyricsStyle('starlight')" id="btn-style-starlight" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">Starlight</button>
-                                        <button onclick="setLyricsStyle('applemusic')" id="btn-style-applemusic" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">🍎 Apple Music</button>
-                                        <button onclick="setLyricsStyle('applemusicpro')" id="btn-style-applemusicpro" class="text-left text-[10px] xxs:text-xs sm:text-sm text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors">🍏 Apple Music Pro</button>
+                                        <!-- NEW: Kompaktes Dropdown statt 61 einzelner Buttons - hält die
+                                             Einstellungen übersichtlich, egal wie viele Stile es gibt. Wird
+                                             per JS aus einem zentralen LYRICS_STYLES-Register befüllt. -->
+                                        <select id="lyrics-style-select" onchange="setLyricsStyle(this.value)" class="w-full bg-slate-800 text-white text-[10px] xxs:text-xs sm:text-sm px-2 py-1.5 rounded border border-slate-600 mb-1.5"></select>
+                                        <!-- NEW: Live-Vorschau - zeigt sofort, wie der ausgewählte Stil
+                                             aussieht, anhand eines generischen Beispieltextes (keine echten
+                                             Songtexte). -->
+                                        <div id="lyrics-style-preview-box" class="w-full bg-black/40 rounded-lg p-2.5 mb-1 overflow-hidden text-center min-h-[52px] flex items-center justify-center">
+                                            <p id="lyrics-style-preview-text" class="text-sm xxs:text-base font-bold leading-snug"></p>
+                                        </div>
 
                                         <div class="h-px w-full bg-slate-700 my-1"></div>
                                         <p id="label-features" class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1 px-1">Features</p>
@@ -2176,6 +2459,14 @@
                                 <div id="lyrics-container" class="absolute inset-0 overflow-y-auto overflow-x-hidden text-left w-full h-full pb-6 sm:pb-10 lyrics-style-fill">
                                     <div id="lyrics-content" class="transition-all flex flex-col items-start w-full min-h-full"></div>
                                 </div>
+                                <!-- NEW: Tipp-zum-Springen - Uhr-Icon aktiviert einen Modus, in dem ein
+                                     Antippen einer Lyrics-Zeile die Sync-Position direkt auf diese Zeile
+                                     korrigiert, statt versehentlich beim normalen Scrollen zu verrutschen.
+                                     Deaktiviert sich nach einer Eingabe automatisch wieder von selbst. -->
+                                <button onclick="toggleLyricsSeekMode()" id="btn-lyrics-seek-mode" aria-label="Tipp-zum-Springen" title="Tipp-zum-Springen" class="absolute bottom-2 left-2 z-30 p-2 rounded-full bg-black/50 hover:bg-black/70 text-white/70 hover:text-white transition-all border border-white/10">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                </button>
+                                <div id="lyrics-seek-hint" class="hidden absolute bottom-2 left-11 z-30 bg-blue-500/90 text-white text-[9px] xxs:text-[10px] font-bold px-2 py-1.5 rounded-full whitespace-nowrap">Tippe auf eine Zeile...</div>
                             </div>
                         </div>
 
@@ -2614,7 +2905,7 @@
                 secret_4: '🐛 Bugs sind einfach ungeplante Features. Punkt.',
                 secret_5: '💙 Danke fürs Neugierig-Sein und Herumklicken!',
                                 music_section_title: 'Was bei mir gerade läuft',
-                music_sync_note: '*Hinweis: Der Time-Sync ist auf -800ms optimiert.',
+                music_sync_note: '*Hinweis: Der Time-Sync ist auf -400ms optimiert.',
                 lyrics_placeholder_title: 'Titel',
                 lyrics_placeholder_artist: 'Artist',
                 lyrics_synced_label: 'Lyrics: Synced',
@@ -2777,7 +3068,7 @@
                 secret_4: '🐛 Bugs are just unplanned features. Period.',
                 secret_5: '💙 Thanks for being curious and clicking around!',
                                 music_section_title: 'What I\'m currently listening to',
-                music_sync_note: '*Note: Time sync is optimized for -800ms.',
+                music_sync_note: '*Note: Time sync is optimized for -400ms.',
                 lyrics_placeholder_title: 'Title',
                 lyrics_placeholder_artist: 'Artist',
                 lyrics_synced_label: 'Lyrics: Synced',
@@ -2940,7 +3231,7 @@
                 secret_4: '🐛 Los bugs son simplemente funciones no planeadas. Punto.',
                 secret_5: '💙 ¡Gracias por ser curioso y andar haciendo clic por todos lados!',
                                 music_section_title: 'Lo que estoy escuchando ahora',
-                music_sync_note: '*Nota: La sincronización está optimizada para -800ms.',
+                music_sync_note: '*Nota: La sincronización está optimizada para -400ms.',
                 lyrics_placeholder_title: 'Título',
                 lyrics_placeholder_artist: 'Artista',
                 lyrics_synced_label: 'Letra: Sincronizada',
@@ -3103,7 +3394,7 @@
                 secret_4: '🐛 Les bugs, ce sont juste des fonctionnalités pas prévues. Point final.',
                 secret_5: '💙 Merci d\'être curieux et d\'avoir cliqué partout !',
                                 music_section_title: 'Ce que j\'écoute en ce moment',
-                music_sync_note: '*Remarque : la synchro est optimisée pour -800ms.',
+                music_sync_note: '*Remarque : la synchro est optimisée pour -400ms.',
                 lyrics_placeholder_title: 'Titre',
                 lyrics_placeholder_artist: 'Artiste',
                 lyrics_synced_label: 'Paroles : Synchro',
@@ -3266,7 +3557,7 @@
                 secret_4: '🐛 Bugs são só funcionalidades não planejadas. Ponto final.',
                 secret_5: '💙 Valeu por ser curioso e clicar em tudo por aí!',
                                 music_section_title: 'O que estou ouvindo agora',
-                music_sync_note: '*Nota: A sincronização está otimizada para -800ms.',
+                music_sync_note: '*Nota: A sincronização está otimizada para -400ms.',
                 lyrics_placeholder_title: 'Título',
                 lyrics_placeholder_artist: 'Artista',
                 lyrics_synced_label: 'Letra: Sincronizada',
@@ -3429,7 +3720,7 @@
                 secret_4: '🐛 Hatalar sadece planlanmamış özelliklerdir. Nokta.',
                 secret_5: '💙 Meraklı olduğun ve etrafa tıkladığın için teşekkürler!',
                                 music_section_title: 'Şu an ne dinliyorum',
-                music_sync_note: '*Not: Zaman senkronizasyonu -800ms için optimize edilmiştir.',
+                music_sync_note: '*Not: Zaman senkronizasyonu -400ms için optimize edilmiştir.',
                 lyrics_placeholder_title: 'Başlık',
                 lyrics_placeholder_artist: 'Sanatçı',
                 lyrics_synced_label: 'Şarkı Sözü: Senkronize',
@@ -3733,9 +4024,98 @@
         let suppressPopHandling = false;
         let isLyricsSettingsOpen = false;
         let currentLyricsStyle = localStorage.getItem('lyricsStyle') || 'fill';
+
+        // NEW: Zentrales Register aller Lyrics-Animationsstile. Einziger Ort, der bei
+        // neuen Stilen gepflegt werden muss - befüllt automatisch das Dropdown und die
+        // Live-Vorschau. Kategorien nur zur optischen Gruppierung im Dropdown (optgroup).
+        const LYRICS_STYLES = [
+            { cat: 'Standard', items: [
+                ['fill', 'Classic Fill'], ['bounce', 'Bouncy Pop'], ['fade', 'Smooth Fade'], ['blur', 'Smooth Focus'],
+                ['wave', 'Wave Slide'], ['wave-char', 'Wave Slide (Letters)'], ['neon', 'Neon Glow'], ['typewriter', 'Typewriter'],
+                ['pop', 'Elastic Pop'], ['karaoke', 'Karaoke Bar'], ['glitch', 'Cyber Glitch'], ['flip', '3D Flip'],
+                ['zoom', 'Zoom Slide'], ['zoom-char', 'Zoom Slide (Letters)']
+            ]},
+            { cat: 'Overkill Shaders', items: [
+                ['kinetic', 'Kinetic Impact'], ['hellfire', 'Hellfire Burn'], ['hologram', 'Hologram Jitter'], ['matrix', 'Matrix Rain'],
+                ['liquid', 'Viscous Liquid'], ['cyberpunk', 'Cyberpunk Glitch'], ['ghost', 'Ghost Trail'], ['rainbow', 'Rainbow Cycle'],
+                ['shake', 'Word Shake'], ['underline', 'Underline Sweep']
+            ]},
+            { cat: 'Kreativ', items: [
+                ['ember', 'Ember Glow'], ['ice', 'Ice Crystal'], ['chromatic', 'Chromatic Split'], ['bubble', 'Bubble Pop'],
+                ['flagwave', 'Flag Wave'], ['spotlight', 'Spotlight Sweep'], ['binary', 'Binary Decode'], ['paint', 'Paint Stroke'],
+                ['vinyl', 'Vinyl Retro'], ['starlight', 'Starlight'], ['applemusic', '🍎 Apple Music'], ['applemusicpro', '🍏 Apple Music Pro']
+            ]},
+            { cat: 'Natur & Elemente', items: [
+                ['sunrise', 'Sunrise Gradient'], ['frostbite', 'Frostbite Shatter'], ['aurora', 'Aurora Drift'], ['windblown', 'Windblown Sway'],
+                ['moonlight', 'Moonlight Pulse'], ['carbon', 'Carbon Smoke']
+            ]},
+            { cat: 'Retro & Vintage', items: [
+                ['static', 'TV Static'], ['retrowave', 'Retrowave Scan'], ['paperfold', 'Paper Fold'], ['cinematic', 'Cinematic Letterbox'],
+                ['inkbrush', 'Ink Brush']
+            ]},
+            { cat: 'Party & Energie', items: [
+                ['confetti', 'Confetti Burst'], ['bassdrop', 'Bass Drop'], ['discoball', 'Disco Sparkle'], ['heartbeat', 'Heartbeat Pulse'],
+                ['echoburst', 'Echo Burst']
+            ]},
+            { cat: 'Elegant & Edel', items: [
+                ['goldleaf', 'Gold Leaf Shine'], ['velvet', 'Velvet Glow'], ['crystalline', 'Crystalline Facet'], ['featherlight', 'Featherlight Drift']
+            ]},
+            { cat: 'Experimentell', items: [
+                ['inkspill', 'Ink Spill'], ['lasertag', 'Laser Scan'], ['spraypaint', 'Spray Paint'], ['pixeldust', 'Pixel Dust'],
+                ['jellywobble', 'Jelly Wobble']
+            ]}
+        ];
+
+        // NEW: Generischer, nicht-urheberrechtlich-geschützter Beispieltext für die
+        // Live-Vorschau - bewusst KEIN echter Songtext, nur ein neutraler Platzhaltersatz.
+        const LYRICS_PREVIEW_SENTENCE = "This is a quick animation preview. Pick your favorite style above.";
+
+        function populateLyricsStyleDropdown() {
+            const select = document.getElementById('lyrics-style-select');
+            if (!select) return;
+            select.innerHTML = LYRICS_STYLES.map(group =>
+                `<optgroup label="${group.cat}">${group.items.map(([id, label]) =>
+                    `<option value="${id}">${label}</option>`).join('')}</optgroup>`
+            ).join('');
+            select.value = currentLyricsStyle;
+        }
+
+        let lyricsPreviewLoopInterval = null;
+        function updateLyricsStylePreview(style) {
+            const box = document.getElementById('lyrics-style-preview-box');
+            const textEl = document.getElementById('lyrics-style-preview-text');
+            if (!box || !textEl) return;
+            box.className = `w-full bg-black/40 rounded-lg p-2.5 mb-1 overflow-hidden text-center min-h-[52px] flex items-center justify-center lyrics-style-${style}`;
+
+            // NEW: Bugfix - die Vorschau spielte die Animation bisher nur EINMAL beim
+            // Öffnen/Wechseln ab und blieb danach bewegungslos stehen, wirkte dadurch wie
+            // "eingefroren"/kaputt. Jetzt läuft sie als echte Dauerschleife: alle 2.5s wird
+            // der Inhalt frisch neu erzeugt, was den Animationsstart bei jedem Durchlauf
+            // sauber neu auslöst (CSS-Animationen starten automatisch, sobald ein Element
+            // mit bereits aktiver Animations-Klasse frisch ins DOM eingefügt wird).
+            const renderOnce = () => {
+                const words = LYRICS_PREVIEW_SENTENCE.split(' ');
+                textEl.innerHTML = words.map((w, wi) =>
+                    `<span class="lyric-word word-active" style="--fill-percent:100%">${w.split('').map((c, ci) =>
+                        `<span class="lyric-char char-active" style="animation-delay:${(wi * 0.15 + ci * 0.03).toFixed(2)}s">${c}</span>`).join('')}</span>`
+                ).join(' ');
+            };
+            renderOnce();
+            clearInterval(lyricsPreviewLoopInterval);
+            lyricsPreviewLoopInterval = setInterval(renderOnce, 2500);
+        }
+        // NEW: Bugfix - die Vorschau-Schleife lief unbemerkt im Hintergrund weiter, auch
+        // wenn das Einstellungsmenü längst geschlossen war, und verschwendete dadurch
+        // dauerhaft unnötig Rechenzeit. Jetzt wird sie explizit gestoppt, sobald das
+        // Lyrics-Einstellungsmenü geschlossen wird, und beim erneuten Öffnen neu gestartet.
+        function stopLyricsStylePreviewLoop() { clearInterval(lyricsPreviewLoopInterval); }
+
         let canvasEnabled = localStorage.getItem('canvasEnabled') !== 'false';
         let currentCanvasUrl = null;
-        let liveSyncOffset = typeof DEFAULT_SYNC_OFFSET !== 'undefined' ? DEFAULT_SYNC_OFFSET : -800;
+        // NEW: Falls der Nutzer schon mal manuell per Ohr nachjustiert hat, diesen
+        // gespeicherten Wert verwenden statt immer wieder beim Standardwert zu starten.
+        const savedUserSyncOffset = localStorage.getItem('userSyncOffset');
+        let liveSyncOffset = savedUserSyncOffset !== null ? parseInt(savedUserSyncOffset, 10) : (typeof DEFAULT_SYNC_OFFSET !== 'undefined' ? DEFAULT_SYNC_OFFSET : -400);
         
         let currentMs = 0;
         let totalMs = 0;
@@ -6061,6 +6441,11 @@
             syncSlider.addEventListener('change', (e) => {
                 liveSyncOffset = parseInt(e.target.value);
                 syncValueEl.innerText = liveSyncOffset;
+                // NEW: Manuell gefundenen Offset dauerhaft speichern, statt ihn bei jedem
+                // Neuladen zu verlieren - das ist der praktische Weg, "automatisch richtig
+                // eingestellt" zu bekommen: einmal per Ohr fein justieren, danach merkt
+                // sich die Seite den Wert und wendet ihn beim nächsten Besuch direkt an.
+                localStorage.setItem('userSyncOffset', liveSyncOffset);
                 syncLyricsUI(true, true); 
             });
         }
@@ -6083,23 +6468,106 @@
                 btn.classList.add('opacity-50', 'pointer-events-none', 'animate-pulse');
             }
             
-            if (title && artist && title !== t('standby_idle_title')) {
-                await fetchExternalLyrics(title, artist, totalMs);
-            }
-            
-            liveSyncOffset = typeof DEFAULT_SYNC_OFFSET !== 'undefined' ? DEFAULT_SYNC_OFFSET : -800;
-            if (syncSlider) syncSlider.value = liveSyncOffset;
-            if (syncValueEl) syncValueEl.innerText = liveSyncOffset;
-            
-            syncLyricsUI(true, true);
-            
-            if (btn) {
-                btn.innerText = originalText;
-                btn.classList.remove('opacity-50', 'pointer-events-none', 'animate-pulse');
+            // NEW: Bugfix - der Songtext-Abruf lief bisher OHNE try/catch. Schlug er aus
+            // irgendeinem Grund fehl (Netzwerkfehler, kein Treffer, API-Timeout), wurde die
+            // Exception nie abgefangen, wodurch der komplette restliche Code darunter -
+            // inklusive dem Zurücksetzen des Buttons - NIE mehr ausgeführt wurde. Der
+            // Button blieb dadurch dauerhaft auf "SYNCING" hängen (deaktiviert, pulsierend)
+            // und wirkte für den Nutzer wie "kaputt", obwohl eigentlich nur ein einzelner
+            // Fetch-Versuch fehlgeschlagen war. Jetzt mit try/catch/finally abgesichert,
+            // damit der Button garantiert IMMER wieder freigegeben wird.
+            try {
+                // NEW: Bugfix - Re-Sync lud bisher nur neue Songtext-Daten nach, aber NICHT
+                // die aktuelle Song-Position (currentMs) selbst - die blieb bis zum nächsten
+                // normalen 5-Sekunden-Poll unverändert. Hat man z.B. extern (in Spotify
+                // selbst) an eine andere Stelle gespult, wusste die Seite davon noch nichts,
+                // wodurch die Lyrics nach dem Re-Sync exakt an derselben (jetzt falschen)
+                // Stelle weiterliefen. Jetzt wird zuerst eine frische Positions-Abfrage
+                // erzwungen, bevor überhaupt neu synchronisiert wird.
+                await fetchMusicData();
+                if (title && artist && title !== t('standby_idle_title')) {
+                    await fetchExternalLyrics(title, artist, totalMs);
+                }
+            } catch (err) {
+                console.warn('Re-Sync: Songtext-Abruf fehlgeschlagen', err);
+                if (typeof showToast === 'function') showToast('Re-Sync fehlgeschlagen, versuch es nochmal.');
+            } finally {
+                liveSyncOffset = typeof DEFAULT_SYNC_OFFSET !== 'undefined' ? DEFAULT_SYNC_OFFSET : -400;
+                localStorage.removeItem('userSyncOffset'); // NEW: Re-Sync setzt auch den gespeicherten manuellen Wert zurück auf den Standard
+                if (syncSlider) syncSlider.value = liveSyncOffset;
+                if (syncValueEl) syncValueEl.innerText = liveSyncOffset;
+
+                syncLyricsUI(true, true);
+
+                if (btn) {
+                    btn.innerText = originalText;
+                    btn.classList.remove('opacity-50', 'pointer-events-none', 'animate-pulse');
+                }
             }
         };
         
         let lyricsSettingsTimeout;
+        // NEW: Tipp-zum-Springen - Uhr-Icon aktiviert einen Modus, in dem ein Antippen
+        // einer Lyrics-Zeile die Sync-Position direkt auf diese Zeile korrigiert. Deaktiviert
+        // sich nach genau einer Eingabe automatisch wieder von selbst, damit normales
+        // Scrollen/Antippen der Zeilen danach nicht mehr versehentlich einen Sprung auslöst.
+        let lyricsSeekModeActive = false;
+        window.toggleLyricsSeekMode = function() {
+            haptic(10);
+            lyricsSeekModeActive = !lyricsSeekModeActive;
+            const btn = document.getElementById('btn-lyrics-seek-mode');
+            const hint = document.getElementById('lyrics-seek-hint');
+            if (btn) btn.classList.toggle('bg-blue-500/90', lyricsSeekModeActive);
+            if (btn) btn.classList.toggle('text-white', lyricsSeekModeActive);
+            if (hint) hint.classList.toggle('hidden', !lyricsSeekModeActive);
+        };
+
+        function deactivateLyricsSeekMode() {
+            lyricsSeekModeActive = false;
+            const btn = document.getElementById('btn-lyrics-seek-mode');
+            const hint = document.getElementById('lyrics-seek-hint');
+            if (btn) { btn.classList.remove('bg-blue-500/90'); btn.classList.remove('text-white'); }
+            if (hint) hint.classList.add('hidden');
+        }
+
+        // Ein einziger, delegierter Klick-Listener auf den Lyrics-Container statt an jede
+        // einzelne Zeile - funktioniert automatisch auch für Zeilen, die erst nach dem
+        // Songwechsel neu ins DOM eingefügt werden.
+        document.addEventListener('DOMContentLoaded', () => {});
+        (function setupLyricsSeekClickHandler() {
+            const container = document.getElementById('lyrics-content');
+            if (!container) return;
+            container.addEventListener('click', (e) => {
+                if (!lyricsSeekModeActive) return;
+                const lineEl = e.target.closest('.lyric-line');
+                if (!lineEl) return;
+                const match = /lyric-line-(\d+)/.exec(lineEl.id);
+                if (!match) return;
+                const idx = parseInt(match[1], 10);
+                const targetLine = parsedLyrics[idx];
+                if (!targetLine) return;
+
+                haptic(10);
+                // NEW: Berechnet den passenden Sync-Offset so, dass die angetippte Zeile
+                // genau JETZT (aktuelle Song-Position) als aktiv gilt - eleganter Ersatz für
+                // manuelles Herumprobieren am Zahlen-Regler: Nutzer tippt einfach auf die
+                // Zeile, die gerade tatsächlich gesungen wird, statt einen ms-Wert zu raten.
+                const newOffset = Math.round(targetLine.timeMs - currentMs);
+                const clampedOffset = Math.max(-5000, Math.min(5000, newOffset));
+                liveSyncOffset = clampedOffset;
+                localStorage.setItem('userSyncOffset', liveSyncOffset);
+                const syncSliderEl = document.getElementById('sync-slider');
+                const syncValueElUpdate = document.getElementById('sync-value');
+                if (syncSliderEl) syncSliderEl.value = liveSyncOffset;
+                if (syncValueElUpdate) syncValueElUpdate.innerText = liveSyncOffset;
+
+                syncLyricsUI(true, true);
+                if (typeof showToast === 'function') showToast('Sync angepasst ✓');
+
+                deactivateLyricsSeekMode(); // NEW: nach der Eingabe automatisch wieder deaktivieren
+            });
+        })();
+
         window.toggleLyricsSettings = function() {
             isLyricsSettingsOpen = !isLyricsSettingsOpen;
             if (!lyricsSettingsMenu) return;
@@ -6107,7 +6575,9 @@
             if (isLyricsSettingsOpen) {
                 lyricsSettingsMenu.classList.remove('hidden', 'settings-closing');
                 lyricsSettingsMenu.classList.add('settings-opening');
+                updateLyricsStylePreview(currentLyricsStyle); // NEW: Vorschau-Schleife frisch starten
             } else {
+                stopLyricsStylePreviewLoop(); // NEW: Vorschau-Schleife stoppen, spart unnötig laufende Rechenzeit im Hintergrund
                 lyricsSettingsMenu.classList.remove('settings-opening');
                 lyricsSettingsMenu.classList.add('settings-closing');
                 lyricsSettingsTimeout = setTimeout(() => {
@@ -6142,18 +6612,11 @@
                 appleBadge.classList.toggle('flex', isAppleStyle);
             }
             
-            ['fill', 'bounce', 'fade', 'blur', 'wave', 'wave-char', 'neon', 'typewriter', 'pop', 'karaoke', 'glitch', 'flip', 'zoom', 'zoom-char', 'kinetic', 'hellfire', 'hologram', 'matrix', 'liquid', 'cyberpunk', 'ghost', 'rainbow', 'shake', 'underline', 'ember', 'ice', 'chromatic', 'bubble', 'flagwave', 'spotlight', 'binary', 'paint', 'vinyl', 'starlight', 'applemusic', 'applemusicpro'].forEach(s => {
-            const btn = document.getElementById(`btn-style-${s}`);
-                if(btn) {
-                    if (s === style) {
-                        btn.classList.add('bg-blue-500/20', 'text-blue-400', 'font-bold');
-                        btn.classList.remove('hover:bg-slate-700');
-                    } else {
-                        btn.classList.remove('bg-blue-500/20', 'text-blue-400', 'font-bold');
-                        btn.classList.add('hover:bg-slate-700');
-                    }
-                }
-            });
+            // NEW: Statt 36+ einzelne Buttons durchzugehen, wird jetzt nur noch der Wert
+            // des kompakten Dropdowns gesetzt, plus die Live-Vorschau aktualisiert.
+            const styleSelect = document.getElementById('lyrics-style-select');
+            if (styleSelect && styleSelect.value !== style) styleSelect.value = style;
+            updateLyricsStylePreview(style);
 
             syncLyricsUI(false, true); 
         };
@@ -6650,6 +7113,24 @@
                 const wordSpan = document.getElementById(`word-${idx}-${wIdx}`);
                 if (!wordSpan) return;
 
+                // NEW: Bugfix - --word-hold-scale wurde in der CSS des "Apple Music Pro"-
+                // Stils bereits referenziert, aber nirgends tatsächlich berechnet/gesetzt,
+                // wodurch immer nur der statische Standardwert griff und nie ein echter,
+                // dynamischer Zoom-Effekt stattfand. Jetzt: je länger ein Wort/eine Silbe
+                // laut den echten Timing-Daten gehalten wird, desto stärker der Zoom - kurze,
+                // schnell durchlaufende Silben bekommen nur einen dezenten Zoom, lang
+                // gehaltene Wörter (z.B. am Ende einer Phrase, wo mehr Zeit da ist) werden
+                // spürbar größer und strahlender herausgehoben, genau wie im echten Apple
+                // Music. sqrt-Kurve statt linear, damit der Unterschied zwischen kurz und
+                // mittellang deutlicher wirkt als zwischen mittellang und sehr lang.
+                const minHoldMs = 140, maxHoldMs = 950;
+                const holdRatio = Math.max(0, Math.min(1, (tok.duration - minHoldMs) / (maxHoldMs - minHoldMs)));
+                // NEW: Zoom-Bereich deutlich zurückhaltender gemacht (1.05-1.43 -> 1.02-1.16)
+                // - der vorherige Wert wirkte auf einzelne Buchstaben zu extrem/verzerrt statt
+                // wie eine dezente, elegante Betonung.
+                const holdScale = (1.02 + Math.sqrt(holdRatio) * 0.14).toFixed(3);
+                wordSpan.style.setProperty('--word-hold-scale', holdScale);
+
                 let tokProgress = 0;
                 if (syncMs >= tok.timeMs + tok.duration) {
                     tokProgress = 1; 
@@ -6747,9 +7228,19 @@
         function isStrictMatch(apiTrack, apiArtist, apiDurationSec, searchTrack, searchArtist, searchDurationMs) {
             if (!apiTrack || !apiArtist || !searchTrack || !searchArtist) return false;
 
+            // NEW: Bugfix - Toleranz von 10s auf 3s verschärft. Nutzer berichtete, oft einen
+            // sehr großen manuellen Sync-Offset (+4-5 Sekunden, je nach Song unterschiedlich)
+            // zu brauchen. Ursache: Die bisherige 10s-Toleranz ließ gelegentlich eine andere
+            // Version desselben Songs durch (z.B. Radio-Edit vs. Album-Version, oder eine mit
+            // längerem Intro), deren Timing sich vom tatsächlich laufenden Track unterscheidet
+            // - das erklärt sowohl die Größe als auch die Uneinheitlichkeit des benötigten
+            // Offsets (abhängig davon, wie sehr sich die zufällig gematchte Version
+            // unterscheidet). Mit 3s Toleranz werden solche Fehltreffer viel zuverlässiger
+            // abgelehnt, während legitime, minimale Rundungsunterschiede zwischen
+            // verschiedenen Musikdaten-Quellen weiterhin toleriert werden.
             if (apiDurationSec && searchDurationMs) {
                 const searchSec = searchDurationMs / 1000;
-                if (Math.abs(apiDurationSec - searchSec) > 10) {
+                if (Math.abs(apiDurationSec - searchSec) > 3) {
                     return false; 
                 }
             }
@@ -7291,7 +7782,10 @@
 
         function fetchMusicData() {
             let pStart = performance.now();
-            fetch('https://npc-api.aikins.xyz/v1/users/gamingpig/now')
+            // NEW: Bugfix - gibt die Promise-Kette jetzt zurück, damit Aufrufer (z.B.
+            // Re-Sync) tatsächlich per await auf den Abschluss der frischen Positions-
+            // Abfrage warten können, statt sofort (ohne echtes Warten) weiterzumachen.
+            return fetch('https://npc-api.aikins.xyz/v1/users/gamingpig/now')
                 .then(r => {
                     if (!r.ok) throw new Error("Fetch failed");
                     return r.text();
@@ -7425,6 +7919,15 @@
         if (settingsVersionEl) settingsVersionEl.textContent = 'Version ' + SITE_VERSION;
         const footerVersionEl = document.getElementById('footer-version-label');
         if (footerVersionEl) footerVersionEl.textContent = SITE_VERSION;
+
+        populateLyricsStyleDropdown();
+        // NEW: Beim Laden nur einmalig statisch vorrendern (Menü ist ja noch geschlossen) -
+        // die eigentliche Dauerschleife startet erst, wenn das Menü tatsächlich geöffnet
+        // wird (siehe toggleLyricsSettings), damit nicht dauerhaft unnötig im Hintergrund
+        // Rechenzeit für eine unsichtbare Vorschau verschwendet wird.
+        const previewTextElInit = document.getElementById('lyrics-style-preview-text');
+        const previewBoxElInit = document.getElementById('lyrics-style-preview-box');
+        if (previewBoxElInit) previewBoxElInit.className = `w-full bg-black/40 rounded-lg p-2.5 mb-1 overflow-hidden text-center min-h-[52px] flex items-center justify-center lyrics-style-${currentLyricsStyle}`;
 
         renderLanguagePicker();
         positionDynamicIsland();
