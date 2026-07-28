@@ -150,6 +150,39 @@
       - "Sticker": Verspielter Aufkleber-Look mit Washi-Tape-Streifen, leicht schräg
         gestelltem Cover und kleinen runden Sticker-Dekorationen
 
+    [BUGFIX] StandBy-Uhr weiterhin falsch trotz vorherigem Cache-Busting-Fix - Zeit-Sync
+             komplett neu aufgebaut ohne Drittanbieter-Abhängigkeit
+      - Symptom: Nutzer berichtete, dass die StandBy-Uhr auch nach dem letzten Fix
+        weiterhin eine falsche Uhrzeit anzeigte.
+      - Ursache: Selbst nach dem Cache-Busting-Fix blieb die Abhängigkeit von externen
+        Drittanbieter-Zeit-APIs (timeapi.io) grundsätzlich fragil - vermutlich durch
+        serverseitiges Caching/Rate-Limiting beim Anbieter selbst, das sich browserseitig
+        nicht beheben lässt (worldtimeapi.org, die vorherige Fallback-Quelle, wurde vom
+        Betreiber zwischenzeitlich sogar komplett abgeschaltet).
+      - Fix: Komplette Abhängigkeit von Drittanbieter-Zeit-APIs entfernt. Stattdessen wird
+        jetzt ausschließlich der "Date"-Response-Header der EIGENEN Seite genutzt - dieser
+        wird von GitHub Pages zuverlässig live vom CDN mitgeliefert und hängt von keinem
+        externen, potenziell abschaltbaren Dienst mehr ab. Mehrere Messungen mit
+        NTP-ähnlicher Latenz-Korrektur für höhere Genauigkeit.
+
+    [FEATURE] "Bildschirm an"-Option für StandBy (Screen Wake Lock)
+      - Neuer Schalter im Einstellungsmenü: hält den Bildschirm während StandBy aktiv
+        wach (Screen Wake Lock API), damit das Gerät nicht nach der üblichen Zeit
+        automatisch abdunkelt/sperrt - nützlich, wenn die Seite bewusst als Nachttisch-
+        Uhr/Now-Playing-Anzeige über längere Zeit offen bleiben soll.
+      - Standardmäßig AUS (verbraucht mehr Akku), bewusste Opt-in-Entscheidung des Nutzers.
+      - Wird automatisch erneut angefragt, falls der Browser ihn bei einem kurzen
+        Tab-Wechsel selbst freigegeben hat, solange StandBy weiterhin aktiv ist.
+      - Tutorial-Schritt zu StandBy entsprechend aktualisiert (erwähnt jetzt Vollbildmodus,
+        Schärfe-Regler und diesen neuen Schalter).
+
+    [BUGFIX] Duplizierter, verwaister Wake-Lock-Codeblock verursachte einen echten
+             JavaScript-Absturz (doppelte Variablen-Deklaration)
+      - Beim Einbau des Wake-Lock-Features wurde ein Codeblock versehentlich doppelt
+        eingefügt, mit inkonsistenten IDs/Übersetzungs-Keys im zweiten, verwaisten Block.
+        Das hätte die komplette Seite mit einem SyntaxError zum Absturz gebracht. Vor dem
+        Export gefunden und der doppelte Block vollständig entfernt.
+
     [BUGFIX] StandBy-Uhr zeigte eine falsche, um mehrere Minuten abweichende Uhrzeit an
       - Symptom: Nutzer berichtete, die StandBy-Uhr zeige rund 10 Minuten vor der echten
         aktuellen Uhrzeit an.
@@ -1695,7 +1728,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v21.8 · 2026-07-22';
+        const SITE_VERSION = 'v21.9 · 2026-07-22';
 
         const DEFAULT_SYNC_OFFSET = -800; 
     </script>
@@ -2118,6 +2151,8 @@
                                             </div>
                                             <input type="range" id="standby-opacity-slider" min="0" max="100" step="5" value="0" class="w-full accent-blue-500" oninput="updateStandbyOpacity(this.value)">
                                         </div>
+                                        <!-- NEW: Bildschirm-an-Regler für StandBy (Screen Wake Lock API) -->
+                                        <button onclick="toggleStandbyWakeLock()" id="btn-toggle-wakelock" class="text-left text-[10px] xxs:text-xs sm:text-sm text-teal-400 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">Bildschirm an (StandBy): AUS</button>
                                         <p id="settings-version-label" class="text-left text-[9px] xxs:text-[10px] text-slate-500 px-2 py-1.5 font-mono select-all">Version —</p>
                                         
                                         <div class="h-px w-full bg-slate-700 my-1"></div>
@@ -2486,7 +2521,7 @@
                 t_step4_title: 'Echtzeit Musik Integration',
                 t_step4_text: 'Der wildeste Part: Das Dashboard zeigt in Echtzeit, was ich gerade höre! Oben bleibt dabei immer eine kleine Dynamic Island sichtbar, solange Musik läuft - antippen klappt sie auf, nochmal antippen klappt sie wieder zu, nach oben wischen blendet sie komplett aus (über die Spotlight-Suche holst du sie zurück). Klicke auf die Karte für synchronisierte Lyrics mit über 30 verrückten Animationsstilen. Über das Zahnrad-Icon in den Lyrics findest du zusätzlich: Ambient Color, Cover-Glow, Hintergrund-Glow, Spatial Tilt und den Share-Card-Generator. Wichtig: Diese Schalter sind mittlerweile nicht nur Optik, sondern auch echte Leistungsschalter - schalte einzelne davon aus, wenn dein Gerät mal warm wird oder ruckelt.',
                 t_step5_title: 'StandBy: Dein Lockscreen',
-                t_step5_text: 'Dieser Button verwandelt die Seite in einen echten Lockscreen: große Uhrzeit, Datum und eine große Now-Playing-Karte mit Cover, Live-EQ und Fortschrittsbalken vor einem sanft animierten, geblurten Hintergrund. Alles verschiebt sich alle paar Minuten minimal, damit nichts auf OLED-Displays einbrennt - perfekt fürs Nachttischhandy beim Laden.',
+                t_step5_text: 'Dieser Button verwandelt die Seite in einen echten Lockscreen: große Uhrzeit, Datum und eine große Now-Playing-Karte, aktiviert automatisch den Vollbildmodus. Alles verschiebt sich alle paar Minuten minimal, damit nichts auf OLED-Displays einbrennt. Im Zahnrad-Menü findest du außerdem einen Schärfe-Regler fürs Hintergrundbild und einen Schalter, der den Bildschirm dauerhaft anlässt - perfekt fürs Nachttischhandy beim Laden.',
                 t_step6_title: 'Spotlight-Suche (⌘K)',
                 t_step6_text: 'Drück Strg+K (oder Cmd+K auf dem Mac) und eine echte Befehlspalette öffnet sich - genau wie auf dem Mac! Tippe einfach, was du suchst: "Dark Mode", "Lyrics", "StandBy", oder sogar "Sprache" um die Sprache zu wechseln. Pfeiltasten zum Navigieren, Enter zum Ausführen. Auf dem Handy ohne Tastatur? Auch hier tippst du einfach in das Suchfeld.',
                 t_step7_title: 'Installier mich als App!',
@@ -2631,6 +2666,7 @@
                 kart_stat_besttime: 'Bestzeit',
                 kart_stat_sessions: 'Sessions',
                 kart_stat_since: 'Seit',
+                                settings_wakelock: 'Bildschirm an (StandBy)',
                 mini_click_to_open: 'Klicken zum Öffnen', mini_click_to_close: 'Klicken zum Schließen',
                 aria_cp: 'Befehlspalette öffnen', aria_install: 'Als App installieren', aria_island: 'Song-Details öffnen, nach oben wischen zum Ausblenden'
             },
@@ -2648,7 +2684,7 @@
                 t_step4_title: 'Real-time music integration',
                 t_step4_text: "The wildest part: the dashboard shows in real time what I'm currently listening to! A small Dynamic Island always stays visible up top while music is playing - tap to expand, tap again to collapse, swipe up to dismiss it completely (bring it back via the Spotlight search). Click the card for synced lyrics with over 30 crazy animation styles. The gear icon in the lyrics view also gives you: Ambient Color, Cover Glow, Background Glow, Spatial Tilt, and the Share Card generator. Important: these toggles aren't just visual anymore - they're real performance switches. Turn individual ones off if your device gets warm or starts lagging.",
                 t_step5_title: 'StandBy: your lock screen',
-                t_step5_text: 'This button turns the page into a real lock screen: a big clock, date, and a large now-playing card with cover art, a live EQ, and a progress bar in front of a gently animated, blurred background. Everything shifts slightly every few minutes so nothing burns into OLED screens - perfect for your nightstand while charging.',
+                t_step5_text: 'This button turns the page into a real lock screen: a big clock, date, and a large now-playing card, and automatically enables fullscreen mode. Everything shifts slightly every few minutes so nothing burns into OLED screens. The gear menu also has a sharpness slider for the background image and a toggle to keep the screen on permanently - perfect for your nightstand while charging.',
                 t_step6_title: 'Spotlight search (⌘K)',
                 t_step6_text: 'Press Ctrl+K (or Cmd+K on Mac) and a real command palette opens - just like on a Mac! Just type what you\'re looking for: "dark mode", "lyrics", "standby", or even "language" to switch languages. Arrow keys to navigate, Enter to run. No keyboard on mobile? Just tap into the search box instead.',
                 t_step7_title: 'Install me as an app!',
@@ -2793,6 +2829,7 @@
                 kart_stat_besttime: 'Best Time',
                 kart_stat_sessions: 'Sessions',
                 kart_stat_since: 'Since',
+                                settings_wakelock: 'Keep Screen On (StandBy)',
                 mini_click_to_open: 'Click to open', mini_click_to_close: 'Click to close',
                 aria_cp: 'Open command palette', aria_install: 'Install as app', aria_island: 'Open song details, swipe up to dismiss'
             },
@@ -2955,6 +2992,7 @@
                 kart_stat_besttime: 'Mejor Tiempo',
                 kart_stat_sessions: 'Sesiones',
                 kart_stat_since: 'Desde',
+                                settings_wakelock: 'Pantalla Encendida (StandBy)',
                 mini_click_to_open: 'Clic para abrir', mini_click_to_close: 'Clic para cerrar',
                 aria_cp: 'Abrir paleta de comandos', aria_install: 'Instalar como app', aria_island: 'Abrir detalles de la canción, desliza arriba para ocultar'
             },
@@ -3117,6 +3155,7 @@
                 kart_stat_besttime: 'Meilleur Temps',
                 kart_stat_sessions: 'Sessions',
                 kart_stat_since: 'Depuis',
+                                settings_wakelock: 'Écran Allumé (StandBy)',
                 mini_click_to_open: 'Cliquer pour ouvrir', mini_click_to_close: 'Cliquer pour fermer',
                 aria_cp: 'Ouvrir la palette de commandes', aria_install: 'Installer comme appli', aria_island: 'Ouvrir les détails du morceau, glisser vers le haut pour masquer'
             },
@@ -3279,6 +3318,7 @@
                 kart_stat_besttime: 'Melhor Tempo',
                 kart_stat_sessions: 'Sessões',
                 kart_stat_since: 'Desde',
+                                settings_wakelock: 'Tela Ligada (StandBy)',
                 mini_click_to_open: 'Clique para abrir', mini_click_to_close: 'Clique para fechar',
                 aria_cp: 'Abrir paleta de comandos', aria_install: 'Instalar como app', aria_island: 'Abrir detalhes da música, deslize para cima para ocultar'
             },
@@ -3441,6 +3481,7 @@
                 kart_stat_besttime: 'En İyi Süre',
                 kart_stat_sessions: 'Seanslar',
                 kart_stat_since: 'Beri',
+                                settings_wakelock: 'Ekranı Açık Tut (StandBy)',
                 mini_click_to_open: 'Açmak için tıkla', mini_click_to_close: 'Kapatmak için tıkla',
                 aria_cp: 'Komut paletini aç', aria_install: 'Uygulama olarak yükle', aria_island: 'Şarkı detaylarını aç, gizlemek için yukarı kaydır'
             }
@@ -3725,6 +3766,41 @@
         let ambientColorEnabled = localStorage.getItem('ambientColor') !== 'false';
         let tiltEnabled = localStorage.getItem('tiltEnabled') !== 'false';
         let standByActive = false;
+        // NEW: Screen Wake Lock - hält den Bildschirm während StandBy aktiv wach, damit
+        // das Handy nicht nach der üblichen Zeit automatisch abdunkelt/sperrt, während man
+        // es z.B. als Nachttisch-Uhr/Now-Playing-Anzeige nutzt. Standardmäßig AUS, da das
+        // mehr Akku verbraucht - bewusst eine Nutzer-Entscheidung, keine Vorgabe.
+        let standbyWakeLockEnabled = localStorage.getItem('standbyWakeLock') === 'true';
+        let activeWakeLockSentinel = null;
+        window.toggleStandbyWakeLock = function() {
+            haptic(10);
+            standbyWakeLockEnabled = !standbyWakeLockEnabled;
+            localStorage.setItem('standbyWakeLock', standbyWakeLockEnabled);
+            const btn = document.getElementById('btn-toggle-wakelock');
+            if (btn) btn.textContent = t('settings_wakelock') + ': ' + (standbyWakeLockEnabled ? t('on_label') : t('off_label'));
+            if (standbyWakeLockEnabled && standByActive) requestStandbyWakeLock();
+            else releaseStandbyWakeLock();
+        };
+        async function requestStandbyWakeLock() {
+            if (!standbyWakeLockEnabled || !('wakeLock' in navigator)) return;
+            try {
+                activeWakeLockSentinel = await navigator.wakeLock.request('screen');
+            } catch (e) { /* z.B. verweigert, Akkusparmodus aktiv, oder API nicht unterstützt - kein Problem, StandBy funktioniert trotzdem normal weiter */ }
+        }
+        function releaseStandbyWakeLock() {
+            if (activeWakeLockSentinel) {
+                activeWakeLockSentinel.release().catch(() => {});
+                activeWakeLockSentinel = null;
+            }
+        }
+        // Manche Browser geben den Wake Lock automatisch frei, sobald der Tab kurz in den
+        // Hintergrund wechselt (z.B. beim Umschalten der App) - beim Zurückkehren muss er
+        // dann erneut angefragt werden, falls StandBy noch aktiv ist.
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible' && standByActive && standbyWakeLockEnabled && !activeWakeLockSentinel) {
+                requestStandbyWakeLock();
+            }
+        });
         let standByInterval = null;
         let standByShiftInterval = null;
         let diHideTimeout = null;
@@ -5188,12 +5264,19 @@
                 // StandBy sich wirklich wie ein echter Lockscreen anfühlt, ohne Browser-UI
                 // oder sichtbare Scrollbar drumherum.
                 document.documentElement.classList.add('standby-fullscreen-lock');
+                requestStandbyWakeLock();
                 const fsEl = document.documentElement;
                 const requestFs = fsEl.requestFullscreen || fsEl.webkitRequestFullscreen || fsEl.msRequestFullscreen;
                 if (requestFs) {
                     requestFs.call(fsEl).catch(() => {}); // manche Browser/Kontexte verweigern das (z.B. iOS Safari) - kein Problem, wird einfach übersprungen
                 }
+                // NEW: Display anlassen (Wake Lock) - hält den Bildschirm aktiv wach, damit
+                // er nicht mitten im StandBy-Betrieb (z.B. über Nacht am Ladekabel) von
+                // selbst dunkel schaltet. Nur wenn der Nutzer das explizit in den
+                // Einstellungen aktiviert hat, da das zusätzlichen Akku verbraucht.
+                requestStandbyWakeLock();
             } else {
+                releaseStandbyWakeLock();
                 clearInterval(standByInterval);
                 clearInterval(standByShiftInterval);
                 clearTimeout(standByDeepDimTimeout);
@@ -5206,6 +5289,7 @@
                 updateIslandRing();
                 // NEW: Vollbildmodus wieder verlassen + Scrollbar wieder zulassen
                 document.documentElement.classList.remove('standby-fullscreen-lock');
+                releaseStandbyWakeLock();
                 if (document.fullscreenElement || document.webkitFullscreenElement) {
                     const exitFs = document.exitFullscreen || document.webkitExitFullscreen;
                     if (exitFs) exitFs.call(document).catch(() => {});
@@ -6130,43 +6214,34 @@
         }
 
         async function syncWorldwideTime() {
-            // NTP-artiger Ansatz: mehrere Messungen nehmen und die mit der geringsten
-            // Round-Trip-Zeit verwenden (die genaueste), statt blind die erste zu nehmen.
-            // NEW: Bugfix - beide Anfragen bekommen jetzt einen Cache-Buster-Query-Parameter
-            // (aktueller Zeitstempel) UND {cache: "no-store"}. Vorher konnte der normale
-            // HTTP-Cache des Browsers eine bereits einmal abgerufene Antwort dieser exakt
-            // gleichen URL wiederverwenden, statt wirklich erneut über das Netzwerk zu
-            // fragen - das führte mit der Zeit zu einer immer größer werdenden Abweichung
-            // der StandBy-Uhr gegenüber der echten aktuellen Uhrzeit.
+            // NEW: Kompletter Neuaufbau - vorherige Versuche mit Drittanbieter-Zeit-APIs
+            // (timeapi.io, worldtimeapi.org) waren wiederholt unzuverlässig: worldtimeapi.org
+            // wurde vom Betreiber komplett abgeschaltet, und selbst nach dem Umstieg auf
+            // timeapi.io als Hauptquelle blieb die angezeigte Uhrzeit weiterhin falsch -
+            // vermutlich durch serverseitiges Caching/Rate-Limiting beim Anbieter, das sich
+            // browserseitig nicht beheben lässt.
+            // Neue Lösung: Statt auf einen Drittanbieter zu vertrauen, wird der "Date"-
+            // Response-Header der EIGENEN Seite genutzt. Dieser Header ist laut Fetch-
+            // Spezifikation immer lesbar (auch ohne explizite CORS-Freigabe), wird von
+            // GitHub Pages zuverlässig live vom CDN-Server mitgeliefert, und hängt von
+            // keinem externen Dienst ab, der abgeschaltet oder unzuverlässig werden könnte.
             const cacheBuster = Date.now();
-            const timeSources = [
-                async () => {
-                    const t0 = performance.now();
-                    const res = await fetch(`https://timeapi.io/api/Time/current/zone?timeZone=UTC&_=${cacheBuster}`, { cache: 'no-store' });
-                    const data = await res.json();
-                    const rtt = performance.now() - t0;
-                    return { trueTime: new Date(data.dateTime + "Z").getTime(), rtt };
-                },
-                async () => {
-                    const t0 = performance.now();
-                    const res = await fetch(`https://worldtimeapi.org/api/timezone/Etc/UTC?_=${cacheBuster}`, { cache: 'no-store' });
-                    const data = await res.json();
-                    const rtt = performance.now() - t0;
-                    return { trueTime: new Date(data.datetime).getTime(), rtt };
-                }
-            ];
-
             let best = null;
-            for (const source of timeSources) {
+            // Mehrere Messungen für bessere Genauigkeit (kürzeste Round-Trip-Zeit gewinnt)
+            for (let i = 0; i < 3; i++) {
                 try {
-                    const sample = await source();
-                    // Latenz wird hälftig als einseitige Signallaufzeit angenommen (Standard-NTP-Näherung)
-                    const estimatedTrueNow = sample.trueTime + sample.rtt / 2;
-                    if (!best || sample.rtt < best.rtt) {
-                        best = { trueWorldTime: estimatedTrueNow, rtt: sample.rtt };
+                    const t0 = performance.now();
+                    const res = await fetch(`https://gamingpig.github.io/About-Gamingpig/?_=${cacheBuster}_${i}`, { cache: 'no-store', method: 'HEAD' });
+                    const serverDate = res.headers.get('Date');
+                    if (!serverDate) continue;
+                    const rtt = performance.now() - t0;
+                    const trueTime = new Date(serverDate).getTime();
+                    const estimatedTrueNow = trueTime + rtt / 2; // Latenz hälftig als einseitige Signallaufzeit angenommen (NTP-Näherung)
+                    if (!best || rtt < best.rtt) {
+                        best = { trueWorldTime: estimatedTrueNow, rtt };
                     }
-                    if (best.rtt < 120) break; // schon sehr gut, weitere Quelle sparen
-                } catch (e) { /* nächste Quelle probieren */ }
+                    if (best.rtt < 150) break; // schon sehr gut, weitere Messung sparen
+                } catch (e) { /* nächsten Versuch probieren */ }
             }
 
             if (best) {
