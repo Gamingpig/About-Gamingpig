@@ -2,13 +2,14 @@
 // Chrome verlangt einen registrierten Service Worker mit Fetch-Handler, bevor
 // beforeinstallprompt überhaupt ausgelöst wird ("Zum Startbildschirm hinzufügen").
 //
-// v3: CACHE_NAME erneut hochgezählt (v2 -> v3), damit hartnäckig gecachte alte
+// v4: CACHE_NAME erneut hochgezählt, damit hartnäckig gecachte alte
 // Versionen beim nächsten Aufruf zuverlässig gelöscht und durch die aktuelle Version
 // ersetzt werden. Diesen Wert bei jedem größeren Update mit erhöhen - das ist der
 // zuverlässigste Weg, um sicherzustellen, dass alle Geräte (v.a. iPhone mit "Zum
 // Home-Bildschirm hinzugefügt") wirklich die neueste Version bekommen.
-const CACHE_NAME = "gamingpig-portfolio-v3";
-const PRECACHE_URLS = ["./", "./manifest.json", "./icon-192.png", "./icon-512.png"];
+const CACHE_NAME = "gamingpig-portfolio-v6";
+const PRECACHE_URLS = ["./", "./privacy.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./og.png"];
+const CACHEABLE_DESTINATIONS = new Set(["document", "style", "script", "image", "manifest"]);
 
 self.addEventListener("install", (event) => {
     self.skipWaiting();
@@ -30,13 +31,21 @@ self.addEventListener("activate", (event) => {
 // statt eine evtl. gecachte HTTP-Antwort zu verwenden.
 self.addEventListener("fetch", (event) => {
     if (event.request.method !== "GET") return;
+    const requestUrl = new URL(event.request.url);
+    if (requestUrl.origin !== self.location.origin) return;
+    if (!CACHEABLE_DESTINATIONS.has(event.request.destination)) return;
+
     event.respondWith(
         fetch(event.request, { cache: "no-store" })
             .then((response) => {
-                const copy = response.clone();
-                caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy)).catch(() => {});
+                if (response.ok && response.type === "basic") {
+                    const copy = response.clone();
+                    caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy)).catch(() => {});
+                }
                 return response;
             })
-            .catch(() => caches.match(event.request))
+            .catch(() => caches.match(event.request).then((cached) =>
+                cached || (event.request.mode === "navigate" ? caches.match("./") : undefined)
+            ))
     );
 });

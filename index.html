@@ -11,6 +11,30 @@
     Neueste Einträge oben.
     ================================================================
 
+    [BUGFIX] Release v24.1: Darstellung nach lokalem Tailwind-Build wiederhergestellt
+      - Symptom: Nach dem Wechsel vom Tailwind-CDN auf eine statisch kompilierte CSS-Datei
+        war das Layout an mehreren Stellen beschädigt.
+      - Ursache: Diese Ein-Datei-App erzeugt und kombiniert zahlreiche Klassen dynamisch
+        zur Laufzeit. Der statische Tailwind-Scanner konnte deshalb nicht alle benötigten
+        Varianten zuverlässig in die lokale CSS-Datei aufnehmen.
+      - Fix: Die zuvor funktionierende Tailwind-CDN-Einbindung samt bestehender eigener
+        Breakpoints und Farben wurde wiederhergestellt. Alle übrigen Änderungen aus v24.0
+        (Datenschutz, Social Preview und sichererer Service Worker) bleiben erhalten.
+
+    [FEATURE] Release v24.0: lokale Styles, neue Social Preview und Datenschutz-Update
+      - Tailwind wird nicht mehr zur Laufzeit über das CDN geladen. Die benötigten
+        Klassen sind jetzt einmalig kompiliert in tailwind.css enthalten; dadurch lädt
+        das Layout zuverlässiger, schneller und funktioniert auch aus dem PWA-Cache.
+      - Das quadratische App-Icon als Link-Vorschau wurde durch eine eigene breite
+        Gamingpig-Social-Card (og.png) für Messenger und soziale Netzwerke ersetzt.
+      - Die Datenschutzerklärung nennt jetzt Google Fonts und die tatsächlich vom
+        Musik-Dashboard kontaktierten Dienste sowie die dabei technisch anfallenden Daten.
+
+    [PERFORMANCE] Service Worker speichert keine Antworten fremder APIs mehr
+      - Externe Requests (z. B. Lyrics- und Musik-APIs) werden vollständig vom
+        Service-Worker-Cache ausgeschlossen. Nur erfolgreiche, gleich-originige Seiten,
+        Styles, Scripts, Bilder und Manifest-Dateien dürfen in den Offline-Cache.
+
     [PERFORMANCE] extractDominantColor() (Ambient Color) lief bei JEDEM Musik-Poll neu,
                   nicht nur bei echtem Cover-Wechsel - komplett unabhängig von Lyrics
       - Symptom: Trotz vorheriger Blur-Radius-Reduzierungen berichtete der Nutzer weiterhin
@@ -610,8 +634,12 @@
 <html lang="de" id="html-root">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title> Gamingpig | Portfolio</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Gamingpig | Portfolio</title>
+    <meta name="description" content="Gamingpigs persönliches Portfolio über Fachinformatik, Homelab, Projekte und Musik.">
+    <meta name="author" content="Gamingpig">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <link rel="canonical" href="https://gamingpig.github.io/About-Gamingpig/">
 
     <!-- NEW: Open Graph / Twitter Card Meta-Tags - ohne diese kann WhatsApp (und andere
          Messenger/Social-Apps) keine Link-Vorschau (Titel/Bild/Beschreibung) bauen, da
@@ -622,12 +650,16 @@
     <meta property="og:type" content="website">
     <meta property="og:title" content="Gamingpig | Portfolio">
     <meta property="og:description" content="Ausbildung, Musik-Dashboard, Homelab & mehr - das persönliche Portfolio von Gamingpig.">
-    <meta property="og:image" content="https://gamingpig.github.io/About-Gamingpig/icon-512.png">
+    <meta property="og:image" content="https://gamingpig.github.io/About-Gamingpig/og.png">
+    <meta property="og:image:width" content="1730">
+    <meta property="og:image:height" content="909">
+    <meta property="og:image:alt" content="Gamingpig – Tech, Music und Homelab">
     <meta property="og:url" content="https://gamingpig.github.io/About-Gamingpig/">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Gamingpig | Portfolio">
     <meta name="twitter:description" content="Ausbildung, Musik-Dashboard, Homelab & mehr - das persönliche Portfolio von Gamingpig.">
-    <meta name="twitter:image" content="https://gamingpig.github.io/About-Gamingpig/icon-512.png">
+    <meta name="twitter:image" content="https://gamingpig.github.io/About-Gamingpig/og.png">
+    <meta name="twitter:image:alt" content="Gamingpig – Tech, Music und Homelab">
 
     <!-- NEW: PWA / "Add to Home Screen" Support -->
     <!-- NEW: Cache-Control-Hinweise gegen zu aggressives Caching (siehe DEV CHANGELOG) -->
@@ -2043,7 +2075,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v23.6 · 2026-07-22';
+        const SITE_VERSION = 'v24.1 · 2026-08-07';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -2701,6 +2733,8 @@
                 <div class="hidden sm:block h-4 w-px bg-slate-300 dark:bg-slate-700"></div>
                 <!-- NEW: Versionsnummer im Footer, immer sichtbar ohne Menüs öffnen zu müssen -->
                 <p id="footer-version-label" class="text-[8px] xxs:text-[10px] font-mono text-slate-500 dark:text-slate-500 select-all">v—</p>
+                <div class="hidden sm:block h-4 w-px bg-slate-300 dark:bg-slate-700"></div>
+                <a href="privacy.html" class="text-[8px] xxs:text-[10px] sm:text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 rounded">Datenschutz</a>
             </div>
         </footer>
     </main>
