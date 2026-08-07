@@ -7,8 +7,8 @@
 // ersetzt werden. Diesen Wert bei jedem größeren Update mit erhöhen - das ist der
 // zuverlässigste Weg, um sicherzustellen, dass alle Geräte (v.a. iPhone mit "Zum
 // Home-Bildschirm hinzugefügt") wirklich die neueste Version bekommen.
-const CACHE_NAME = "gamingpig-portfolio-v6";
-const PRECACHE_URLS = ["./", "./privacy.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./og.png"];
+const CACHE_NAME = "gamingpig-portfolio-v7";
+const PRECACHE_URLS = ["./", "./privacy.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./og-v2.jpg"];
 const CACHEABLE_DESTINATIONS = new Set(["document", "style", "script", "image", "manifest"]);
 
 self.addEventListener("install", (event) => {
