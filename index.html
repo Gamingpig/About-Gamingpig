@@ -4174,6 +4174,13 @@
         let trackIsPlaying = false;
         let isAnimating = false; 
         let lyricAnimFrame = null;
+        // PERF-FIX: animateLoop lief bisher ungedrosselt mit voller Framerate (bis zu 60x/Sek)
+        // FÜR IMMER sobald ein Song läuft, komplett unabhängig davon ob Dashboard/Lyrics/StandBy
+        // überhaupt sichtbar waren - Ursache für dauerhaft hohe CPU/GPU-Last beim Musikhören.
+        // lastProgressUIUpdate drosselt die eigentlichen DOM-Writes (Balken/Zeit/Dynamic Island)
+        // auf ~5x/Sek, was optisch identisch aussieht, aber >90% weniger Style-Recalcs/Paints kostet.
+        let lastProgressUIUpdate = 0;
+        const PROGRESS_UI_THROTTLE_MS = 200;
         let lastProcessedUpdate = 0;
         let lastSeenProgressMs = -1;
         let localClockOffset = 0;
@@ -7229,6 +7236,15 @@
 
         function animateLoop(now) {
             if (trackIsPlaying) {
+                // PERF-FIX: Tab im Hintergrund -> Loop komplett anhalten statt weiter unsichtbar
+                // zu rechnen. fetchMusicData() (alle 5s) oder der visibilitychange-Listener weiter
+                // unten setzen isAnimating zurück auf false und starten den Loop beim nächsten
+                // Sichtbarwerden sofort wieder neu - kein Datenverlust, kein Drift.
+                if (document.hidden) {
+                    isAnimating = false;
+                    return;
+                }
+
                 if (document.body.classList.contains('low-end')) {
                     if (now - lastLowEndUpdate < 250) { 
                         lyricAnimFrame = requestAnimationFrame(animateLoop);
@@ -7239,8 +7255,13 @@
 
                 currentMs = serverBaseProgress + (now - localStartTime);
                 if (totalMs > 0 && currentMs > totalMs) currentMs = totalMs;
-                
-                updateProgressUI();
+
+                // PERF-FIX: DOM-Writes gedrosselt statt bei jedem einzelnen Frame (siehe Kommentar
+                // bei der Variablendeklaration oben) - Hauptursache der 100%-CPU/GPU-Last behoben.
+                if (now - lastProgressUIUpdate >= PROGRESS_UI_THROTTLE_MS) {
+                    lastProgressUIUpdate = now;
+                    updateProgressUI();
+                }
 
                 if (mainMusicCard && mainMusicCard.classList.contains('lyrics-open')) {
                     syncLyricsUI();
@@ -7250,6 +7271,15 @@
                 isAnimating = false; 
             }
         }
+
+        // PERF-FIX: Sofortiger Wiedereinstieg, sobald der Tab wieder sichtbar wird, statt bis zu
+        // 5 Sekunden auf den nächsten fetchMusicData()-Poll zu warten.
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && trackIsPlaying && !isAnimating) {
+                isAnimating = true;
+                lyricAnimFrame = requestAnimationFrame(animateLoop);
+            }
+        });
 
         function isDummyLyrics(text) {
             if (!text) return true;
