@@ -11,6 +11,25 @@
     Neueste Einträge oben.
     ================================================================
 
+    [PERFORMANCE] Release v24.3: Dauerhafte 100%-CPU/GPU-Last während der Musikwiedergabe behoben
+      - Symptom: Sobald ein Song lief, wurde CPU und GPU dauerhaft auf 100% ausgelastet -
+        auf einem PC/Laptop messbar, auf dem Smartphone spürbar als starke Erwärmung. Trat
+        auch auf, wenn gar kein Dashboard, keine Lyrics-Ansicht und kein StandBy offen waren.
+      - Ursache: animateLoop() lief per requestAnimationFrame mit voller Framerate (bis zu
+        60x/Sekunde) für immer, solange trackIsPlaying true war, und schrieb bei jedem
+        einzelnen Frame mehrere Style-Werte (Progressbar, Zeitanzeige, Dynamic Island) in
+        den DOM - komplett unabhängig davon, ob überhaupt etwas davon sichtbar war. Der
+        vorhandene "low-end"-Modus drosselt das zwar, ist aber nur ein manueller Toggle und
+        greift auf normaler/starker Hardware nie automatisch.
+      - Fix: Die eigentlichen DOM-Writes in updateProgressUI() werden jetzt auf ca. 5x/Sekunde
+        gedrosselt (PROGRESS_UI_THROTTLE_MS) statt bei jedem Frame zu laufen - für einen
+        linearen Fortschrittsbalken optisch nicht unterscheidbar, aber >90% weniger Style-
+        Recalculations und Paints pro Sekunde. Zusätzlich pausiert der komplette Loop sofort
+        über einen document.hidden-Check, sobald der Tab in den Hintergrund geht, und ein
+        neuer visibilitychange-Listener setzt ihn beim Zurückkehren ohne Verzögerung fort
+        (vorher lief er im Hintergrund-Tab je nach Browser bis zu weitere 5 Sekunden unnötig
+        weiter, ehe der nächste fetchMusicData()-Poll ihn ohnehin neu gestartet hätte).
+
     [BUGFIX] Release v24.2: Social-Media-Vorschau mit cachefestem Bildpfad
       - Symptom: Messenger zeigten trotz erreichbarer og.png weiterhin kein oder ein altes
         Vorschaubild, weil Link-Preview-Crawler Bild-URLs sehr lange zwischenspeichern.
@@ -2085,7 +2104,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.2 · 2026-08-07';
+        const SITE_VERSION = 'v24.3 · 2026-08-09';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
