@@ -11,6 +11,28 @@
     Neueste Einträge oben.
     ================================================================
 
+    [PERFORMANCE] Release v24.18 (radikal): "will-change auf alles" - diesmal auf Ebenen, die
+    IMMER im DOM liegen, unabhängig von Dashboard/Lyrics
+      - Symptom: Nutzer meldete, dass sein Pixel-Handy schon heiß wird, sobald die Seite
+        überhaupt geöffnet ist - unabhängig davon, ob Dashboard oder Lyrics offen sind, und
+        unabhängig ob App oder Chrome-Browser genutzt wird.
+      - Ursache 1 (größter Fund): .mesh-gradient (der Vollbild-Hintergrundverlauf, auf JEDER
+        Seitenansicht permanent sichtbar) hatte will-change fest auf sich selbst UND beiden
+        Pseudo-Elementen - obwohl sich dieser Hintergrund nur alle paar Minuten (Tageszeit-
+        Farbwechsel) oder bei Theme-Wechsel überhaupt ändert. Hielt dadurch dauerhaft eine
+        eigene GPU-Ebene über die komplette Bildschirmfläche offen, buchstäblich vom ersten
+        Seitenaufruf an.
+      - Ursache 2: #lyrics-overlay/#lyrics-container liegen permanent im DOM (nur per opacity/
+        visibility versteckt, kein display:none) und hatten will-change ebenfalls auf der
+        Basis-Regel - hielten dadurch AUCH BEI KOMPLETT GESCHLOSSENEN LYRICS dauerhaft eine
+        eigene GPU-Ebene über einen Großteil der Kartenfläche offen.
+      - Ursache 3 (kleiner): .reveal (6 Scroll-Einblend-Sektionen) behielt will-change auch
+        noch lange nachdem die einmalige Einblend-Animation längst abgeschlossen war.
+      - Fix: Alle drei will-change jetzt gezielt nur noch aktiv, wenn tatsächlich etwas
+        passiert - mesh-gradient komplett entfernt (seltene Übergänge bleiben genauso weich),
+        lyrics-overlay/-container nur noch bei #main-music-card.lyrics-open, .reveal nur noch
+        vor Abschluss der Einblend-Animation (:not(.active)). Keine optische Änderung.
+
     [PERFORMANCE] Release v24.17 (radikal): Zeichen-Spans nur noch für Stile erzeugt, die sie
     tatsächlich brauchen (8 von 61 statt bisher alle)
       - Symptom: Weiterhin hohe GPU-Last speziell bei Songs mit vielen langen/zeichenreichen
@@ -1088,14 +1110,23 @@
 
         /* --- MESH GRADIENT (GPU OPTIMIZED) --- */
         :root { --time-r: 59; --time-g: 130; --time-b: 246; --time-r2: 168; --time-g2: 85; --time-b2: 247; }
+        /* PERF-FIX v24.18 (radikal): Gleicher Fehler wie bei .lyric-word/.lyric-line (v24.12),
+           nur diesmal auf der Ebene, die auf JEDER Seitenansicht permanent sichtbar ist - dem
+           Vollbild-Hintergrundverlauf. will-change stand hier fest, obwohl sich dieser
+           Hintergrund nur sehr selten ändert (Theme-Wechsel, Tageszeit-Farbwechsel alle paar
+           Minuten) - der Rest der Zeit hielt der Browser trotzdem dauerhaft eine eigene
+           GPU-Ebene über die komplette Bildschirmfläche offen. Das erklärt plausibel, warum
+           auf dem Handy die Hitze schon beim bloßen Öffnen der Seite auftrat, unabhängig davon
+           ob Dashboard oder Lyrics überhaupt offen waren. will-change entfernt - die seltenen
+           Übergänge selbst bleiben genauso weich (CSS transition unverändert), nur ohne die
+           permanente Ebenen-Reservierung dazwischen. */
         .mesh-gradient {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; overflow: hidden;
-            transform: translateZ(0); will-change: transform;
+            transform: translateZ(0);
             pointer-events: none;
         }
         .mesh-gradient::before, .mesh-gradient::after {
             content: ''; position: absolute; inset: 0; transition: opacity 0.8s var(--apple-ease), background 3s ease;
-            will-change: opacity;
         }
         .mesh-gradient::before {
             background: radial-gradient(circle at 50% 50%, rgba(var(--time-r), var(--time-g), var(--time-b), 0.05) 0%, transparent 50%);
@@ -1428,7 +1459,12 @@
         @keyframes blob-morph { 0% { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); } 50% { transform: translate3d(10vw, 8vh, 0) rotate(90deg) scale(1.15); } 100% { transform: translate3d(-8vw, 12vh, 0) rotate(180deg) scale(0.9); } }
 
         /* --- STANDARD V17 GLASS CARD --- */
-        .reveal { opacity: 0; transform: translate3d(0, 40px, 0) scale(0.96); transition: opacity 0.8s var(--apple-ease), transform 1s var(--apple-spring); will-change: opacity, transform; }
+        /* PERF-FIX v24.18: will-change lief hier bisher für immer weiter, auch lange nachdem
+           die einmalige Einblend-Animation (nur beim ersten Scrollen ins Sichtfeld) längst
+           abgeschlossen war. Jetzt nur noch, solange das Element noch NICHT eingeblendet ist -
+           danach (.active) wird will-change wieder freigegeben. */
+        .reveal { opacity: 0; transform: translate3d(0, 40px, 0) scale(0.96); transition: opacity 0.8s var(--apple-ease), transform 1s var(--apple-spring); }
+        .reveal:not(.active) { will-change: opacity, transform; }
         .reveal.active { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
 
         @supports (backdrop-filter: blur(12px)) or (-webkit-backdrop-filter: blur(12px)) {
@@ -1875,7 +1911,16 @@
 
         .mask-image-gradient { -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%); mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%); }
 
-        #lyrics-overlay, #lyrics-container { overflow: hidden; will-change: transform, opacity; border-radius: inherit; }
+        <!-- PERF-FIX v24.18: #lyrics-overlay/#lyrics-container hatten will-change fest auf der
+             Basis-Regel - das Element liegt permanent im DOM (nur per opacity/visibility
+             versteckt, kein display:none), hielt also AUCH BEI GESCHLOSSENEN LYRICS dauerhaft
+             eine eigene GPU-Ebene über fast die komplette Kartenfläche offen. Erklärt
+             plausibel "Handy wird schon beim bloßen Öffnen der Seite heiß" - dieses Element
+             existiert ja auf jeder einzelnen Seitenansicht. will-change jetzt nur noch, wenn
+             die Lyrics-Ansicht tatsächlich offen ist (per bestehender lyrics-open-Klasse). -->
+        #lyrics-overlay, #lyrics-container { overflow: hidden; border-radius: inherit; }
+        #main-music-card.lyrics-open #lyrics-overlay,
+        #main-music-card.lyrics-open #lyrics-container { will-change: transform, opacity; }
         #lyrics-container { overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
         #lyrics-container::-webkit-scrollbar { width: 4px; }
         #lyrics-container::-webkit-scrollbar-track { background: transparent; }
@@ -2434,7 +2479,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.17 · 2026-08-09';
+        const SITE_VERSION = 'v24.18 · 2026-08-09';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
