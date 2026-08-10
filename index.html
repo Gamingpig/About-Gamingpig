@@ -11,6 +11,255 @@
     Neueste Einträge oben.
     ================================================================
 
+    [PERFORMANCE] Release v24.17 (radikal): Zeichen-Spans nur noch für Stile erzeugt, die sie
+    tatsächlich brauchen (8 von 61 statt bisher alle)
+      - Symptom: Weiterhin hohe GPU-Last speziell bei Songs mit vielen langen/zeichenreichen
+        Wörtern (Nutzer-Beispiel: "duuuu uuuu uuu" - viele wiederholte Buchstaben).
+      - Ursache: renderLyrics() zerlegte JEDES Wort des KOMPLETTEN Songtexts in einzelne
+        <span class="lyric-char">-Elemente - unabhängig davon, ob der gerade aktive Songtext-
+        Stil das überhaupt visuell nutzt. Von 61 verfügbaren Stilen greifen aber nur 8
+        (Apple Music/Pro, Binary, Flagwave, Matrix, Typewriter, Wave-Char, Zoom-Char)
+        tatsächlich auf .lyric-char-Selektoren zu - die restlichen 53 (87%!) bekamen die
+        Zeichen-Aufteilung trotzdem, komplett wirkungslos. Bei langen Songs mit vielen
+        wiederholten Buchstaben bedeutet das hunderte bis tausende nutzlose DOM-Knoten, die
+        Layout/Paint dennoch mitverwalten müssen, plus unnötige Gewichtsberechnungen in
+        buildLineAnimCache() für nicht vorhandene/nutzlose Zeichen.
+      - Fix: Neue CHAR_LEVEL_STYLES-Liste mit den 8 tatsächlich betroffenen Stilen. Der
+        schlanke Wort-Pfad (vorher nur für low-end-Modus reserviert) gilt jetzt für alle 53
+        Stile ohne Zeichen-Bedarf. buildLineAnimCache() überspringt die komplette Zeichen-
+        Gewichtsberechnung ebenfalls, wenn der aktive Stil sie nicht braucht. Zusätzlich:
+        Stilwechsel MITTEN im Song (ohne Songwechsel) erkennt jetzt automatisch, wenn sich die
+        Zeichen-Anforderung ändert, und baut die Lyrics-DOM bei Bedarf gezielt neu auf, damit
+        z.B. ein Wechsel zu "Matrix" mitten im Song weiterhin korrekt funktioniert.
+
+    [FIX] Release v24.16: Eigener Fehler im Farbrahmen-Feature behoben - geblurrter
+    box-shadow widersprach dem eigenen "kein Blur"-Versprechen
+      - Nutzer meldete per Screenshot: 70% GPU (71°C) in der Lyrics-Ansicht, spürbar mehr als
+        zuvor - nach dem in v24.14 hinzugefügten Cover-Farbrahmen.
+      - Ursache: Der Farbrahmen aus v24.14 hatte einen box-shadow mit 28px Blur-Radius
+        ("0 0 28px -6px rgba(...)") - ein geblurrter Schatten ist beim Malen fast so teuer wie
+        ein echter Blur-Filter, besonders neben Text, der durch die Lyrics-Sync ständig neu
+        gemalt wird. Das widersprach dem eigenen Versprechen "sparend bauen" aus v24.14 - ein
+        Fehler, der direkt beim Hinzufügen des Features gemacht wurde.
+      - Fix: Blur-Radius auf 0 - nur noch eine scharfe 1px-Outline-Kontur, keine Weichzeichnung
+        mehr. Optischer Unterschied minimal (etwas weniger "glühend", aber immer noch klar als
+        farbiger Rahmen erkennbar), Kosten dafür wieder bei praktisch null.
+
+    [FIX] Release v24.15: Lyrics-Overlay auf volle Deckkraft - Cover/Karteninhalt schimmerte
+    noch durch
+      - Nutzer bestätigte per Screenshot: bei 95% Deckkraft (v24.14) war der Karteninhalt
+        dahinter (Titel, Künstler, Fortschrittsbalken, Spotify-Button, Cover) noch schwach
+        sichtbar und überlagerte sich mit dem Songtext.
+      - Fix: bg-slate-950/95 -> bg-slate-950 (kein Opacity-Suffix mehr = 100% deckend). Jetzt
+        eine komplett solide Fläche, nichts scheint mehr durch.
+
+    [FEATURE/PERFORMANCE] Release v24.14: Lyrics-Overlay-Blur komplett entfernt + neuer
+    statischer Cover-Farbrahmen
+      - Nutzerwunsch nach v24.13-Ergebnis (64%->39% GPU): Lyrics-Ansicht braucht gar keinen
+        Blur mehr, eine flache dunkle Fläche reicht - der Cover-Blur-Effekt auf der
+        Haupt-Karte (Dashboard-Ansicht) soll dagegen erhalten bleiben.
+      - Fix: #lyrics-overlay backdrop-filter komplett entfernt (vorher zuletzt 4px in v24.13),
+        Deckkraft von 85% auf 95% erhöht, damit der Wegfall des Blurs optisch nicht auffällt.
+        Spart die verbleibenden Kosten dieser Ebene vollständig statt nur teilweise.
+      - Neues Feature: Statischer Cover-Farbrahmen um die Haupt-Karte (Wunsch: "wie früher"),
+        nutzt die bereits pro Songwechsel berechneten --ambient-r/g/b-Variablen (dieselben wie
+        bei "Ambient Color"), bewusst KOMPLETT ohne Animation gebaut - nur ein einmaliger,
+        weicher Farbwechsel bei Songwechsel per CSS-Transition, kein Loop, kein Blur, keine
+        Bewegung. Dadurch praktisch kostenlos im Vergleich zu den anderen Effekten. Als
+        eigener Schalter "Cover-Farbrahmen" im Lyrics-Einstellungsmenü neben Ambient Color
+        ergänzt, standardmäßig an (da kostenlos), in allen 6 Sprachen übersetzt.
+
+    [PERFORMANCE] Release v24.13 (radikal): Größte Blur-Fläche der ganzen Seite gefunden -
+    40px Weichzeichner über die komplette Lyrics-Ansicht, optisch fast irrelevant
+      - Symptom: Kollege meldete weiterhin 64% GPU (70°C) im Lyrics-View trotz v24.3-v24.12.
+      - Ursache: #lyrics-overlay (deckt die GESAMTE Lyrics-Fläche ab, absolute inset-0) hatte
+        zusätzlich zur Haupt-Karte UND zu #lyrics-ambient-bg noch eine dritte, eigene
+        backdrop-blur-2xl-Ebene (40px Weichzeichner-Radius, Tailwind-Utility-Klasse, leicht zu
+        übersehen) - die größte einzelne Blur-Fläche der gesamten Seite, aktiv exakt während
+        der vom Nutzer als am belastendsten gemeldeten Ansicht. Da der Hintergrund bereits zu
+        85% deckend ist (bg-slate-950/85), war von dem, was dieser 40px-Blur eigentlich
+        weichzeichnen sollte, ohnehin kaum noch etwas zu sehen - fast reiner Rechenaufwand
+        ohne entsprechenden optischen Gegenwert.
+      - Fix: Von backdrop-blur-2xl (40px) auf backdrop-blur-sm (4px) reduziert. Blur-Kosten
+        skalieren stark mit dem Radius, das ist ein erheblicher Kostenschnitt bei minimalem
+        sichtbarem Unterschied (der "Frosted Glass"-Rand-Effekt bleibt spürbar erhalten).
+      - Zusätzlich geprüft: alle anderen backdrop-blur-xl-Vorkommen betreffen entweder kleine
+        Icon-Buttons (vernachlässigbar) oder ein selten geöffnetes Auswahlmenü (#music-picker,
+        nur bei aktivem Öffnen relevant) - kein weiterer Handlungsbedarf dort.
+
+    [PERFORMANCE] Release v24.12 (radikal): "will-change auf alles" behoben - vermutlich der
+    eigentliche Hauptverursacher der gesamten Serie
+      - Symptom: Kollege mit dedizierter AMD Radeon-Grafikkarte meldete weiterhin 65% GPU-
+        Last (70°C) im reinen Lyrics-View, trotz aller bisherigen Fixes (v24.3-v24.11).
+      - Ursache: Die Basis-Regeln .lyric-word und .lyric-line hatten will-change permanent
+        gesetzt - und zwar nicht nur für das gerade aktive Wort/die aktive Zeile, sondern für
+        JEDES einzelne Wort und JEDE Zeile im GESAMTEN Songtext (alle Zeilen werden beim
+        Öffnen der Lyrics-Ansicht komplett im DOM aufgebaut). Bei einem durchschnittlichen
+        Song mit z.B. 300 Wörtern über alle Zeilen bedeutet das 300+ permanent offene, einzeln
+        kompositierte GPU-Ebenen, die der Browser bei JEDEM Frame mitverwalten muss - komplett
+        unabhängig davon, ob dort gerade überhaupt etwas passiert. Das ist der klassische
+        "will-change auf alles statt auf das Nötige"-Fehler und erklärt plausibel, warum trotz
+        aller JS-Drosselungen/Cache-Optimierungen (v24.6) und CSS-Animation-Fixes (v24.4/v24.7/
+        v24.10) weiterhin so hohe GPU-Last bestehen blieb - die vielen JS-Fixes optimierten die
+        aus dieser Encoding-Situation im schlechtesten Fall, aber nicht dieses strukturelle
+        GPU-Ebenen-Problem selbst.
+      - Fix: will-change komplett von den Basis-Regeln entfernt, stattdessen gezielt NUR auf
+        .lyric-word.word-active und .lyric-line.active gesetzt - zu jedem Zeitpunkt ist ohnehin
+        nur maximal 1 Wort und 1 Zeile aktiv, jetzt bekommen auch nur diese eine eigene
+        GPU-Ebene statt aller. Keine optische Änderung, da will-change selbst nie sichtbar ist -
+        nur eine reine Browser-Optimierungs-Direktive.
+
+    [FIX] Release v24.11: v24.10-Throttle-Werte waren zu aggressiv - sichtbares Ruckeln zurückgenommen
+      - Nutzer-Feedback: 500ms/80ms-Update-Intervalle aus v24.10 sahen spürbar ruckelig aus.
+      - Ursache: Progressbar hat nur 0.3s CSS-Transition, viele Lyrics-Stile (Typewriter,
+        Matrix) nur 0.05s - bei selteneren Updates als diese Transition-Dauer entstehen
+        sichtbare Stillstands-Lücken zwischen den Bewegungen statt durchgehender Animation.
+      - Fix: Beide Werte zurück auf die zuletzt unbeanstandet laufenden Stufen (Progress
+        200ms/5x-Sek, Lyrics-Sync 33ms/30x-Sek aus v24.5-v24.9). Die in v24.10 eingeführten,
+        rein UNSICHTBAREN Optimierungen (Blob-Pausierung bei offenem Dashboard/Lyrics,
+        korrigierte Glow-Animationen) bleiben unverändert bestehen, da dort keine
+        Ruckel-Beschwerde vorlag - nur die zu aggressive Frequenzreduktion wird zurückgedreht.
+      - Lektion für weitere Optimierungen: Update-Frequenz darf nie unter die kürzeste
+        beteiligte CSS-Transition-Dauer fallen, sonst entsteht sichtbares Stottern statt
+        echter Performance-Gewinn.
+
+    [PERFORMANCE] Release v24.10 (radikal): backdrop-filter-Resampling erkannt + Update-
+    Frequenzen weiter runter, Fokus explizit Dashboard & Lyrics
+      - Erkenntnis-Korrektur zu v24.8: backdrop-filter tastet LIVE ab, was hinter dem Element
+        liegt und berechnet seine Weichzeichnung neu, sobald sich DORT etwas verändert -
+        komplett unabhängig davon, wie "billig" die Hintergrund-Animation für sich selbst
+        wäre. Die Haupt-Karte hat backdrop-filter: blur(30px); jede Bewegung im Hintergrund
+        (Glow-Ebenen, Blobs) zwang sie dadurch, sich pro Frame neu zu berechnen. v24.8 war in
+        diesem Punkt zu optimistisch.
+      - Fix 1: ambilight-pulse/ambient-drift/lyrics-ambient-drift zurück auf einmalig +
+        forwards (wie ursprünglich in v24.4, jetzt mit korrekter Begründung).
+      - Fix 2: Hintergrund-Blobs pausieren jetzt automatisch (animation-play-state: paused)
+        sobald Dashboard ODER Lyrics-Ansicht offen sind (body.dashboard-open bzw.
+        #main-music-card.lyrics-open) - sie sind in beiden Zuständen ohnehin komplett
+        verdeckt, kein sichtbarer Unterschied, aber die Karte muss ihre Weichzeichnung dann
+        nicht mehr pro Frame neu berechnen, genau während der vom Nutzer als am
+        ressourcenhungrigsten gemeldeten Ansichten.
+      - Fix 3: Update-Frequenzen aggressiv reduziert wie gewünscht ("weniger oft pro
+        Sekunde neu berechnen") - Progressbar/Zeit/Dynamic Island von 5x/Sek auf 2x/Sek
+        (PROGRESS_UI_THROTTLE_MS 200ms -\> 500ms), Wort/Zeichen-Sync von 30x/Sek auf
+        12,5x/Sek (LYRICS_SYNC_THROTTLE_MS 33ms -\> 80ms). Beide Werte bleiben optisch
+        flüssig, da Progressbar UND Wort/Zeichen-Elemente bereits eigene CSS-Transitions
+        (0.1-0.3s) besitzen, die zwischen den selteneren JS-Updates weich interpolieren.
+
+    [PERFORMANCE] Release v24.9 (radikal): Canvas-Video-Hintergrund von Opt-Out auf Opt-In +
+    Liquid-Glass-Hintergrund-Blobs deutlich verkleinert
+      - Symptom: Weiterhin zu hohe Last, ausdrücklich auch bei jedem Songwechsel.
+      - Ursache 1 (vermutlich der bisher größte Einzelfaktor): canvasEnabled war
+        standardmäßig AN (`!== 'false'` statt `=== 'true'`) - Spotify-Canvas-Loop-Videos
+        wurden bei JEDEM Songwechsel neu geladen und vollflächig hinter dem Dashboard
+        dekodiert/abgespielt. Kontinuierliche Videodekodierung ist mit Abstand die teuerste
+        Operation, die ein Browser ausführen kann - teurer als jede CSS-Animation oder jeder
+        JS-Loop, der bisher optimiert wurde, und erklärt die Last exakt bei jedem
+        Songwechsel (= neuer Dekodier-Vorgang pro Track).
+      - Fix 1: Auf Opt-In umgestellt. Standard-Besucher bekommen jetzt kein Video mehr,
+        wer es ausdrücklich will, kann es weiterhin im Einstellungsmenü aktivieren.
+      - Ursache 2: Der "Liquid Glass"-Hintergrund (Opt-in-Schalter, standardmäßig aus) lief,
+        wenn aktiviert, mit 4 riesigen (bis zu 80vw) halbtransparenten Ebenen übereinander -
+        spürbare Füllraten-/Overdraw-Kosten trotz reiner transform-Animation, v.a. auf
+        schwacher/integrierter GPU.
+      - Fix 2: Von 4 auf 2 Blobs reduziert, Größe von 70-80vw auf 42-46vw verkleinert -
+        rund 75% weniger zu kompositierende Fläche, visueller Effekt bleibt erhalten.
+
+    [FEATURE/FIX] Release v24.8: Glow-Effekte reaktiviert + Spatial-Tilt-Richtung bei Maus korrigiert
+      - Glow-Effekte: Nachdem v24.7 den echten Hauptverursacher (border-radius-Animation auf
+        backdrop-filter-Ebene) gefunden hatte, wurde klar, dass die in v24.4 deaktivierten
+        Glow-Pulsationen (#ambilight-glow, #ambient-bg, #lyrics-ambient-bg) gar nicht der
+        Kernkosten-Treiber waren: reine scale/opacity-Animation auf einer bereits statisch
+        geblurrten, will-change-promoteten Ebene ist Kompositor-seitig günstig, da der Browser
+        nur die fertige Bitmap skaliert statt die Weichzeichnung neu zu berechnen. Alle drei
+        laufen jetzt wieder mit voller "infinite alternate"-Lebendigkeit wie ursprünglich.
+      - Spatial Tilt: Die Kippsteuerung per Maus lief in die entgegengesetzte Richtung zum
+        Gyroskop-Tilt auf dem Handy (welcher bereits korrekt war). Da beide dieselben
+        --tilt-x/--tilt-y-Variablen nutzen, wurde nur die Maus-Berechnung umgedreht
+        (negiertes x/y) - Handy-Verhalten unverändert.
+
+    [PERFORMANCE] Release v24.7 (radikal): Größter verbleibender Einzelverursacher gefunden -
+    Haupt-Card animierte border-radius auf einer 30px-Blur-Ebene für immer
+      - Symptom: Trotz v24.3-v24.6 weiterhin dieselbe hohe Last, unabhängig von Hardware.
+      - Ursache: body.liquid-glass-active #main-music-card (die größte, immer sichtbare Karte
+        der Seite) hatte gleichzeitig backdrop-filter: blur(30px) UND eine für immer laufende
+        border-radius-Animation (card-liquid-idle, infinite alternate) - komplett unabhängig
+        davon, ob überhaupt Musik lief. Eine Radius-Änderung auf einer geblurrten Ebene
+        zwingt den Browser, die komplette Weichzeichnungs-Maske bei JEDEM Frame neu
+        zuzuschneiden und neu zu berechnen. Das ist eine der teuersten CSS-Kombinationen
+        überhaupt und lief permanent auf der größten Karte der gesamten Seite.
+      - Fix: infinite alternate -> einmalig + forwards (gleiches Muster wie v24.4). Die
+        organische Form schwingt sich einmal beim Erscheinen ein und bleibt danach fix -
+        der Browser muss die Blur-Maske danach nicht mehr pro Frame neu berechnen.
+      - Zusätzlich geprüft und für unbedenklich befunden: das #particles-container-System
+        existiert nur als CSS-Klasse, wird aber nirgends im JS tatsächlich instanziiert -
+        kein aktiver Kostenfaktor, kein Handlungsbedarf.
+      - Damit sind jetzt alle bekannten "infinite + (blur ODER border-radius-auf-blur)"-
+        Kombinationen der Seite behoben (v24.4: ambilight-glow/ambient-bg/lyrics-ambient-bg,
+        v24.7: main-music-card). Verbleibende infinite-Animationen (blob-container-Rotation,
+        einzelne Lyrics-Stil-Effekte auf dem jeweils AKTIVEN Wort, Equalizer-Balken) nutzen
+        ausschließlich transform/color/text-shadow ohne Blur-Neuberechnung und laufen
+        kompositor-seitig, nicht mehr über den teuren Haupt-Thread.
+
+    [PERFORMANCE] Release v24.6 (radikal): Wort/Zeichen-Sync komplett neu strukturiert - kein
+    redundantes Neu-Berechnen und keine unnötigen DOM-Writes mehr
+      - Symptom: Trotz v24.3-v24.5 blieb spürbare Last bestehen, auch auf deutlich stärkerer
+        Hardware eines Kollegen (Report: 40% GPU, 10% CPU bei aktiven synced Lyrics - für
+        eine reine Textanzeige immer noch unangemessen hoch).
+      - Ursache (strukturell, nicht nur Frequenz): Pro Frame wurden für JEDES Zeichen der
+        aktiven Zeile (a) document.getElementById erneut aufgerufen, (b) zwei Regex-Tests und
+        eine komplette Gewichtsberechnung neu durchgeführt, obwohl sich diese Werte pro Zeile
+        NIE ändern (nur der Fortschritt ändert sich), und (c) classList.add/remove IMMER
+        aufgerufen, auch wenn sich der Zustand des Zeichens gegenüber dem letzten Tick gar
+        nicht geändert hatte. Reines Drosseln (v24.5) reduziert nur die Häufigkeit dieser
+        Verschwendung, behebt aber nicht die Verschwendung selbst.
+      - Fix: Neue Funktion buildLineAnimCache() berechnet beim Wechsel auf eine neue Zeile
+        EINMALIG alle DOM-Referenzen (Wort- und Zeichen-Elemente) sowie alle statischen
+        Gewichts-/Zeit-Verhältnisse und cached sie in lineAnimCache. syncLyricsUI() greift
+        danach pro Tick nur noch auf diesen Cache zu, macht ausschließlich einfache
+        Zahlenvergleiche und schreibt via lastState-Tracking NUR dann in den DOM, wenn sich
+        der Zustand eines Wortes/Zeichens tatsächlich geändert hat (none -> active -> passed).
+        Cache wird in renderLyrics() invalidiert, sobald ein neuer Song/neue Lyrics-DOM
+        aufgebaut wird, damit nie auf entfernte Elemente zugegriffen wird. Kein Verhaltens-
+        unterschied für den Nutzer (identische Optik/Timing), aber massiv weniger Arbeit pro
+        Frame - insbesondere auf längeren/zeichenreichen Zeilen, wo die Einsparung am
+        stärksten ins Gewicht fällt.
+
+    [PERFORMANCE] Release v24.5: Zweiter Hauptverursacher gefunden - Wort/Zeichen-Sync ungedrosselt
+      - Symptom: Trotz v24.4-Fix (Blur-Animationen) blieb die Last bei Songs mit ECHTEN
+        synchronisierten Lyrics (Synced-Badge) weiterhin sehr hoch (Nutzer-Report: Intel HD
+        630 bei 95%, CPU bei 93% bei "Without Me" mit aktiver Wort-für-Wort-Anzeige).
+      - Ursache: syncLyricsUI() lief (wie animateLoop selbst) mit voller Framerate (60x/Sek)
+        und führte dabei für JEDES ZEICHEN der aktuell aktiven Zeile ein eigenes
+        document.getElementById() + mehrere classList-Änderungen + Style-Writes aus. Bei
+        einer durchschnittlichen Zeile (~30-50 Zeichen) macht das mehrere tausend DOM-
+        Zugriffe pro Sekunde, nur für die Buchstaben-Füllanimation.
+      - Fix: syncLyricsUI() läuft jetzt gedrosselt auf ~30x/Sek (LYRICS_SYNC_THROTTLE_MS)
+        statt 60x/Sek - für eine Zeichen-Füllanimation nach wie vor absolut flüssig, aber
+        halbiert die DOM-Zugriffe. In Kombination mit v24.3 (Progressbar) und v24.4 (Blur-
+        Animationen) sollte die Gesamtlast jetzt spürbar niedriger liegen; falls bei
+        Buchstaben-intensiven Lyrics-Stilen (z.B. "Flagwave", Zeichen-für-Zeichen-Styles)
+        weiterhin hohe Last auftritt, ist der nächste Ansatzpunkt eine echte DOM-Referenz-
+        Cache-Struktur statt wiederholter getElementById-Aufrufe pro Frame.
+
+    [PERFORMANCE] Release v24.4: Eigentliche Hauptursache der 100%-CPU/GPU-Last gefunden und behoben
+      - Symptom: Trotz v24.3-Fix (Progressbar-Throttle) blieb die Last hoch, v.a. bei
+        geöffneter Vollbild-Lyrics-Ansicht (siehe Nutzer-Screenshot: Intel HD 630 bei 83%,
+        CPU bei 94%, obwohl kein Songtext vorhanden war und somit keine Wort-für-Wort-
+        Berechnung lief).
+      - Ursache: Drei Hintergrund-Glow/Blur-Ebenen (#ambilight-glow mit bis zu 85px Blur,
+        #ambient-bg mit 22px Blur, #lyrics-ambient-bg mit 32px Blur - letzteres exakt der
+        Hintergrund der Vollbild-Lyrics-Ansicht) wurden per CSS mit "infinite alternate"
+        für die GESAMTE Dauer der Wiedergabe bzw. der geöffneten Ansicht durchgehend per
+        transform/scale animiert. Eine bereits weichgezeichnete Ebene bei laufender
+        Transform-Animation zwingt den Browser, die komplette Unschärfe-Berechnung bei
+        JEDEM Frame neu durchzuführen - auf schwachen/integrierten GPUs extrem teuer und
+        der eigentliche Hauptverursacher der Last, nicht der (bereits gefixte) JS-Loop.
+      - Fix: Alle drei Animationen laufen jetzt einmalig beim Öffnen/Songstart (6s/15s/16s)
+        und bleiben danach im Endzustand stehen (ease-in-out 1 forwards statt infinite
+        alternate) - der "Aufleucht/Drift"-Effekt bleibt optisch erhalten, aber der Browser
+        muss die geblurrte Ebene danach nicht mehr pausenlos neu zusammensetzen.
+
     [PERFORMANCE] Release v24.3: Dauerhafte 100%-CPU/GPU-Last während der Musikwiedergabe behoben
       - Symptom: Sobald ein Song lief, wurde CPU und GPU dauerhaft auf 100% ausgelastet -
         auf einem PC/Laptop messbar, auf dem Smartphone spürbar als starke Erwärmung. Trat
@@ -899,9 +1148,12 @@
             border-top: 1px solid rgba(255, 255, 255, 0.9) !important;
             border-left: 1px solid rgba(255, 255, 255, 0.7) !important;
             
-            /* GPU SAVER: Blur massiv reduziert für die vielen kleinen Karten im Idle */
-            -webkit-backdrop-filter: blur(8px) saturate(120%) !important;
-            backdrop-filter: blur(8px) saturate(120%) !important;
+            /* PERF-FIX v24.14 (radikal, auf Nutzerwunsch): backdrop-filter komplett entfernt.
+               Das war die teuerste CSS-Eigenschaft auf JEDER einzelnen Dashboard-Karte
+               gleichzeitig (dieser Effekt gilt für ALLE .glass-card-Elemente). Stattdessen
+               nur noch der solide Gradient-Hintergrund, der ohnehin schon da war - sieht
+               weiterhin wie eine "Glas"-Karte aus, kostet aber keine laufende Weichzeichnung
+               mehr. */
             
             /* Idle Animation für kleine Karten deaktiviert um VRAM zu sparen */
             border-radius: 24px !important;
@@ -923,8 +1175,6 @@
         body.low-end.liquid-glass-active #mini-player-toggle,
         body.low-end.liquid-glass-active .modal-content {
             animation: none !important;
-            -webkit-backdrop-filter: blur(8px) saturate(120%) !important;
-            backdrop-filter: blur(8px) saturate(120%) !important;
         }
 
         .dark body.liquid-glass-active .glass-card {
@@ -932,18 +1182,23 @@
             border-top: 1px solid rgba(255, 255, 255, 0.25) !important;
             border-left: 1px solid rgba(255, 255, 255, 0.1) !important;
             border-color: rgba(255, 255, 255, 0.08) !important;
-            /* GPU SAVER */
-            -webkit-backdrop-filter: blur(8px) saturate(150%) brightness(1.1) !important;
-            backdrop-filter: blur(8px) saturate(150%) brightness(1.1) !important;
         }
 
         /* Voller Blur und fette Idle-Animation NUR für die großen/wichtigen Container */
+        /* PERF-FIX v24.7 (radikal): Das war der bisher größte verbleibende Verursacher - diese
+           Regel animierte border-radius auf einem Element mit backdrop-filter: blur(30px) FÜR
+           IMMER, komplett unabhängig davon ob Musik läuft. Eine Radius-Änderung auf einer
+           geblurrten Ebene zwingt den Browser, die Weichzeichnungs-Maske bei JEDEM Frame neu
+           zuzuschneiden und neu zu berechnen - eine der teuersten denkbaren CSS-Kombinationen
+           überhaupt, dazu noch auf der größten/prominentesten Karte der ganzen Seite.
+           infinite alternate -> einmalig + forwards: die organische Form wird einmal beim
+           Erscheinen der Karte "eingeschwungen" und bleibt danach fix stehen. */
         body.liquid-glass-active #main-music-card,
         body.liquid-glass-active #mini-player-toggle,
         body.liquid-glass-active .modal-content {
             -webkit-backdrop-filter: blur(30px) saturate(150%) !important;
             backdrop-filter: blur(30px) saturate(150%) !important;
-            animation: card-liquid-idle 8s ease-in-out infinite alternate !important;
+            animation: card-liquid-idle 8s ease-in-out 1 forwards !important;
         }
         .dark body.liquid-glass-active #main-music-card,
         .dark body.liquid-glass-active #mini-player-toggle,
@@ -1134,18 +1389,40 @@
         .dark #liquid-blobs { background: #020617; }
         body.liquid-glass-active:not(.low-end) #liquid-blobs { display: block; opacity: 1; }
         
+        /* PERF-FIX v24.9 (radikal): Der "Liquid Glass"-Hintergrund ist zwar standardmäßig AUS
+           (Opt-in-Schalter), lief aber, wenn aktiviert, mit 4 riesigen (bis zu 80vw!)
+           halbtransparenten Flächen permanent übereinander - das kostet trotz reiner
+           transform-Animation spürbar Füllrate/Overdraw, v.a. auf schwacher/integrierter GPU,
+           weil bei jedem Frame eine riesige, mehrfach überlappende Alpha-Blend-Fläche neu
+           zusammengesetzt werden muss. Von 4 auf 2 Blobs reduziert und deutlich verkleinert
+           (70-80vw -> 42vw) - schneidet die zu kompositierende Fläche um ca. 75%, der visuelle
+           "Farbverlauf im Hintergrund"-Effekt bleibt erhalten, nur dezenter/günstiger. */
         .blob-container {
             position: absolute; width: 100%; height: 100%; opacity: 0.4;
             transform: translate3d(0,0,0); backface-visibility: hidden; will-change: transform;
             animation: container-rotate 40s linear infinite;
         }
         .dark .blob-container { opacity: 0.35; }
+        /* PERF-FIX v24.10 (radikal): backdrop-filter auf der Haupt-Karte tastet LIVE ab, was
+           dahinter liegt - jede Bewegung im Hintergrund (diese Blobs) zwingt die Karte, ihre
+           30px-Weichzeichnung bei JEDEM Frame neu zu berechnen, komplett unabhängig davon, wie
+           "billig" die Blob-Animation für sich allein wäre. Sobald Dashboard oder Lyrics offen
+           sind, sind die Blobs ohnehin komplett verdeckt - dann pausieren wir sie einfach, das
+           kostet keine Sekunde sichtbaren Unterschied, spart aber die dauerhafte Neuberechnung
+           der Karten-Weichzeichnung im exakt wichtigsten Moment. */
+        body.dashboard-open .blob-container,
+        body.dashboard-open .blob,
+        body:has(#main-music-card.lyrics-open) .blob-container,
+        body:has(#main-music-card.lyrics-open) .blob {
+            animation-play-state: paused !important;
+        }
         .blob { position: absolute; will-change: transform; animation: blob-morph 20s ease-in-out infinite alternate; }
         
-        .blob-1 { top: -10%; left: -10%; width: 70vw; height: 70vw; background: radial-gradient(circle, rgba(255,0,128,1) 0%, rgba(255,0,128,0) 70%); animation-duration: 25s; }
-        .blob-2 { top: 20%; right: -20%; width: 80vw; height: 80vw; background: radial-gradient(circle, rgba(121,40,202,1) 0%, rgba(121,40,202,0) 70%); animation-delay: -5s; animation-duration: 30s; animation-direction: alternate-reverse; }
-        .blob-3 { bottom: -20%; left: 10%; width: 70vw; height: 70vw; background: radial-gradient(circle, rgba(0,210,255,1) 0%, rgba(0,210,255,0) 70%); animation-delay: -10s; animation-duration: 22s; }
-        .blob-4 { top: 30%; left: 30%; width: 60vw; height: 60vw; background: radial-gradient(circle, rgba(255,77,77,1) 0%, rgba(255,77,77,0) 70%); animation-delay: -15s; animation-duration: 28s; animation-direction: alternate-reverse; }
+        .blob-1 { top: -10%; left: -10%; width: 42vw; height: 42vw; background: radial-gradient(circle, rgba(255,0,128,1) 0%, rgba(255,0,128,0) 70%); animation-duration: 25s; }
+        .blob-2 { top: 20%; right: -20%; width: 46vw; height: 46vw; background: radial-gradient(circle, rgba(121,40,202,1) 0%, rgba(121,40,202,0) 70%); animation-delay: -5s; animation-duration: 30s; animation-direction: alternate-reverse; }
+        /* PERF-FIX v24.9: blob-3/blob-4 komplett deaktiviert statt nur verkleinert - halbiert
+           die Anzahl der zu kompositierenden Ebenen zusätzlich zur Flächenreduktion oben. */
+        .blob-3, .blob-4 { display: none; }
         
         @keyframes container-rotate { from { transform: rotate(0deg) scale(1.2); } to { transform: rotate(360deg) scale(1.2); } }
         @keyframes blob-morph { 0% { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); } 50% { transform: translate3d(10vw, 8vh, 0) rotate(90deg) scale(1.15); } 100% { transform: translate3d(-8vw, 12vh, 0) rotate(180deg) scale(0.9); } }
@@ -1181,7 +1458,18 @@
            kräftiger gemacht: größerer Bleed-Radius (inset -15px/-60px -> -30px/-90px),
            mehr Blur, mehr Sättigung/Helligkeit, höhere Ziel-Opazität. */
         @media (min-width: 640px) { #ambilight-glow { inset: -90px; filter: blur(85px) saturate(2.8) brightness(1.3); } }
-        .playing #ambilight-glow { animation: ambilight-pulse 6s infinite alternate ease-in-out; opacity: 1; }
+        /* v24.8: Zurück auf "infinite" - reine scale/opacity-Animation auf einer bereits
+           statisch geblurrten Ebene ist Kompositor-seitig günstig (der Browser skaliert nur
+           die fertige Bitmap, ohne die Weichzeichnung neu zu berechnen). Der eigentliche
+           Kostentreiber war die border-radius-Animation aus v24.7 (siehe dort), nicht diese
+           Glow-Pulsation - die kann also gefahrlos ihre volle Lebendigkeit zurückbekommen. */
+        /* PERF-FIX v24.10: v24.8 hatte dies fälschlich auf "infinite" zurückgestellt, mit der
+           (unvollständigen) Annahme, scale/opacity auf einer statisch geblurrten Ebene sei
+           immer Kompositor-billig. Das stimmt nur, wenn NICHTS mit backdrop-filter darüber
+           liegt - die Haupt-Karte hat aber backdrop-filter: blur(30px) und tastet dabei live
+           ab, was im Hintergrund passiert. Jede Bewegung dieser Glow-Ebene zwingt die Karte,
+           ihre eigene Weichzeichnung neu zu berechnen. Zurück auf einmalig + forwards. */
+        .playing #ambilight-glow { animation: ambilight-pulse 6s ease-in-out 1 forwards; opacity: 1; }
         .dark .playing #ambilight-glow { opacity: 0.85; }
         @keyframes ambilight-pulse { 0% { transform: scale(1) translate3d(0,0,0); opacity: 0.6; } 100% { transform: scale(1.05) translate3d(0,0,0); opacity: 0.9; } }
 
@@ -1214,7 +1502,12 @@
         }
         #lyrics-overlay.apple-ambient-active #lyrics-ambient-bg {
             opacity: 0.95;
-            animation: lyrics-ambient-drift 16s ease-in-out infinite alternate;
+            /* PERF-FIX: infinite -> einmalig + forwards, gleicher Grund wie bei ambilight-pulse
+               oben - dies ist der 32px-Blur-Hintergrund der VOLLBILD-Lyrics-Ansicht und lief
+               bisher für die gesamte Dauer der geöffneten Ansicht ununterbrochen weiter. */
+            /* v24.8: zurück auf infinite, siehe Kommentar bei ambilight-glow oben. */
+            /* PERF-FIX v24.10: siehe Kommentar bei ambilight-glow oben, gleicher Grund. */
+            animation: lyrics-ambient-drift 16s ease-in-out 1 forwards;
         }
         #lyrics-overlay.apple-ambient-active #lyrics-ambient-tint { opacity: 1; }
         @keyframes lyrics-ambient-drift {
@@ -1222,7 +1515,10 @@
             100% { transform: scale(1.32) translate3d(-3%, 2%, 0); }
         }
         body.low-end #lyrics-ambient-bg, body.low-end #lyrics-ambient-tint { display: none !important; }
-        .playing #ambient-bg { opacity: 1; animation: ambient-drift 15s infinite alternate ease-in-out; }
+        /* PERF-FIX: gleicher Grund wie bei ambilight-pulse - infinite -> einmalig + forwards. */
+        /* v24.8: zurück auf infinite, siehe Kommentar bei ambilight-glow oben. */
+        /* PERF-FIX v24.10: siehe Kommentar bei ambilight-glow oben, gleicher Grund. */
+        .playing #ambient-bg { opacity: 1; animation: ambient-drift 15s ease-in-out 1 forwards; }
         @keyframes ambient-drift { 0% { transform: scale(1.1) translate3d(0, 0, 0); } 100% { transform: scale(1.2) translate3d(-5px, 5px, 0); } }
 
         .playing #track-title, .playing #track-artist { text-shadow: 0 2px 10px rgba(0,0,0,0.8); }
@@ -1251,11 +1547,24 @@
             opacity: 1;
         }
 
-        .lyric-line { display: block; max-width: 94%; margin: 4vh 0; line-height: 1.25; transition: opacity 0.4s ease, filter 0.4s ease, transform 0.5s var(--apple-bounce); transform-origin: left center; overflow-wrap: break-word; word-wrap: break-word; white-space: pre-wrap; padding-right: 1rem; will-change: opacity, transform; transform: translate3d(0,0,0); }
+        /* PERF-FIX v24.12: gleicher Fehler wie bei .lyric-word oben, hier für Zeilen - jede
+           einzelne Zeile des kompletten Songtexts bekam permanent eine eigene GPU-Ebene, statt
+           nur die tatsächlich aktive. will-change jetzt nur noch auf .lyric-line.active. */
+        .lyric-line { display: block; max-width: 94%; margin: 4vh 0; line-height: 1.25; transition: opacity 0.4s ease, filter 0.4s ease, transform 0.5s var(--apple-bounce); transform-origin: left center; overflow-wrap: break-word; word-wrap: break-word; white-space: pre-wrap; padding-right: 1rem; transform: translate3d(0,0,0); }
+        .lyric-line.active { will-change: opacity, transform; }
         .lyrics-open .lyric-line { opacity: 0.25; filter: blur(1px); transform: scale(0.95) translate3d(0,0,0); }
         .lyrics-open .lyric-line.active { opacity: 1; filter: blur(0px) drop-shadow(0 0 8px rgba(255,255,255,0.1)); transform: scale(1.05) translate3d(0,0,0); }
 
-        .lyric-word { position: relative; display: inline-block; margin-right: 0; white-space: nowrap; will-change: background-size, transform, color, opacity; font-size: 14px; font-size: clamp(0.75rem, 4vw, 2.2rem); font-weight: 800; letter-spacing: -0.02em; transition: color 0.1s linear, transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), text-shadow 0.1s linear, filter 0.1s linear, opacity 0.1s linear; }
+        /* PERF-FIX v24.12 (radikal): will-change stand hier bisher auf der BASIS-Regel, betraf
+           also AUSNAHMSLOS JEDES Wort im gesamten Songtext (nicht nur das aktive) - bei einem
+           Song mit z.B. 300 Wörtern erzeugt das 300 permanente, einzelne GPU-Kompositions-
+           Ebenen, die der Browser bei JEDEM Frame mitverwalten muss, komplett unabhängig davon
+           ob sich dort gerade etwas bewegt. Das ist der klassische "will-change auf alles"-
+           Fehler und erklärt dauerhaft hohe GPU-Last unabhängig von allen JS-Optimierungen.
+           will-change hier entfernt, stattdessen weiter unten gezielt nur auf .word-active
+           gesetzt - dort ist es tatsächlich nötig (max. 1 Wort gleichzeitig aktiv). */
+        .lyric-word { position: relative; display: inline-block; margin-right: 0; white-space: nowrap; font-size: 14px; font-size: clamp(0.75rem, 4vw, 2.2rem); font-weight: 800; letter-spacing: -0.02em; transition: color 0.1s linear, transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), text-shadow 0.1s linear, filter 0.1s linear, opacity 0.1s linear; }
+        .lyric-word.word-active { will-change: transform, opacity, color; }
 
         .lyrics-style-fill .lyric-word { background: linear-gradient(to right, #ffffff var(--fill-percent, 0%), rgba(255,255,255,0.2) var(--fill-percent, 0%)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
         .lyrics-style-bounce .lyric-word { color: rgba(255, 255, 255, 0.3); } .lyrics-style-bounce .lyric-word.word-passed { color: rgba(255, 255, 255, 0.7); } .lyrics-style-bounce .lyric-word.word-active { color: #ffffff; transform: scale(1.15) translate3d(0,-4px,0); text-shadow: 0 4px 15px rgba(255, 255, 255, 0.6); z-index: 10; }
@@ -2078,6 +2387,27 @@
         }
 
         /* ========================================================= */
+        /* --- NEW v24.14/FIX v24.16: COLOR FRAME (statischer Cover-Farbrahmen) - */
+        /* Bewusst OHNE jede Animation gebaut (sparend): nur ein einmaliger */
+        /* CSS-Wechsel bei Songwechsel via transition, kein Loop, keine  */
+        /* Bewegung - nutzt dieselben --ambient-r/g/b Variablen, die für */
+        /* Ambient Color ohnehin schon pro Song berechnet werden. */
+        /* FIX v24.16: Der box-shadow mit 28px-Blur-Radius aus v24.14 war ein */
+        /* eigener Fehler - ein geblurrter Schatten ist fürs Malen fast so */
+        /* teuer wie ein echter Blur-Filter, besonders wenn er neben ständig */
+        /* neu gemalten Textelementen (Lyrics-Sync) liegt. Entfernt, nur noch */
+        /* scharfe Kanten (0px Blur-Radius) - jetzt wirklich kostenlos. */
+        /* ========================================================= */
+        body.color-frame-active #main-music-card {
+            border: 2px solid rgba(var(--ambient-r), var(--ambient-g), var(--ambient-b), 0.55);
+            box-shadow: 0 0 0 1px rgba(var(--ambient-r2), var(--ambient-g2), var(--ambient-b2), 0.25);
+            transition: border-color 1.2s ease, box-shadow 1.2s ease;
+        }
+        .dark body.color-frame-active #main-music-card {
+            border-color: rgba(var(--ambient-r), var(--ambient-g), var(--ambient-b), 0.7);
+        }
+
+        /* ========================================================= */
         /* --- NEW: SPATIAL TILT (3D Parallax) ----------------------- */
         /* ========================================================= */
         #media-container { perspective: 800px; }
@@ -2104,7 +2434,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.3 · 2026-08-09';
+        const SITE_VERSION = 'v24.17 · 2026-08-09';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -2439,7 +2769,26 @@
                     </div>
 
                     <!-- Das Lyrics Fenster -->
-                    <div id="lyrics-overlay" class="absolute inset-0 bg-slate-950/85 backdrop-blur-2xl rounded-[1.5rem] xxs:rounded-3xl md:rounded-[3rem] flex-col p-2 xxs:p-3 xs:p-6 md:p-8 z-40 transition-all duration-500 opacity-0 pointer-events-none flex border border-white/10 invisible overflow-hidden">
+                    <!-- PERF-FIX v24.13 (radikal): backdrop-blur-2xl (40px) auf der GESAMTEN
+                         Lyrics-Fläche war die größte Weichzeichner-Ebene der ganzen Seite -
+                         und das genau während der vom Nutzer als am belastendsten gemeldeten
+                         Ansicht. Der Hintergrund ist bereits zu 85% deckend (bg-slate-950/85),
+                         dadurch ist von dem, was der 40px-Blur eigentlich weichzeichnen würde,
+                         optisch kaum noch etwas zu sehen. Auf backdrop-blur-sm (4px) reduziert -
+                         der "Frosted Glass"-Rand bleibt sichtbar, aber der Rechenaufwand sinkt
+                         massiv, da die Blur-Kosten stark mit dem Radius skalieren. -->
+                    <!-- PERF-FIX v24.14: Nutzerwunsch - Lyrics-Overlay braucht keinen Blur mehr,
+                         eine flache dunkle Fläche reicht völlig und fällt niemandem auf. backdrop-
+                         filter hier komplett entfernt statt nur reduziert - das spart die
+                         verbleibenden Kosten dieser Ebene komplett, nicht nur teilweise. Etwas
+                         dunkler (from-slate-950/95 statt /85) gemacht, damit der Verzicht auf
+                         den Blur optisch nicht auffällt. -->
+                    <!-- FIX v24.15: Nutzer bestätigte per Screenshot, dass bei bg-slate-950/95
+                         (95% Deckkraft) das Cover + der Karteninhalt dahinter noch sichtbar
+                         durchschimmerten und sich mit dem Songtext überlagerten. Auf volle
+                         Deckkraft (bg-slate-950, kein Opacity-Suffix mehr = 100%) umgestellt -
+                         jetzt eine komplett solide Fläche, nichts scheint mehr durch. -->
+                    <div id="lyrics-overlay" class="absolute inset-0 bg-slate-950 rounded-[1.5rem] xxs:rounded-3xl md:rounded-[3rem] flex-col p-2 xxs:p-3 xs:p-6 md:p-8 z-40 transition-all duration-500 opacity-0 pointer-events-none flex border border-white/10 invisible overflow-hidden">
                         <div id="lyrics-ambient-bg"></div>
                         <div id="lyrics-ambient-tint"></div>
                         
@@ -2482,6 +2831,7 @@
                                         <p id="label-features" class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1 px-1">Features</p>
                                         <button onclick="toggleCanvasVideo()" id="btn-toggle-canvas" class="text-left text-[10px] xxs:text-xs sm:text-sm text-green-400 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">Canvas: AN</button>
                                         <button onclick="toggleAmbientColor()" id="btn-toggle-ambient" class="text-left text-[10px] xxs:text-xs sm:text-sm text-cyan-400 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">Ambient Color: AN</button>
+                                        <button onclick="toggleColorFrame()" id="btn-toggle-color-frame" class="text-left text-[10px] xxs:text-xs sm:text-sm text-cyan-400 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">Cover-Farbrahmen: AN</button>
                                         <button onclick="toggleGlowEffect()" id="btn-toggle-glow" class="text-left text-[10px] xxs:text-xs sm:text-sm text-orange-400 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">Hintergrund-Glow: AN</button>
                                         <button onclick="toggleCoverGlow()" id="btn-toggle-cover-glow" class="text-left text-[10px] xxs:text-xs sm:text-sm text-yellow-400 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">Cover-Glow: AN</button>
                                         <button onclick="toggleTilt()" id="btn-toggle-tilt" class="text-left text-[10px] xxs:text-xs sm:text-sm text-purple-400 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">Spatial Tilt: AN</button>
@@ -2911,7 +3261,7 @@
                 cp_sharecard: 'Share Card erstellen & herunterladen', cp_tutorial: 'Tutorial starten', cp_tiktok: 'Mein TikTok öffnen',
                 cp_island_back: 'Dynamic Island wieder einblenden', cp_copy_link: 'Link zur Seite kopieren', cp_reload: 'Seite neu laden',
                 cp_change_lang: '🌐 Sprache ändern / Change language',
-                settings_ambient: 'Ambient Color', settings_glow: 'Glow-Effekt', settings_cover_glow: 'Cover-Glow', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
+                settings_ambient: 'Ambient Color', settings_color_frame: 'Cover-Farbrahmen', settings_glow: 'Glow-Effekt', settings_cover_glow: 'Cover-Glow', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
                 on_label: 'AN', off_label: 'AUS',
                 standby_idle_title: 'Aktuell ist es ruhig...', standby_idle_subtitle: 'Genieße die Stille', standby_hint: 'Zum Verlassen tippen',
                 install_btn: '📲 App installieren',
@@ -3074,7 +3424,7 @@
                 cp_sharecard: 'Create & download share card', cp_tutorial: 'Start tutorial', cp_tiktok: 'Open my TikTok',
                 cp_island_back: 'Show Dynamic Island again', cp_copy_link: 'Copy link to this page', cp_reload: 'Reload page',
                 cp_change_lang: '🌐 Sprache ändern / Change language',
-                settings_ambient: 'Ambient Color', settings_glow: 'Glow Effect', settings_cover_glow: 'Cover Glow', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
+                settings_ambient: 'Ambient Color', settings_color_frame: 'Cover Color Frame', settings_glow: 'Glow Effect', settings_cover_glow: 'Cover Glow', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
                 on_label: 'ON', off_label: 'OFF',
                 standby_idle_title: "It's quiet right now...", standby_idle_subtitle: 'Enjoy the silence', standby_hint: 'Tap to exit',
                 install_btn: '📲 Install app',
@@ -3237,7 +3587,7 @@
                 cp_sharecard: 'Crear y descargar tarjeta', cp_tutorial: 'Iniciar tutorial', cp_tiktok: 'Abrir mi TikTok',
                 cp_island_back: 'Mostrar Dynamic Island de nuevo', cp_copy_link: 'Copiar enlace de la página', cp_reload: 'Recargar página',
                 cp_change_lang: '🌐 Cambiar idioma / Change language',
-                settings_ambient: 'Ambient Color', settings_glow: 'Efecto de Brillo', settings_cover_glow: 'Brillo de Portada', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
+                settings_ambient: 'Ambient Color', settings_color_frame: 'Marco de Color', settings_glow: 'Efecto de Brillo', settings_cover_glow: 'Brillo de Portada', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
                 on_label: 'ON', off_label: 'OFF',
                 standby_idle_title: 'Todo tranquilo por ahora...', standby_idle_subtitle: 'Disfruta del silencio', standby_hint: 'Toca para salir',
                 install_btn: '📲 Instalar app',
@@ -3400,7 +3750,7 @@
                 cp_sharecard: 'Créer & télécharger la carte à partager', cp_tutorial: 'Démarrer le tutoriel', cp_tiktok: 'Ouvrir mon TikTok',
                 cp_island_back: 'Réafficher la Dynamic Island', cp_copy_link: 'Copier le lien de la page', cp_reload: 'Recharger la page',
                 cp_change_lang: '🌐 Changer de langue / Change language',
-                settings_ambient: 'Ambient Color', settings_glow: 'Effet de Lueur', settings_cover_glow: 'Lueur de Pochette', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
+                settings_ambient: 'Ambient Color', settings_color_frame: 'Cadre de Couleur', settings_glow: 'Effet de Lueur', settings_cover_glow: 'Lueur de Pochette', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
                 on_label: 'ON', off_label: 'OFF',
                 standby_idle_title: "C'est calme pour le moment...", standby_idle_subtitle: 'Profite du silence', standby_hint: 'Toucher pour quitter',
                 install_btn: '📲 Installer l\'appli',
@@ -3563,7 +3913,7 @@
                 cp_sharecard: 'Criar & baixar cartão para compartilhar', cp_tutorial: 'Iniciar tutorial', cp_tiktok: 'Abrir meu TikTok',
                 cp_island_back: 'Mostrar Dynamic Island novamente', cp_copy_link: 'Copiar link da página', cp_reload: 'Recarregar página',
                 cp_change_lang: '🌐 Mudar idioma / Change language',
-                settings_ambient: 'Ambient Color', settings_glow: 'Efeito de Brilho', settings_cover_glow: 'Brilho da Capa', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
+                settings_ambient: 'Ambient Color', settings_color_frame: 'Moldura de Cor', settings_glow: 'Efeito de Brilho', settings_cover_glow: 'Brilho da Capa', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
                 on_label: 'LIGADO', off_label: 'DESLIGADO',
                 standby_idle_title: 'Está tudo quieto agora...', standby_idle_subtitle: 'Aproveite o silêncio', standby_hint: 'Toque para sair',
                 install_btn: '📲 Instalar app',
@@ -3726,7 +4076,7 @@
                 cp_sharecard: 'Paylaşım kartı oluştur & indir', cp_tutorial: 'Eğitimi başlat', cp_tiktok: "TikTok'umu aç",
                 cp_island_back: "Dynamic Island'ı tekrar göster", cp_copy_link: 'Sayfa bağlantısını kopyala', cp_reload: 'Sayfayı yenile',
                 cp_change_lang: '🌐 Dili değiştir / Change language',
-                settings_ambient: 'Ambient Color', settings_glow: 'Parlama Efekti', settings_cover_glow: 'Kapak Parlaması', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
+                settings_ambient: 'Ambient Color', settings_color_frame: 'Kapak Renk Çerçevesi', settings_glow: 'Parlama Efekti', settings_cover_glow: 'Kapak Parlaması', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
                 on_label: 'AÇIK', off_label: 'KAPALI',
                 standby_idle_title: 'Şu an sessiz...', standby_idle_subtitle: 'Sessizliğin tadını çıkar', standby_hint: 'Çıkmak için dokun',
                 install_btn: '📲 Uygulamayı yükle',
@@ -3916,6 +4266,7 @@
 
             // Settings-Menü Toggle-Labels neu rendern
             if (typeof ambientColorEnabled !== 'undefined' && typeof applyAmbientColorMode === 'function') applyAmbientColorMode(ambientColorEnabled);
+            if (typeof colorFrameEnabled !== 'undefined' && typeof applyColorFrameMode === 'function') applyColorFrameMode(colorFrameEnabled);
             if (typeof tiltEnabled !== 'undefined' && typeof applyTiltMode === 'function') applyTiltMode(tiltEnabled);
             const btnCanvasEl = document.getElementById('btn-toggle-canvas');
             if (btnCanvasEl && typeof canvasEnabled !== 'undefined') {
@@ -4087,6 +4438,20 @@
         let suppressPopHandling = false;
         let isLyricsSettingsOpen = false;
         let currentLyricsStyle = localStorage.getItem('lyricsStyle') || 'fill';
+        // PERF-FIX v24.17 (radikal): Nur diese 8 von 61 Songtext-Stilen nutzen überhaupt
+        // .lyric-char-Selektoren in ihrem CSS - für alle anderen 53 Stile (87%!) wurden bisher
+        // trotzdem für JEDES einzelne Zeichen des kompletten Songtexts eigene <span>-Elemente
+        // erzeugt, obwohl visuell komplett wirkungslos. Bei langen/zeichenreichen Songs (viele
+        // wiederholte Buchstaben, lange Wörter) bedeutet das hunderte bis tausende unnötige
+        // DOM-Knoten, die Layout/Paint trotzdem mitverwalten müssen.
+        const CHAR_LEVEL_STYLES = new Set([
+            'applemusic', 'applemusicpro', 'binary', 'flagwave', 'matrix', 'typewriter',
+            'wave-char', 'zoom-char'
+        ]);
+        // PERF-FIX v24.17: merkt sich, ob die AKTUELL gerenderte DOM Zeichen-Spans enthält -
+        // nötig, damit ein Stilwechsel MITTEN im Song (ohne Songwechsel) erkennt, wenn die
+        // vorhandene DOM nicht zum neu gewählten Stil passt, und dann gezielt neu rendert.
+        let lyricsDomHasCharSplit = false;
 
         // NEW: Zentrales Register aller Lyrics-Animationsstile. Einziger Ort, der bei
         // neuen Stilen gepflegt werden muss - befüllt automatisch das Dropdown und die
@@ -4173,7 +4538,17 @@
         // Lyrics-Einstellungsmenü geschlossen wird, und beim erneuten Öffnen neu gestartet.
         function stopLyricsStylePreviewLoop() { clearInterval(lyricsPreviewLoopInterval); }
 
-        let canvasEnabled = localStorage.getItem('canvasEnabled') !== 'false';
+        // PERF-FIX v24.9 (radikal): Canvas-Video-Hintergründe (Spotify-Canvas-Loops) liefen
+        // bisher standardmäßig AN (!== 'false' = an, außer explizit deaktiviert) und wurden bei
+        // JEDEM Songwechsel neu geladen und vollflächig hinter dem Dashboard abgespielt.
+        // Kontinuierliche Videodekodierung ist mit Abstand das teuerste, was ein Browser tun
+        // kann - deutlich teurer als jede CSS-Animation oder jeder JS-Loop, den wir bisher
+        // optimiert haben, und erklärt plausibel, warum die Last "auch beim Songwechsel"
+        // spürbar blieb (neues Video = neuer Dekodier-Vorgang pro Track). Jetzt Opt-In statt
+        // Opt-Out (=== 'true' statt !== 'false') - wer es explizit will, kann es im
+        // Einstellungsmenü weiterhin anschalten, aber die meisten Besucher bekommen jetzt die
+        // deutlich günstigere Variante ohne Dauer-Videodekodierung.
+        let canvasEnabled = localStorage.getItem('canvasEnabled') === 'true';
         let currentCanvasUrl = null;
         // NEW: Falls der Nutzer schon mal manuell per Ohr nachjustiert hat, diesen
         // gespeicherten Wert verwenden statt immer wieder beim Standardwert zu starten.
@@ -4199,7 +4574,30 @@
         // lastProgressUIUpdate drosselt die eigentlichen DOM-Writes (Balken/Zeit/Dynamic Island)
         // auf ~5x/Sek, was optisch identisch aussieht, aber >90% weniger Style-Recalcs/Paints kostet.
         let lastProgressUIUpdate = 0;
+        // PERF-FIX v24.11: 500ms (v24.10) sah spürbar ruckelig aus - die Progressbar-Transition
+        // ist nur 0.3s lang, bei 500ms-Updates stand der Balken also kurz still zwischen den
+        // Bewegungen statt durchgehend zu laufen. Zurück auf 200ms (5x/Sek), was in v24.5-v24.9
+        // ohne Ruckel-Beschwerde lief und trotzdem deutlich weniger als die ursprünglichen 60x/Sek ist.
         const PROGRESS_UI_THROTTLE_MS = 200;
+        // PERF-FIX v24.5: syncLyricsUI() macht bei aktiver Wort-für-Wort-Synchronisation pro
+        // Frame mehrere document.getElementById-Lookups + Klassen-Änderungen PRO ZEICHEN der
+        // aktuellen Zeile. Bei 60x/Sek ist das bei längeren Zeilen mehrere tausend DOM-Zugriffe
+        // pro Sekunde - zweiter Hauptverursacher der 100%-Last neben den Blur-Animationen aus
+        // v24.4. 30x/Sek (alle ~33ms) ist für eine Buchstaben-Füllanimation immer noch absolut
+        // flüssig, halbiert aber die Kosten gegenüber 60fps.
+        let lastLyricsSyncUpdate = 0;
+        // PERF-FIX v24.11: 80ms (v24.10) war für einige Lyrics-Stile mit sehr kurzen
+        // CSS-Transitions (z.B. Typewriter/Matrix mit nur 0.05s) sichtbar ruckelig, weil
+        // zwischen den seltenen Updates lange Stillstands-Lücken entstanden. Zurück auf 33ms
+        // (~30x/Sek), was vorher flüssig lief.
+        const LYRICS_SYNC_THROTTLE_MS = 33;
+        // PERF-FIX v24.6 (radikal): Statt bei JEDEM Frame für jedes Zeichen erneut
+        // getElementById + Regex-Gewichtsberechnung + unbedingte classList-Writes zu machen,
+        // wird das komplette statische Setup einer Zeile (DOM-Referenzen, Gewichts-Verhältnisse,
+        // Hold-Scale) genau EINMAL berechnet, sobald die Zeile aktiv wird - siehe
+        // buildLineAnimCache(). Der Frame-Loop selbst tastet danach nur noch simple Zahlen ab
+        // und schreibt NUR bei tatsächlicher Zustandsänderung in den DOM (lastState-Tracking).
+        let lineAnimCache = null;
         let lastProcessedUpdate = 0;
         let lastSeenProgressMs = -1;
         let localClockOffset = 0;
@@ -4214,6 +4612,10 @@
 
         // --- NEW FEATURE STATE ---
         let ambientColorEnabled = localStorage.getItem('ambientColor') !== 'false';
+        // NEW v24.14: Statischer Cover-Farbrahmen - Default AN, da rein statisch (kein Blur,
+        // keine Animation) und dadurch praktisch kostenlos, im Gegensatz zu den anderen
+        // Effekt-Schaltern hier kein Performance-Grund für Opt-in nötig.
+        let colorFrameEnabled = localStorage.getItem('colorFrame') !== 'false';
         let tiltEnabled = localStorage.getItem('tiltEnabled') !== 'false';
         let standByActive = false;
         // NEW: Screen Wake Lock - hält den Bildschirm während StandBy aktiv wach, damit
@@ -4343,6 +4745,23 @@
             applyAmbientColorMode(next);
         };
         applyAmbientColorMode(ambientColorEnabled);
+
+        // NEW v24.14: Statischer Cover-Farbrahmen um die Haupt-Karte - bewusst ohne eigene
+        // Farbextraktion gebaut, nutzt einfach dieselben --ambient-r/g/b-Variablen, die
+        // extractDominantColor() ohnehin schon bei jedem Songwechsel berechnet.
+        function applyColorFrameMode(isActive) {
+            colorFrameEnabled = isActive;
+            document.body.classList.toggle('color-frame-active', isActive);
+            const btn = document.getElementById('btn-toggle-color-frame');
+            if (btn) btn.textContent = t('settings_color_frame') + ': ' + (isActive ? t('on_label') : t('off_label'));
+        }
+        window.toggleColorFrame = function() {
+            haptic(10);
+            const next = !colorFrameEnabled;
+            localStorage.setItem('colorFrame', next);
+            applyColorFrameMode(next);
+        };
+        applyColorFrameMode(colorFrameEnabled);
 
         // NEW: Hintergrund-Glow (Ambient-Hintergrund + Lyrics-Hintergrund-Glow) manuell
         // abschaltbar, um zusätzliche Performance zu sparen. Standardmäßig AN.
@@ -4499,8 +4918,13 @@
                     const rect = mc.getBoundingClientRect();
                     const x = ((tiltLastEvent.clientX - rect.left) / rect.width - 0.5) * 2;
                     const y = ((tiltLastEvent.clientY - rect.top) / rect.height - 0.5) * 2;
-                    document.documentElement.style.setProperty('--tilt-x', (x * 12).toFixed(2));
-                    document.documentElement.style.setProperty('--tilt-y', (y * 12).toFixed(2));
+                    // FIX: Maus-Tilt lief in die falsche Richtung (fühlte sich invertiert an),
+                    // während der Gyroskop-Tilt auf dem Handy schon korrekt war. Da beide dieselben
+                    // --tilt-x/--tilt-y-Variablen und dieselbe CSS-Transform-Formel nutzen, wird
+                    // hier NUR die Maus-Berechnung umgedreht (-x/-y) - Handy-Verhalten bleibt exakt
+                    // wie es war.
+                    document.documentElement.style.setProperty('--tilt-x', (-x * 12).toFixed(2));
+                    document.documentElement.style.setProperty('--tilt-y', (-y * 12).toFixed(2));
                     document.documentElement.style.setProperty('--tilt-glare', Math.round(Math.abs(x) * 50 + Math.abs(y) * 50));
                 });
             }, { passive: true });
@@ -6416,6 +6840,11 @@
 
         window.toggleDashboard = function() {
             isDashboardOpen = !isDashboardOpen;
+            // PERF-FIX v24.10: body-Klasse spiegelt den Dashboard-Status, damit CSS darauf
+            // reagieren kann (siehe .blob-container Pausierung weiter unten) - die
+            // Hintergrund-Blobs sind ohnehin komplett vom Dashboard verdeckt, sobald es
+            // offen ist, müssen währenddessen also gar nicht weiterlaufen.
+            document.body.classList.toggle('dashboard-open', isDashboardOpen);
             if (isDashboardOpen) { pushOverlayHistory(); } else { popOverlayHistory(); }
             clearTimeout(dashboardTimeout); 
             clearTimeout(dashboardOpenTimeout);
@@ -6687,6 +7116,15 @@
             const styleSelect = document.getElementById('lyrics-style-select');
             if (styleSelect && styleSelect.value !== style) styleSelect.value = style;
             updateLyricsStylePreview(style);
+
+            // PERF-FIX v24.17: Falls der neu gewählte Stil eine andere Zeichen-Anforderung hat
+            // als das, was aktuell im DOM steht (z.B. Wechsel von "fill" zu "matrix" mitten im
+            // Song), muss die Lyrics-DOM neu aufgebaut werden, damit die nötigen Zeichen-Spans
+            // entstehen bzw. unnötige wieder verschwinden. Nur in diesem Fall, sonst unnötig.
+            const willNeedCharSplit = !document.body.classList.contains('low-end') && CHAR_LEVEL_STYLES.has(style);
+            if (willNeedCharSplit !== lyricsDomHasCharSplit && parsedLyrics.length > 0) {
+                renderLyrics();
+            }
 
             syncLyricsUI(false, true); 
         };
@@ -7005,6 +7443,12 @@
             const syncBadge = document.getElementById('sync-status-badge');
             if (!lyricsContent) return;
 
+            // PERF-FIX v24.6: renderLyrics baut die komplette Wort/Zeichen-DOM neu auf (neuer
+            // Song, neue Lyrics) - alte DOM-Referenzen im lineAnimCache wären danach tot.
+            // Cache hier ungültig machen, buildLineAnimCache() erstellt ihn beim nächsten
+            // Frame automatisch mit den neuen Referenzen neu.
+            lineAnimCache = null;
+
             if (parsedLyrics.length === 0) {
                 const displayMsg = fallbackText || currentNoLyricsMessage;
                 const isCustomFallback = fallbackMessages.includes(displayMsg);
@@ -7036,6 +7480,11 @@
             }
             
             const isLowEnd = document.body.classList.contains('low-end');
+            // PERF-FIX v24.17: siehe Kommentar bei CHAR_LEVEL_STYLES oben - der schlanke
+            // Wort-Pfad (kein Zeichen-Splitting) gilt jetzt für 53 von 61 Stilen, nicht mehr
+            // nur für den low-end-Modus.
+            const needsCharSplit = !isLowEnd && CHAR_LEVEL_STYLES.has(currentLyricsStyle);
+            lyricsDomHasCharSplit = needsCharSplit;
 
             // NEU: Footer HTML für Writer und Provider dynamisch zusammenbauen
             let footerHtml = '';
@@ -7047,7 +7496,7 @@
             }
             
             lyricsContent.innerHTML = '<div class="w-full pt-[40vh] pb-[40vh] px-2 sm:px-4">' + parsedLyrics.map((line, idx) => {
-                if (isLowEnd) {
+                if (!needsCharSplit) {
                     return `<div id="lyric-line-${idx}" class="lyric-line">` + 
                         line.tokens.map((tok, wIdx) => {
                             return `<span id="word-${idx}-${wIdx}" class="lyric-word">${escapeHTML(tok.cleanText)}</span>${tok.trailingSpace}`;
@@ -7122,6 +7571,59 @@
             });
         }
 
+        // PERF-FIX v24.6: Baut EINMALIG (bei Zeilenwechsel) alle DOM-Referenzen und statischen
+        // Gewichts-/Zeit-Verhältnisse für die aktuell aktive Zeile. Vorher wurde all das bei
+        // JEDEM Frame für JEDES Zeichen neu berechnet (getElementById + Regex + Division) -
+        // reine Verschwendung, da sich diese Werte pro Zeile nie ändern, nur der Fortschritt.
+        function buildLineAnimCache(idx) {
+            const line = parsedLyrics[idx];
+            if (!line) { lineAnimCache = null; return; }
+
+            // PERF-FIX v24.17: siehe CHAR_LEVEL_STYLES weiter oben - wenn der aktive Stil gar
+            // keine Zeichen-Spans im DOM hat (87% der Stile), lohnt sich die komplette
+            // Gewichts-/Verhältnis-Berechnung pro Zeichen nicht - es gäbe ohnehin nichts zum
+            // Anfassen (getElementById würde nur null zurückgeben).
+            const charsNeeded = !document.body.classList.contains('low-end') && CHAR_LEVEL_STYLES.has(currentLyricsStyle);
+
+            const words = line.tokens.map((tok, wIdx) => {
+                const wordSpan = document.getElementById(`word-${idx}-${wIdx}`);
+
+                // Hold-Scale hängt nur von tok.duration ab - ändert sich nie während der Zeile,
+                // deshalb hier einmalig setzen statt bei jedem Frame neu zu berechnen/schreiben.
+                const minHoldMs = 140, maxHoldMs = 950;
+                const holdRatio = Math.max(0, Math.min(1, (tok.duration - minHoldMs) / (maxHoldMs - minHoldMs)));
+                const holdScale = (1.02 + Math.sqrt(holdRatio) * 0.14).toFixed(3);
+                if (wordSpan) wordSpan.style.setProperty('--word-hold-scale', holdScale);
+
+                let chars = [];
+                if (charsNeeded) {
+                    const tokLen = tok.cleanText.length;
+                    let currentTokWeightPassed = 0;
+                    for (let cIdx = 0; cIdx < tokLen; cIdx++) {
+                        const cChar = tok.cleanText[cIdx];
+                        let cWeight = 0;
+                        if (!/[.,!?]/.test(cChar)) {
+                            cWeight = getCharWeight(cChar, tok.isPhraseEnd, /[aeiouy]/.test(cChar.toLowerCase()));
+                        }
+                        if (cWeight === 0 && tok.rawWeight > 0) cWeight = tok.rawWeight * 0.05;
+
+                        const startRatio = tok.rawWeight > 0 ? (currentTokWeightPassed / tok.rawWeight) : 0;
+                        const endRatio = tok.rawWeight > 0 ? ((currentTokWeightPassed + cWeight) / tok.rawWeight) : 1;
+                        currentTokWeightPassed += cWeight;
+
+                        chars.push({
+                            el: document.getElementById(`char-${idx}-${wIdx}-${cIdx}`),
+                            startRatio, endRatio,
+                            lastState: null // 'none' | 'active' | 'passed' - für Change-Detection
+                        });
+                    }
+                }
+                return { tok, el: wordSpan, chars, lastState: null };
+            });
+
+            lineAnimCache = { idx, words };
+        }
+
         function syncLyricsUI(forceScroll = false, forceRefresh = false) {
             if (parsedLyrics.length === 0 || (!mainMusicCard || (!mainMusicCard.classList.contains('lyrics-open') && !forceRefresh))) return;
 
@@ -7174,82 +7676,72 @@
             if (document.body.classList.contains('low-end')) return;
             if (currentLyricIndex === -1 || !parsedLyrics[currentLyricIndex]) return;
 
-            // NEW: Ab hier läuft die feingranulare, laufende Pro-Frame-Animation nur noch
-            // für die AKTUELLE Zeile - das ist unabhängig von der Songlänge immer ein
-            // kleiner, konstanter Aufwand statt mit der Zeit immer größer zu werden.
+            // PERF-FIX v24.6 (radikal): idx wird weiterhin jeden (gedrosselten) Tick geprüft,
+            // aber alle DOM-Referenzen/Gewichte kommen jetzt aus lineAnimCache statt aus
+            // erneuten getElementById+Regex-Aufrufen. Der Cache wird nur neu gebaut, wenn sich
+            // die Zeile tatsächlich geändert hat (idx-Vergleich) - unabhängig von der Songlänge
+            // immer ein kleiner, konstanter Aufwand.
             const idx = currentLyricIndex;
-            const line = parsedLyrics[idx];
-            line.tokens.forEach((tok, wIdx) => {
-                const wordSpan = document.getElementById(`word-${idx}-${wIdx}`);
-                if (!wordSpan) return;
+            if (!lineAnimCache || lineAnimCache.idx !== idx) {
+                buildLineAnimCache(idx);
+            }
+            if (!lineAnimCache) return;
 
-                // NEW: Bugfix - --word-hold-scale wurde in der CSS des "Apple Music Pro"-
-                // Stils bereits referenziert, aber nirgends tatsächlich berechnet/gesetzt,
-                // wodurch immer nur der statische Standardwert griff und nie ein echter,
-                // dynamischer Zoom-Effekt stattfand. Jetzt: je länger ein Wort/eine Silbe
-                // laut den echten Timing-Daten gehalten wird, desto stärker der Zoom - kurze,
-                // schnell durchlaufende Silben bekommen nur einen dezenten Zoom, lang
-                // gehaltene Wörter (z.B. am Ende einer Phrase, wo mehr Zeit da ist) werden
-                // spürbar größer und strahlender herausgehoben, genau wie im echten Apple
-                // Music. sqrt-Kurve statt linear, damit der Unterschied zwischen kurz und
-                // mittellang deutlicher wirkt als zwischen mittellang und sehr lang.
-                const minHoldMs = 140, maxHoldMs = 950;
-                const holdRatio = Math.max(0, Math.min(1, (tok.duration - minHoldMs) / (maxHoldMs - minHoldMs)));
-                // NEW: Zoom-Bereich deutlich zurückhaltender gemacht (1.05-1.43 -> 1.02-1.16)
-                // - der vorherige Wert wirkte auf einzelne Buchstaben zu extrem/verzerrt statt
-                // wie eine dezente, elegante Betonung.
-                const holdScale = (1.02 + Math.sqrt(holdRatio) * 0.14).toFixed(3);
-                wordSpan.style.setProperty('--word-hold-scale', holdScale);
+            lineAnimCache.words.forEach(w => {
+                if (!w.el) return;
+                const tok = w.tok;
 
                 let tokProgress = 0;
                 if (syncMs >= tok.timeMs + tok.duration) {
-                    tokProgress = 1; 
+                    tokProgress = 1;
                 } else if (syncMs > tok.timeMs) {
-                    tokProgress = (syncMs - tok.timeMs) / tok.duration; 
-                }
-                
-                if (tokProgress > 0 && tokProgress < 1) {
-                    wordSpan.classList.add('word-active');
-                    wordSpan.classList.remove('word-passed');
-                } else if (tokProgress >= 1) {
-                    wordSpan.classList.remove('word-active');
-                    wordSpan.classList.add('word-passed');
-                } else {
-                    wordSpan.classList.remove('word-active', 'word-passed');
+                    tokProgress = (syncMs - tok.timeMs) / tok.duration;
                 }
 
-                let tokLen = tok.cleanText.length;
-                let currentTokWeightPassed = 0;
-                
-                for(let cIdx=0; cIdx<tokLen; cIdx++) {
-                    let cChar = tok.cleanText[cIdx];
-                    let cWeight = 0;
-                    if (!/[.,!?]/.test(cChar)) {
-                        cWeight = getCharWeight(cChar, tok.isPhraseEnd, /[aeiouy]/.test(cChar.toLowerCase()));
+                // PERF-FIX: classList wird nur noch bei TATSÄCHLICHER Zustandsänderung
+                // angefasst (lastState-Vergleich), statt bei jedem Tick unbedingt
+                // add/remove aufzurufen, auch wenn sich am Zustand gar nichts geändert hat.
+                const newWordState = tokProgress <= 0 ? 'none' : (tokProgress >= 1 ? 'passed' : 'active');
+                if (newWordState !== w.lastState) {
+                    w.lastState = newWordState;
+                    if (newWordState === 'active') {
+                        w.el.classList.add('word-active');
+                        w.el.classList.remove('word-passed');
+                    } else if (newWordState === 'passed') {
+                        w.el.classList.remove('word-active');
+                        w.el.classList.add('word-passed');
+                    } else {
+                        w.el.classList.remove('word-active', 'word-passed');
                     }
-                    if (cWeight === 0 && tok.rawWeight > 0) cWeight = tok.rawWeight * 0.05; 
-                    
-                    let charStartRatio = tok.rawWeight > 0 ? (currentTokWeightPassed / tok.rawWeight) : 0;
-                    let charEndRatio = tok.rawWeight > 0 ? ((currentTokWeightPassed + cWeight) / tok.rawWeight) : 1;
-                    
-                    const charSpan = document.getElementById(`char-${idx}-${wIdx}-${cIdx}`);
-                    if(charSpan) {
-                        if (tokProgress === 0) {
-                            charSpan.classList.remove('char-passed', 'char-active');
-                        } else if (tokProgress >= charEndRatio) {
-                            charSpan.classList.add('char-passed');
-                            charSpan.classList.remove('char-active');
-                        } else if (tokProgress >= charStartRatio && tokProgress < charEndRatio) {
-                            charSpan.classList.add('char-active');
-                            charSpan.classList.remove('char-passed');
+                }
+
+                w.chars.forEach(c => {
+                    if (!c.el) return;
+                    let newCharState;
+                    if (tokProgress === 0) {
+                        newCharState = 'none';
+                    } else if (tokProgress >= c.endRatio) {
+                        newCharState = 'passed';
+                    } else if (tokProgress >= c.startRatio && tokProgress < c.endRatio) {
+                        newCharState = 'active';
+                    } else {
+                        newCharState = 'none';
+                    }
+                    if (newCharState !== c.lastState) {
+                        c.lastState = newCharState;
+                        if (newCharState === 'passed') {
+                            c.el.classList.add('char-passed');
+                            c.el.classList.remove('char-active');
+                        } else if (newCharState === 'active') {
+                            c.el.classList.add('char-active');
+                            c.el.classList.remove('char-passed');
                         } else {
-                            charSpan.classList.remove('char-passed', 'char-active');
+                            c.el.classList.remove('char-passed', 'char-active');
                         }
                     }
-                    currentTokWeightPassed += cWeight;
-                }
-                
-                wordSpan.style.setProperty('--fill-percent', `${tokProgress * 100}%`);
+                });
+
+                w.el.style.setProperty('--fill-percent', `${tokProgress * 100}%`);
             });
         }
 
@@ -7283,7 +7775,10 @@
                 }
 
                 if (mainMusicCard && mainMusicCard.classList.contains('lyrics-open')) {
-                    syncLyricsUI();
+                    if (now - lastLyricsSyncUpdate >= LYRICS_SYNC_THROTTLE_MS) {
+                        lastLyricsSyncUpdate = now;
+                        syncLyricsUI();
+                    }
                 }
                 lyricAnimFrame = requestAnimationFrame(animateLoop);
             } else {
