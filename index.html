@@ -11,6 +11,133 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FIX] Release v24.25: Zwei Nutzer-gemeldete Bugs behoben
+      - Release-Notes waren unvollständig: v24.22-v24.24 wurden zwar gebaut, aber nie in
+        PUBLIC_CHANGELOG eingetragen (eigenes Versehen beim vorherigen Release). Ergänzt,
+        Liste ist jetzt wieder auf dem aktuellen Stand.
+      - Vorlesen-Button blieb nach Klick permanent im "Lädt..."-Zustand hängen, auch bei
+        wiederholtem Klick keine Reaktion. Ursache: keine der drei Netzwerk-Phasen
+        (Bibliothek laden, Stimme herunterladen, Sprache erzeugen) hatte eine Zeitgrenze -
+        blieb eine davon aus irgendeinem Grund (z.B. CDN-Problem) für immer hängen, ohne
+        weder Erfolg noch Fehler zu melden, war auch der Button für immer disabled und ein
+        erneuter Klick wirkungslos. Neue withTimeout()-Hilfsfunktion umschließt jetzt jede
+        Phase mit einer harten Zeitgrenze (20s Bibliothek, 60s Stimmen-Download, 30s
+        Sprachsynthese) - danach wird IMMER ein Fehler angezeigt und der Button wieder
+        freigegeben. Zusätzlich ?bundle an die esm.sh-URL ergänzt, da Pakete mit WASM-
+        Abhängigkeiten dort ohne diesen Parameter manchmal nicht zuverlässig gebündelt
+        werden - mögliche zusätzliche Ursache für das ursprüngliche Hängenbleiben.
+
+    [FIX] Release v24.24: Vorlesen-Button überlappte mit dem Schließen-Button (X)
+      - Nutzer meldete: Der Vorlesen-Button in Karten/Release-Notes saß in derselben oberen
+        rechten Ecke wie der X-Schließen-Button des Modals (der ist per position:absolute
+        fest dort verankert) - dadurch kaum sichtbar/anklickbar.
+      - Fix: Vorlesen-Button aus der Ecke raus, jetzt auf eigener Zeile direkt unter der
+        Überschrift platziert (in beiden Modal-Typen: Karten und Release-Notes). Zusätzlich
+        rechtes Padding auf das kleine Label oben ergänzt, damit auch das nicht mehr unter
+        den X-Button rutscht.
+
+    [FEATURE] Release v24.23: Vorlesefunktion erweitert auf alle interaktiven Karten +
+    Release-Notes reichen weiter in die Vergangenheit
+      - Alle 8 interaktiven Karten (Status, Hintergrund, Kontakt, Freizeit, Labor, Menschen,
+        Setup, Techstack) sind jetzt vorlesbar - neue generische speakModalGeneric()-
+        Funktion, da alle Karten dasselbe openModal()-Template nutzen. Liest direkt aus dem
+        gerade gerenderten Modal-Inhalt (Titel + Text per ID), keine doppelte
+        Datenbeschaffung nötig.
+      - Release-Notes um 5 weitere, weiter zurückreichende Einträge ergänzt (bis Juni 2026:
+        StandBy-Lockscreen-Einführung, Share-Card-Generator, Zeitsynchronisations-Fixes,
+        erstes Musik-Dashboard, Mehrsprachigkeit).
+
+    [FEATURE] Release v24.22: Sprachausgabe (TTS) + verbesserte Release-Notes
+      - WICHTIGER HINWEIS: Dieses Feature konnte in dieser Umgebung NICHT live in einem
+        echten Browser getestet werden (kein Zugriff auf echte Audio-Wiedergabe). Sauber
+        nach offizieller Bibliotheks-Dokumentation umgesetzt, aber unbedingt als Erstes
+        selbst gegentesten, bevor es als zuverlässig funktionierend gilt.
+      - Nutzerwunsch (Tester-Feedback): eigene heruntergeladene Stimmen statt der oft
+        schlechten/inkonsistenten Browser-eigenen Web-Speech-API-Stimmen, damit auch Geräte
+        ohne installierte System-Stimmen eine gute Sprachausgabe bekommen.
+      - Technische Basis: Piper TTS (offenes neuronales TTS-Modell, läuft komplett im
+        Browser via WebAssembly/ONNX Runtime, Bibliothek @mintplex-labs/piper-tts-web via
+        esm.sh CDN eingebunden). Bewusst zu 100% LAZY geladen (dynamisches import() erst
+        beim ersten Klick auf "Vorlesen") - kostet Besuchern, die es nie nutzen, exakt
+        keine zusätzliche Ladezeit oder Bandbreite.
+      - 6 kuratierte deutsche Stimmen zur Auswahl (3 männlich bis "High"-Qualität, 3
+        weiblich). WICHTIGE EHRLICHKEIT: im offenen Piper-Stimmenkatalog gibt es aktuell
+        für Deutsch keine weiblichen Stimmen in "Medium"/"High"-Qualität, nur "Low"/"X-Low"
+        - das ist eine echte Lücke im öffentlichen Trainingsdaten-Katalog, keine
+        Design-Entscheidung. Qualitätsstufe wird deshalb transparent direkt im
+        Auswahl-Dropdown angezeigt, damit niemand überrascht wird.
+      - Vorlesen-Buttons an drei Stellen: Bio-Text (Header), Songtext (Lyrics-
+        Einstellungsmenü), Release-Notes-Modal. Erneuter Klick während der Wiedergabe
+        stoppt statt neu zu starten. Modell-Download-Fortschritt wird direkt im Button-Text
+        angezeigt (z.B. "Stimme lädt... 42%").
+      - Release-Notes (v24.20) verbessert: jeder Eintrag hat jetzt eine farbige Kategorie
+        (Neu/Performance/Fehlerbehebung) statt nur einer flachen Liste, plus eigener
+        Vorlesen-Button direkt im Modal.
+
+    [FEATURE/FIX] Release v24.21: Scrollender Titel/Künstler im StandBy-Lockscreen +
+    Pixel-Shift-Intervall verschärft
+      - Anti-Burn-in-Intervall: Nutzer-Sorge bestätigt - 3 Minuten zwischen Pixel-Shifts war
+        länger als der Branchenstandard (Apple StandBy, die meisten Always-On-Displays nutzen
+        eher 1 Minute). AOD_SHIFT_INTERVAL_MS von 3min auf 1min verschärft.
+      - Neuer Scroll-Effekt ("Marquee") für Titel/Künstlername im StandBy-Lockscreen: läuft
+        NUR bei Texten, die tatsächlich zu breit für den verfügbaren Platz sind (per
+        requestAnimationFrame-Messung von scrollWidth vs. clientWidth), kurze Titel werden
+        weiterhin normal mit "..." abgeschnitten. Ping-Pong-Bewegung (hin, Pause, zurück,
+        Pause) statt Dauerschleife, konstante Scroll-Geschwindigkeit unabhängig von der
+        Textlänge. Aktivierung/Deaktivierung bewusst an toggleStandBy() gekoppelt (nicht
+        permanent im CSS), da #standby-overlay nur über visibility:hidden versteckt wird -
+        eine dauerhaft aktive CSS-Animation hätte sonst auch bei geschlossenem StandBy im
+        Hintergrund weitergelaufen.
+      - Eigener Bug im selben Zug gefunden und behoben: Die neue verschachtelte <span>-Struktur
+        für den Marquee-Effekt hätte durch die BEIDEN bestehenden .textContent-Zuweisungen auf
+        die äußeren <p>-Elemente (in syncStandByTrackInfo() und im Sprachwechsel-Handler) bei
+        jedem Songwechsel automatisch wieder zerstört und den Scroll-Effekt kaputt gemacht -
+        beide Stellen zielen jetzt korrekt auf die inneren Marquee-Spans.
+      - Geprüft: Die bestehende Tag-Ungleichheit bei <span> (1 mehr geöffnet als geschlossen)
+        bestand bereits vor dieser Session unverändert seit v24.19 - kein neu eingeführter
+        Fehler, bewusst nicht angefasst, um nicht unnötig in unrelated altem Code zu wühlen.
+        <p>-Tags sind exakt balanciert (51/51).
+
+    [FEATURE] Release v24.20: Vier neue Features - Zuletzt gehört, Schnellexport, erweiterte
+    Command Palette, öffentliches Changelog
+      - "Zuletzt gehört"-Verlauf: Rein clientseitiges (localStorage) Protokoll der letzten 10
+        Songwechsel, ausklappbar unter dem Titel/Künstler-Bereich der Haupt-Karte. Neue
+        Funktionen addToRecentlyPlayed()/renderRecentlyPlayed()/toggleRecentlyPlayed().
+        Wird bei jedem echten Songwechsel (isNewTrack) automatisch aktualisiert, Dedupe gegen
+        direkt aufeinanderfolgende identische Einträge. Panel bewusst ohne Blur/Animation
+        außer einer einfachen max-height-Transition gebaut (sparend).
+      - Schnellexport: Neuer Button lädt direkt das "Classic"-Share-Card-Design herunter, ohne
+        das Auswahlmenü zu öffnen - nutzt die bereits bewährte Bild-Lade-/Zeichenlogik von
+        generateShareCard()/downloadSharecardDesign() wieder, kein neuer Code-Pfad.
+      - Command Palette erweitert: 6 neue Einträge für bisher nicht erreichbare Funktionen
+        (Schnellexport, Zuletzt gehört, Cover-Farbrahmen, Canvas-Video, Cover-Glow).
+      - Öffentliches Changelog: Neuer "Was ist neu?"-Link im Footer öffnet ein kuratiertes,
+        allgemein verständliches Release-Notes-Modal (PUBLIC_CHANGELOG-Array) - bewusst
+        getrennt vom internen technischen DEV-CHANGELOG hier oben in der Datei, das für
+        Entwickler gedacht und für normale Besucher zu detailliert/technisch ist. Nutzt die
+        bereits vorhandene Modal-Infrastruktur wieder statt ein neues Overlay-System zu bauen.
+      - Kart-Dashboard-JS geprüft (Nutzerfrage): kein Timer/Intervall läuft automatisch für
+        das jetzt ausgeblendete Feature, die gesamte Logik (toggleKartDashboard etc.) wird
+        nur bei Klick auf den - jetzt unerreichbaren - Öffnen-Button ausgeführt. Kein
+        zusätzlicher Performance-Fix nötig, Code liegt bereits vollständig inaktiv.
+
+    [FEATURE/PERFORMANCE] Release v24.19: Kart-Dashboard ausgeblendet, letzte will-change-Reste
+    auf der Haupt-Karte behoben
+      - Kart-Dashboard-Sektion für die normale Version per display:none ausgeblendet - Code
+        komplett erhalten, jederzeit reaktivierbar sobald die Raspberry-Pi-Anbindung steht.
+      - Weiterer "will-change auf alles"-Fund (gleiche Fehlerklasse wie v24.12/v24.18): Die
+        Haupt-Karte selbst (#main-music-card, das einzige Element das auf JEDER
+        Seitenansicht permanent sichtbar ist) hatte will-change fest gesetzt, kombiniert mit
+        25px Blur - hielt dadurch unabhängig von Dashboard/Lyrics-Zustand dauerhaft eine
+        eigene GPU-Ebene offen. Zusätzlich #ambilight-glow und #ambient-bg (beide Kind-
+        Elemente der Karte, permanent im DOM auch wenn unsichtbar) hatten dasselbe Problem.
+      - Fix: will-change bei allen drei entfernt bzw. auf den tatsächlich aktiven Zustand
+        (.playing) gescoped. Keine optische Änderung, nur weniger dauerhaft offene Ebenen.
+      - Android-App: Predictive Back Gesture systemweit aktiviert
+        (android:enableOnBackInvokedCallback="true" im AndroidManifest.xml) - die TWA nutzt
+        Standard-Zurück-Navigation über die Web-Historie, laut offizieller Android-Doku ist
+        dieser eine Manifest-Eintrag dafür ausreichend, kein zusätzlicher Code nötig.
+
     [PERFORMANCE] Release v24.18 (radikal): "will-change auf alles" - diesmal auf Ebenen, die
     IMMER im DOM liegen, unabhängig von Dashboard/Lyrics
       - Symptom: Nutzer meldete, dass sein Pixel-Handy schon heiß wird, sobald die Seite
@@ -1472,22 +1599,64 @@
             .dark .glass-card { background: rgba(15, 23, 42, 0.65); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
         }
         
+        /* ========================================================= */
+        /* --- NEU v24.20: "Zuletzt gehört"-Verlauf ------------------ */
+        /* Bewusst sparend gebaut: nur eine max-height-Transition beim Auf-/Zuklappen,        */
+        /* keine Blur-Effekte, keine Dauer-Animation, keine eigene GPU-Ebene.                 */
+        /* ========================================================= */
+        #recently-played-panel {
+            max-height: 0;
+            transition: max-height 0.35s var(--apple-ease, ease);
+        }
+        #recently-played-panel.rp-open {
+            max-height: 400px;
+        }
+        .recently-played-item {
+            display: flex; align-items: center; gap: 8px;
+            padding: 5px 6px; border-radius: 10px;
+            background: rgba(255,255,255,0.06);
+        }
+        .recently-played-item img {
+            width: 28px; height: 28px; border-radius: 6px; object-fit: cover; flex-shrink: 0;
+            background: rgba(255,255,255,0.1);
+        }
+        .recently-played-info { display: flex; flex-direction: column; min-width: 0; }
+        .recently-played-title {
+            font-size: 10px; font-weight: 700; color: #fff;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .recently-played-artist {
+            font-size: 9px; color: rgba(255,255,255,0.55);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+
+        /* PERF-FIX v24.19: Gleicher Fehler wie bei .mesh-gradient (v24.18), diesmal auf der
+           Haupt-Karte selbst - dem einzigen Element, das auf JEDER Seitenansicht permanent
+           sichtbar ist (das "Now Playing"-Widget), zusätzlich noch mit 25px Blur kombiniert.
+           will-change stand hier fest, obwohl sich max-width/min-height/transform nur beim
+           seltenen Öffnen/Schließen der Lyrics-Ansicht überhaupt ändern - den Rest der Zeit
+           hielt der Browser trotzdem dauerhaft eine eigene, geblurrte GPU-Ebene offen, ganz
+           unabhängig davon ob Dashboard oder Lyrics überhaupt genutzt wurden. Entfernt - die
+           Übergänge selbst bleiben genauso weich (CSS-Transition unverändert), nur ohne die
+           permanente Ebenen-Reservierung dazwischen. */
         #main-music-card {
             background: rgba(15, 23, 42, 0.4) !important; border-color: rgba(255, 255, 255, 0.15) !important;
             -webkit-backdrop-filter: blur(25px) saturate(1.5); backdrop-filter: blur(25px) saturate(1.5);
             /* FIX: Butterweiche Animationen für Dimensionen hinzufügen! */
             transition: max-width 0.8s var(--apple-spring), min-height 0.8s var(--apple-spring), box-shadow 0.4s ease, border-radius 0.6s var(--apple-spring), transform 0.6s var(--apple-spring) !important;
-            will-change: max-width, min-height, transform;
         }
         #main-music-card.lyrics-open { max-width: 800px !important; min-height: 80vh !important; }
         #main-music-card #track-title { color: #ffffff !important; }
         #main-music-card #track-artist { color: rgba(255, 255, 255, 0.7) !important; }
 
         /* --- AMBILIGHT GLOW EFFEKT --- */
+        /* PERF-FIX v24.19: will-change von der Basis-Regel entfernt (galt bisher permanent,
+           auch bei opacity:0/unsichtbar) - jetzt nur noch aktiv, während der Effekt beim
+           Songstart tatsächlich einmalig einschwingt (siehe .playing-Regel unten). */
         #ambilight-glow {
             position: absolute; inset: -30px; z-index: -1; background-size: cover; background-position: center;
             filter: blur(45px) saturate(2.6) brightness(1.35); opacity: 0; transition: opacity 1.5s ease, transform 1s ease;
-            pointer-events: none; will-change: transform, opacity; border-radius: inherit; transform: translate3d(0,0,0);
+            pointer-events: none; border-radius: inherit; transform: translate3d(0,0,0);
         }
         /* NEW: Nutzer bestätigte per Screenshot, dass der Effekt zwar technisch lief, aber
            viel zu subtil war, um überhaupt als "Glow" wahrgenommen zu werden. Deutlich
@@ -1519,7 +1688,10 @@
         .p5 { left: 90%; animation-duration: 4.5s; animation-delay: 1.5s; } .p6 { left: 20%; animation-duration: 5.5s; animation-delay: 3s; }
         .p7 { left: 80%; animation-duration: 4s; animation-delay: 2.5s; width: 5px; height: 5px; } .p8 { left: 40%; animation-duration: 6.5s; animation-delay: 0.8s; }
 
-        #ambient-bg { position: absolute; inset: -50px; z-index: 0; background-size: cover; background-position: center; filter: blur(22px) brightness(0.75) saturate(1.8); opacity: 0; transition: opacity 1s ease; transform: scale(1.1) translate3d(0,0,0); pointer-events: none; will-change: transform, opacity; }
+        /* PERF-FIX v24.19: will-change von der Basis-Regel entfernt, gleicher Grund wie bei
+           #ambilight-glow oben. */
+        #ambient-bg { position: absolute; inset: -50px; z-index: 0; background-size: cover; background-position: center; filter: blur(22px) brightness(0.75) saturate(1.8); opacity: 0; transition: opacity 1s ease; transform: scale(1.1) translate3d(0,0,0); pointer-events: none; }
+        .playing #ambient-bg { will-change: transform, opacity; }
 
         /* Apple Music-Feeling: unscharfer, treibender Album-Cover-Hintergrund hinter den Lyrics */
         #lyrics-ambient-bg {
@@ -2285,8 +2457,26 @@
         #standby-eq span:nth-child(1) { animation-delay: -0.6s; } #standby-eq span:nth-child(2) { animation-delay: -0.3s; } #standby-eq span:nth-child(3) { animation-delay: -0.9s; }
         body.low-end #standby-eq { display: none; }
         #standby-track-text { min-width: 0; flex: 1; }
-        #standby-track-title { color: #fff; font-size: clamp(19px, 5.6vw, 28px); font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; letter-spacing: -0.3px; }
-        #standby-track-artist { color: rgba(255,255,255,0.65); font-size: clamp(14px, 4vw, 18px); font-weight: 600; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        #standby-track-title { color: #fff; font-size: clamp(19px, 5.6vw, 28px); font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; letter-spacing: -0.3px; position: relative; }
+        #standby-track-artist { color: rgba(255,255,255,0.65); font-size: clamp(14px, 4vw, 18px); font-weight: 600; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; position: relative; }
+        /* NEU v24.21: Scrollender Titel/Künstler-Name im StandBy-Lockscreen für Texte, die
+           nicht in die verfügbare Breite passen. Läuft NUR, wenn die JS-Messung tatsächlich
+           einen Überlauf feststellt (Klasse .standby-marquee-active wird gezielt gesetzt) -
+           kurze Titel bekommen weiterhin ganz normal "..." abgeschnitten, kein unnötiger
+           Scroll-Effekt bei Texten, die eh schon passen. Ping-Pong-Bewegung (hin und zurück
+           mit Pausen an den Enden) statt Dauerschleife - wirkt auf einem Lockscreen ruhiger. */
+        #standby-track-title-inner, #standby-track-artist-inner { display: inline-block; }
+        .standby-marquee-active #standby-track-title-inner {
+            animation: standby-marquee var(--marquee-duration-title, 6s) ease-in-out infinite;
+        }
+        .standby-marquee-active-artist #standby-track-artist-inner {
+            animation: standby-marquee var(--marquee-duration-artist, 6s) ease-in-out infinite;
+        }
+        @keyframes standby-marquee {
+            0%, 15% { transform: translateX(0); }
+            45%, 60% { transform: translateX(var(--marquee-distance, 0px)); }
+            90%, 100% { transform: translateX(0); }
+        }
         #standby-progress-wrap { margin-top: 24px; }
         #standby-progress-track { width: 100%; height: 6px; background: rgba(255,255,255,0.15); border-radius: 999px; overflow: hidden; }
         #standby-progress-bar { height: 100%; width: 100%; transform: scaleX(0); transform-origin: left; background: #fff; border-radius: 999px; transition: transform 0.3s linear; }
@@ -2479,7 +2669,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.18 · 2026-08-09';
+        const SITE_VERSION = 'v24.25 · 2026-08-10';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -2549,8 +2739,8 @@
                         <div id="standby-eq"><span></span><span></span><span></span></div>
                     </div>
                     <div id="standby-track-text">
-                        <p id="standby-track-title">Aktuell ist es ruhig...</p>
-                        <p id="standby-track-artist">Genieße die Stille</p>
+                        <p id="standby-track-title"><span id="standby-track-title-inner">Aktuell ist es ruhig...</span></p>
+                        <p id="standby-track-artist"><span id="standby-track-artist-inner">Genieße die Stille</span></p>
                     </div>
                 </div>
                 <div id="standby-progress-wrap">
@@ -2679,6 +2869,9 @@
             <p id="header-intro-p2" class="mt-3 xxs:mt-4 sm:mt-6 text-xs xxs:text-sm xs:text-base sm:text-lg text-slate-600 dark:text-slate-400 leading-relaxed drop-shadow-sm">
                 In meiner Freizeit beschäftige ich mich mit Gaming und Streaming. Ich bin zwar etwas schüchtern, jedoch an sich ein sehr freundlicher und gelassener Mensch. Ich repariere auch gerne IT Geräte (Laptops, Tablets, PCs, Smartphones usw.).
             </p>
+            <!-- NEU v24.22: Sprachausgabe - lädt die TTS-Bibliothek erst bei Klick, kostet
+                 vorher niemandem irgendwelche Leistung. -->
+            <button onclick="speakBio(this)" class="mt-3 xxs:mt-4 sm:mt-6 inline-flex items-center gap-1.5 text-xs xxs:text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline">🔊 Vorlesen</button>
         </header>
 
         <!-- AUSBILDUNG & ALLTAG: Gequetschtes Grid, 2 Spalten -->
@@ -2881,6 +3074,10 @@
                                         <button onclick="toggleCoverGlow()" id="btn-toggle-cover-glow" class="text-left text-[10px] xxs:text-xs sm:text-sm text-yellow-400 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">Cover-Glow: AN</button>
                                         <button onclick="toggleTilt()" id="btn-toggle-tilt" class="text-left text-[10px] xxs:text-xs sm:text-sm text-purple-400 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">Spatial Tilt: AN</button>
                                         <button onclick="generateShareCard()" id="btn-share-card" class="text-left text-[10px] xxs:text-xs sm:text-sm text-pink-400 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">🎴 Share Card erstellen</button>
+                                        <button onclick="quickExportSongCard()" id="btn-quick-export" class="text-left text-[10px] xxs:text-xs sm:text-sm text-pink-300 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">📸 Schnellexport (Classic)</button>
+                                        <!-- NEU v24.22: Songtext vorlesen + Stimmauswahl -->
+                                        <button onclick="speakLyrics(this)" id="btn-speak-lyrics" class="text-left text-[10px] xxs:text-xs sm:text-sm text-cyan-300 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">🔊 Songtext vorlesen</button>
+                                        <select id="tts-voice-select" onchange="setTtsVoiceId(this.value)" class="w-full bg-slate-800 text-white text-[10px] xxs:text-xs sm:text-sm px-2 py-1.5 rounded border border-slate-600 mb-1.5"></select>
                                         <!-- NEW: StandBy-Transparenz-Regler - steuert, wie blickdicht der schwarze
                                              Hintergrund im StandBy-/Lockscreen-Modus ist. -->
                                         <div class="px-2 py-1.5">
@@ -2948,6 +3145,15 @@
                             <p id="track-artist" class="text-white/70 text-xs xxs:text-sm sm:text-lg font-medium">Genieße die Stille</p>
                         </div>
 
+                        <!-- NEU v24.20: "Zuletzt gehört"-Verlauf - rein clientseitig, ausklappbar -->
+                        <button onclick="toggleRecentlyPlayed()" id="btn-recently-played" class="relative z-10 flex items-center gap-1 text-[9px] xxs:text-[10px] sm:text-xs text-white/50 hover:text-white/80 transition-colors mb-2 xxs:mb-3 px-1 sm:px-2 shrink-0" aria-expanded="false" aria-controls="recently-played-panel">
+                            <span>🕓</span><span id="recently-played-toggle-label">Zuletzt gehört</span>
+                        </button>
+                        <div id="recently-played-panel" class="relative z-10 w-full px-1 sm:px-2 mb-2 xxs:mb-3 shrink-0 overflow-hidden">
+                            <div id="recently-played-list" class="flex flex-col gap-1.5"></div>
+                            <p id="recently-played-empty" class="text-[9px] xxs:text-[10px] text-white/40 italic hidden">Noch keine Songs erfasst.</p>
+                        </div>
+
                         <div id="progress-container" class="relative z-10 w-full px-1 sm:px-2 mb-2 xxs:mb-4 sm:mb-6 shrink-0 transition-all">
                             <div class="flex justify-between text-[7px] xxs:text-[9px] xs:text-[11px] font-mono text-white/60 mb-0.5 xxs:mb-1 sm:mb-2">
                                 <span id="time-current">0:00</span>
@@ -2979,7 +3185,10 @@
         <!-- NEW: KART DASHBOARD - vorbereitet für die zukünftige Live-Anbindung an den
              eigenen Raspberry-Pi-API-Server. Bis dahin zeigt es einen klaren "in Arbeit"-
              Zustand statt Platzhalter-/Fantasiewerte vorzugaukeln. -->
-        <section id="kart-section" class="mb-12 xxs:mb-16 xs:mb-20 sm:mb-24 reveal relative rounded-3xl">
+        <!-- v24.19: Auf Wunsch für die normale Version ausgeblendet (nur display:none, kein
+             Code entfernt) - kann jederzeit durch Entfernen von style="display:none;"
+             wieder aktiviert werden, sobald die Raspberry-Pi-Anbindung steht. -->
+        <section id="kart-section" style="display:none;" class="mb-12 xxs:mb-16 xs:mb-20 sm:mb-24 reveal relative rounded-3xl">
             <h2 id="kart-section-title" class="text-lg xxs:text-xl xs:text-2xl sm:text-3xl font-bold mb-1.5 xxs:mb-2 text-red-600 dark:text-red-500 border-b-2 sm:border-b-4 border-red-600 dark:border-red-500 pb-1.5 xxs:pb-2 sm:pb-3 inline-block break-words">
                 Kart-Dashboard
             </h2>
@@ -3156,7 +3365,8 @@
                 <p id="footer-created-by" class="font-bold text-[10px] xxs:text-xs sm:text-sm text-slate-800 dark:text-white">Erstellt von Gamingpig</p>
                 <div class="hidden sm:block h-4 w-px bg-slate-300 dark:bg-slate-700"></div>
                 <!-- NEW: Versionsnummer im Footer, immer sichtbar ohne Menüs öffnen zu müssen -->
-                <p id="footer-version-label" class="text-[8px] xxs:text-[10px] font-mono text-slate-500 dark:text-slate-500 select-all">v—</p>
+                <p id="footer-version-label" class="text-[8px] xxs:text-[10px] font-mono text-slate-500 dark:text-slate-500 select-all"></p>
+                <button onclick="openChangelogModal()" class="text-[8px] xxs:text-[10px] sm:text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 rounded">Was ist neu?</button>
                 <div class="hidden sm:block h-4 w-px bg-slate-300 dark:bg-slate-700"></div>
                 <a href="privacy.html" class="text-[8px] xxs:text-[10px] sm:text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 rounded">Datenschutz</a>
             </div>
@@ -3304,6 +3514,8 @@
                 cp_toggle_dark: 'Dark Mode umschalten', cp_toggle_glass: 'Liquid Glass Modus umschalten', cp_toggle_perf: 'Low-End / Performance Modus umschalten',
                 cp_standby: 'StandBy Modus starten', cp_ambient: 'Ambient Color umschalten', cp_tilt: 'Spatial Tilt umschalten',
                 cp_sharecard: 'Share Card erstellen & herunterladen', cp_tutorial: 'Tutorial starten', cp_tiktok: 'Mein TikTok öffnen',
+                cp_quick_export: 'Song-Schnellexport (Bild)', cp_recently_played: 'Zuletzt gehört anzeigen', cp_color_frame: 'Cover-Farbrahmen umschalten',
+                cp_canvas_video: 'Canvas-Video-Hintergrund umschalten', cp_cover_glow: 'Cover-Glow umschalten',
                 cp_island_back: 'Dynamic Island wieder einblenden', cp_copy_link: 'Link zur Seite kopieren', cp_reload: 'Seite neu laden',
                 cp_change_lang: '🌐 Sprache ändern / Change language',
                 settings_ambient: 'Ambient Color', settings_color_frame: 'Cover-Farbrahmen', settings_glow: 'Glow-Effekt', settings_cover_glow: 'Cover-Glow', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
@@ -4297,8 +4509,10 @@
             // Idle-Texte nur überschreiben, wenn gerade wirklich kein Track aktiv ist
             const npCard = document.getElementById('standby-nowplaying');
             if (npCard && npCard.classList.contains('standby-idle')) {
-                const stt = document.getElementById('standby-track-title');
-                const sta = document.getElementById('standby-track-artist');
+                // FIX v24.21: auf die inneren Marquee-Spans umgestellt, siehe Kommentar in
+                // syncStandByTrackInfo() für den Grund.
+                const stt = document.getElementById('standby-track-title-inner');
+                const sta = document.getElementById('standby-track-artist-inner');
                 if (stt) stt.textContent = t('standby_idle_title');
                 if (sta) sta.textContent = t('standby_idle_subtitle');
             }
@@ -4551,6 +4765,20 @@
                     `<option value="${id}">${label}</option>`).join('')}</optgroup>`
             ).join('');
             select.value = currentLyricsStyle;
+        }
+
+        // NEU v24.22: Befüllt das Stimm-Dropdown, gruppiert nach männlich/weiblich, mit
+        // ehrlich angegebener Qualitätsstufe direkt im sichtbaren Namen.
+        function populateTtsVoiceDropdown() {
+            const select = document.getElementById('tts-voice-select');
+            if (!select) return;
+            const male = TTS_VOICES.filter(v => v.gender === 'm');
+            const female = TTS_VOICES.filter(v => v.gender === 'f');
+            const renderGroup = (label, voices) =>
+                `<optgroup label="${label}">${voices.map(v =>
+                    `<option value="${v.id}">${escapeHTML(v.label)} - ${escapeHTML(v.quality)}</option>`).join('')}</optgroup>`;
+            select.innerHTML = renderGroup('Männlich', male) + renderGroup('Weiblich', female);
+            select.value = getTtsVoiceId();
         }
 
         let lyricsPreviewLoopInterval = null;
@@ -4846,6 +5074,229 @@
             applyCoverGlowMode(next);
         };
         applyCoverGlowMode(coverGlowEnabled);
+
+        // ========================================================= //
+        // --- NEU v24.20: "Zuletzt gehört"-Verlauf ------------------ //
+        // Rein clientseitig (localStorage), kein Server nötig. Speichert die letzten 10
+        // erkannten Songwechsel mit Titel/Künstler/Cover/Zeitstempel.
+        // ========================================================= //
+        const RECENTLY_PLAYED_KEY = 'recentlyPlayed';
+        const RECENTLY_PLAYED_MAX = 10;
+
+        function getRecentlyPlayed() {
+            try {
+                const raw = localStorage.getItem(RECENTLY_PLAYED_KEY);
+                return raw ? JSON.parse(raw) : [];
+            } catch (e) { return []; }
+        }
+
+        function addToRecentlyPlayed(title, artist, art) {
+            if (!title) return;
+            try {
+                let list = getRecentlyPlayed();
+                // Dedupe: falls der letzte Eintrag exakt derselbe Song ist, nicht doppelt speichern
+                if (list.length > 0 && list[0].title === title && list[0].artist === artist) return;
+                list.unshift({ title, artist: artist || '', art: art || '', ts: Date.now() });
+                if (list.length > RECENTLY_PLAYED_MAX) list = list.slice(0, RECENTLY_PLAYED_MAX);
+                localStorage.setItem(RECENTLY_PLAYED_KEY, JSON.stringify(list));
+                renderRecentlyPlayed();
+            } catch (e) { /* localStorage voll o.ä. - stillschweigend ignorieren */ }
+        }
+
+        function renderRecentlyPlayed() {
+            const listEl = document.getElementById('recently-played-list');
+            const emptyEl = document.getElementById('recently-played-empty');
+            if (!listEl) return;
+            const list = getRecentlyPlayed();
+            if (list.length === 0) {
+                listEl.innerHTML = '';
+                if (emptyEl) emptyEl.classList.remove('hidden');
+                return;
+            }
+            if (emptyEl) emptyEl.classList.add('hidden');
+            listEl.innerHTML = list.map(item => `
+                <div class="recently-played-item">
+                    <img src="${item.art ? escapeHTML(item.art) : ''}" alt="" onerror="this.style.visibility='hidden'" loading="lazy">
+                    <div class="recently-played-info">
+                        <span class="recently-played-title">${escapeHTML(item.title)}</span>
+                        <span class="recently-played-artist">${escapeHTML(item.artist)}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        window.toggleRecentlyPlayed = function() {
+            const panel = document.getElementById('recently-played-panel');
+            if (!panel) return;
+            const isOpening = !panel.classList.contains('rp-open');
+            if (isOpening) renderRecentlyPlayed();
+            panel.classList.toggle('rp-open');
+            haptic(10);
+        };
+
+        // ========================================================= //
+        // --- NEU v24.22: SPRACHAUSGABE (Text-to-Speech) ------------ //
+        // Nutzerwunsch (Tester-Feedback): eigene heruntergeladene Stimmen statt der oft
+        // schlechten/inkonsistenten Browser-eigenen TTS-Stimmen (Web Speech API), damit es
+        // auf Geräten ohne installierte System-Stimmen nicht einfach stumm bleibt.
+        //
+        // WICHTIG - technische Ehrlichkeit: Nutzt Piper TTS (offenes, neuronales
+        // Text-zu-Sprache-Modell, läuft komplett im Browser via WebAssembly/ONNX, siehe
+        // https://github.com/rhasspy/piper). Für Deutsch gibt es im offenen Stimmen-Katalog
+        // mehrere richtig gute MÄNNLICHE Stimmen (bis "High"-Qualität), aber aktuell NUR
+        // niedrigere Qualitätsstufe bei WEIBLICHEN Stimmen - das ist eine echte Lücke im
+        // offenen Trainingsdaten-Katalog, keine Entscheidung von uns. Qualitätsstufe wird
+        // deshalb transparent mit angezeigt.
+        //
+        // Bewusst zu 100% LAZY geladen: Die komplette TTS-Bibliothek (WASM+ONNX-Runtime)
+        // wird NUR heruntergeladen, wenn jemand tatsächlich auf "Vorlesen" klickt - kostet
+        // Besuchern, die es nie nutzen, exakt null zusätzliche Ladezeit oder Ressourcen.
+        // ========================================================= //
+        const TTS_VOICES = [
+            { id: 'de_DE-thorsten-high',           label: 'Thorsten (männlich)', quality: 'Beste Qualität', gender: 'm' },
+            { id: 'de_DE-thorsten-medium',         label: 'Thorsten (männlich, kompakt)', quality: 'Gute Qualität, kleinerer Download', gender: 'm' },
+            { id: 'de_DE-thorsten_emotional-medium', label: 'Thorsten Emotional (männlich)', quality: 'Gute Qualität, ausdrucksstark', gender: 'm' },
+            { id: 'de_DE-kerstin-low',              label: 'Kerstin (weiblich)', quality: 'Basis-Qualität', gender: 'f' },
+            { id: 'de_DE-ramona-low',               label: 'Ramona (weiblich)', quality: 'Basis-Qualität', gender: 'f' },
+            { id: 'de_DE-eva_k-x_low',              label: 'Eva (weiblich)', quality: 'Einfache Qualität, kleinster Download', gender: 'f' }
+        ];
+        // FIX v24.25: ?bundle ergänzt - esm.sh löst interne Importe bei Paketen mit
+        // WASM-Abhängigkeiten ohne diesen Parameter manchmal nicht zuverlässig auf.
+        const TTS_LIB_URL = 'https://esm.sh/@mintplex-labs/piper-tts-web?bundle';
+        let ttsModulePromise = null;
+        let ttsCurrentAudio = null;
+
+        function getTtsVoiceId() {
+            return localStorage.getItem('ttsVoiceId') || 'de_DE-thorsten-medium';
+        }
+        window.setTtsVoiceId = function(voiceId) {
+            localStorage.setItem('ttsVoiceId', voiceId);
+        };
+
+        // Lädt die TTS-Bibliothek nur beim allerersten Gebrauch (dynamisches import()),
+        // danach wird dieselbe geladene Instanz wiederverwendet.
+        function loadTtsModule() {
+            if (!ttsModulePromise) {
+                ttsModulePromise = import(TTS_LIB_URL).catch(err => {
+                    ttsModulePromise = null; // erneuten Versuch beim nächsten Klick erlauben
+                    throw err;
+                });
+            }
+            return ttsModulePromise;
+        }
+
+        function ttsSetButtonState(btnEl, state) {
+            if (!btnEl) return;
+            const original = btnEl.dataset.originalLabel || btnEl.textContent;
+            btnEl.dataset.originalLabel = original;
+            if (state === 'loading') { btnEl.textContent = '⏳ Stimme wird geladen...'; btnEl.disabled = true; }
+            else if (state === 'speaking') { btnEl.textContent = '⏹️ Stoppen'; btnEl.disabled = false; }
+            else { btnEl.textContent = original; btnEl.disabled = false; }
+        }
+
+        // Zentrale Vorlesefunktion - nimmt reinen Text, kümmert sich um Laden, Herunterladen
+        // der Stimme (falls noch nicht gecacht), Synthese und Wiedergabe.
+        // FIX v24.25: Ohne Zeitgrenze konnte der Button für immer im "Lädt..."-Zustand hängen
+        // bleiben (disabled=true), falls das Laden der Bibliothek/Stimme aus irgendeinem
+        // Grund nie fertig wird (weder Erfolg noch Fehler) - z.B. bei einem CDN-Problem, das
+        // weder sauber durchkommt noch sauber fehlschlägt. Jede der drei Netzwerk-Phasen
+        // (Bibliothek laden, Stimme herunterladen, Sprache erzeugen) bekommt jetzt eine harte
+        // Zeitgrenze, danach wird IMMER ein Fehler gezeigt und der Button wieder freigegeben,
+        // damit ein erneuter Klick tatsächlich etwas bewirkt statt ins Leere zu laufen.
+        function withTimeout(promise, ms, label) {
+            return Promise.race([
+                promise,
+                new Promise((_, reject) => setTimeout(() => reject(new Error(`Zeitüberschreitung bei: ${label}`)), ms))
+            ]);
+        }
+
+        async function ttsSpeak(text, btnEl) {
+            if (!text || !text.trim()) return;
+
+            // Erneuter Klick während der Wiedergabe = stoppen statt neu starten
+            if (ttsCurrentAudio && !ttsCurrentAudio.paused) {
+                ttsCurrentAudio.pause();
+                ttsCurrentAudio = null;
+                ttsSetButtonState(btnEl, 'idle');
+                return;
+            }
+
+            const voiceId = getTtsVoiceId();
+            try {
+                ttsSetButtonState(btnEl, 'loading');
+                if (typeof showToast === 'function') showToast('Stimme wird vorbereitet - beim ersten Mal kann das je nach Verbindung einen Moment dauern...');
+
+                const tts = await withTimeout(loadTtsModule(), 20000, 'Bibliothek laden');
+
+                // Nur herunterladen, wenn die Stimme noch nicht lokal gecacht ist
+                const stored = await withTimeout(tts.stored().catch(() => []), 5000, 'Gespeicherte Stimmen prüfen').catch(() => []);
+                if (!stored.includes(voiceId)) {
+                    await withTimeout(
+                        tts.download(voiceId, (progress) => {
+                            if (btnEl && progress && progress.total) {
+                                const pct = Math.round((progress.loaded * 100) / progress.total);
+                                btnEl.textContent = `⏳ Stimme lädt... ${pct}%`;
+                            }
+                        }),
+                        60000, // Stimmen sind 15-115MB groß, brauchen mehr Zeit als die Bibliothek selbst
+                        'Stimme herunterladen'
+                    );
+                }
+
+                const wav = await withTimeout(tts.predict({ text: text.trim(), voiceId }), 30000, 'Sprache erzeugen');
+                const audio = new Audio();
+                audio.src = URL.createObjectURL(wav);
+                ttsCurrentAudio = audio;
+                ttsSetButtonState(btnEl, 'speaking');
+                audio.onended = () => { ttsSetButtonState(btnEl, 'idle'); ttsCurrentAudio = null; };
+                audio.onerror = () => { ttsSetButtonState(btnEl, 'idle'); ttsCurrentAudio = null; };
+                await audio.play();
+            } catch (err) {
+                ttsSetButtonState(btnEl, 'idle');
+                if (typeof showToast === 'function') {
+                    showToast('Sprachausgabe gerade nicht verfügbar - bitte später erneut versuchen.');
+                }
+                console.error('TTS error:', err);
+            }
+        }
+
+        // Sammelt den reinen Bio-Text und liest ihn vor.
+        window.speakBio = function(btnEl) {
+            const p1 = document.getElementById('header-intro-p1');
+            const p2 = document.getElementById('header-intro-p2');
+            const text = [p1, p2].filter(Boolean).map(el => el.innerText).join('. ');
+            ttsSpeak(text, btnEl);
+        };
+
+        // Liest den aktuell sichtbaren Songtext vor (die bereits geparsten Zeilen).
+        window.speakLyrics = function(btnEl) {
+            if (!parsedLyrics || parsedLyrics.length === 0) {
+                if (typeof showToast === 'function') showToast('Kein Songtext zum Vorlesen vorhanden.');
+                return;
+            }
+            const text = parsedLyrics.map(line => line.tokens.map(t => t.cleanText).join(' ')).join('. ');
+            ttsSpeak(text, btnEl);
+        };
+
+        // Liest die Release-Notes vor.
+        window.speakChangelog = function() {
+            const btnEl = document.getElementById('btn-speak-changelog');
+            const text = PUBLIC_CHANGELOG.map(entry =>
+                `${entry.version}, ${entry.date}. ${entry.items.join('. ')}`
+            ).join('. ');
+            ttsSpeak(text, btnEl);
+        };
+
+        // NEU v24.23: Liest JEDE interaktive Karte vor (Status, Hintergrund, Kontakt usw.) -
+        // generisch, da alle Karten dasselbe openModal()-Template mit Titel+Text nutzen.
+        // Liest direkt aus dem gerade gerenderten Modal-Inhalt statt Daten erneut zu
+        // beschaffen, damit garantiert genau das vorgelesen wird, was auch sichtbar ist.
+        window.speakModalGeneric = function(btnEl) {
+            const titleEl = document.getElementById('modal-tts-title');
+            const contentEl = document.getElementById('modal-tts-content');
+            const text = [titleEl, contentEl].filter(Boolean).map(el => el.innerText).join('. ');
+            ttsSpeak(text, btnEl);
+        };
 
         function extractDominantColor(imgUrl) {
             if (!ambientColorEnabled || !imgUrl) return;
@@ -5257,6 +5708,33 @@
             if (typeof showToast === 'function') showToast(t('toast_sharecard_creating'));
 
             const proceed = (artImg) => openSharecardPicker(artImg, title, artist);
+
+            if (artSrc && !artSrc.startsWith('data:')) {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = () => proceed(img);
+                img.onerror = () => proceed(null);
+                img.src = artSrc;
+            } else {
+                proceed(null);
+            }
+        };
+
+        // NEW v24.20: Schnellexport - lädt direkt das Classic-Design herunter, ohne das
+        // Auswahlmenü zu öffnen. Nutzt exakt dieselbe, bereits bewährte Bild-Lade- und
+        // Zeichenlogik wie generateShareCard()/downloadSharecardDesign() - kein neuer,
+        // ungetesteter Code-Pfad, nur ein direkterer Einstiegspunkt.
+        window.quickExportSongCard = function() {
+            const titleEl = document.getElementById('track-title');
+            const artistEl = document.getElementById('track-artist');
+            const artworkEl = document.getElementById('artwork');
+            const title = (titleEl && titleEl.innerText) ? titleEl.innerText : t('standby_idle_title');
+            const artist = (artistEl && artistEl.innerText) ? artistEl.innerText : t('standby_idle_subtitle');
+            const artSrc = artworkEl ? artworkEl.getAttribute('src') : null;
+
+            if (typeof showToast === 'function') showToast(t('toast_sharecard_creating'));
+
+            const proceed = (artImg) => downloadSharecardDesign(SHARECARD_DESIGNS[0], artImg, title, artist);
 
             if (artSrc && !artSrc.startsWith('data:')) {
                 const img = new Image();
@@ -5975,6 +6453,11 @@
                 { icon: '🎨', label: t('cp_ambient'), keywords: 'ambient color farbe cover', action: () => toggleAmbientColor() },
                 { icon: '🪞', label: t('cp_tilt'), keywords: 'tilt gyroskop 3d parallax neigen', action: () => toggleTilt() },
                 { icon: '🎴', label: t('cp_sharecard'), keywords: 'share card teilen bild download', action: () => generateShareCard() },
+                { icon: '📸', label: t('cp_quick_export'), keywords: 'schnellexport screenshot export bild song', action: () => quickExportSongCard() },
+                { icon: '🕓', label: t('cp_recently_played'), keywords: 'zuletzt gehört verlauf history recent songs', action: () => toggleRecentlyPlayed() },
+                { icon: '🖼️', label: t('cp_color_frame'), keywords: 'farbrahmen cover frame rand color border', action: () => toggleColorFrame() },
+                { icon: '🎬', label: t('cp_canvas_video'), keywords: 'canvas video hintergrund spotify loop', action: () => toggleCanvasVideo() },
+                { icon: '✨', label: t('cp_cover_glow'), keywords: 'cover glow leuchten effekt', action: () => toggleCoverGlow() },
                 { icon: '🧭', label: t('cp_tutorial'), keywords: 'tutorial hilfe guide anleitung', action: () => btnStartTutorial && btnStartTutorial.click() },
                 { icon: '🐷', label: t('cp_tiktok'), keywords: 'tiktok social gamingpig', action: () => window.open('https://www.tiktok.com/@gamingpig900', '_blank') },
                 { icon: '🏝️', label: t('cp_island_back'), keywords: 'dynamic island zeigen einblenden reset ausgeblendet wisch', action: () => {
@@ -6179,6 +6662,9 @@
                 if (island) island.classList.add('di-hidden-by-standby');
                 updateIslandRing();
                 scheduleStandbyDeepDim(); // NEW: Tiefen-Dimmung nach 30min ununterbrochenem StandBy planen
+                // NEU v24.21: Scroll-Effekt für zu lange Titel/Künstlernamen nur beim tatsächlichen
+                // Öffnen aktivieren - läuft NIE im Hintergrund während StandBy geschlossen ist.
+                setupStandbyMarquee();
                 // NEW: Vollbildmodus aktivieren + Scrollbar komplett ausblenden, damit
                 // StandBy sich wirklich wie ein echter Lockscreen anfühlt, ohne Browser-UI
                 // oder sichtbare Scrollbar drumherum.
@@ -6200,6 +6686,10 @@
                 clearInterval(standByShiftInterval);
                 clearTimeout(standByDeepDimTimeout);
                 overlay.classList.remove('standby-deep-dim');
+                // NEU v24.21: Scroll-Animation beim Schließen sauber stoppen, damit sie nicht
+                // unsichtbar im Hintergrund weiterläuft (visibility:hidden allein pausiert
+                // CSS-Animationen nicht zuverlässig).
+                overlay.classList.remove('standby-marquee-active', 'standby-marquee-active-artist');
                 document.documentElement.style.setProperty('--standby-shift-x', '0px');
                 document.documentElement.style.setProperty('--standby-shift-y', '0px');
                 // NEW: Dynamic Island nach Verlassen von StandBy wieder zulassen
@@ -6226,7 +6716,7 @@
         // "Tiefen-Dimmung" nach 30 Minuten ununterbrochenem StandBy: Helligkeit/Kontrast
         // werden nochmal reduziert, was zusätzlich hilft, weil dauerhaft volle Helligkeit
         // an denselben Pixelpositionen das größte Einbrenn-Risiko darstellt.
-        const AOD_SHIFT_INTERVAL_MS = 3 * 60 * 1000; // NEW: von 5min auf 3min verschärft - noch häufigeres Verschieben
+        const AOD_SHIFT_INTERVAL_MS = 1 * 60 * 1000; // v24.21: von 3min auf 1min verschärft - entspricht dem branchenüblichen Intervall (Apple StandBy, die meisten Always-On-Displays), 3min war für dauerhaftes OLED-Stehenlassen zu lang
         const AOD_DEEP_DIM_AFTER_MS = 20 * 60 * 1000; // NEW: von 30min auf 20min verschärft - dunkelt früher zusätzlich ab
         const AOD_SHIFT_POSITIONS = [
             { x: 0, y: 0 },
@@ -6258,9 +6748,48 @@
             }, AOD_DEEP_DIM_AFTER_MS);
         }
 
+        // NEU v24.21: Prüft, ob Titel/Künstler im StandBy-Lockscreen zu breit für den
+        // verfügbaren Platz sind, und aktiviert den Scroll-Effekt NUR dann gezielt für das
+        // jeweils betroffene Element (Titel und Künstler unabhängig voneinander). Kurze Texte
+        // bleiben unangetastet und werden weiterhin normal mit "..." abgeschnitten dargestellt.
+        function setupStandbyMarquee() {
+            const overlay = document.getElementById('standby-overlay');
+            if (!overlay || !standByActive) return;
+
+            [
+                { outer: 'standby-track-title', inner: 'standby-track-title-inner', activeClass: 'standby-marquee-active', durationVar: '--marquee-duration-title' },
+                { outer: 'standby-track-artist', inner: 'standby-track-artist-inner', activeClass: 'standby-marquee-active-artist', durationVar: '--marquee-duration-artist' }
+            ].forEach(cfg => {
+                const outerEl = document.getElementById(cfg.outer);
+                const innerEl = document.getElementById(cfg.inner);
+                if (!outerEl || !innerEl) return;
+
+                overlay.classList.remove(cfg.activeClass);
+                outerEl.style.removeProperty('--marquee-distance');
+
+                // Kurz warten, bis der Browser das neue Layout berechnet hat (Font bereits
+                // geladen, Text bereits gesetzt), sonst wäre scrollWidth noch veraltet.
+                requestAnimationFrame(() => {
+                    const overflow = innerEl.scrollWidth - outerEl.clientWidth;
+                    if (overflow > 4) {
+                        const distance = -(overflow + 12); // + kleiner Puffer als Lese-Pause am Ende
+                        const pxPerSecond = 32; // konstante, ruhige Scrollgeschwindigkeit
+                        const duration = Math.max(4, Math.abs(distance) / pxPerSecond * 2.2); // *2.2 wegen Hin- und Rückweg + Pausen in den Keyframes
+                        outerEl.style.setProperty('--marquee-distance', distance + 'px');
+                        outerEl.style.setProperty(cfg.durationVar, duration.toFixed(2) + 's');
+                        overlay.classList.add(cfg.activeClass);
+                    }
+                });
+            });
+        }
+
         function syncStandByTrackInfo(title, artist, artUrl) {
-            const titleEl = document.getElementById('standby-track-title');
-            const artistEl = document.getElementById('standby-track-artist');
+            // FIX v24.21: Zielt jetzt auf die inneren <span>-Elemente statt auf die äußeren
+            // <p>-Container, da diese seit dem Marquee-Feature ein verschachteltes <span>
+            // enthalten - .textContent auf dem äußeren Element hätte dieses <span> sonst bei
+            // jedem Update einfach gelöscht und den Scroll-Effekt dauerhaft kaputt gemacht.
+            const titleEl = document.getElementById('standby-track-title-inner');
+            const artistEl = document.getElementById('standby-track-artist-inner');
             const img = document.getElementById('standby-track-art');
             const bg = document.getElementById('standby-bg');
             const npCard = document.getElementById('standby-nowplaying');
@@ -6269,6 +6798,9 @@
             if (npCard) npCard.classList.toggle('standby-idle', isIdle);
             if (titleEl) titleEl.textContent = title || t('standby_idle_title');
             if (artistEl) artistEl.textContent = artist || t('standby_idle_subtitle');
+            // NEU v24.21: Falls StandBy gerade aktiv ist, bei jedem Songwechsel neu prüfen,
+            // ob der neue Titel/Künstler-Name gescrollt werden muss.
+            if (standByActive) setupStandbyMarquee();
 
             if (isIdle) {
                 if (img) img.removeAttribute('src');
@@ -6456,6 +6988,109 @@
         }
 
         let modalTimeout;
+        // ========================================================= //
+        // --- NEU v24.20: Öffentliches Changelog / "Was ist neu?" --- //
+        // Bewusst getrennt vom internen technischen DEV-CHANGELOG oben in der Datei - das ist
+        // für Entwickler gedacht und viel zu detailliert/technisch für Besucher. Hier nur eine
+        // kleine, handverlesene, allgemein verständliche Auswahl der letzten Updates.
+        // Nutzt die bereits vorhandene Modal-Infrastruktur (modalOverlay/modalBody/closeModal)
+        // statt ein komplett neues Overlay-System zu bauen.
+        // ========================================================= //
+        // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
+        // Anzeige kategorisiert werden kann statt nur als flache Liste.
+        const PUBLIC_CHANGELOG = [
+            { version: 'v24.24', date: 'August 2026', type: 'fix', items: [
+                'Vorlesen-Button überlappte mit dem Schließen-Button - jetzt klar sichtbar platziert'
+            ]},
+            { version: 'v24.23', date: 'August 2026', type: 'feature', items: [
+                'Sprachausgabe jetzt auch für alle Info-Karten verfügbar (Status, Hintergrund, Kontakt usw.)',
+                'Release-Notes reichen jetzt weiter in die Vergangenheit zurück'
+            ]},
+            { version: 'v24.22', date: 'August 2026', type: 'feature', items: [
+                'Neu: Sprachausgabe (Vorlesen) für Bio-Text, Songtext und Release-Notes',
+                'Mehrere deutsche Stimmen zur Auswahl, laden erst bei tatsächlicher Nutzung'
+            ]},
+            { version: 'v24.21', date: 'August 2026', type: 'feature', items: [
+                'Titel/Künstlername im StandBy-Lockscreen scrollt jetzt bei längeren Namen',
+                'Bildschirmschoner-Verschiebung (Einbrennschutz) läuft jetzt häufiger'
+            ]},
+            { version: 'v24.20', date: 'August 2026', type: 'feature', items: [
+                'Neu: "Zuletzt gehört"-Verlauf der letzten 10 Songs',
+                'Neu: Schnellexport für ein Songbild per Klick',
+                'Neu: "Was ist neu?"-Bereich (diese Seite hier!)'
+            ]},
+            { version: 'v24.19', date: 'August 2026', type: 'performance', items: [
+                'Predictive Back Gesture in der App unterstützt (moderne Zurück-Wisch-Animation)',
+                'Deutlich spürbar flüssiger und energiesparender, v.a. bei offenen Lyrics'
+            ]},
+            { version: 'v24.15', date: 'August 2026', type: 'feature', items: [
+                'Songtext-Ansicht läuft jetzt spürbar flüssiger auf Handys',
+                'Neuer, dezenter Cover-Farbrahmen um die Musik-Karte (in den Einstellungen abschaltbar)'
+            ]},
+            { version: 'v24.9', date: 'August 2026', type: 'fix', items: [
+                'App zeigt sich jetzt im echten Vollbild-Modus statt mit Browser-Leiste',
+                'Video-Hintergründe sind jetzt optional statt automatisch aktiv (spart Akku)'
+            ]},
+            { version: 'v24.6', date: 'August 2026', type: 'performance', items: [
+                'Songtext-Synchronisation komplett überarbeitet - läuft jetzt deutlich ruhiger',
+                'Viele kleinere Bugfixes bei der Wort-für-Wort-Anzeige'
+            ]},
+            { version: 'v23.x', date: 'Juli 2026', type: 'feature', items: [
+                'StandBy-Lockscreen-Modus eingeführt (Vollbild-Uhr mit Musikanzeige, wie ein echtes Always-On-Display)',
+                'Über 60 verschiedene Songtext-Animationsstile zur Auswahl',
+                'Kart-Dashboard als Vorbereitung für zukünftige Live-Anbindung hinzugefügt'
+            ]},
+            { version: 'v22.x', date: 'Juli 2026', type: 'feature', items: [
+                'Share-Card-Generator eingeführt - eigene Songbilder in 10 verschiedenen Designs erstellen und teilen',
+                'Cover-Glow-Effekt: sanftes Umgebungslicht passend zur aktuellen Album-Farbe'
+            ]},
+            { version: 'v21.x', date: 'Juni 2026', type: 'fix', items: [
+                'Uhrzeit im StandBy-Modus zuverlässig korrigiert (nutzt jetzt die eigene Serverzeit statt unzuverlässiger externer Zeit-Dienste)',
+                'Zahlreiche kleinere Darstellungsfehler auf sehr kleinen und sehr großen Bildschirmen behoben'
+            ]},
+            { version: 'v20.x', date: 'Juni 2026', type: 'feature', items: [
+                'Erstes eigenständiges Musik-Dashboard mit Live-Songanzeige eingeführt',
+                'Mehrsprachigkeit: die Seite unterstützt jetzt 6 Sprachen'
+            ]}
+        ];
+        const CHANGELOG_TYPE_META = {
+            feature:     { label: 'Neu',         color: '#3b82f6', bg: 'rgba(59,130,246,0.12)' },
+            performance: { label: 'Performance',  color: '#22c55e', bg: 'rgba(34,197,94,0.12)' },
+            fix:         { label: 'Fehlerbehebung', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' }
+        };
+
+        window.openChangelogModal = function() {
+            if (!modalBody || !modalOverlay) return;
+            modalBody.innerHTML = `
+                <div class="text-[8px] xxs:text-[10px] sm:text-xs font-black uppercase tracking-widest text-blue-500 mb-2 pr-8 xxs:pr-10 sm:pr-12">Was ist neu?</div>
+                <h3 class="text-xl xxs:text-2xl xs:text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white mb-2 xxs:mb-3 sm:mb-4 leading-tight">Release-Notes</h3>
+                <button onclick="speakChangelog()" id="btn-speak-changelog" class="mb-3 xxs:mb-4 sm:mb-6 text-[10px] xxs:text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-blue-500 transition-colors flex items-center gap-1">🔊 Vorlesen</button>
+                <div class="space-y-4 xxs:space-y-5 sm:space-y-8 mb-4 xxs:mb-6 sm:mb-10 max-h-[50vh] overflow-y-auto pr-1">
+                    ${PUBLIC_CHANGELOG.map(entry => {
+                        const meta = CHANGELOG_TYPE_META[entry.type] || CHANGELOG_TYPE_META.feature;
+                        return `
+                        <div>
+                            <div class="flex items-center flex-wrap gap-2 mb-1.5">
+                                <span class="font-mono text-xs xxs:text-sm font-bold text-blue-500">${escapeHTML(entry.version)}</span>
+                                <span class="text-[10px] xxs:text-xs text-slate-500 dark:text-slate-400">${escapeHTML(entry.date)}</span>
+                                <span style="color:${meta.color};background:${meta.bg};" class="text-[8px] xxs:text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full">${escapeHTML(meta.label)}</span>
+                            </div>
+                            <ul class="list-disc list-inside space-y-1">
+                                ${entry.items.map(i => `<li class="text-slate-600 dark:text-slate-300 text-xs xxs:text-sm sm:text-base leading-relaxed">${escapeHTML(i)}</li>`).join('')}
+                            </ul>
+                        </div>
+                    `;}).join('')}
+                </div>
+                <button onclick="document.getElementById('close-modal').click()" class="w-full py-2 xxs:py-3 sm:py-5 bg-blue-600 text-white rounded-xl sm:rounded-[1.5rem] font-bold text-sm xxs:text-base sm:text-lg hover:bg-blue-700 hover:shadow-xl hover:shadow-blue-500/30 transition-all active:scale-95">${escapeHTML(t('modal_understood'))}</button>
+            `;
+            clearTimeout(modalTimeout);
+            modalOverlay.classList.remove('hidden', 'modal-closing');
+            void modalOverlay.offsetWidth;
+            modalOverlay.classList.add('flex', 'modal-opening');
+            modalTimeout = setTimeout(() => { modalOverlay.classList.remove('modal-opening'); }, 1200);
+            document.body.style.overflow = 'hidden';
+        };
+
         window.openModal = function(key) {
             const data = getDetails()[key];
             if(!data) return;
@@ -6467,9 +7102,10 @@
                       </button>`
                     : '';
                 modalBody.innerHTML = `
-                    <div class="text-[8px] xxs:text-[10px] sm:text-xs font-black uppercase tracking-widest text-blue-500 mb-2">${escapeHTML(t('modal_deep_dive'))}</div>
-                    <h3 class="text-xl xxs:text-2xl xs:text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white mb-3 xxs:mb-4 sm:mb-6 leading-tight break-words">${escapeHTML(data.title)}</h3>
-                    <p class="text-slate-600 dark:text-slate-300 text-xs xxs:text-sm sm:text-lg leading-relaxed font-medium mb-4 xxs:mb-6 sm:mb-10">${escapeHTML(data.content)}</p>
+                    <div class="text-[8px] xxs:text-[10px] sm:text-xs font-black uppercase tracking-widest text-blue-500 mb-2 pr-8 xxs:pr-10 sm:pr-12">${escapeHTML(t('modal_deep_dive'))}</div>
+                    <h3 id="modal-tts-title" class="text-xl xxs:text-2xl xs:text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white mb-2 xxs:mb-3 sm:mb-4 leading-tight break-words">${escapeHTML(data.title)}</h3>
+                    <button onclick="speakModalGeneric(this)" id="btn-speak-modal" class="mb-3 xxs:mb-4 sm:mb-6 text-[10px] xxs:text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-blue-500 transition-colors flex items-center gap-1">🔊 Vorlesen</button>
+                    <p id="modal-tts-content" class="text-slate-600 dark:text-slate-300 text-xs xxs:text-sm sm:text-lg leading-relaxed font-medium mb-4 xxs:mb-6 sm:mb-10">${escapeHTML(data.content)}</p>
                     ${copyLinkButton}
                     <button onclick="document.getElementById('close-modal').click()" class="w-full py-2 xxs:py-3 sm:py-5 bg-blue-600 text-white rounded-xl sm:rounded-[1.5rem] font-bold text-sm xxs:text-base sm:text-lg hover:bg-blue-700 hover:shadow-xl hover:shadow-blue-500/30 transition-all active:scale-95">${escapeHTML(t('modal_understood'))}</button>
                 `;
@@ -8224,6 +8860,8 @@
                 if (isPlaying) showIslandPersistent(data.track.title, rawArtist, imgUrl);
 
                 if (isNewTrack) {
+                    // NEU v24.20: Songwechsel im "Zuletzt gehört"-Verlauf vermerken
+                    addToRecentlyPlayed(data.track.title, rawArtist, imgUrl);
                     // NEW: Dynamic Island 2.0 - kurzes Aufpoppen bei echtem Songwechsel
                     if (!isFirstLoad && isPlaying) {
                         triggerDynamicIsland(data.track.title, rawArtist, imgUrl);
@@ -8554,6 +9192,7 @@
         if (footerVersionEl) footerVersionEl.textContent = SITE_VERSION;
 
         populateLyricsStyleDropdown();
+        populateTtsVoiceDropdown();
         // NEW: Beim Laden nur einmalig statisch vorrendern (Menü ist ja noch geschlossen) -
         // die eigentliche Dauerschleife startet erst, wenn das Menü tatsächlich geöffnet
         // wird (siehe toggleLyricsSettings), damit nicht dauerhaft unnötig im Hintergrund
