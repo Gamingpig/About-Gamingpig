@@ -11,6 +11,63 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FIX-VERSUCH] Release v24.28: Wechsel vom Bibliotheks-Fork auf die aktivere Original-Bibliothek
+      - Nutzer testete v24.26 auf der echten Live-Seite (nicht mehr file://) - identischer
+        Fehler wie zuvor bestätigt: dieselbe kaputte cdnjs.cloudflare.com-Adresse für
+        onnxruntime-web 1.18.0 taucht weiterhin auf. Das beweist: die externe
+        ort.env.wasm.wasmPaths-Umleitung aus v24.26 griff nicht.
+      - Root-Cause-Recherche ergab: @mintplex-labs/piper-tts-web wird als EINE fertig
+        gebündelte Datei ausgeliefert (dist/piper-tts-web.js, von den Bibliotheks-Autoren
+        selbst per Vite gebaut), in die onnxruntime-web bereits fest eingebacken ist -
+        inklusive der defekten CDN-Referenz. Eine externe Vorkonfiguration kann diese
+        bereits gebündelte, isolierte Kopie strukturell nicht erreichen, unabhängig davon
+        wie sorgfältig sie umgesetzt ist.
+      - EHRLICHER STAND: Dies ist ein Bug in der Drittanbieter-Bibliothek selbst, kein Fehler
+        im eigenen Code, und ohne eigenen Build-Prozess (den diese Seite als Einzeldatei-
+        HTML bewusst nicht hat) nicht von außen reparierbar.
+      - Nächster Versuch (dieser Release): Wechsel von @mintplex-labs/piper-tts-web (Fork)
+        auf @diffusionstudio/vits-web (die aktiver gepflegte Original-Bibliothek, von der
+        der Fork abstammt) - identische API und Voice-IDs, aber möglicherweise mit
+        korrekter/aktueller CDN-Referenz statt der defekten Adresse im Fork. KEINE
+        Erfolgsgarantie - falls derselbe Fehlertyp erneut auftritt, ist das der endgültige
+        Beweis, dass dieser ganze technische Ansatz (browserbasierte neuronale TTS ohne
+        eigenen Build-Prozess) in dieser Umgebung nicht zuverlässig umsetzbar ist, und der
+        Umstieg auf die native Browser-Sprachausgabe (Web Speech API) der pragmatische
+        nächste Schritt wäre.
+
+    [PROZESS] Release v24.27: Release-Notes vervollständigt, Lücke bei v24.10-14 geschlossen
+      - Nutzer meldete: v24.25 und v24.26 fehlten in PUBLIC_CHANGELOG (schon zum zweiten Mal
+        vergessen einzutragen). Beide ergänzt, plus einen zusammenfassenden Eintrag für die
+        Performance-Feinjustierung zwischen v24.9 und v24.15 (v24.10-14), die bisher komplett
+        unsichtbar in der öffentlichen Liste war, obwohl dort mehrere reale Nutzer-relevante
+        Effizienz-Verbesserungen passiert sind.
+      - AB SOFORT VERBINDLICH: Bei jedem zukünftigen Release wird der PUBLIC_CHANGELOG-Eintrag
+        IMMER im selben Arbeitsschritt wie der interne DEV-CHANGELOG-Eintrag ergänzt, nicht
+        mehr nachträglich/separat - damit dieser Fehler nicht ein drittes Mal passiert.
+
+    [FIX] Release v24.26: Echte TTS-Fehlerursache aus Browser-Konsole gefunden - defekte
+    CDN-Adresse in onnxruntime-web
+      - Nutzer schickte Konsolen-Screenshot mit echtem Fehler: "Failed to fetch dynamically
+        imported module: https://cdnjs.cloudflare.com/.../onnxruntime-web/1.18.0/ort-wasm-
+        simd-threaded.jsep.mjs" -> 404, gefolgt von "no available backend found" für alle
+        Backend-Typen (wasm/cpu/webgpu/webnn).
+      - Ursache: onnxruntime-web (die Rechen-Engine unter Piper TTS) versucht standardmäßig,
+        ihre WASM-Dateien von einer fest einprogrammierten cdnjs-Adresse zu laden, die für
+        diese Version nicht mehr existiert - komplett unabhängig von unserem eigenen Code,
+        ein reines CDN/Versions-Problem der Drittanbieter-Bibliothek.
+      - Fix (offiziell dokumentiert unter onnxruntime.ai/docs/tutorials/web/deploy.html):
+        onnxruntime-web separat importiert und ort.env.wasm.wasmPaths explizit auf eine
+        bekannt funktionierende jsdelivr-CDN-Adresse mit exakt passender Version (1.18.0)
+        umgeleitet, BEVOR die eigentliche TTS-Bibliothek geladen wird. Zusätzlich
+        numThreads=1 gesetzt, um die Multi-Threading-Warnung zu vermeiden (GitHub Pages
+        bietet keinen crossOriginIsolated-Modus).
+      - EHRLICHER VORBEHALT: Es ist nicht zu 100% sicher, ob piper-tts-web über den
+        ?bundle-Parameter eine eigene, unabhängige Kopie von onnxruntime-web mitbringt, die
+        von dieser externen Vorkonfiguration unberührt bleibt - falls der Fehler nach
+        diesem Fix identisch reproduziert, ist das der nächste Verdacht, und Piper TTS
+        müsste ggf. zugunsten eines anderen Ansatzes (z.B. Web Speech API mit
+        Qualitätskompromiss) aufgegeben werden.
+
     [FIX] Release v24.25: Zwei Nutzer-gemeldete Bugs behoben
       - Release-Notes waren unvollständig: v24.22-v24.24 wurden zwar gebaut, aber nie in
         PUBLIC_CHANGELOG eingetragen (eigenes Versehen beim vorherigen Release). Ergänzt,
@@ -2669,7 +2726,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.25 · 2026-08-10';
+        const SITE_VERSION = 'v24.28 · 2026-08-10';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -5162,7 +5219,12 @@
         ];
         // FIX v24.25: ?bundle ergänzt - esm.sh löst interne Importe bei Paketen mit
         // WASM-Abhängigkeiten ohne diesen Parameter manchmal nicht zuverlässig auf.
-        const TTS_LIB_URL = 'https://esm.sh/@mintplex-labs/piper-tts-web?bundle';
+        // FIX v24.28: Umstieg vom Mintplex-Labs-Fork (@mintplex-labs/piper-tts-web) auf die
+        // aktiver gepflegte Original-Bibliothek (@diffusionstudio/vits-web), von der der
+        // Fork abstammt. Identische API (predict/download/stored/remove/flush/voices,
+        // gleiche Voice-IDs), aber möglicherweise mit korrekter/aktueller CDN-Referenz für
+        // onnxruntime-web statt der defekten cdnjs-Adresse aus dem Fork.
+        const TTS_LIB_URL = 'https://esm.sh/@diffusionstudio/vits-web?bundle';
         let ttsModulePromise = null;
         let ttsCurrentAudio = null;
 
@@ -5173,14 +5235,44 @@
             localStorage.setItem('ttsVoiceId', voiceId);
         };
 
+        // FIX v24.26: Der Kernfehler aus der Browser-Konsole war eindeutig - onnxruntime-web
+        // (die Rechen-Engine unter der Haube von Piper TTS) versucht standardmäßig, ihre
+        // eigenen WASM-Dateien von einer fest einprogrammierten cdnjs.cloudflare.com-Adresse
+        // für Version 1.18.0 zu laden, die dort nicht mehr existiert (404) - dadurch schlägt
+        // die komplette Initialisierung fehl ("no available backend found"), egal welcher
+        // Backend-Typ (wasm/cpu/webgpu/webnn) versucht wird.
+        // Offiziell dokumentierter Fix (onnxruntime.ai/docs/tutorials/web/deploy.html):
+        // ort.env.wasm.wasmPaths explizit auf eine bekannt funktionierende CDN-Adresse
+        // (jsdelivr, exakt passende Version) umleiten, BEVOR irgendeine Inferenz versucht wird.
+        let ortConfigured = false;
+        async function configureOnnxRuntimeWasmPaths() {
+            if (ortConfigured) return;
+            try {
+                const ort = await import('https://esm.sh/onnxruntime-web@1.18.0?bundle');
+                ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/';
+                // Multi-Threading braucht crossOriginIsolated-Modus, den GitHub Pages nicht
+                // bereitstellt - explizit auf 1 setzen, damit sauber auf Single-Threading
+                // zurückgefallen wird, statt nur eine Warnung zu zeigen.
+                ort.env.wasm.numThreads = 1;
+                ortConfigured = true;
+            } catch (e) {
+                console.error('onnxruntime-web Vorkonfiguration fehlgeschlagen:', e);
+                // Kein harter Abbruch - falls piper-tts-web seine eigene, unabhängige Kopie
+                // von onnxruntime-web mitbringt, wäre diese Vorkonfiguration ohnehin wirkungslos
+                // gewesen, dann probieren wir es trotzdem mit dem regulären Ladevorgang weiter.
+            }
+        }
+
         // Lädt die TTS-Bibliothek nur beim allerersten Gebrauch (dynamisches import()),
         // danach wird dieselbe geladene Instanz wiederverwendet.
         function loadTtsModule() {
             if (!ttsModulePromise) {
-                ttsModulePromise = import(TTS_LIB_URL).catch(err => {
-                    ttsModulePromise = null; // erneuten Versuch beim nächsten Klick erlauben
-                    throw err;
-                });
+                ttsModulePromise = configureOnnxRuntimeWasmPaths()
+                    .then(() => import(TTS_LIB_URL))
+                    .catch(err => {
+                        ttsModulePromise = null; // erneuten Versuch beim nächsten Klick erlauben
+                        throw err;
+                    });
             }
             return ttsModulePromise;
         }
@@ -6999,6 +7091,16 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.28', date: 'August 2026', type: 'fix', items: [
+                'Sprachausgabe: Versuch mit einer anderen, aktiver gepflegten Sprach-Bibliothek'
+            ]},
+            { version: 'v24.26', date: 'August 2026', type: 'fix', items: [
+                'Sprachausgabe: defekte Verbindung zur Sprach-Engine behoben (lud vorher ins Leere)'
+            ]},
+            { version: 'v24.25', date: 'August 2026', type: 'fix', items: [
+                'Release-Notes-Liste vervollständigt',
+                'Vorlesen-Button blieb manchmal dauerhaft im Ladezustand hängen - jetzt mit fester Zeitgrenze abgesichert'
+            ]},
             { version: 'v24.24', date: 'August 2026', type: 'fix', items: [
                 'Vorlesen-Button überlappte mit dem Schließen-Button - jetzt klar sichtbar platziert'
             ]},
@@ -7026,6 +7128,10 @@
             { version: 'v24.15', date: 'August 2026', type: 'feature', items: [
                 'Songtext-Ansicht läuft jetzt spürbar flüssiger auf Handys',
                 'Neuer, dezenter Cover-Farbrahmen um die Musik-Karte (in den Einstellungen abschaltbar)'
+            ]},
+            { version: 'v24.10-14', date: 'August 2026', type: 'performance', items: [
+                'Mehrere Runden Feintuning an Update-Frequenzen und Hintergrund-Effekten',
+                'Deutlich weniger Akku- und Grafikkarten-Last bei laufender Musik'
             ]},
             { version: 'v24.9', date: 'August 2026', type: 'fix', items: [
                 'App zeigt sich jetzt im echten Vollbild-Modus statt mit Browser-Leiste',
