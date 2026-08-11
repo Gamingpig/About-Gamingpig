@@ -11,6 +11,28 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FIX] Release v24.41: Zwei Scroll-Bugs bei Lyrics/Dashboard behoben (App + Website)
+      - Nutzer meldete zwei zusammenhängende Bugs: 1) Spotlight-Befehl "Lyrics anzeigen"
+        scrollte nicht automatisch zum Musik-Dashboard hin. 2) Nach dem Scrollen zum
+        Dashboard und Schließen der Lyrics sprang die Seite zurück zu der Position, an der
+        man beim ursprünglichen Ausführen des Spotlight-Befehls war - wiederholte sich bei
+        jedem erneuten Scrollen+Schließen.
+      - Ursache 1: Der cp_open_lyrics-Spotlight-Befehl hatte (anders als der vergleichbare
+        cp_open_dashboard-Befehl) keinen scrollToId('music-section')-Aufruf - simpler,
+        übersehener Unterschied. Ergänzt.
+      - Ursache 2 (die eigentlich interessante): Der Browser verknüpft standardmäßig
+        automatisch die aktuelle Scroll-Position mit jedem history.pushState()-Aufruf und
+        stellt sie bei history.back() automatisch wieder her - eingebautes Verhalten, gedacht
+        für echte Seitennavigation. Da pushState()/history.back() hier aber zweckentfremdet
+        nur für die Android-Zurück-Button-Overlay-Logik (Dashboard/Lyrics/StandBy/Command
+        Palette, siehe pushOverlayHistory()/popOverlayHistory()) genutzt werden, sprang der
+        Browser bei jedem Schließen eines Overlays automatisch zur Scroll-Position vom
+        Öffnungszeitpunkt zurück - unabhängig davon, wohin der Nutzer inzwischen gescrollt
+        hatte. Fix: history.scrollRestoration = 'manual' einmalig global gesetzt, schaltet
+        dieses automatische Verhalten ab, eigene Scroll-Logik bleibt unberührt.
+      - Betraf laut Nutzer sowohl die App als auch die Website (dieselbe Codebasis, daher
+        derselbe Fix für beide).
+
     [FIX] Release v24.40: Changelog/"Was ist neu?" fehlte noch im Tutorial-Hinweis
       - Nutzer fragte gezielt nach: hatte im letzten Release den Changelog-Link nicht ins
         Tutorial aufgenommen. Ergänzt im Easter-Egg-Schritt (t_step8_text), da dort ohnehin
@@ -2984,7 +3006,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.40 · 2026-08-10';
+        const SITE_VERSION = 'v24.41 · 2026-08-10';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -5151,6 +5173,18 @@
         let isDashboardOpen = false;
         // NEW: Android-Back-Button-Fix - trackt offene Overlays, damit "Zurück" sie sauber schließt
         // statt die Seite in einen kaputten Zwischenzustand zu bringen.
+        // FIX v24.41: Ohne die Zeile unten hat der Browser bei jedem pushOverlayHistory()/
+        // popOverlayHistory()-Aufruf (siehe weiter unten) automatisch die aktuelle
+        // Scroll-Position mit dem jeweiligen History-Eintrag verknüpft - das ist eingebautes
+        // Standardverhalten aller Browser, gedacht für echte Seitennavigation. Da wir
+        // pushState() aber zweckentfremdet nur fürs Overlay-Öffnen/Schließen nutzen (Dashboard,
+        // Lyrics, StandBy, Command Palette), hat der Browser bei jedem history.back() (das
+        // popOverlayHistory() auslöst) automatisch zur Scroll-Position vom Zeitpunkt des
+        // Öffnens zurückgesprungen - genau der gemeldete Bug ("scrollt zurück dahin, wo ich
+        // beim Ausführen des Befehls war"). history.scrollRestoration = 'manual' schaltet
+        // dieses automatische Verhalten global ab, unsere eigene Scroll-Logik (scrollToId
+        // usw.) bleibt davon unberührt.
+        history.scrollRestoration = 'manual';
         let overlayHistoryDepth = 0;
         let suppressPopHandling = false;
         let isLyricsSettingsOpen = false;
@@ -6952,7 +6986,7 @@
                 { icon: '🎵', label: t('cp_scroll_music'), keywords: 'music song track player', action: () => scrollToId('music-section') },
                 { icon: '📬', label: t('cp_scroll_footer'), keywords: 'footer contact kontakt ende', action: () => scrollToId('footer-section') },
                 { icon: '📖', label: t('cp_open_dashboard'), keywords: 'dashboard aufklappen open music', action: () => { if (!isDashboardOpen) toggleDashboard(); scrollToId('music-section'); } },
-                { icon: '🎤', label: t('cp_open_lyrics'), keywords: 'lyrics songtext text', action: () => { if (!isDashboardOpen) toggleDashboard(); setTimeout(() => toggleLyrics(true), 400); } },
+                { icon: '🎤', label: t('cp_open_lyrics'), keywords: 'lyrics songtext text', action: () => { if (!isDashboardOpen) toggleDashboard(); scrollToId('music-section'); setTimeout(() => toggleLyrics(true), 400); } },
                 { icon: '🌗', label: t('cp_toggle_dark'), keywords: 'dark light theme hell dunkel modus', action: () => themeToggle && themeToggle.click() },
                 { icon: '💧', label: t('cp_toggle_glass'), keywords: 'liquid glass apple design', action: () => liquidGlassToggle && liquidGlassToggle.click() },
                 { icon: '⚡', label: t('cp_toggle_perf'), keywords: 'performance low end animationen aus', action: () => perfToggle && perfToggle.click() },
@@ -7506,6 +7540,10 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.41', date: 'August 2026', type: 'fix', items: [
+                'Lyrics-Ansicht per Spotlight scrollt jetzt korrekt automatisch hin',
+                'Scroll-Position springt beim Schließen von Dashboard/Lyrics nicht mehr fälschlich zurück'
+            ]},
             { version: 'v24.40', date: 'August 2026', type: 'fix', items: [
                 'Tutorial verweist jetzt auch auf den "Was ist neu?"-Bereich'
             ]},
