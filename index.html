@@ -11,6 +11,24 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FIX] Release v24.35: Eigener Tippfehler im v24.34-Patch behoben - falscher relativer Pfad
+      - Nutzer testete v24.34 - neuer Fehlertyp: "expected magic word 00 61 73 6d, found 3c
+        21 44 4f" - das bedeutet, der Browser bekam eine HTML-404-Seite statt der echten
+        WASM-Datei zurück (3c 21 44 4f = "<!DO" in ASCII, der Anfang von "<!DOCTYPE html>").
+      - Ursache: eigener Tippfehler im Patch-Skript aus v24.34. Der Pfad wurde auf
+        "./ort-wasm/" (EIN Punkt, gleiche Ordnerebene) statt "../ort-wasm/" (ZWEI Punkte,
+        eine Ebene höher) gesetzt. Da vits-web.js beim Bundling in denselben assets/-
+        Unterordner wie unser eigenes worker.js landet (das den Pfad bereits korrekt mit
+        "../ort-wasm/" nutzte), zeigte der falsche Pfad auf tts/assets/ort-wasm/ statt auf
+        das tatsächliche tts/ort-wasm/ - GitHub Pages lieferte dafür seine eigene 404-Seite
+        aus, die WebAssembly.instantiate() dann fälschlich als .wasm-Binärdatei zu
+        interpretieren versuchte.
+      - Fix: patch-vits-web.js korrigiert (../ort-wasm/ statt ./ort-wasm/), zusätzlich robust
+        gegen beide bisherigen Zustände gemacht (unbehandelte Originaldatei ODER bereits mit
+        dem fehlerhaften v24.34-Pfad gepatcht) - erkennt und korrigiert beide Fälle
+        automatisch. Im gebauten Bundle verifiziert: "../ort-wasm/" kommt jetzt 2x korrekt
+        vor, die kaputte cdnjs-Adresse weiterhin 0x.
+
     [FIX - ENDGÜLTIG] Release v24.34: Eigentliche Ursache aller bisherigen TTS-Abstürze
     gefunden - Bibliothek selbst überschrieb unsere Konfiguration bei jedem Aufruf
       - Nutzer meldete erneut denselben Fehlertyp (rohe Zufallszahl statt Fehlermeldung) mit
@@ -2867,7 +2885,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.34 · 2026-08-10';
+        const SITE_VERSION = 'v24.35 · 2026-08-10';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -7338,6 +7356,9 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.35', date: 'August 2026', type: 'fix', items: [
+                'Sprachausgabe: falscher technischer Dateipfad korrigiert (Tippfehler von uns)'
+            ]},
             { version: 'v24.34', date: 'August 2026', type: 'fix', items: [
                 'Sprachausgabe: eigentliche Absturzursache in der zugrundeliegenden Bibliothek gefunden und behoben'
             ]},

@@ -3,7 +3,7 @@ var e = null, t = 0, n = /* @__PURE__ */ new Map();
 function r() {
 	return e || (e = new Worker(new URL(
 		/* @vite-ignore */
-		"" + new URL("assets/worker-BlUOxP4j.js", import.meta.url).href,
+		"" + new URL("assets/worker-03_Elyqq.js", import.meta.url).href,
 		"" + import.meta.url
 	), { type: "module" }), e.onmessage = (e) => {
 		let { id: t, type: r } = e.data, i = n.get(t);
