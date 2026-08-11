@@ -11,6 +11,30 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FIX - ENDGÜLTIG] Release v24.34: Eigentliche Ursache aller bisherigen TTS-Abstürze
+    gefunden - Bibliothek selbst überschrieb unsere Konfiguration bei jedem Aufruf
+      - Nutzer meldete erneut denselben Fehlertyp (rohe Zufallszahl statt Fehlermeldung) mit
+        weiterhin sichtbarer "numThreads is set to 8"-Warnung trotz explizitem numThreads=1
+        in unserem eigenen worker.js.
+      - ROOT CAUSE gefunden: node_modules/@diffusionstudio/vits-web/dist/vits-web.js enthält
+        intern die Zeile "_.env.wasm.numThreads = navigator.hardwareConcurrency,
+        _.env.wasm.wasmPaths = B" (B = die kaputte cdnjs-Adresse aus fixtures.ts/ONNX_BASE) -
+        das lief bei JEDEM predict()-Aufruf und überschrieb UNSERE Konfiguration aus
+        worker.js unmittelbar vor der eigentlichen Sprachsynthese, komplett unabhängig davon
+        was extern gesetzt wurde. Das erklärt rückwirkend ALLE bisherigen Fehlversuche
+        (v24.26 externe ort.env-Konfiguration, v24.28 Bibliothekswechsel, v24.29 eigener
+        Build) - keiner davon konnte diese interne Zwangs-Überschreibung erreichen, da sie
+        erst zur Laufzeit bei jedem einzelnen Aufruf neu passierte.
+      - Fix: Neues Patch-Skript (tts-build/patch-vits-web.js) ersetzt direkt in der
+        installierten node_modules-Datei die kaputte cdnjs-Adresse durch einen lokalen,
+        relativen Pfad (new URL('./ort-wasm/', import.meta.url).href) sowie
+        navigator.hardwareConcurrency durch eine feste 1. Läuft automatisch als
+        "postinstall"-Skript UND vor jedem Build, damit der Fix auch nach einer künftigen
+        Neuinstallation der Bibliothek bestehen bleibt. Idempotent (erkennt bereits
+        angewendeten Patch, überschreibt nicht doppelt).
+      - Verifiziert: die kaputte cdnjs-Adresse kommt im finalen, gebauten Worker-Bundle jetzt
+        exakt 0 Mal vor (vorher unvermeidbar vorhanden).
+
     [FIX] Release v24.33: Sprachausgabe stürzte mit rohem WASM-Fehlercode ab - fehlende
     Threaded-Variante war vermutlich die Ursache
       - Nutzer meldete: Sprachausgabe funktioniert weiterhin nicht. Konsole zeigte "TTS
@@ -2843,7 +2867,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.33 · 2026-08-10';
+        const SITE_VERSION = 'v24.34 · 2026-08-10';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -7314,6 +7338,9 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.34', date: 'August 2026', type: 'fix', items: [
+                'Sprachausgabe: eigentliche Absturzursache in der zugrundeliegenden Bibliothek gefunden und behoben'
+            ]},
             { version: 'v24.33', date: 'August 2026', type: 'fix', items: [
                 'Sprachausgabe stürzte statt zu sprechen - fehlende technische Datei ergänzt'
             ]},
