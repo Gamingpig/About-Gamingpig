@@ -11,6 +11,52 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FEATURE] Release v24.30: Vorlesen-Button sichtbar gemacht + Fallback-Text vorlesbar +
+    synchronisiertes Zeilen-für-Zeilen-Vorlesen
+      - Vorlesen-Button war bisher nur im Einstellungsmenü versteckt, nicht direkt in der
+        Lyrics-Ansicht sichtbar. Neuer Button unten rechts ergänzt (btn-speak-lyrics-visible),
+        spiegelbildlich zur bereits vorhandenen Tipp-zum-Springen-Uhr unten links.
+      - Fallback-Text ("kein Songtext gefunden" o.ä., currentNoLyricsMessage) ist jetzt auch
+        vorlesbar statt nur eine "nichts vorhanden"-Meldung zu zeigen.
+      - Synchronisiertes Vorlesen: Bei Songs mit ECHTEN zeilenweise synchronisierten Lyrics
+        (erkannt über unterschiedliche line.timeMs-Werte) wird nicht mehr der komplette Text
+        am Stück vorgelesen, sondern jede Zeile einzeln per gpTts.speak() erzeugt und mit
+        denselben relativen Zeitabständen abgespielt wie im Original (neue Funktion
+        speakLyricsSynced()). Lange Instrumental-Pausen werden auf max. 6 Sekunden gedeckelt
+        (TTS_MAX_LINE_GAP_MS), damit die Funktion nicht scheinbar minutenlang hängt. Bei
+        reinem Fließtext ohne Sync-Daten bleibt es beim normalen Vorlesen am Stück, da dort
+        kein sinnvolles Zeilen-Timing existiert.
+
+    [FEATURE - RADIKAL] Release v24.29: Echter Build-Prozess für die Sprachausgabe - eigenes
+    Bundle statt kaputter CDN-Abhängigkeit
+      - Nutzer testete v24.28 - identischer Fehlertyp wie erwartet nicht mehr die kaputte
+        CDN-Adresse, sondern jetzt "module 'buffer' not found", "module 'long' not found",
+        "fs.readFile is not implemented yet" - Node.js-interne Module, die esm.sh's
+        automatischer Übersetzungsversuch ("unenv") nicht sauber ins Browser-Umfeld
+        übersetzen konnte. Drei Versuche, drei unterschiedliche Fehlertypen - endgültiger
+        Beweis, dass automatisches CDN-Bundling für diese Bibliotheksklasse hier nicht
+        zuverlässig funktioniert.
+      - Nutzerentscheidung: echter Build-Prozess, aber minimaler eigener Aufwand gewünscht.
+      - Umsetzung: Separates, kleines Vite-Projekt (tts-build/, nicht Teil der eigentlichen
+        Website) wurde einmalig erstellt und selbst gebaut (nicht vom Nutzer). Installiert
+        @diffusionstudio/vits-web + onnxruntime-web ganz normal per npm (nicht per CDN),
+        wodurch alle WASM-Binärdateien direkt aus dem npm-Paket verfügbar sind - garantiert
+        exakt passende Version, keine externe CDN-Referenz mehr zur Laufzeit nötig. Ergebnis:
+        gamingpig-tts.js (668KB) + zugehöriger Chunk + ort-wasm/-Ordner mit den WASM-Dateien,
+        alle mit relativen Pfaden, direkt im Projekt unter tts/ abgelegt.
+      - Datenmenge bewusst reduziert: von 8 verschiedenen onnxruntime-web-WASM-Varianten
+        (89MB, inkl. Multi-Threading-Varianten die wegen fehlendem crossOriginIsolated auf
+        GitHub Pages ohnehin nicht nutzbar sind, sowie einer komplett ungenutzten Trainings-
+        Variante) auf die 2 tatsächlich benötigten (Single-Thread CPU SIMD + Fallback) plus
+        ort.min.js reduziert - 21MB statt 89MB, ohne Funktionsverlust.
+      - index.html umgestellt: lädt jetzt ./tts/gamingpig-tts.js per lokalem dynamischem
+        import() statt einer externen esm.sh-Adresse, nutzt die vereinfachte
+        window.GamingpigTTS.speak()-API (kümmert sich intern selbst um Download-Caching)
+        statt der einzelnen stored/download/predict-Aufrufe von vorher.
+      - Für künftige Aktualisierungen der TTS-Bibliothek: im tts-build/-Ordner einmalig
+        "npm run build" ausführen, den Inhalt von dist-bundle/ 1:1 in den tts/-Ordner der
+        Website kopieren, fertig - kein wiederkehrender manueller Aufwand.
+
     [FIX-VERSUCH] Release v24.28: Wechsel vom Bibliotheks-Fork auf die aktivere Original-Bibliothek
       - Nutzer testete v24.26 auf der echten Live-Seite (nicht mehr file://) - identischer
         Fehler wie zuvor bestätigt: dieselbe kaputte cdnjs.cloudflare.com-Adresse für
@@ -2726,7 +2772,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.28 · 2026-08-10';
+        const SITE_VERSION = 'v24.30 · 2026-08-10';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -3177,6 +3223,12 @@
                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                                 </button>
                                 <div id="lyrics-seek-hint" class="hidden absolute bottom-2 left-11 z-30 bg-blue-500/90 text-white text-[9px] xxs:text-[10px] font-bold px-2 py-1.5 rounded-full whitespace-nowrap">Tippe auf eine Zeile...</div>
+                                <!-- NEU v24.30: Vorlesen-Button jetzt direkt in der Lyrics-Ansicht sichtbar
+                                     (vorher nur im Einstellungsmenü versteckt) - spiegelbildlich zur
+                                     Tipp-zum-Springen-Uhr unten links platziert. -->
+                                <button onclick="speakLyrics(this)" id="btn-speak-lyrics-visible" aria-label="Songtext vorlesen" title="Songtext vorlesen" class="absolute bottom-2 right-2 z-30 p-2 rounded-full bg-black/50 hover:bg-black/70 text-white/70 hover:text-white transition-all border border-white/10">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+                                </button>
                             </div>
                         </div>
 
@@ -5219,12 +5271,15 @@
         ];
         // FIX v24.25: ?bundle ergänzt - esm.sh löst interne Importe bei Paketen mit
         // WASM-Abhängigkeiten ohne diesen Parameter manchmal nicht zuverlässig auf.
-        // FIX v24.28: Umstieg vom Mintplex-Labs-Fork (@mintplex-labs/piper-tts-web) auf die
-        // aktiver gepflegte Original-Bibliothek (@diffusionstudio/vits-web), von der der
-        // Fork abstammt. Identische API (predict/download/stored/remove/flush/voices,
-        // gleiche Voice-IDs), aber möglicherweise mit korrekter/aktueller CDN-Referenz für
-        // onnxruntime-web statt der defekten cdnjs-Adresse aus dem Fork.
-        const TTS_LIB_URL = 'https://esm.sh/@diffusionstudio/vits-web?bundle';
+        // FIX v24.29 (RADIKAL - eigener Build-Prozess): Nach drei gescheiterten Versuchen mit
+        // extern über CDN geladenen Bibliotheken (esm.sh konnte weder die kaputte cdnjs-
+        // Referenz noch die Node.js-Inkompatibilitäten sauber auflösen) wird die TTS-
+        // Bibliothek jetzt EINMALIG mit einem echten Build-Prozess (Vite) sauber gebündelt
+        // und die WASM-Dateien direkt vom eigenen Server ausgeliefert - keine externe CDN-
+        // Abhängigkeit mehr zur Laufzeit. Das Build-Setup liegt separat (nicht Teil dieser
+        // Seite selbst) und muss nur bei einer TTS-Bibliotheks-Aktualisierung erneut
+        // ausgeführt werden ("npm run build" im tts-build-Projekt).
+        const TTS_BUNDLE_URL = './tts/gamingpig-tts.js';
         let ttsModulePromise = null;
         let ttsCurrentAudio = null;
 
@@ -5235,40 +5290,15 @@
             localStorage.setItem('ttsVoiceId', voiceId);
         };
 
-        // FIX v24.26: Der Kernfehler aus der Browser-Konsole war eindeutig - onnxruntime-web
-        // (die Rechen-Engine unter der Haube von Piper TTS) versucht standardmäßig, ihre
-        // eigenen WASM-Dateien von einer fest einprogrammierten cdnjs.cloudflare.com-Adresse
-        // für Version 1.18.0 zu laden, die dort nicht mehr existiert (404) - dadurch schlägt
-        // die komplette Initialisierung fehl ("no available backend found"), egal welcher
-        // Backend-Typ (wasm/cpu/webgpu/webnn) versucht wird.
-        // Offiziell dokumentierter Fix (onnxruntime.ai/docs/tutorials/web/deploy.html):
-        // ort.env.wasm.wasmPaths explizit auf eine bekannt funktionierende CDN-Adresse
-        // (jsdelivr, exakt passende Version) umleiten, BEVOR irgendeine Inferenz versucht wird.
-        let ortConfigured = false;
-        async function configureOnnxRuntimeWasmPaths() {
-            if (ortConfigured) return;
-            try {
-                const ort = await import('https://esm.sh/onnxruntime-web@1.18.0?bundle');
-                ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/';
-                // Multi-Threading braucht crossOriginIsolated-Modus, den GitHub Pages nicht
-                // bereitstellt - explizit auf 1 setzen, damit sauber auf Single-Threading
-                // zurückgefallen wird, statt nur eine Warnung zu zeigen.
-                ort.env.wasm.numThreads = 1;
-                ortConfigured = true;
-            } catch (e) {
-                console.error('onnxruntime-web Vorkonfiguration fehlgeschlagen:', e);
-                // Kein harter Abbruch - falls piper-tts-web seine eigene, unabhängige Kopie
-                // von onnxruntime-web mitbringt, wäre diese Vorkonfiguration ohnehin wirkungslos
-                // gewesen, dann probieren wir es trotzdem mit dem regulären Ladevorgang weiter.
-            }
-        }
-
-        // Lädt die TTS-Bibliothek nur beim allerersten Gebrauch (dynamisches import()),
-        // danach wird dieselbe geladene Instanz wiederverwendet.
+        // Lädt das lokale TTS-Bundle nur beim allerersten Gebrauch (dynamisches import()),
+        // danach wird dieselbe geladene Instanz (window.GamingpigTTS) wiederverwendet.
         function loadTtsModule() {
             if (!ttsModulePromise) {
-                ttsModulePromise = configureOnnxRuntimeWasmPaths()
-                    .then(() => import(TTS_LIB_URL))
+                ttsModulePromise = import(TTS_BUNDLE_URL)
+                    .then(() => {
+                        if (!window.GamingpigTTS) throw new Error('TTS-Bundle hat sich nicht korrekt initialisiert.');
+                        return window.GamingpigTTS;
+                    })
                     .catch(err => {
                         ttsModulePromise = null; // erneuten Versuch beim nächsten Klick erlauben
                         throw err;
@@ -5318,24 +5348,21 @@
                 ttsSetButtonState(btnEl, 'loading');
                 if (typeof showToast === 'function') showToast('Stimme wird vorbereitet - beim ersten Mal kann das je nach Verbindung einen Moment dauern...');
 
-                const tts = await withTimeout(loadTtsModule(), 20000, 'Bibliothek laden');
+                const gpTts = await withTimeout(loadTtsModule(), 20000, 'Bibliothek laden');
 
-                // Nur herunterladen, wenn die Stimme noch nicht lokal gecacht ist
-                const stored = await withTimeout(tts.stored().catch(() => []), 5000, 'Gespeicherte Stimmen prüfen').catch(() => []);
-                if (!stored.includes(voiceId)) {
-                    await withTimeout(
-                        tts.download(voiceId, (progress) => {
-                            if (btnEl && progress && progress.total) {
-                                const pct = Math.round((progress.loaded * 100) / progress.total);
-                                btnEl.textContent = `⏳ Stimme lädt... ${pct}%`;
-                            }
-                        }),
-                        60000, // Stimmen sind 15-115MB groß, brauchen mehr Zeit als die Bibliothek selbst
-                        'Stimme herunterladen'
-                    );
-                }
-
-                const wav = await withTimeout(tts.predict({ text: text.trim(), voiceId }), 30000, 'Sprache erzeugen');
+                // gpTts.speak() kümmert sich intern selbst darum, ob die Stimme schon
+                // lokal gecacht ist oder erst heruntergeladen werden muss (siehe
+                // tts-build/src/main.js) - hier reicht ein einziger Aufruf.
+                const wav = await withTimeout(
+                    gpTts.speak(text.trim(), voiceId, (progress) => {
+                        if (btnEl && progress && progress.total) {
+                            const pct = Math.round((progress.loaded * 100) / progress.total);
+                            btnEl.textContent = `⏳ Stimme lädt... ${pct}%`;
+                        }
+                    }),
+                    60000, // Stimmen sind 15-115MB groß, brauchen mehr Zeit als das Bundle selbst
+                    'Stimme laden/erzeugen'
+                );
                 const audio = new Audio();
                 audio.src = URL.createObjectURL(wav);
                 ttsCurrentAudio = audio;
@@ -5361,14 +5388,127 @@
         };
 
         // Liest den aktuell sichtbaren Songtext vor (die bereits geparsten Zeilen).
+        // NEU v24.30: Zwei Verbesserungen auf Nutzerwunsch:
+        // 1. Fallback-Text ("kein Songtext gefunden" o.ä.) ist jetzt auch vorlesbar, statt
+        //    nur eine Meldung zu zeigen, dass nichts vorhanden sei.
+        // 2. Bei ECHTEN zeilenweise synchronisierten Lyrics wird nicht mehr alles am Stück
+        //    vorgelesen, sondern jede Zeile einzeln erzeugt und mit denselben relativen
+        //    Zeitabständen wie im Original-Songtext abgespielt (siehe speakLyricsSynced
+        //    weiter unten) - fühlt sich dadurch wie eine echte Live-Erzählung an, statt wie
+        //    ein hastig heruntergelesener Fließtext. Funktioniert nur mit echten
+        //    Zeitstempeln, bei reinem Fließtext (keine Sync-Daten) bleibt es beim normalen
+        //    Vorlesen am Stück.
+        let ttsSyncedPlaybackActive = false;
+
+        function ttsSleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        function ttsWaitForAudioEnd(audio) {
+            return new Promise(resolve => {
+                const start = performance.now();
+                const finish = () => resolve(performance.now() - start);
+                audio.addEventListener('ended', finish, { once: true });
+                audio.addEventListener('error', finish, { once: true });
+            });
+        }
+
         window.speakLyrics = function(btnEl) {
-            if (!parsedLyrics || parsedLyrics.length === 0) {
-                if (typeof showToast === 'function') showToast('Kein Songtext zum Vorlesen vorhanden.');
+            // Erneuter Klick während (synchroner oder normaler) Wiedergabe = stoppen
+            if (ttsSyncedPlaybackActive || (ttsCurrentAudio && !ttsCurrentAudio.paused)) {
+                ttsSyncedPlaybackActive = false;
+                if (ttsCurrentAudio) { ttsCurrentAudio.pause(); ttsCurrentAudio = null; }
+                ttsSetButtonState(btnEl, 'idle');
                 return;
             }
-            const text = parsedLyrics.map(line => line.tokens.map(t => t.cleanText).join(' ')).join('. ');
-            ttsSpeak(text, btnEl);
+
+            // Kein Songtext gefunden -> stattdessen den sichtbaren Fallback-Text vorlesen
+            if (!parsedLyrics || parsedLyrics.length === 0) {
+                const fallbackText = (typeof currentNoLyricsMessage !== 'undefined' && currentNoLyricsMessage)
+                    || 'Für diesen Song wurde kein Songtext gefunden.';
+                ttsSpeak(fallbackText, btnEl);
+                return;
+            }
+
+            // Prüfen, ob echte, unterschiedliche Zeilen-Zeitstempel vorhanden sind (= synced
+            // Lyrics). Reiner Fließtext ohne Sync-Daten hat für alle Zeilen denselben/keinen
+            // sinnvollen Zeitstempel - dann lohnt sich Zeile-für-Zeile-Timing nicht.
+            const hasRealTimestamps = parsedLyrics.length > 1 &&
+                parsedLyrics.some((line, i) => i > 0 && line.timeMs !== parsedLyrics[0].timeMs);
+
+            if (hasRealTimestamps) {
+                speakLyricsSynced(parsedLyrics, btnEl);
+            } else {
+                const text = parsedLyrics.map(line => line.tokens.map(t => t.cleanText).join(' ')).join('. ');
+                ttsSpeak(text, btnEl);
+            }
         };
+
+        // Erzeugt jede Zeile einzeln und spielt sie mit denselben relativen Zeitabständen wie
+        // im Original ab - lange Instrumental-Pausen werden auf max. 6 Sekunden gedeckelt,
+        // damit die Vorlesefunktion nicht minutenlang scheinbar hängen bleibt, dafür bleibt
+        // das grundsätzliche "Zeilen kommen im Songrhythmus"-Gefühl erhalten.
+        const TTS_MAX_LINE_GAP_MS = 6000;
+
+        async function speakLyricsSynced(lines, btnEl) {
+            const voiceId = getTtsVoiceId();
+            try {
+                ttsSetButtonState(btnEl, 'loading');
+                if (typeof showToast === 'function') {
+                    showToast('Songtext wird synchron vorbereitet - bei längeren Songs kann das einen Moment dauern...');
+                }
+
+                const gpTts = await withTimeout(loadTtsModule(), 20000, 'Bibliothek laden');
+
+                // Alle Zeilen-Audios vorab nacheinander erzeugen, damit die spätere zeitliche
+                // Wiedergabe nicht durch Generierungs-Wartezeiten aus dem Takt gerät.
+                const clips = [];
+                for (let i = 0; i < lines.length; i++) {
+                    const lineText = lines[i].tokens.map(t => t.cleanText).join(' ').trim();
+                    if (!lineText || lineText === '♪') { clips.push(null); continue; }
+                    if (btnEl) btnEl.textContent = `⏳ Zeile ${i + 1}/${lines.length} wird erzeugt...`;
+                    const wav = await withTimeout(gpTts.speak(lineText, voiceId), 30000, `Zeile ${i + 1} erzeugen`);
+                    clips.push(wav);
+                }
+
+                ttsSetButtonState(btnEl, 'speaking');
+                ttsSyncedPlaybackActive = true;
+
+                const firstTime = lines[0].timeMs;
+                let cursor = 0; // Zeitpunkt (ms, relativ zur ersten Zeile), an dem die vorige Zeile endete
+
+                for (let i = 0; i < clips.length; i++) {
+                    if (!ttsSyncedPlaybackActive) break; // per Stopp-Klick abgebrochen
+                    const clip = clips[i];
+                    if (!clip) continue;
+
+                    const rawOffset = lines[i].timeMs - firstTime;
+                    const scheduledOffset = Math.min(rawOffset, cursor + TTS_MAX_LINE_GAP_MS);
+                    const waitMs = Math.max(0, scheduledOffset - cursor);
+                    if (waitMs > 0) await ttsSleep(waitMs);
+                    if (!ttsSyncedPlaybackActive) break;
+
+                    const audio = new Audio();
+                    audio.src = URL.createObjectURL(clip);
+                    ttsCurrentAudio = audio;
+                    await audio.play().catch(() => {});
+                    const durationMs = await ttsWaitForAudioEnd(audio);
+                    cursor = Math.max(scheduledOffset, cursor) + durationMs;
+                }
+
+                ttsSyncedPlaybackActive = false;
+                ttsCurrentAudio = null;
+                ttsSetButtonState(btnEl, 'idle');
+            } catch (err) {
+                ttsSyncedPlaybackActive = false;
+                ttsCurrentAudio = null;
+                ttsSetButtonState(btnEl, 'idle');
+                if (typeof showToast === 'function') {
+                    showToast('Sprachausgabe gerade nicht verfügbar - bitte später erneut versuchen.');
+                }
+                console.error('TTS synced error:', err);
+            }
+        }
 
         // Liest die Release-Notes vor.
         window.speakChangelog = function() {
@@ -7091,6 +7231,15 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.30', date: 'August 2026', type: 'feature', items: [
+                'Vorlesen-Button jetzt direkt sichtbar in der Songtext-Ansicht',
+                'Songtext wird bei synchronisierten Lyrics jetzt zeilenweise im Songrhythmus vorgelesen, nicht mehr am Stück',
+                'Auch der Hinweistext bei fehlendem Songtext ist jetzt vorlesbar'
+            ]},
+            { version: 'v24.29', date: 'August 2026', type: 'feature', items: [
+                'Sprachausgabe technisch komplett neu aufgebaut - läuft jetzt eigenständig ohne externe Abhängigkeiten',
+                'Kleinerer Download für die Sprach-Engine (21 statt 89 MB)'
+            ]},
             { version: 'v24.28', date: 'August 2026', type: 'fix', items: [
                 'Sprachausgabe: Versuch mit einer anderen, aktiver gepflegten Sprach-Bibliothek'
             ]},
