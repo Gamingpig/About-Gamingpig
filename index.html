@@ -11,6 +11,25 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FEATURE] Release v24.32: Vorab-Aufwärmen der Sprach-Engine für schnellere Reaktionszeit
+      - Nutzerwunsch: "Stimme wird geladen" fühlt sich zu langsam an, besonders wenn Lyrics
+        "gesungen"/vorgelesen werden sollen - dort sollte nicht erst gewartet werden müssen.
+      - Fix: Neue Funktion warmUpTts() wird jetzt automatisch beim ÖFFNEN der Lyrics-Ansicht
+        aufgerufen (in toggleLyrics), nicht erst beim Klick auf "Vorlesen" selbst. Das startet
+        den Web Worker + parst das TTS-Bundle bereits im Hintergrund, während der Nutzer sich
+        die Lyrics anschaut - beim tatsächlichen Klick ist dieser Teil dann meist schon
+        erledigt. WICHTIG: lädt dabei bewusst noch KEINE Stimmdaten herunter (das bleibt
+        weiterhin sparend erst bei echtem Vorlesen-Wunsch) - nur der Worker-Start selbst wird
+        vorgezogen. Fehler beim Vorab-Laden werden bewusst verschluckt (kein Nutzer wartet
+        aktiv darauf), die reguläre Fehlerbehandlung beim tatsächlichen Klick bleibt
+        unverändert bestehen.
+      - Geprüft (Nutzerfrage): Vorlesen-Button wird an KEINER Stelle durch CSS oder JS
+        versteckt (weder in der Lyrics-Ansicht noch sonst wo) - er liegt bereits fest im
+        statischen HTML außerhalb des dynamisch neu aufgebauten Songtext-Bereichs, bleibt
+        also unabhängig vom Lyrics-Ladezustand immer sichtbar. Auch der Fallback-Text bei
+        fehlendem Songtext war bereits seit v24.30 vorlesbar. Kein Code-Fix nötig, da
+        bereits korrekt umgesetzt.
+
     [FIX - RADIKAL] Release v24.31: Seite fror bei Sprachausgabe komplett ein - Berechnung in
     Web Worker ausgelagert
       - Nutzer meldete: Seite friert beim Vorlesen (v.a. bei zeilenweisem Sync-Vorlesen)
@@ -2801,7 +2820,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.31 · 2026-08-10';
+        const SITE_VERSION = 'v24.32 · 2026-08-10';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -5336,6 +5355,18 @@
             return ttsModulePromise;
         }
 
+        // NEU v24.32: Startet den Web Worker + das TTS-Bundle bereits im Hintergrund, sobald
+        // die Lyrics-Ansicht geöffnet wird (siehe toggleLyrics) - NICHT erst beim Klick auf
+        // "Vorlesen". Lädt dabei bewusst NOCH KEINE Stimmdaten herunter (das bleibt weiterhin
+        // sparend erst bei echtem Vorlesen-Wunsch) - spart aber den Worker-Start und das
+        // Parsen des ~640KB-Bundles, was einen spürbaren Teil der bisherigen Wartezeit
+        // ausmachte. Fehler hier werden bewusst verschluckt (nur ein Vorab-Versuch, kein
+        // Nutzer wartet gerade aktiv darauf) - beim tatsächlichen Klick greift ohnehin die
+        // reguläre Fehlerbehandlung in ttsSpeak()/speakLyricsSynced().
+        function warmUpTts() {
+            loadTtsModule().catch(() => {});
+        }
+
         function ttsSetButtonState(btnEl, state) {
             if (!btnEl) return;
             const original = btnEl.dataset.originalLabel || btnEl.textContent;
@@ -7260,6 +7291,9 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.32', date: 'August 2026', type: 'performance', items: [
+                'Sprachausgabe startet spürbar schneller, wenn die Songtext-Ansicht geöffnet ist'
+            ]},
             { version: 'v24.31', date: 'August 2026', type: 'fix', items: [
                 'Seite fror beim Vorlesen komplett ein - Berechnung läuft jetzt im Hintergrund, ohne die Seite zu blockieren'
             ]},
@@ -8127,7 +8161,15 @@
                 mainMusicCard.classList.remove('lyrics-closing-state');
                 void mainMusicCard.offsetWidth; // Reflow erzwingen
                 mainMusicCard.classList.add('lyrics-open');
-                setTimeout(() => syncLyricsUI(true), 100); 
+                setTimeout(() => syncLyricsUI(true), 100);
+                // NEU v24.32: TTS-Engine schon beim Öffnen der Lyrics-Ansicht im Hintergrund
+                // vorwärmen (Worker starten + WASM-Laufzeit initialisieren), statt erst beim
+                // tatsächlichen Klick auf "Vorlesen". Der eigentliche Sprachmodell-Download
+                // passiert weiterhin nur bei echtem Vorlesen-Wunsch (also weiterhin sparend),
+                // aber der langsamste Teil (Worker-Start + Engine-Initialisierung) ist dann
+                // meistens schon erledigt, bevor überhaupt draufgetippt wird - macht den
+                // eigentlichen "Vorlesen"-Klick spürbar schneller.
+                if (typeof warmUpTts === 'function') warmUpTts();
             } else {
                 mainMusicCard.classList.add('lyrics-closing-state');
                 // Wichtig: Um die Transition zurück auf Standard-Größe zu starten, direkt entfernen!
