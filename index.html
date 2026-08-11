@@ -11,6 +11,35 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FIX - RADIKAL] Release v24.31: Seite fror bei Sprachausgabe komplett ein - Berechnung in
+    Web Worker ausgelagert
+      - Nutzer meldete: Seite friert beim Vorlesen (v.a. bei zeilenweisem Sync-Vorlesen)
+        komplett ein, auch schon während "Stimme wird geladen".
+      - Ursache: Die komplette KI-Berechnung (Modell laden, Stimme generieren) lief bisher im
+        Haupt-Thread der Seite - demselben Thread, der auch alles andere (Scrollen, Klicks,
+        Animationen) verarbeitet. Da onnxruntime-web WASM-Inferenz größtenteils synchron
+        rechnet, blockierte das den kompletten Haupt-Thread für die Dauer der Berechnung -
+        bei mehreren nacheinander erzeugten Zeilen (Sync-Vorlesen) entsprechend lange am
+        Stück.
+      - Fix: Komplette Berechnung in einen Web Worker ausgelagert (neue Datei
+        tts-build/src/worker.js) - ein eigener, vom Haupt-Thread komplett getrennter
+        Hintergrund-Prozess. Die Seite selbst (main.js/gamingpig-tts.js) schickt nur noch
+        Anfragen per postMessage an den Worker und wartet asynchron auf die Antwort (WAV-
+        Audiodaten werden per Transfer statt Kopie zurückgegeben, spart zusätzlich Zeit/
+        Speicher) - blockiert dabei nie mehr, egal wie lange die Berechnung im Hintergrund
+        braucht.
+      - Eigener Fehler im selben Zug gefunden und behoben: Der automatisch erzeugte Pfad zum
+        Worker-Bundle war ABSOLUT (z.B. "/assets/worker-x.js", ausgehend vom Domain-Root) -
+        das hätte auf gamingpig.github.io/About-Gamingpig/ (ein Unterordner) ins Leere
+        gezeigt. Mit base:'./' in der Vite-Konfiguration auf relative Pfade umgestellt, vor
+        dem Ausliefern verifiziert.
+      - Nutzerwunsch "Lyrics sollen gesungen werden" - ehrliche Einordnung: technisch nicht
+        umsetzbar mit dieser Art Sprachsynthese (Piper/VITS ist reine Sprach-, keine
+        Gesangs-Synthese ohne Tonhöhen-/Melodie-Steuerung). Echte Gesangssynthese (z.B.
+        DiffSinger) wäre eine komplett andere, deutlich aufwendigere Technologie - nicht im
+        Rahmen dieser Umsetzung sinnvoll integrierbar. Kein Code-Änderung dazu vorgenommen,
+        Nutzer wurde direkt im Chat informiert.
+
     [FEATURE] Release v24.30: Vorlesen-Button sichtbar gemacht + Fallback-Text vorlesbar +
     synchronisiertes Zeilen-für-Zeilen-Vorlesen
       - Vorlesen-Button war bisher nur im Einstellungsmenü versteckt, nicht direkt in der
@@ -2772,7 +2801,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.30 · 2026-08-10';
+        const SITE_VERSION = 'v24.31 · 2026-08-10';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -7231,6 +7260,9 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.31', date: 'August 2026', type: 'fix', items: [
+                'Seite fror beim Vorlesen komplett ein - Berechnung läuft jetzt im Hintergrund, ohne die Seite zu blockieren'
+            ]},
             { version: 'v24.30', date: 'August 2026', type: 'feature', items: [
                 'Vorlesen-Button jetzt direkt sichtbar in der Songtext-Ansicht',
                 'Songtext wird bei synchronisierten Lyrics jetzt zeilenweise im Songrhythmus vorgelesen, nicht mehr am Stück',
