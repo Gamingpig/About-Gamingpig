@@ -11,6 +11,41 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FEATURE - RADIKAL] Release v24.36: Umstieg auf Web Speech API nach sechs erfolglosen
+    Anläufen mit browserbasierter neuronaler Sprachsynthese
+      - Nutzer testete v24.35 (korrigierter Pfad) - Absturz weiterhin vorhanden, diesmal
+        offenbar während der Text-zu-Lautschrift-Umwandlung selbst (piper_phonemize lud laut
+        Network-Tab erfolgreich, aber kein einziger .onnx-Stimm-Download wurde je ausgelöst -
+        der Absturz passierte davor, während der WASM-Ausführung selbst, nicht beim Laden).
+        Diese Art Fehler bräuchte einen echten Schritt-für-Schritt-WASM-Debugger zur
+        Diagnose, was in dieser Umgebung nicht möglich ist.
+      - Versuch mit Kokoro TTS geprüft und verworfen: unterstützt kein Deutsch (nur
+        Englisch/Italienisch/Spanisch/Französisch/Hindi/Japanisch/Portugiesisch/Chinesisch),
+        damit für diese deutschsprachige Seite von vornherein ungeeignet.
+      - Nutzerentscheidung nach Abwägung: Umstieg auf die eingebaute Browser-Sprachausgabe
+        (Web Speech API/SpeechSynthesis) - genau das, was ursprünglich vermieden werden
+        sollte, aber die einzige für Deutsch zuverlässig funktionierende Option ohne eigenen
+        Server/Build-Prozess.
+      - Kompletter Umbau: gesamtes bisheriges Piper/ONNX/Worker-System aus index.html entfernt
+        (ttsSpeak, speakLyricsSynced, loadTtsModule, warmUpTts, withTimeout, TTS_VOICES-Liste
+        usw.), durch deutlich einfachere Web-Speech-API-Version ersetzt. Kein Download, kein
+        Web Worker, keine WASM-Dateien mehr zur Laufzeit nötig - der Browser bringt seine
+        Stimmen selbst mit (speechSynthesis.getVoices(), gefiltert auf lang.startsWith('de')).
+      - Stimmauswahl-Dropdown zeigt jetzt die tatsächlich auf dem jeweiligen Gerät
+        installierten deutschen Systemstimmen (variiert je nach Browser/OS), statt einer
+        festen Liste. Zeilenweises synchronisiertes Vorlesen (v24.30) funktional erhalten,
+        nutzt jetzt SpeechSynthesisUtterance-Warteschlange statt vorab erzeugter WAV-Clips.
+      - Beim Aufräumen alten, verwaisten Duplikat-Code (kaputte Referenzen auf nie
+        existierende Funktionen ttsLoadVoices/getTtsVoiceURI) gefunden und entfernt.
+      - tts/-Ordner (~40MB WASM-Dateien) wird von der Seite nicht mehr referenziert - kann bei
+        Gelegenheit aus dem Repo gelöscht werden, eilt aber nicht.
+      - EHRLICHER STAND: Stimmqualität hängt jetzt vom jeweiligen Gerät/Browser ab statt einer
+        garantiert konsistenten KI-Stimme - auf den meisten aktuellen Chrome-Installationen
+        sind das brauchbare, teils cloud-gestützte "Google"-Stimmen, auf älteren/anderen
+        Systemen ggf. schwächer. Das war der ursprünglich zu vermeidende Kompromiss, aber
+        nach sechs gescheiterten Anläufen mit der Alternative die pragmatisch einzige
+        zuverlässig funktionierende Lösung für diese Umgebung.
+
     [FIX] Release v24.35: Eigener Tippfehler im v24.34-Patch behoben - falscher relativer Pfad
       - Nutzer testete v24.34 - neuer Fehlertyp: "expected magic word 00 61 73 6d, found 3c
         21 44 4f" - das bedeutet, der Browser bekam eine HTML-404-Seite statt der echten
@@ -2885,7 +2920,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.35 · 2026-08-10';
+        const SITE_VERSION = 'v24.36 · 2026-08-10';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -4989,20 +5024,6 @@
             select.value = currentLyricsStyle;
         }
 
-        // NEU v24.22: Befüllt das Stimm-Dropdown, gruppiert nach männlich/weiblich, mit
-        // ehrlich angegebener Qualitätsstufe direkt im sichtbaren Namen.
-        function populateTtsVoiceDropdown() {
-            const select = document.getElementById('tts-voice-select');
-            if (!select) return;
-            const male = TTS_VOICES.filter(v => v.gender === 'm');
-            const female = TTS_VOICES.filter(v => v.gender === 'f');
-            const renderGroup = (label, voices) =>
-                `<optgroup label="${label}">${voices.map(v =>
-                    `<option value="${v.id}">${escapeHTML(v.label)} - ${escapeHTML(v.quality)}</option>`).join('')}</optgroup>`;
-            select.innerHTML = renderGroup('Männlich', male) + renderGroup('Weiblich', female);
-            select.value = getTtsVoiceId();
-        }
-
         let lyricsPreviewLoopInterval = null;
         function updateLyricsStylePreview(style) {
             const box = document.getElementById('lyrics-style-preview-box');
@@ -5374,134 +5395,103 @@
         // wird NUR heruntergeladen, wenn jemand tatsächlich auf "Vorlesen" klickt - kostet
         // Besuchern, die es nie nutzen, exakt null zusätzliche Ladezeit oder Ressourcen.
         // ========================================================= //
-        const TTS_VOICES = [
-            { id: 'de_DE-thorsten-high',           label: 'Thorsten (männlich)', quality: 'Beste Qualität', gender: 'm' },
-            { id: 'de_DE-thorsten-medium',         label: 'Thorsten (männlich, kompakt)', quality: 'Gute Qualität, kleinerer Download', gender: 'm' },
-            { id: 'de_DE-thorsten_emotional-medium', label: 'Thorsten Emotional (männlich)', quality: 'Gute Qualität, ausdrucksstark', gender: 'm' },
-            { id: 'de_DE-kerstin-low',              label: 'Kerstin (weiblich)', quality: 'Basis-Qualität', gender: 'f' },
-            { id: 'de_DE-ramona-low',               label: 'Ramona (weiblich)', quality: 'Basis-Qualität', gender: 'f' },
-            { id: 'de_DE-eva_k-x_low',              label: 'Eva (weiblich)', quality: 'Einfache Qualität, kleinster Download', gender: 'f' }
-        ];
-        // FIX v24.25: ?bundle ergänzt - esm.sh löst interne Importe bei Paketen mit
-        // WASM-Abhängigkeiten ohne diesen Parameter manchmal nicht zuverlässig auf.
-        // FIX v24.29 (RADIKAL - eigener Build-Prozess): Nach drei gescheiterten Versuchen mit
-        // extern über CDN geladenen Bibliotheken (esm.sh konnte weder die kaputte cdnjs-
-        // Referenz noch die Node.js-Inkompatibilitäten sauber auflösen) wird die TTS-
-        // Bibliothek jetzt EINMALIG mit einem echten Build-Prozess (Vite) sauber gebündelt
-        // und die WASM-Dateien direkt vom eigenen Server ausgeliefert - keine externe CDN-
-        // Abhängigkeit mehr zur Laufzeit. Das Build-Setup liegt separat (nicht Teil dieser
-        // Seite selbst) und muss nur bei einer TTS-Bibliotheks-Aktualisierung erneut
-        // ausgeführt werden ("npm run build" im tts-build-Projekt).
-        const TTS_BUNDLE_URL = './tts/gamingpig-tts.js';
-        let ttsModulePromise = null;
-        let ttsCurrentAudio = null;
+        // FIX v24.36 (WEB SPEECH API): Nach sechs erfolglosen Anläufen mit browserbasierter
+        // neuronaler Sprachsynthese (Piper/VITS über verschiedene CDN- und Build-Wege, siehe
+        // ausführliche Historie in v24.26-v24.35) und Kokoro TTS (unterstützt kein Deutsch)
+        // wird jetzt auf die eingebaute Browser-Sprachausgabe (Web Speech API) umgestellt -
+        // genau das, was ursprünglich vermieden werden sollte, aber die einzige Option, die
+        // in dieser Umgebung ohne eigenen Build-Prozess/Server zuverlässig für Deutsch
+        // funktioniert. Deutlich einfacher: kein Download, kein Web Worker, keine WASM-
+        // Dateien mehr nötig - der Browser bringt seine Stimmen selbst mit.
+        //
+        // Stimmqualität hängt vom jeweiligen Gerät/Browser ab - auf den meisten aktuellen
+        // Chrome-Installationen sind das brauchbare, teils cloud-gestützte "Google"-Stimmen.
+        function getGermanVoices() {
+            return speechSynthesis.getVoices().filter(v => v.lang.toLowerCase().startsWith('de'));
+        }
+
+        // Manche Browser laden die Stimmenliste asynchron nach - erst nach 'voiceschanged'
+        // ist getVoices() zuverlässig gefüllt.
+        function ensureVoicesLoaded() {
+            return new Promise(resolve => {
+                const existing = speechSynthesis.getVoices();
+                if (existing.length > 0) { resolve(existing); return; }
+                let resolved = false;
+                speechSynthesis.onvoiceschanged = () => {
+                    if (resolved) return;
+                    resolved = true;
+                    resolve(speechSynthesis.getVoices());
+                };
+                // Fallback, falls das Event auf manchen Geräten nie feuert
+                setTimeout(() => { if (!resolved) { resolved = true; resolve(speechSynthesis.getVoices()); } }, 1500);
+            });
+        }
 
         function getTtsVoiceId() {
-            return localStorage.getItem('ttsVoiceId') || 'de_DE-thorsten-medium';
+            return localStorage.getItem('ttsVoiceId') || '';
         }
         window.setTtsVoiceId = function(voiceId) {
             localStorage.setItem('ttsVoiceId', voiceId);
         };
 
-        // Lädt das lokale TTS-Bundle nur beim allerersten Gebrauch (dynamisches import()),
-        // danach wird dieselbe geladene Instanz (window.GamingpigTTS) wiederverwendet.
-        function loadTtsModule() {
-            if (!ttsModulePromise) {
-                ttsModulePromise = import(TTS_BUNDLE_URL)
-                    .then(() => {
-                        if (!window.GamingpigTTS) throw new Error('TTS-Bundle hat sich nicht korrekt initialisiert.');
-                        return window.GamingpigTTS;
-                    })
-                    .catch(err => {
-                        ttsModulePromise = null; // erneuten Versuch beim nächsten Klick erlauben
-                        throw err;
-                    });
+        async function populateTtsVoiceDropdown() {
+            const select = document.getElementById('tts-voice-select');
+            if (!select) return;
+            const voices = await ensureVoicesLoaded();
+            const german = voices.filter(v => v.lang.toLowerCase().startsWith('de'));
+            if (german.length === 0) {
+                select.innerHTML = '<option value="">Keine deutsche Stimme auf diesem Gerät gefunden</option>';
+                return;
             }
-            return ttsModulePromise;
-        }
-
-        // NEU v24.32: Startet den Web Worker + das TTS-Bundle bereits im Hintergrund, sobald
-        // die Lyrics-Ansicht geöffnet wird (siehe toggleLyrics) - NICHT erst beim Klick auf
-        // "Vorlesen". Lädt dabei bewusst NOCH KEINE Stimmdaten herunter (das bleibt weiterhin
-        // sparend erst bei echtem Vorlesen-Wunsch) - spart aber den Worker-Start und das
-        // Parsen des ~640KB-Bundles, was einen spürbaren Teil der bisherigen Wartezeit
-        // ausmachte. Fehler hier werden bewusst verschluckt (nur ein Vorab-Versuch, kein
-        // Nutzer wartet gerade aktiv darauf) - beim tatsächlichen Klick greift ohnehin die
-        // reguläre Fehlerbehandlung in ttsSpeak()/speakLyricsSynced().
-        function warmUpTts() {
-            loadTtsModule().catch(() => {});
+            select.innerHTML = german.map(v =>
+                `<option value="${escapeHTML(v.name)}">${escapeHTML(v.name)}${v.localService ? '' : ' (Online)'}</option>`
+            ).join('');
+            const saved = getTtsVoiceId();
+            if (saved && german.some(v => v.name === saved)) select.value = saved;
+            else select.value = german[0].name;
         }
 
         function ttsSetButtonState(btnEl, state) {
             if (!btnEl) return;
             const original = btnEl.dataset.originalLabel || btnEl.textContent;
             btnEl.dataset.originalLabel = original;
-            if (state === 'loading') { btnEl.textContent = '⏳ Stimme wird geladen...'; btnEl.disabled = true; }
-            else if (state === 'speaking') { btnEl.textContent = '⏹️ Stoppen'; btnEl.disabled = false; }
+            if (state === 'speaking') { btnEl.textContent = '⏹️ Stoppen'; btnEl.disabled = false; }
             else { btnEl.textContent = original; btnEl.disabled = false; }
         }
 
-        // Zentrale Vorlesefunktion - nimmt reinen Text, kümmert sich um Laden, Herunterladen
-        // der Stimme (falls noch nicht gecacht), Synthese und Wiedergabe.
-        // FIX v24.25: Ohne Zeitgrenze konnte der Button für immer im "Lädt..."-Zustand hängen
-        // bleiben (disabled=true), falls das Laden der Bibliothek/Stimme aus irgendeinem
-        // Grund nie fertig wird (weder Erfolg noch Fehler) - z.B. bei einem CDN-Problem, das
-        // weder sauber durchkommt noch sauber fehlschlägt. Jede der drei Netzwerk-Phasen
-        // (Bibliothek laden, Stimme herunterladen, Sprache erzeugen) bekommt jetzt eine harte
-        // Zeitgrenze, danach wird IMMER ein Fehler gezeigt und der Button wieder freigegeben,
-        // damit ein erneuter Klick tatsächlich etwas bewirkt statt ins Leere zu laufen.
-        function withTimeout(promise, ms, label) {
-            return Promise.race([
-                promise,
-                new Promise((_, reject) => setTimeout(() => reject(new Error(`Zeitüberschreitung bei: ${label}`)), ms))
-            ]);
+        function ttsPickVoice() {
+            const voices = getGermanVoices();
+            if (voices.length === 0) return null;
+            const saved = getTtsVoiceId();
+            return voices.find(v => v.name === saved) || voices[0];
         }
 
-        async function ttsSpeak(text, btnEl) {
+        // Zentrale Vorlesefunktion - erneuter Klick während der Wiedergabe stoppt statt neu
+        // zu starten.
+        function ttsSpeak(text, btnEl) {
             if (!text || !text.trim()) return;
 
-            // Erneuter Klick während der Wiedergabe = stoppen statt neu starten
-            if (ttsCurrentAudio && !ttsCurrentAudio.paused) {
-                ttsCurrentAudio.pause();
-                ttsCurrentAudio = null;
+            if (speechSynthesis.speaking || speechSynthesis.pending) {
+                speechSynthesis.cancel();
                 ttsSetButtonState(btnEl, 'idle');
                 return;
             }
 
-            const voiceId = getTtsVoiceId();
-            try {
-                ttsSetButtonState(btnEl, 'loading');
-                if (typeof showToast === 'function') showToast('Stimme wird vorbereitet - beim ersten Mal kann das je nach Verbindung einen Moment dauern...');
-
-                const gpTts = await withTimeout(loadTtsModule(), 20000, 'Bibliothek laden');
-
-                // gpTts.speak() kümmert sich intern selbst darum, ob die Stimme schon
-                // lokal gecacht ist oder erst heruntergeladen werden muss (siehe
-                // tts-build/src/main.js) - hier reicht ein einziger Aufruf.
-                const wav = await withTimeout(
-                    gpTts.speak(text.trim(), voiceId, (progress) => {
-                        if (btnEl && progress && progress.total) {
-                            const pct = Math.round((progress.loaded * 100) / progress.total);
-                            btnEl.textContent = `⏳ Stimme lädt... ${pct}%`;
-                        }
-                    }),
-                    60000, // Stimmen sind 15-115MB groß, brauchen mehr Zeit als das Bundle selbst
-                    'Stimme laden/erzeugen'
-                );
-                const audio = new Audio();
-                audio.src = URL.createObjectURL(wav);
-                ttsCurrentAudio = audio;
-                ttsSetButtonState(btnEl, 'speaking');
-                audio.onended = () => { ttsSetButtonState(btnEl, 'idle'); ttsCurrentAudio = null; };
-                audio.onerror = () => { ttsSetButtonState(btnEl, 'idle'); ttsCurrentAudio = null; };
-                await audio.play();
-            } catch (err) {
-                ttsSetButtonState(btnEl, 'idle');
-                if (typeof showToast === 'function') {
-                    showToast('Sprachausgabe gerade nicht verfügbar - bitte später erneut versuchen.');
-                }
-                console.error('TTS error:', err);
+            const voice = ttsPickVoice();
+            if (!voice && typeof showToast === 'function') {
+                showToast('Keine deutsche Stimme auf diesem Gerät gefunden - Wiedergabe nutzt die Standardstimme.');
             }
+
+            const utterance = new SpeechSynthesisUtterance(text.trim());
+            if (voice) utterance.voice = voice;
+            utterance.lang = 'de-DE';
+            ttsSetButtonState(btnEl, 'speaking');
+            utterance.onend = () => ttsSetButtonState(btnEl, 'idle');
+            utterance.onerror = () => {
+                ttsSetButtonState(btnEl, 'idle');
+                if (typeof showToast === 'function') showToast('Sprachausgabe auf diesem Gerät nicht verfügbar.');
+            };
+            speechSynthesis.speak(utterance);
         }
 
         // Sammelt den reinen Bio-Text und liest ihn vor.
@@ -5512,37 +5502,30 @@
             ttsSpeak(text, btnEl);
         };
 
-        // Liest den aktuell sichtbaren Songtext vor (die bereits geparsten Zeilen).
-        // NEU v24.30: Zwei Verbesserungen auf Nutzerwunsch:
-        // 1. Fallback-Text ("kein Songtext gefunden" o.ä.) ist jetzt auch vorlesbar, statt
-        //    nur eine Meldung zu zeigen, dass nichts vorhanden sei.
-        // 2. Bei ECHTEN zeilenweise synchronisierten Lyrics wird nicht mehr alles am Stück
-        //    vorgelesen, sondern jede Zeile einzeln erzeugt und mit denselben relativen
-        //    Zeitabständen wie im Original-Songtext abgespielt (siehe speakLyricsSynced
-        //    weiter unten) - fühlt sich dadurch wie eine echte Live-Erzählung an, statt wie
-        //    ein hastig heruntergelesener Fließtext. Funktioniert nur mit echten
-        //    Zeitstempeln, bei reinem Fließtext (keine Sync-Daten) bleibt es beim normalen
-        //    Vorlesen am Stück.
+        // Liest den aktuell sichtbaren Songtext vor (die bereits geparsten Zeilen), oder bei
+        // synchronisierten Lyrics zeilenweise im Songrhythmus (siehe speakLyricsSynced).
         let ttsSyncedPlaybackActive = false;
 
         function ttsSleep(ms) {
             return new Promise(resolve => setTimeout(resolve, ms));
         }
 
-        function ttsWaitForAudioEnd(audio) {
+        function speakUtteranceAndWait(text, voice) {
             return new Promise(resolve => {
-                const start = performance.now();
-                const finish = () => resolve(performance.now() - start);
-                audio.addEventListener('ended', finish, { once: true });
-                audio.addEventListener('error', finish, { once: true });
+                const u = new SpeechSynthesisUtterance(text);
+                if (voice) u.voice = voice;
+                u.lang = 'de-DE';
+                u.onend = resolve;
+                u.onerror = resolve;
+                speechSynthesis.speak(u);
             });
         }
 
         window.speakLyrics = function(btnEl) {
             // Erneuter Klick während (synchroner oder normaler) Wiedergabe = stoppen
-            if (ttsSyncedPlaybackActive || (ttsCurrentAudio && !ttsCurrentAudio.paused)) {
+            if (ttsSyncedPlaybackActive || speechSynthesis.speaking || speechSynthesis.pending) {
                 ttsSyncedPlaybackActive = false;
-                if (ttsCurrentAudio) { ttsCurrentAudio.pause(); ttsCurrentAudio = null; }
+                speechSynthesis.cancel();
                 ttsSetButtonState(btnEl, 'idle');
                 return;
             }
@@ -5569,70 +5552,38 @@
             }
         };
 
-        // Erzeugt jede Zeile einzeln und spielt sie mit denselben relativen Zeitabständen wie
-        // im Original ab - lange Instrumental-Pausen werden auf max. 6 Sekunden gedeckelt,
-        // damit die Vorlesefunktion nicht minutenlang scheinbar hängen bleibt, dafür bleibt
-        // das grundsätzliche "Zeilen kommen im Songrhythmus"-Gefühl erhalten.
+        // Spielt jede Zeile einzeln ab, mit denselben relativen Zeitabständen wie im
+        // Original - lange Instrumental-Pausen werden auf max. 6 Sekunden gedeckelt, damit
+        // die Vorlesefunktion nicht minutenlang scheinbar hängen bleibt.
         const TTS_MAX_LINE_GAP_MS = 6000;
 
         async function speakLyricsSynced(lines, btnEl) {
-            const voiceId = getTtsVoiceId();
-            try {
-                ttsSetButtonState(btnEl, 'loading');
-                if (typeof showToast === 'function') {
-                    showToast('Songtext wird synchron vorbereitet - bei längeren Songs kann das einen Moment dauern...');
-                }
+            const voice = ttsPickVoice();
+            ttsSetButtonState(btnEl, 'speaking');
+            ttsSyncedPlaybackActive = true;
 
-                const gpTts = await withTimeout(loadTtsModule(), 20000, 'Bibliothek laden');
+            const firstTime = lines[0].timeMs;
+            let cursor = 0; // Zeitpunkt (ms, relativ zur ersten Zeile), an dem die vorige Zeile endete
 
-                // Alle Zeilen-Audios vorab nacheinander erzeugen, damit die spätere zeitliche
-                // Wiedergabe nicht durch Generierungs-Wartezeiten aus dem Takt gerät.
-                const clips = [];
-                for (let i = 0; i < lines.length; i++) {
-                    const lineText = lines[i].tokens.map(t => t.cleanText).join(' ').trim();
-                    if (!lineText || lineText === '♪') { clips.push(null); continue; }
-                    if (btnEl) btnEl.textContent = `⏳ Zeile ${i + 1}/${lines.length} wird erzeugt...`;
-                    const wav = await withTimeout(gpTts.speak(lineText, voiceId), 30000, `Zeile ${i + 1} erzeugen`);
-                    clips.push(wav);
-                }
+            for (let i = 0; i < lines.length; i++) {
+                if (!ttsSyncedPlaybackActive) break; // per Stopp-Klick abgebrochen
+                const lineText = lines[i].tokens.map(t => t.cleanText).join(' ').trim();
+                if (!lineText || lineText === '♪') continue;
 
-                ttsSetButtonState(btnEl, 'speaking');
-                ttsSyncedPlaybackActive = true;
+                const rawOffset = lines[i].timeMs - firstTime;
+                const scheduledOffset = Math.min(rawOffset, cursor + TTS_MAX_LINE_GAP_MS);
+                const waitMs = Math.max(0, scheduledOffset - cursor);
+                if (waitMs > 0) await ttsSleep(waitMs);
+                if (!ttsSyncedPlaybackActive) break;
 
-                const firstTime = lines[0].timeMs;
-                let cursor = 0; // Zeitpunkt (ms, relativ zur ersten Zeile), an dem die vorige Zeile endete
-
-                for (let i = 0; i < clips.length; i++) {
-                    if (!ttsSyncedPlaybackActive) break; // per Stopp-Klick abgebrochen
-                    const clip = clips[i];
-                    if (!clip) continue;
-
-                    const rawOffset = lines[i].timeMs - firstTime;
-                    const scheduledOffset = Math.min(rawOffset, cursor + TTS_MAX_LINE_GAP_MS);
-                    const waitMs = Math.max(0, scheduledOffset - cursor);
-                    if (waitMs > 0) await ttsSleep(waitMs);
-                    if (!ttsSyncedPlaybackActive) break;
-
-                    const audio = new Audio();
-                    audio.src = URL.createObjectURL(clip);
-                    ttsCurrentAudio = audio;
-                    await audio.play().catch(() => {});
-                    const durationMs = await ttsWaitForAudioEnd(audio);
-                    cursor = Math.max(scheduledOffset, cursor) + durationMs;
-                }
-
-                ttsSyncedPlaybackActive = false;
-                ttsCurrentAudio = null;
-                ttsSetButtonState(btnEl, 'idle');
-            } catch (err) {
-                ttsSyncedPlaybackActive = false;
-                ttsCurrentAudio = null;
-                ttsSetButtonState(btnEl, 'idle');
-                if (typeof showToast === 'function') {
-                    showToast('Sprachausgabe gerade nicht verfügbar - bitte später erneut versuchen.');
-                }
-                console.error('TTS synced error:', err);
+                const lineStart = performance.now();
+                await speakUtteranceAndWait(lineText, voice);
+                const durationMs = performance.now() - lineStart;
+                cursor = Math.max(scheduledOffset, cursor) + durationMs;
             }
+
+            ttsSyncedPlaybackActive = false;
+            ttsSetButtonState(btnEl, 'idle');
         }
 
         // Liest die Release-Notes vor.
@@ -5644,10 +5595,8 @@
             ttsSpeak(text, btnEl);
         };
 
-        // NEU v24.23: Liest JEDE interaktive Karte vor (Status, Hintergrund, Kontakt usw.) -
-        // generisch, da alle Karten dasselbe openModal()-Template mit Titel+Text nutzen.
-        // Liest direkt aus dem gerade gerenderten Modal-Inhalt statt Daten erneut zu
-        // beschaffen, damit garantiert genau das vorgelesen wird, was auch sichtbar ist.
+        // Liest JEDE interaktive Karte vor (Status, Hintergrund, Kontakt usw.) - generisch,
+        // da alle Karten dasselbe openModal()-Template mit Titel+Text nutzen.
         window.speakModalGeneric = function(btnEl) {
             const titleEl = document.getElementById('modal-tts-title');
             const contentEl = document.getElementById('modal-tts-content');
@@ -7356,6 +7305,10 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.36', date: 'August 2026', type: 'feature', items: [
+                'Sprachausgabe technisch nochmal komplett umgebaut - läuft jetzt direkt über die Systemstimmen des Geräts',
+                'Kein Download mehr nötig, startet sofort'
+            ]},
             { version: 'v24.35', date: 'August 2026', type: 'fix', items: [
                 'Sprachausgabe: falscher technischer Dateipfad korrigiert (Tippfehler von uns)'
             ]},
@@ -8236,14 +8189,9 @@
                 void mainMusicCard.offsetWidth; // Reflow erzwingen
                 mainMusicCard.classList.add('lyrics-open');
                 setTimeout(() => syncLyricsUI(true), 100);
-                // NEU v24.32: TTS-Engine schon beim Öffnen der Lyrics-Ansicht im Hintergrund
-                // vorwärmen (Worker starten + WASM-Laufzeit initialisieren), statt erst beim
-                // tatsächlichen Klick auf "Vorlesen". Der eigentliche Sprachmodell-Download
-                // passiert weiterhin nur bei echtem Vorlesen-Wunsch (also weiterhin sparend),
-                // aber der langsamste Teil (Worker-Start + Engine-Initialisierung) ist dann
-                // meistens schon erledigt, bevor überhaupt draufgetippt wird - macht den
-                // eigentlichen "Vorlesen"-Klick spürbar schneller.
-                if (typeof warmUpTts === 'function') warmUpTts();
+                // FIX v24.36: warmUpTts()-Aufruf entfernt - mit dem Umstieg auf die
+                // Browser-eigene Sprachausgabe (Web Speech API) gibt es keinen Download/
+                // Worker-Start mehr, den man vorwärmen müsste. Stimmen sind sofort verfügbar.
             } else {
                 mainMusicCard.classList.add('lyrics-closing-state');
                 // Wichtig: Um die Transition zurück auf Standard-Größe zu starten, direkt entfernen!
