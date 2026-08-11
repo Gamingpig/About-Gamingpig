@@ -11,6 +11,29 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FIX] Release v24.33: Sprachausgabe stürzte mit rohem WASM-Fehlercode ab - fehlende
+    Threaded-Variante war vermutlich die Ursache
+      - Nutzer meldete: Sprachausgabe funktioniert weiterhin nicht. Konsole zeigte "TTS
+        error: Error: 73681272" - keine normale Fehlermeldung, sondern eine rohe
+        Speicheradresse/Ausnahme-Nummer, wie sie bei internen Abstürzen im Emscripten/
+        onnxruntime-WASM-Code auftritt, kombiniert mit der weiterhin sichtbaren Warnung
+        "numThreads is set to 8" (obwohl im Code explizit auf 1 gesetzt).
+      - Verdacht: Die Engine versucht trotz der numThreads=1-Einstellung zumindest zeitweise
+        intern auf die Multi-Thread-Variante zuzugreifen. In v24.29 wurden genau diese
+        Dateien (ort-wasm-simd-threaded.wasm, ort-wasm-threaded.wasm) bewusst entfernt, um
+        Download-Größe zu sparen (89MB -\> 21MB), da sie durch numThreads=1 eigentlich
+        überflüssig sein sollten - das war offenbar voreilig und hat zu einem harten Absturz
+        statt eines sauberen Fallbacks geführt, wenn die Datei fehlte.
+      - Fix: Alle Nicht-Trainings-WASM-Varianten wieder zurückgebracht (jetzt 41MB statt
+        21MB) - Funktionsfähigkeit hat Vorrang vor Downloadgröße. Sobald bestätigt ist, dass
+        es wieder läuft, kann die Größenoptimierung in einem späteren Schritt vorsichtiger
+        (mit echtem Test zwischen jedem Schritt) erneut versucht werden.
+      - Button-Sichtbarkeit in Lyrics-Ansicht: Nutzer-Screenshot zeigte das Release-Notes-
+        Modal, nicht die eigentliche Lyrics-Ansicht - konnte von dort nicht überprüft werden.
+        Screenshot der tatsächlichen Lyrics-Ansicht angefordert, bevor an dieser Stelle
+        etwas geändert wird (bisherige Code-Prüfung aus v24.32 zeigte keine versteckende
+        Logik).
+
     [FEATURE] Release v24.32: Vorab-Aufwärmen der Sprach-Engine für schnellere Reaktionszeit
       - Nutzerwunsch: "Stimme wird geladen" fühlt sich zu langsam an, besonders wenn Lyrics
         "gesungen"/vorgelesen werden sollen - dort sollte nicht erst gewartet werden müssen.
@@ -2820,7 +2843,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.32 · 2026-08-10';
+        const SITE_VERSION = 'v24.33 · 2026-08-10';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -7291,6 +7314,9 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.33', date: 'August 2026', type: 'fix', items: [
+                'Sprachausgabe stürzte statt zu sprechen - fehlende technische Datei ergänzt'
+            ]},
             { version: 'v24.32', date: 'August 2026', type: 'performance', items: [
                 'Sprachausgabe startet spürbar schneller, wenn die Songtext-Ansicht geöffnet ist'
             ]},
