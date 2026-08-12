@@ -11,6 +11,64 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FEATURE] Release v24.62: Datenschutz komplett aktualisiert + vorlesbar, "Was ist neu?"-Tour
+    komplett vom Haupt-Tutorial getrennt
+      - Datenschutzerklärung: iTunes-Search-API-Fallback (aus v24.61) in allen 6 Sprachen
+        ergänzt, Stand-Datum auf 13. August aktualisiert. Neuer Vorlesen-Button neben dem
+        Sprachumschalter - nutzt dieselbe Text-Zerlegung wie die Hauptseite (siehe v24.44),
+        um den bekannten Chrome-Bug bei langen Utterances zu vermeiden. Mit Playwright
+        verifiziert: erkennt korrekt den aktiven Sprachblock, liest 5313 Zeichen für Deutsch.
+      - "Was ist neu?"-Tour (aus v24.50) auf Nutzerwunsch komplett vom Haupt-Tutorial
+        getrennt: neue eigenständige Funktion getWhatsNewSteps() statt an
+        getTutorialSteps() angehängter isNew-Schritte. Neue Variable tutorialMode
+        ('main'/'whatsnew') steuert, welche Schritt-Liste showTutorialStep() gerade nutzt -
+        dieselbe Overlay-Infrastruktur wird für beide wiederverwendet, nur Quelle und
+        Abschluss-Verhalten unterscheiden sich.
+      - endTutorial() verzweigt jetzt: Haupt-Tutorial macht weiterhin den vollen Low-End-aus/
+        Scroll/Reload-Ablauf (nötig, um den erzwungenen Low-End-Modus sauber
+        zurückzusetzen). Die Was-ist-neu-Tour schließt sich jetzt LEICHTGEWICHTIG ohne
+        Reload - kein Grund, die ganze Seite neu zu laden nur um ein zweistufiges
+        Info-Popup zu schließen. Neue eigenständige startWhatsNewTour()-Funktion erzwingt
+        bewusst NICHT den Low-End-Modus wie startTutorial() (wäre ohne Reload-Rücksetzung
+        nur störend).
+      - Automatischer Reset bei jedem Update: neues Flag whatsNewSeenVersion, verglichen
+        gegen SITE_VERSION statt einem manuell zu pflegenden V2/V3-Flag wie beim Haupt-
+        Tutorial - Tour zeigt sich automatisch erneut, sobald sich die Versionsnummer
+        ändert, ganz ohne Code-Änderung bei jedem Release nötig.
+      - Flow für neue Besucher bleibt nahtlos: Haupt-Tutorial endet mit Reload (wie immer),
+        auf der frischen Seite danach prüft die Autostart-Logik automatisch, ob die
+        Was-ist-neu-Tour noch aussteht, und startet sie dann sofort - fühlt sich weiterhin
+        wie ein durchgehender Rundgang an, obwohl es jetzt zwei technisch komplett getrennte
+        Abläufe sind. Für wiederkehrende Besucher (Haupt-Tutorial längst abgeschlossen)
+        läuft die Tour jetzt unabhängig und ohne Reload.
+      - Mit Playwright verifiziert: beide Modi (tutorialMode 'main'/'whatsnew') liefern
+        korrekte Schritt-Anzahl (9 bzw. 2), korrekten Titel und korrektes Badge.
+      - HINWEIS an den Nutzer: Da SITE_VERSION praktisch bei jeder Antwort dieser Session
+        erhöht wird, würde die Tour aktuell bei JEDEM Update erneut aufpoppen - im Chat
+        transparent angemerkt, falls das zu häufig werden sollte.
+
+    [FEATURE] Release v24.61: iTunes-Fallback für Cover-Art, wenn der npc-api-Proxy 404 liefert
+      - Nutzer schickte konkrete Netzwerk-Beweise nach v24.60: npc-api.aikins.xyz gibt beim
+        Cover-Art-Proxy (v1/artwork/...) wiederholt 404 zurück, bei mehreren verschiedenen
+        Songs - eindeutig ein externes Problem beim Drittanbieter (Ein-Personen-Projekt,
+        keine öffentliche Status-Seite vorhanden), nicht in unserem Code. Watchdog aus
+        v24.60 bestätigt funktionierend (hat den Ausfall korrekt erkannt und
+        Wiederherstellung versucht), kann aber naturgemäß eine kaputte externe API nicht
+        reparieren.
+      - Nutzerwunsch: bevor auf das generische Platzhalterbild zurückgegriffen wird, zuerst
+        die kostenlose, login-freie iTunes-Search-API als Zwischenstufe probieren. Neue
+        Funktion tryItunesArtworkFallback() sucht per Titel+Künstler
+        (itunes.apple.com/search) und nutzt bei Treffer die dort hinterlegte Cover-Art
+        (hochskaliert auf 600x600 statt der Standard-100x100-Miniatur).
+      - mArtwork.onerror-Handler umgebaut: bei einem 404 wird jetzt erst iTunes versucht,
+        erst wenn AUCH das nichts findet (oder selbst fehlschlägt), kommt das echte
+        generische Platzhalterbild zum Einsatz. Eigener zweiter onerror-Handler für den Fall,
+        dass sogar die iTunes-Bild-URL kaputt sein sollte (verhindert Endlosschleife).
+      - EHRLICHER HINWEIS: iTunes-API-Aufruf konnte in dieser Sandbox nicht live getestet
+        werden (Netzwerk-Einschränkungen erlauben itunes.apple.com nicht) - basiert auf der
+        seit Jahren etablierten, öffentlich dokumentierten Nutzung dieser Schnittstelle für
+        genau diesen Zweck, aber ohne Live-Verifikation in diesem Fall.
+
     [FIX - KRITISCH] Release v24.60: Root Cause für "Fortschrittsbalken friert ein" + "Cover-Art
     verschwindet nach Songwechsel" gefunden - Timing-Bug im Polling
       - Nutzer meldete zwei zusammenhängende Bugs: Cover-Art zeigt sich nach einem Songwechsel
@@ -3515,7 +3573,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.60 · 2026-08-12';
+        const SITE_VERSION = 'v24.62 · 2026-08-13';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -5722,10 +5780,18 @@
                 { targetId: 'support-section', title: t('t_step_support_title'), text: t('t_step_support_text') },
                 { targetId: 'cp-trigger', title: t('t_step6_title'), text: t('t_step6_text') },
                 { targetId: 'pwa-install-btn', title: t('t_step7_title'), text: t('t_step7_text') },
-                { targetId: 'footer-section', title: t('t_step8_title'), text: t('t_step8_text') },
-                // NEU v24.50: Eigenständiges "Was ist neu?"-Mini-Tutorial, das direkt nach dem
-                // normalen Rundgang kommt - eigenes isNew-Flag für die visuelle Unterscheidung
-                // (andersfarbiges Badge statt "Schritt X/Y").
+                { targetId: 'footer-section', title: t('t_step8_title'), text: t('t_step8_text') }
+            ];
+        }
+
+        // FIX v24.62: Auf Nutzerwunsch komplett vom Haupt-Tutorial getrennt - eigene
+        // Funktion, eigener Ablauf, eigenes Flag. Läuft für neue Besucher direkt nach dem
+        // Haupt-Rundgang weiter, kann aber auch UNABHÄNGIG davon für wiederkehrende Besucher
+        // ausgelöst werden, die das Haupt-Tutorial schon lange kennen, aber die neuesten
+        // Änderungen noch nicht gesehen haben. Alle isNew-Markierungen bleiben für die
+        // visuelle Badge-Unterscheidung erhalten.
+        function getWhatsNewSteps() {
+            return [
                 { targetId: 'standby-toggle', title: t('t_whatsnew1_title'), text: t('t_whatsnew1_text'), isNew: true },
                 { targetId: 'support-section', title: t('t_whatsnew2_title'), text: t('t_whatsnew2_text'), isNew: true }
             ];
@@ -5752,6 +5818,14 @@
         const fallbackMessages = getFallbackMessages(); // Startwert; wird bei Sprachwechsel über applyLanguage() neu befüllt
         
         let currentStepIndex = 0;
+        // FIX v24.62: Steuert, welche Schritt-Liste gerade läuft (Haupt-Tutorial oder die
+        // eigenständige "Was ist neu?"-Tour) - dieselbe Overlay-Infrastruktur wird für beide
+        // wiederverwendet, nur die Schritt-Quelle und das Abschluss-Verhalten unterscheiden
+        // sich.
+        let tutorialMode = 'main';
+        function getCurrentSteps() {
+            return tutorialMode === 'whatsnew' ? getWhatsNewSteps() : getTutorialSteps();
+        }
         let originalPerfModeState = localStorage.getItem('perfMode');
         let activeTutorialTarget = null;
         let currentNoLyricsMessage = fallbackMessages[0];
@@ -8259,6 +8333,22 @@
             if (tutorialWrapper) {
                 tutorialWrapper.classList.add('tutorial-closing');
             }
+
+            // FIX v24.62: Die "Was ist neu?"-Tour ist jetzt ein eigenständiger, leichtgewichtiger
+            // Ablauf - kein Reload nötig (der war nur wegen des Low-End-Modus-Resets für das
+            // Haupt-Tutorial erforderlich). Einfach schließen und das Datum-Flag setzen.
+            if (tutorialMode === 'whatsnew') {
+                setTimeout(() => {
+                    if (tutorialWrapper) {
+                        tutorialWrapper.classList.add('hidden');
+                        tutorialWrapper.classList.remove('flex', 'tutorial-closing');
+                    }
+                    if (tutorialBox) tutorialBox.classList.remove('tutorial-closing');
+                    clearTutorialHighlights();
+                    localStorage.setItem('whatsNewSeenVersion', SITE_VERSION);
+                }, 850);
+                return;
+            }
             
             setTimeout(() => {
                 if (tutorialWrapper) {
@@ -8278,7 +8368,10 @@
                 // Animation nichts (sieht man eh nicht mehr) - jetzt ein sofortiger Sprung
                 // (behavior:'auto'), garantiert komplett fertig, bevor der Reload startet.
                 // Reihenfolge bewusst wie gewünscht: 1) Low-End-Modus aus, 2) nach oben
-                // scrollen, 3) neu laden.
+                // scrollen, 3) neu laden. NEU v24.62: Nach dem Reload prüft die Seite frisch,
+                // ob die "Was ist neu?"-Tour noch aussteht, und startet sie ggf. automatisch -
+                // dadurch fühlt es sich für neue Besucher weiterhin wie "ein durchgehender
+                // Rundgang" an, obwohl es jetzt zwei technisch getrennte Abläufe sind.
                 if (originalPerfModeState !== 'true' && window.innerWidth >= 360) {
                     applyPerformanceMode(false);
                     localStorage.setItem('perfMode', 'false');
@@ -8311,7 +8404,7 @@
                 speechSynthesis.cancel();
                 ttsSetButtonState(document.getElementById('btn-speak-tutorial'), 'idle');
             }
-            const steps = getTutorialSteps();
+            const steps = getCurrentSteps();
             if (index >= steps.length) {
                 endTutorial();
                 return;
@@ -8360,6 +8453,7 @@
 
         let tutorialTimeout;
         function startTutorial() {
+            tutorialMode = 'main';
             currentStepIndex = 0;
             originalPerfModeState = localStorage.getItem('perfMode');
             document.body.classList.add('tutorial-mode');
@@ -8382,12 +8476,44 @@
             showTutorialStep(currentStepIndex);
         }
 
+        // FIX v24.62: Eigenständiger, leichtgewichtiger Einstiegspunkt für die "Was ist neu?"-
+        // Tour - komplett getrennt vom Haupt-Tutorial, kann unabhängig davon jederzeit
+        // ausgelöst werden (z.B. für wiederkehrende Besucher, die das Haupt-Tutorial längst
+        // kennen, aber die neuesten Änderungen noch nicht gesehen haben). Erzwingt bewusst
+        // NICHT den Low-End-Modus wie das Haupt-Tutorial - das war dort nötig, weil danach
+        // ohnehin ein Reload folgt, der alles zurücksetzt. Hier gibt es keinen Reload, also
+        // würde ein erzwungener Low-End-Modus ohne passenden Rücksetz-Mechanismus nur stören.
+        window.startWhatsNewTour = function() {
+            tutorialMode = 'whatsnew';
+            currentStepIndex = 0;
+            document.body.classList.add('tutorial-mode');
+
+            if (tutorialWrapper) {
+                tutorialWrapper.classList.remove('hidden', 'tutorial-closing');
+                void tutorialWrapper.offsetWidth;
+                tutorialWrapper.classList.add('flex');
+            }
+            if (tutorialBox) {
+                clearTimeout(tutorialTimeout);
+                tutorialBox.classList.remove('tutorial-closing');
+                tutorialBox.classList.add('tutorial-opening');
+                tutorialTimeout = setTimeout(() => {
+                    tutorialBox.classList.remove('tutorial-opening');
+                }, 1200);
+            }
+            showTutorialStep(currentStepIndex);
+        };
+
         if (btnNext) {
             btnNext.addEventListener('click', () => {
-                const steps = getTutorialSteps();
+                const steps = getCurrentSteps();
                 const isFinishing = currentStepIndex === steps.length - 1;
 
-                if (isFinishing) {
+                // NEU v24.62: Ladeanzeige nur beim Haupt-Tutorial sinnvoll - dort läuft nach
+                // dem Fertig-Klick noch die Low-End-aus/Scroll/Reload-Sequenz (~1 Sekunde).
+                // Die "Was ist neu?"-Tour schließt sich sofort ohne Reload, braucht also
+                // keine Warte-Rückmeldung.
+                if (isFinishing && tutorialMode === 'main') {
                     // NEU v24.47: Beim letzten Schritt (Fertig-Klick) läuft danach noch die
                     // Low-End-aus/Scroll/Reload-Sequenz (~1 Sekunde) - ohne Rückmeldung wirkte
                     // der Klick, als würde nichts passieren. Button zeigt jetzt sofort einen
@@ -8425,6 +8551,14 @@
         // gewählt wurde (siehe dort).
         if (!localStorage.getItem('tutorialCompletedV3') && currentLang) {
             setTimeout(startTutorial, 500);
+        } else if (currentLang && localStorage.getItem('whatsNewSeenVersion') !== SITE_VERSION) {
+            // FIX v24.62: Was-ist-neu-Flag jetzt an SITE_VERSION gekoppelt statt an ein
+            // manuell zu pflegendes V2/V3-Flag wie beim Haupt-Tutorial - dadurch resettet
+            // sich die Tour automatisch bei jedem Versions-Update, ganz ohne dass im Code
+            // von Hand ein neuer Flag-Name vergeben werden muss. Nur für wiederkehrende
+            // Besucher (Haupt-Tutorial schon abgeschlossen) - neue Besucher bekommen die
+            // Tour ohnehin automatisch nach dem Haupt-Tutorial-Reload (siehe endTutorial()).
+            setTimeout(startWhatsNewTour, 500);
         }
 
         let modalTimeout;
@@ -8439,6 +8573,22 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.62', date: "August 2026", type: 'feature', items: {
+                de: ["Datenschutzerklärung jetzt vorlesbar, plus aktuellster Stand", "\"Was ist neu?\"-Tour läuft jetzt unabhängig vom Haupt-Tutorial und aktualisiert sich automatisch"],
+                en: ["Privacy policy is now readable aloud, plus fully up to date", "The \"What's new?\" tour now runs independently from the main tutorial and updates automatically"],
+                es: ["La política de privacidad ahora se puede escuchar, además de estar totalmente actualizada", "El recorrido \"¿Qué hay de nuevo?\" ahora funciona de forma independiente del tutorial principal y se actualiza automáticamente"],
+                fr: ["La politique de confidentialité peut désormais être écoutée, en plus d'être entièrement à jour", "La visite \"Quoi de neuf ?\" fonctionne désormais indépendamment du tutoriel principal et se met à jour automatiquement"],
+                pt: ["A política de privacidade agora pode ser ouvida, além de estar totalmente atualizada", "O tour \"O que há de novo?\" agora funciona independentemente do tutorial principal e se atualiza automaticamente"],
+                tr: ["Gizlilik politikası artık sesli dinlenebiliyor, ayrıca tamamen güncel", "\"Yenilikler neler?\" turu artık ana eğitimden bağımsız çalışıyor ve otomatik olarak güncelleniyor"],
+            }},
+            { version: 'v24.61', date: "August 2026", type: 'feature', items: {
+                de: ["Neu: iTunes-Cover-Art-Fallback, falls die Haupt-Bildquelle mal ausfällt"],
+                en: ["New: iTunes cover art fallback if the main image source is unavailable"],
+                es: ["Nuevo: respaldo de portada de iTunes si la fuente principal de imagen falla"],
+                fr: ["Nouveau : solution de secours iTunes pour la pochette si la source principale est indisponible"],
+                pt: ["Novo: capa de reserva do iTunes caso a fonte principal de imagem falhe"],
+                tr: ["Yeni: ana görsel kaynağı çalışmadığında iTunes kapak görseli yedeği"],
+            }},
             { version: 'v24.60', date: "August 2026", type: 'fix', items: {
                 de: ["Kritischer Fix: Fortschrittsbalken fror bei kurzen Verbindungsaussetzern komplett ein", "Cover-Art verschwand teils direkt nach dem Songwechsel wieder - behoben"],
                 en: ["Critical fix: progress bar completely froze during brief connection hiccups", "Cover art sometimes disappeared right after a song change - fixed"],
@@ -10760,14 +10910,45 @@
                 apiProgress = trackDuration;
             }
 
+                // NEU v24.61: Nutzer bat um einen Zwischenschritt, bevor auf das generische
+                // Platzhalterbild zurückgegriffen wird - npc-api.aikins.xyz gibt aktuell
+                // wiederholt 404 für den Cover-Art-Proxy zurück (externes Problem, siehe
+                // Chat-Verlauf). Die iTunes-Search-API ist kostenlos, braucht keinen
+                // API-Key/Login und ist CORS-freundlich - perfekt als Rückfallebene, bevor
+                // wirklich nur noch das generische Musiknoten-Icon übrig bleibt.
+                async function tryItunesArtworkFallback(title, artist) {
+                    try {
+                        const query = encodeURIComponent(`${artist} ${title}`.trim());
+                        const res = await fetch(`https://itunes.apple.com/search?term=${query}&media=music&limit=1`);
+                        if (!res.ok) return null;
+                        const json = await res.json();
+                        const hit = json.results && json.results[0];
+                        if (!hit || !hit.artworkUrl100) return null;
+                        // Höhere Auflösung anfordern statt der Standard-100x100-Miniatur.
+                        return hit.artworkUrl100.replace('100x100bb', '600x600bb');
+                    } catch (err) {
+                        console.warn('iTunes-Artwork-Fallback fehlgeschlagen:', err);
+                        return null;
+                    }
+                }
+
                 const applyDataChanges = (addedDelay = 0) => {
                 // Der native Error-Handler: Feuert WIRKLICH NUR, wenn der Link kaputt ist (z.B. 404 Fehler vom CDN)
                 if (mArtwork && !mArtwork.onerror) {
-                    mArtwork.onerror = function() {
-                        this.src = fallbackImg;
-                        if (mAmbient) mAmbient.style.backgroundImage = `url('${fallbackImg}')`;
-                        if (mGlow && coverGlowEnabled) mGlow.style.backgroundImage = `url('${fallbackImg}')`;
-                        if (lyricsMiniArt) lyricsMiniArt.src = fallbackImg;
+                    mArtwork.onerror = async function() {
+                        // Verhindert, dass ein erneuter Fehler (z.B. wenn auch die
+                        // iTunes-URL fehlschlägt) eine Endlosschleife auslöst.
+                        this.onerror = null;
+                        const itunesUrl = await tryItunesArtworkFallback(
+                            mTitle ? mTitle.innerText : '',
+                            mArtist ? mArtist.innerText : ''
+                        );
+                        const finalFallback = itunesUrl || fallbackImg;
+                        this.src = finalFallback;
+                        this.onerror = () => { this.src = fallbackImg; }; // falls sogar die iTunes-URL kaputt sein sollte
+                        if (mAmbient) mAmbient.style.backgroundImage = `url('${finalFallback}')`;
+                        if (mGlow && coverGlowEnabled) mGlow.style.backgroundImage = `url('${finalFallback}')`;
+                        if (lyricsMiniArt) lyricsMiniArt.src = finalFallback;
                     };
                 }
 
