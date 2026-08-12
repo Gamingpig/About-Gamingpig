@@ -11,6 +11,56 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FEATURE] Release v24.50: Tutorial-Flag zurückgesetzt + "Was ist neu?"-Mini-Tutorial +
+    aktualisierte Datenschutzerklärung
+      - Nutzer bat um Reset des Tutorial-Flags (nach den großen Updates der letzten Releases
+        sinnvoll, damit auch wiederkehrende Besucher die neuen Inhalte sehen) - localStorage-
+        Key von 'tutorialCompletedV2' auf 'tutorialCompletedV3' erhöht (alle 3 echten
+        Code-Stellen), zwei historische Changelog-Kommentare (die den ALTEN V1->V2-Wechsel
+        beschreiben) beim Massenersatz korrekt wieder auf V2 zurückkorrigiert.
+      - Neues "Was ist neu?"-Mini-Tutorial: zwei zusätzliche Schritte am Ende der bestehenden
+        11-Schritte-Liste (isNew-Flag), visuell klar vom normalen Rundgang unterschieden
+        (violettes "✨ Bonus: Was ist neu"-Badge statt "Schritt X/Y", eigener
+        Übersetzungsschlüssel tutorial_whatsnew_badge). Inhalt: Zusammenfassung der jüngsten
+        großen Änderungen (Sprachausgabe fast überall, StandBy-Überarbeitung/Sicherheits-Fix,
+        Discord-Live-Widget). Alle 6 Sprachen.
+      - Datenschutzerklärung (privacy.html) aktualisiert: neue Abschnitte für die
+        Sprachausgabe (Web Speech API - je nach Browser lokal oder über Cloud-Dienst des
+        Anbieters, keine Kontrolle darüber), das Discord-Widget (ruft öffentliche
+        discord.com-API auf, verlinkt Discords eigene Datenschutzerklärung), sowie eine
+        explizite Übersicht der rein lokal in localStorage gespeicherten Daten (Sprache,
+        Design-Einstellungen, Tutorial-Status, gewählte Vorlese-Stimme, "Zuletzt gehört"-
+        Verlauf) - alles bewusst als "verlässt nie das Gerät" gekennzeichnet. Stand-Datum auf
+        12. August 2026 aktualisiert.
+
+    [PERFORMANCE - KRITISCH] Release v24.49: StandBy-GPU-Dauerlast auf 14-16% gemessen (AMD
+    Ryzen 7 4700U Laptop-GPU) - Hauptursache gefunden und behoben
+      - Nutzer maß per Task-Manager konkrete Zahlen: 14-16% GPU-Dauerlast im StandBy auf einer
+        Laptop-GPU, die stärker als die meisten Smartphone-GPUs ist - für einen fast
+        statischen Lockscreen deutlich zu hoch, sollte klar unter 10% liegen.
+      - HAUPTURSACHE gefunden: #standby-nowplaying hat eine STATISCHE backdrop-filter:
+        blur(30px) - die muss aber bei JEDEM Frame neu berechnet werden, solange sich der
+        Hintergrund dahinter bewegt (backdrop-filter tastet live ab, was optisch dahinter
+        liegt). #standby-bg lief mit "animation: standby-kenburns 26s infinite alternate" -
+        für immer, solange StandBy offen ist (potenziell stundenlang) - und hielt dadurch
+        permanent eine teure Reblur-Berechnung am Laufen. Exakt dasselbe Muster wie bereits
+        mehrfach an anderer Stelle dieser Seite gefunden (v24.4/v24.7/v24.10-Fixes).
+      - Fix 1: Ken-Burns-Animation läuft jetzt nur noch EINMAL (60s sanfter Pan zu Beginn,
+        "1 forwards" statt "infinite alternate"), danach steht der Hintergrund fest - keine
+        dauerhafte Reblur-Berechnung mehr. Der Anti-Burn-in-Shift (alle 60s) bleibt trotzdem
+        wirksam, da CSS-Variablen auch nach Animationsende neu ausgewertet werden. will-change
+        auf #standby-bg ebenfalls entfernt (unnötige dauerhafte GPU-Ebenen-Reservierung bei
+        einer nur einmal laufenden Animation).
+      - Fix 2: Blur-Radius von #standby-nowplaying selbst von 30px auf 18px reduziert -
+        Compositing-Kosten skalieren mit dem Blur-Radius, optisch kaum ein Unterschied.
+      - Fix 3: Hintergrund-"Blobs" (.blob-container/.blob, endlose 20s-Animation) hatten für
+        StandBy keine eigene Pausier-Regel, verließen sich nur zufällig auf die
+        dashboard-open-Klasse - jetzt explizit auch bei aktivem StandBy pausiert
+        (body:has(#standby-overlay.standby-active)), unabhängig vom Dashboard-Status.
+      - Fix 4 (Kleinvieh): will-change bei den winzigen StandBy-EQ-Balken entfernt - für so
+        kleine Elemente kaum relevant, aber im Sinne von "wirklich jede Ressource sparen"
+        trotzdem bereinigt.
+
     [PERFORMANCE/FIX] Release v24.48: Weitere StandBy-Effizienz + Spatial-Tilt-Bug + echte
     Songrhythmus-Synchronisation beim Vorlesen
       - Nutzer meldete: Handy wird im StandBy-Modus immer noch warm, trotz des kritischen
@@ -2081,7 +2131,13 @@
         body.dashboard-open .blob-container,
         body.dashboard-open .blob,
         body:has(#main-music-card.lyrics-open) .blob-container,
-        body:has(#main-music-card.lyrics-open) .blob {
+        body:has(#main-music-card.lyrics-open) .blob,
+        /* NEU v24.49: StandBy deckt den kompletten Bildschirm blickdicht ab - Blobs dahinter
+           sind exakt genauso unsichtbar wie bei offenem Dashboard/Lyrics, hatten bisher aber
+           keine eigene, direkte Pausier-Regel (verließen sich darauf, dass dashboard-open
+           zufällig auch gesetzt war, was nicht garantiert ist). */
+        body:has(#standby-overlay.standby-active) .blob-container,
+        body:has(#standby-overlay.standby-active) .blob {
             animation-play-state: paused !important;
         }
         .blob { position: absolute; will-change: transform; animation: blob-morph 20s ease-in-out infinite alternate; }
@@ -2939,17 +2995,29 @@
         }
         #standby-bg {
             position: absolute; inset: -30px; background-size: cover; background-position: center;
-            filter: blur(var(--standby-bg-blur, 36px)) brightness(0.4) saturate(160%); transform: scale(1.2);
-            will-change: transform; transition: background-image 0.8s ease, filter 0.3s ease;
-            animation: standby-kenburns 26s ease-in-out infinite alternate;
+            filter: blur(var(--standby-bg-blur, 36px)) brightness(0.4) saturate(160%); transform: scale(1.28);
+            transition: background-image 0.8s ease, filter 0.3s ease;
+            animation: standby-kenburns 60s ease-in-out 1 forwards;
             /* NEW: Korrektur - der Regler soll NICHT ein-/ausblenden (Opazität), sondern
                den Weichzeichner-Grad steuern: höherer Regler-Wert = weniger Blur = das
                Cover-Bild wird klarer/schärfer sichtbar, statt komplett zu verschwinden. */
         }
-        /* NEW: Performance-Fix - Blur-Radius von 50px auf 36px reduziert (spürbar günstiger
-           für die GPU, kaum sichtbarer Unterschied) und Ken-Burns-Zyklus von 20s auf 26s
-           verlangsamt (weniger Bewegungs-/Repaint-Arbeit pro Sekunde). Relevant, da der
-           StandBy-Modus potenziell stundenlang offen bleibt (z.B. Nachttisch beim Laden). */
+        /* KRITISCHER FIX v24.49: Nutzer maß per Task-Manager 14-16% DAUERHAFTE GPU-Last im
+           StandBy auf einem Laptop (AMD Ryzen 7 4700U) - für einen fast statischen Screen
+           deutlich zu hoch. Ursache identifiziert: #standby-nowplaying hat eine STATISCHE
+           backdrop-filter: blur(30px) - die muss aber bei JEDEM Frame neu berechnet werden,
+           solange sich der Hintergrund DAHINTER bewegt (backdrop-filter tastet live ab, was
+           optisch dahinter liegt). Die Ken-Burns-Animation lief bisher "infinite alternate" -
+           für immer, solange StandBy offen ist (potenziell stundenlang) - und hielt dadurch
+           permanent eine teure Reblur-Berechnung am Laufen. Exakt dasselbe Muster wie schon
+           mehrfach an anderer Stelle dieser Seite gefunden (siehe v24.4/v24.7/v24.10-Fixes).
+           Fix: Animation läuft jetzt nur EINMAL (60s sanfter Pan zu Beginn), danach steht der
+           Hintergrund fest - der Anti-Burn-in-Shift (alle 60s) bleibt trotzdem wirksam, da
+           CSS-Variablen (--standby-shift-x/y) auch nach Animationsende neu ausgewertet
+           werden, ohne dass die Animation selbst erneut anlaufen muss. will-change ebenfalls
+           entfernt - eine dauerhaft reservierte GPU-Ebene ist bei einer nur einmal
+           laufenden Animation unnötige Verschwendung.
+        */
         body.low-end #standby-bg { filter: brightness(0.35); animation: none; }
         /* NEU v24.48: Anti-Burn-in-Verschiebung jetzt auch für den Hintergrund - vorher betraf
            der Pixel-Shift nur Uhr/Now-Playing-Karte, das Hintergrundbild blieb bei langem
@@ -2960,7 +3028,7 @@
         */
         @keyframes standby-kenburns {
             0% { transform: scale(1.2) translate(var(--standby-shift-x, 0px), var(--standby-shift-y, 0px)); }
-            100% { transform: scale(1.3) translate(calc(-1.2% + var(--standby-shift-x, 0px)), calc(-1.2% + var(--standby-shift-y, 0px))); }
+            100% { transform: scale(1.28) translate(calc(-1.2% + var(--standby-shift-x, 0px)), calc(-1.2% + var(--standby-shift-y, 0px))); }
         }
 
         #standby-clockzone { position: relative; z-index: 2; text-align: center; padding: 48px 20px 0; }
@@ -2971,14 +3039,17 @@
         #standby-nowplaying {
             position: relative; z-index: 2; width: min(94vw, 520px); margin-bottom: 40px;
             background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14);
-            backdrop-filter: blur(30px) saturate(150%); -webkit-backdrop-filter: blur(30px) saturate(150%);
+            /* NEU v24.49: Blur-Radius von 30px auf 18px reduziert - Compositing-Kosten
+               skalieren spürbar mit dem Blur-Radius, optisch kaum ein Unterschied auf einer
+               ohnehin schon weichgezeichneten Hintergrundfläche. */
+            backdrop-filter: blur(18px) saturate(150%); -webkit-backdrop-filter: blur(18px) saturate(150%);
             border-radius: 32px; padding: 26px; box-shadow: 0 20px 60px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.15);
         }
         #standby-track { display: flex; align-items: center; gap: 20px; }
         #standby-track-art-wrap { position: relative; width: clamp(120px, 34vw, 190px); height: clamp(120px, 34vw, 190px); flex-shrink: 0; border-radius: 28px; overflow: hidden; box-shadow: 0 14px 40px rgba(0,0,0,0.65); }
         #standby-track-art { width: 100%; height: 100%; object-fit: cover; display: block; }
         #standby-eq { position: absolute; bottom: 8px; left: 8px; display: flex; align-items: flex-end; gap: 3.5px; height: 20px; background: rgba(0,0,0,0.4); padding: 4px 7px; border-radius: 8px; }
-        #standby-eq span { width: 4px; height: 13px; background: #fff; border-radius: 2px; transform-origin: bottom; will-change: transform; animation: di-eq-bounce 0.9s ease-in-out infinite; }
+        #standby-eq span { width: 4px; height: 13px; background: #fff; border-radius: 2px; transform-origin: bottom; animation: di-eq-bounce 0.9s ease-in-out infinite; }
         #standby-eq span:nth-child(1) { animation-delay: -0.6s; } #standby-eq span:nth-child(2) { animation-delay: -0.3s; } #standby-eq span:nth-child(3) { animation-delay: -0.9s; }
         body.low-end #standby-eq { display: none; }
         #standby-track-text { min-width: 0; flex: 1; }
@@ -3194,7 +3265,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.48 · 2026-08-12';
+        const SITE_VERSION = 'v24.50 · 2026-08-12';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -4169,6 +4240,11 @@
                 changelog_whats_new: 'Was ist neu?', changelog_release_notes: 'Release-Notes',
                 changelog_type_feature: 'Neu', changelog_type_performance: 'Performance', changelog_type_fix: 'Fehlerbehebung',
                 tutorial_speak_aria: 'Diesen Schritt vorlesen',
+                t_whatsnew1_title: '✨ Was ist neu seit deinem letzten Besuch?',
+                t_whatsnew1_text: 'Kurzer Extra-Rundgang: Die Sprachausgabe ist jetzt fast überall verfügbar - Songtext, Bio, Karten, Dashboard, Release-Notes, sogar hier im Tutorial. Und der StandBy-Modus wurde komplett überarbeitet: ein ernster Akku-/Hitze-Bug wurde behoben, außerdem läuft er jetzt insgesamt deutlich sparsamer.',
+                t_whatsnew2_title: '✨ Noch mehr Neues',
+                t_whatsnew2_text: 'Der Support-Bereich zeigt jetzt live, wer gerade auf meinem Discord-Server online ist. Und die Release-Notes im Footer wachsen ständig weiter - schau da gerne öfter mal rein. Das war\'s mit dem Extra-Rundgang - viel Spaß beim Entdecken!',
+                tutorial_whatsnew_badge: '✨ Bonus: Was ist neu',
                 support_section_title: 'Support', support_section_email_title: 'E-Mail', support_section_email_desc: 'Fragen, Bugs gefunden oder einfach quatschen? Schreib mir!',
                 support_section_discord_title: 'Discord', support_section_discord_desc: 'Tritt dem Support-Server bei - dort bin ich meistens am schnellsten erreichbar.',
                 support_email_open: 'Öffnen', support_email_copy: 'Kopieren', support_email_copied: 'Kopiert! ✓',
@@ -4347,6 +4423,11 @@
                 changelog_whats_new: "What's new?", changelog_release_notes: 'Release Notes',
                 changelog_type_feature: 'New', changelog_type_performance: 'Performance', changelog_type_fix: 'Fix',
                 tutorial_speak_aria: 'Read this step aloud',
+                t_whatsnew1_title: '✨ What\'s new since your last visit?',
+                t_whatsnew1_text: 'Quick extra tour: Voice narration is now available almost everywhere - lyrics, bio, cards, dashboard, release notes, even here in the tutorial. And StandBy mode got a full overhaul: a serious battery/heat bug was fixed, and it now runs noticeably more efficiently overall.',
+                t_whatsnew2_title: '✨ Even more news',
+                t_whatsnew2_text: "The Support section now shows live who's currently online on my Discord server. And the release notes in the footer keep growing - feel free to check back often. That's the extra tour - have fun exploring!",
+                tutorial_whatsnew_badge: "✨ Bonus: What's new",
                 support_section_title: 'Support', support_section_email_title: 'Email', support_section_email_desc: 'Questions, found a bug, or just want to chat? Email me!',
                 support_section_discord_title: 'Discord', support_section_discord_desc: 'Join the support server - that\'s usually the fastest way to reach me.',
                 support_email_open: 'Open', support_email_copy: 'Copy', support_email_copied: 'Copied! ✓',
@@ -4525,6 +4606,11 @@
                 changelog_whats_new: '¿Qué hay de nuevo?', changelog_release_notes: 'Notas de la versión',
                 changelog_type_feature: 'Nuevo', changelog_type_performance: 'Rendimiento', changelog_type_fix: 'Corrección',
                 tutorial_speak_aria: 'Escuchar este paso',
+                t_whatsnew1_title: '✨ ¿Qué hay de nuevo desde tu última visita?',
+                t_whatsnew1_text: 'Recorrido extra rápido: la narración por voz ahora está disponible en casi todas partes - letras, biografía, tarjetas, panel, notas de versión, incluso aquí en el tutorial. Y el modo StandBy fue completamente renovado: se corrigió un error grave de batería/calor, y ahora funciona notablemente más eficiente en general.',
+                t_whatsnew2_title: '✨ Más novedades',
+                t_whatsnew2_text: 'La sección de Soporte ahora muestra en vivo quién está conectado en mi servidor de Discord. Y las notas de versión en el pie de página siguen creciendo - échales un vistazo de vez en cuando. Eso es todo el recorrido extra - ¡diviértete explorando!',
+                tutorial_whatsnew_badge: '✨ Extra: Novedades',
                 support_section_title: 'Soporte', support_section_email_title: 'Email', support_section_email_desc: '¿Tienes preguntas, encontraste un error o solo quieres charlar? ¡Escríbeme!',
                 support_section_discord_title: 'Discord', support_section_discord_desc: 'Únete al servidor de soporte - ahí suelo responder más rápido.',
                 support_email_open: 'Abrir', support_email_copy: 'Copiar', support_email_copied: '¡Copiado! ✓',
@@ -4703,6 +4789,11 @@
                 changelog_whats_new: 'Quoi de neuf ?', changelog_release_notes: 'Notes de version',
                 changelog_type_feature: 'Nouveau', changelog_type_performance: 'Performance', changelog_type_fix: 'Correction',
                 tutorial_speak_aria: 'Écouter cette étape',
+                t_whatsnew1_title: '✨ Quoi de neuf depuis ta dernière visite ?',
+                t_whatsnew1_text: "Petit tour supplémentaire : la narration vocale est maintenant disponible presque partout - paroles, bio, cartes, tableau de bord, notes de version, même ici dans le tutoriel. Et le mode StandBy a été entièrement revu : un bug sérieux de batterie/chaleur a été corrigé, et il tourne maintenant nettement plus efficacement dans l'ensemble.",
+                t_whatsnew2_title: '✨ Encore plus de nouveautés',
+                t_whatsnew2_text: "La section Support affiche maintenant en direct qui est connecté sur mon serveur Discord. Et les notes de version dans le pied de page continuent de s'étoffer - n'hésite pas à y jeter un œil de temps en temps. C'est tout pour le tour supplémentaire - amuse-toi bien à explorer !",
+                tutorial_whatsnew_badge: '✨ Bonus : Nouveautés',
                 support_section_title: 'Support', support_section_email_title: 'Email', support_section_email_desc: 'Des questions, un bug trouvé, ou juste envie de discuter ? Écris-moi !',
                 support_section_discord_title: 'Discord', support_section_discord_desc: 'Rejoins le serveur de support - c\'est souvent le moyen le plus rapide de me joindre.',
                 support_email_open: 'Ouvrir', support_email_copy: 'Copier', support_email_copied: 'Copié ! ✓',
@@ -4881,6 +4972,11 @@
                 changelog_whats_new: 'O que há de novo?', changelog_release_notes: 'Notas da versão',
                 changelog_type_feature: 'Novo', changelog_type_performance: 'Performance', changelog_type_fix: 'Correção',
                 tutorial_speak_aria: 'Ouvir esta etapa',
+                t_whatsnew1_title: '✨ O que há de novo desde sua última visita?',
+                t_whatsnew1_text: 'Tour extra rápido: a narração por voz agora está disponível em quase todos os lugares - letras, bio, cartões, painel, notas de versão, até aqui no tutorial. E o modo StandBy foi totalmente reformulado: um bug sério de bateria/calor foi corrigido, e agora roda notavelmente mais eficiente no geral.',
+                t_whatsnew2_title: '✨ Ainda mais novidades',
+                t_whatsnew2_text: 'A seção de Suporte agora mostra ao vivo quem está online no meu servidor do Discord. E as notas de versão no rodapé continuam crescendo - dá uma olhada de vez em quando. Isso é tudo pelo tour extra - divirta-se explorando!',
+                tutorial_whatsnew_badge: '✨ Bônus: Novidades',
                 support_section_title: 'Suporte', support_section_email_title: 'Email', support_section_email_desc: 'Tem dúvidas, achou um bug, ou só quer bater um papo? Me manda um email!',
                 support_section_discord_title: 'Discord', support_section_discord_desc: 'Entra no servidor de suporte - geralmente é a forma mais rápida de me alcançar.',
                 support_email_open: 'Abrir', support_email_copy: 'Copiar', support_email_copied: 'Copiado! ✓',
@@ -5059,6 +5155,11 @@
                 changelog_whats_new: 'Yenilikler neler?', changelog_release_notes: 'Sürüm Notları',
                 changelog_type_feature: 'Yeni', changelog_type_performance: 'Performans', changelog_type_fix: 'Düzeltme',
                 tutorial_speak_aria: 'Bu adımı sesli oku',
+                t_whatsnew1_title: '✨ Son ziyaretinden beri neler değişti?',
+                t_whatsnew1_text: 'Kısa ekstra tur: sesli anlatım artık neredeyse her yerde mevcut - şarkı sözleri, biyografi, kartlar, panel, sürüm notları, hatta burada eğitimde bile. Ve StandBy modu tamamen yenilendi: ciddi bir pil/ısınma hatası düzeltildi, ayrıca artık genel olarak belirgin şekilde daha verimli çalışıyor.',
+                t_whatsnew2_title: '✨ Daha fazla yenilik',
+                t_whatsnew2_text: 'Destek bölümü artık Discord sunucumda kimlerin çevrimiçi olduğunu canlı gösteriyor. Ve alt bilgideki sürüm notları büyümeye devam ediyor - ara sıra göz atmaktan çekinme. Ekstra tur bu kadardı - keşfetmenin tadını çıkar!',
+                tutorial_whatsnew_badge: '✨ Bonus: Yenilikler',
                 support_section_title: 'Destek', support_section_email_title: 'E-posta', support_section_email_desc: 'Sorun mu var, bir hata mı buldun, ya da sadece sohbet mi etmek istiyorsun? Bana yaz!',
                 support_section_discord_title: 'Discord', support_section_discord_desc: 'Destek sunucusuna katıl - genelde en hızlı ulaşım yolu bu.',
                 support_email_open: 'Aç', support_email_copy: 'Kopyala', support_email_copied: 'Kopyalandı! ✓',
@@ -5169,7 +5270,7 @@
             }
             // NEW: Bugfix - Tutorial-Autostart darf erst NACH der Sprachauswahl kommen,
             // nie gleichzeitig (siehe Kommentar bei der alten if-Abfrage weiter unten).
-            if (!localStorage.getItem('tutorialCompletedV2')) {
+            if (!localStorage.getItem('tutorialCompletedV3')) {
                 setTimeout(startTutorial, 700);
             }
         };
@@ -5360,7 +5461,12 @@
                 { targetId: 'support-section', title: t('t_step_support_title'), text: t('t_step_support_text') },
                 { targetId: 'cp-trigger', title: t('t_step6_title'), text: t('t_step6_text') },
                 { targetId: 'pwa-install-btn', title: t('t_step7_title'), text: t('t_step7_text') },
-                { targetId: 'footer-section', title: t('t_step8_title'), text: t('t_step8_text') }
+                { targetId: 'footer-section', title: t('t_step8_title'), text: t('t_step8_text') },
+                // NEU v24.50: Eigenständiges "Was ist neu?"-Mini-Tutorial, das direkt nach dem
+                // normalen Rundgang kommt - eigenes isNew-Flag für die visuelle Unterscheidung
+                // (andersfarbiges Badge statt "Schritt X/Y").
+                { targetId: 'standby-toggle', title: t('t_whatsnew1_title'), text: t('t_whatsnew1_text'), isNew: true },
+                { targetId: 'support-section', title: t('t_whatsnew2_title'), text: t('t_whatsnew2_text'), isNew: true }
             ];
         }
 
@@ -7794,7 +7900,7 @@
                     tutorialBox.classList.remove('tutorial-closing');
                 }
                 clearTutorialHighlights();
-                localStorage.setItem('tutorialCompletedV2', 'true');
+                localStorage.setItem('tutorialCompletedV3', 'true');
                 
                 // FIX v24.47: Nutzer meldete - Seite scrollt nach dem Tutorial nicht komplett
                 // nach oben. Ursache: behavior:'smooth' animiert über mehrere hundert ms, aber
@@ -7850,7 +7956,19 @@
                 activeTutorialTarget.scrollIntoView({ behavior: 'auto', block: 'center' });
             }
 
-            if (stepIndicator) stepIndicator.innerText = t('tutorial_step', index + 1, steps.length);
+            if (stepIndicator) {
+                if (step.isNew) {
+                    // NEU v24.50: "Was ist neu?"-Mini-Tutorial visuell klar vom normalen
+                    // Rundgang unterscheiden - eigenes Badge statt "Schritt X/Y".
+                    stepIndicator.innerText = t('tutorial_whatsnew_badge');
+                    stepIndicator.classList.add('text-purple-500', 'dark:text-purple-400');
+                    stepIndicator.classList.remove('text-blue-500');
+                } else {
+                    stepIndicator.innerText = t('tutorial_step', index + 1, steps.length);
+                    stepIndicator.classList.remove('text-purple-500', 'dark:text-purple-400');
+                    stepIndicator.classList.add('text-blue-500');
+                }
+            }
             const progressDots = document.getElementById('tutorial-progress-dots');
             if (progressDots) {
                 progressDots.innerHTML = steps.map((_, i) =>
@@ -7936,7 +8054,7 @@
         // wiederkehrende Besucher, die schon eine Sprache gewählt haben - für Erstbesucher
         // passiert der Autostart stattdessen in selectLanguage(), NACHDEM die Sprache
         // gewählt wurde (siehe dort).
-        if (!localStorage.getItem('tutorialCompletedV2') && currentLang) {
+        if (!localStorage.getItem('tutorialCompletedV3') && currentLang) {
             setTimeout(startTutorial, 500);
         }
 
@@ -7952,6 +8070,13 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.50', date: 'August 2026', type: 'feature', items: [
+                'Neues "Was ist neu?"-Mini-Tutorial nach dem normalen Rundgang',
+                'Datenschutzerklärung aktualisiert (Sprachausgabe, Discord-Widget, lokale Speicherung)'
+            ]},
+            { version: 'v24.49', date: 'August 2026', type: 'performance', items: [
+                'StandBy-Modus deutlich GPU-sparender - Hauptursache für hohe Grafikkartenlast gefunden und behoben'
+            ]},
             { version: 'v24.48', date: 'August 2026', type: 'performance', items: [
                 'StandBy-Modus nochmal spürbar effizienter (Video-Hintergrund pausiert jetzt mit)',
                 'Spatial-Tilt-Effekt lief unnötig im Hintergrund weiter - behoben',
