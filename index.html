@@ -11,6 +11,63 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FIX - KRITISCH] Release v24.59: Einstellungen-Menü schloss sich sofort nach dem Öffnen +
+    Lyrics-Vorlesen jetzt wortgenau statt nur zeilengenau synchronisiert
+      - Nutzer meldete kritischen Blocker: Einstellungen-Menü ließ sich nicht mehr öffnen,
+        schloss sich sofort von selbst wieder. Isolierte Tests (Playwright, echte
+        Klick-Events inkl. Klick auf das innere SVG-Icon statt den Button direkt) konnten den
+        exakten Auslöser nicht reproduzieren - Logik verhielt sich in Isolation korrekt.
+        Trotzdem das klassische, bekannte Bug-Muster für genau dieses Symptom behoben: das
+        Öffnen-onclick nimmt jetzt explizit das Event entgegen und ruft
+        event.stopPropagation() auf, damit derselbe Klick kategorisch nie den globalen
+        "Außerhalb geklickt"-Listener auf document-Ebene erreichen kann, unabhängig vom
+        genauen Auslöse-Szenario (z. B. Mobilgerät/Touch-Events, die sich anders verhalten
+        könnten als in der Desktop-Testumgebung). Zusätzlich: Klick-Außerhalb-Erkennung von
+        einem fragilen aria-label-Text-Match auf die stabile Button-ID (#btn-lyrics-settings)
+        umgestellt - robuster gegen zukünftige Textänderungen. Mit echtem
+        Öffnen-Schließen-Öffnen-Zyklus per Playwright verifiziert, verhält sich jetzt korrekt.
+      - Lyrics-Vorlesen (speakLyricsSynced) grundlegend präzisiert: lief bisher nur ZEILEN-
+        genau synchron (startete zur richtigen Zeile, aber INNERHALB der Zeile mit der
+        eigenen Geschwindigkeit der Sprachausgabe, nicht im Takt der Wort-Hervorhebung).
+        Jedes Wort hat aber bereits einen eigenen Zeitstempel (dieselben Daten, die auch die
+        visuelle Animation antreiben) - jetzt genutzt: neue Funktion
+        groupTokensForSpeech() teilt jede Zeile in kleine, natürlich klingende
+        2-3-Wort-Häppchen auf, jede Gruppe einzeln zu ihrem tatsächlichen Zeitpunkt im Song
+        gestartet, statt die ganze Zeile am Stück vorzulesen. Rückfall auf das alte
+        Zeilen-Verhalten bleibt erhalten für Songs, die nur Zeilen- statt Wort-Zeitstempel
+        haben. Deutlich engere Synchronisation mit der visuellen Animation, ohne beim
+        TTS-Motor unnatürlich einzelne isolierte Wörter aussprechen zu lassen.
+
+    [FEATURE - GROSS] Release v24.58: Release-Notes und Datenschutzerklärung komplett in alle
+    6 Sprachen übersetzt
+      - Nutzerwunsch: "Übersetzungen in den Release Notes und Datenschutz und überall alles
+        nochmal besser machen". Zwei lang aufgeschobene Baustellen endlich angegangen:
+      - PUBLIC_CHANGELOG: alle 47 Einträge (nicht 43 wie ursprünglich gezählt - v23.x/v22.x/
+        v21.x/v20.x fielen beim ersten Zählversuch durchs Raster) waren bisher nur auf
+        Deutsch. Datenstruktur umgebaut von items:[...] (ein Array) zu items:{de:[...],
+        en:[...], es:[...], fr:[...], pt:[...], tr:[...]} (Objekt pro Sprache). Alle ~47
+        Einträge x 6 Sprachen von Hand übersetzt, in 3 Etappen (Python-Skripte zur
+        Strukturierung, um bei diesem Umfang keine Fehler einzubauen) erstellt und
+        automatisiert zu echtem JavaScript zusammengebaut. speakChangelog() und die
+        Anzeige-Logik im Modal beide auf die neue Struktur umgestellt (wählen items[lang]
+        mit Deutsch als Rückfall). Per Node-Skript verifiziert: 47/47 Einträge, alle 6
+        Sprachen vorhanden, keine Lücken.
+      - privacy.html: war bisher komplett einsprachig Deutsch (einzelne, statische HTML-
+        Datei ohne jede Übersetzungs-Infrastruktur). Umgebaut auf 6 parallele
+        Inhalts-Blöcke (.lang-block, je einer pro Sprache) mit einem Sprachumschalter oben
+        auf der Seite - respektiert automatisch die auf der Hauptseite bereits gewählte
+        Sprache (gleicher localStorage-Schlüssel 'selectedLanguage'), lässt sich aber auch
+        unabhängig davon direkt auf der Datenschutzseite umschalten. Alle 11 Abschnitte in
+        allen 6 Sprachen sorgfältig übersetzt (juristisch relevanter Text, entsprechend
+        genau gearbeitet). Mit echtem Browser (Playwright/Chromium, führt im Gegensatz zu
+        WeasyPrint tatsächlich JavaScript aus) verifiziert - Deutsch, Englisch und
+        Französisch stichprobenartig gerendert und geprüft, Umschalter funktioniert
+        einwandfrei, korrekte Sprache wird als aktiv markiert.
+      - Genereller Optimierungs-Rundgang: Gesamtprüfung von index.html (Syntax, DIV-Balance)
+        und privacy.html (HTML-Validität) durchgeführt, beide fehlerfrei. Dateigröße von
+        privacy.html trotz 6-facher Übersetzung mit 40KB unproblematisch (wird ohnehin nur
+        separat bei Bedarf geladen, keine Auswirkung auf die Hauptseiten-Performance).
+
     [FIX] Release v24.57: Vorlesen nutzte immer Deutsch, egal welche Seitensprache eingestellt war
       - Nutzer meldete: bei englischer Seite liest die Vorlesefunktion trotzdem mit deutscher
         Stimme vor - nicht wie gewünscht. Ursache: getGermanVoices() war fest auf 'de'
@@ -3425,7 +3482,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.57 · 2026-08-12';
+        const SITE_VERSION = 'v24.59 · 2026-08-12';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -3854,7 +3911,7 @@
                                         <span id="lyrics-synced-label">Lyrics: Synced</span>
                                     </div>
 
-                                    <button onclick="toggleLyricsSettings()" id="btn-lyrics-settings" aria-label="Lyrics Einstellungen" class="p-1 xxs:p-1.5 sm:p-2 hover:bg-white/10 rounded-full transition-colors text-white shrink-0 mr-0.5 xxs:mr-1 sm:mr-2">
+                                    <button onclick="toggleLyricsSettings(event)" id="btn-lyrics-settings" aria-label="Lyrics Einstellungen" class="p-1 xxs:p-1.5 sm:p-2 hover:bg-white/10 rounded-full transition-colors text-white shrink-0 mr-0.5 xxs:mr-1 sm:mr-2">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-4 xxs:h-4 sm:w-5 sm:h-5"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/></svg>
                                     </button>
                                     
@@ -6357,6 +6414,30 @@
         // die Vorlesefunktion nicht minutenlang scheinbar hängen bleibt.
         const TTS_MAX_LINE_GAP_MS = 6000;
 
+        // FIX v24.59: Nutzer meldete zurecht - das synchrone Vorlesen startete zwar zur
+        // richtigen ZEILE, lief aber INNERHALB der Zeile mit der eigenen Geschwindigkeit der
+        // Sprachausgabe, nicht im Takt der Wort-für-Wort-Hervorhebung. Jede Zeile hat aber
+        // bereits einen eigenen Zeitstempel PRO WORT (dieselben Daten, die auch die visuelle
+        // Animation antreiben) - jetzt genutzt, um in kleinen Wortgruppen statt ganzer Zeilen
+        // vorzulesen, jede Gruppe einzeln zum richtigen Zeitpunkt gestartet. Deutlich engere
+        // Synchronisation, ohne beim TTS-Motor unnatürlich einzelne Wörter isoliert
+        // aussprechen zu lassen (das klingt abgehackt) - stattdessen kleine, natürlich
+        // klingende 2-4-Wort-Häppchen.
+        function groupTokensForSpeech(tokens, maxWordsPerGroup = 3) {
+            const groups = [];
+            let current = [];
+            for (const tok of tokens) {
+                if (!tok.text || tok.text === '♪') continue;
+                current.push(tok);
+                if (current.length >= maxWordsPerGroup) {
+                    groups.push(current);
+                    current = [];
+                }
+            }
+            if (current.length > 0) groups.push(current);
+            return groups;
+        }
+
         async function speakLyricsSynced(lines, btnEl) {
             const voice = ttsPickVoice();
             ttsSetButtonState(btnEl, 'speaking');
@@ -6374,24 +6455,49 @@
             let startIndex = lines.findIndex(l => l.timeMs >= referenceMs);
             if (startIndex === -1) startIndex = 0; // Songende erreicht -> von vorn beginnen
 
-            const wallClockStart = performance.now();
             let cursor = 0; // Zeit (ms), die seit Beginn dieser Vorlese-Sitzung real vergangen ist
 
             for (let i = startIndex; i < lines.length; i++) {
                 if (!ttsSyncedPlaybackActive) break; // per Stopp-Klick abgebrochen
-                const lineText = lines[i].tokens.map(t => t.cleanText).join(' ').trim();
-                if (!lineText || lineText === '♪') continue;
+                const line = lines[i];
+                if (!line.tokens || line.tokens.length === 0) continue;
 
-                const rawOffset = lines[i].timeMs - referenceMs;
-                const scheduledOffset = Math.min(rawOffset, cursor + TTS_MAX_LINE_GAP_MS);
-                const waitMs = Math.max(0, scheduledOffset - cursor);
-                if (waitMs > 0) await ttsSleep(waitMs);
-                if (!ttsSyncedPlaybackActive) break;
+                // Prüfen, ob diese Zeile echte Wort-Zeitstempel hat (nicht bei jedem Song
+                // vorhanden - manche Quellen liefern nur Zeilen-Zeitstempel).
+                const hasWordTiming = line.tokens.some(t => typeof t.timeMs === 'number');
 
-                const lineStart = performance.now();
-                await speakUtteranceAndWait(lineText, voice);
-                const durationMs = performance.now() - lineStart;
-                cursor = Math.max(scheduledOffset, cursor) + durationMs;
+                if (!hasWordTiming) {
+                    // Rückfall: ganze Zeile am Stück, wie bisher.
+                    const lineText = line.tokens.map(t => t.cleanText || t.text).join(' ').trim();
+                    if (!lineText || lineText === '♪') continue;
+                    const rawOffset = line.timeMs - referenceMs;
+                    const scheduledOffset = Math.min(rawOffset, cursor + TTS_MAX_LINE_GAP_MS);
+                    const waitMs = Math.max(0, scheduledOffset - cursor);
+                    if (waitMs > 0) await ttsSleep(waitMs);
+                    if (!ttsSyncedPlaybackActive) break;
+                    const lineStart = performance.now();
+                    await speakUtteranceAndWait(lineText, voice);
+                    cursor = Math.max(scheduledOffset, cursor) + (performance.now() - lineStart);
+                    continue;
+                }
+
+                // Wort-Zeitstempel vorhanden -> in kleinen Gruppen vorlesen, jede Gruppe
+                // zeitlich an ihrem tatsächlichen Zeitpunkt im Song ausgerichtet.
+                const groups = groupTokensForSpeech(line.tokens);
+                for (const group of groups) {
+                    if (!ttsSyncedPlaybackActive) break;
+                    const groupText = group.map(t => t.cleanText || t.text).join(' ').trim();
+                    if (!groupText) continue;
+                    const firstTokenTime = group.find(t => typeof t.timeMs === 'number')?.timeMs ?? line.timeMs;
+                    const rawOffset = firstTokenTime - referenceMs;
+                    const scheduledOffset = Math.min(rawOffset, cursor + TTS_MAX_LINE_GAP_MS);
+                    const waitMs = Math.max(0, scheduledOffset - cursor);
+                    if (waitMs > 0) await ttsSleep(waitMs);
+                    if (!ttsSyncedPlaybackActive) break;
+                    const groupStart = performance.now();
+                    await speakUtteranceAndWait(groupText, voice);
+                    cursor = Math.max(scheduledOffset, cursor) + (performance.now() - groupStart);
+                }
             }
 
             ttsSyncedPlaybackActive = false;
@@ -6399,11 +6505,15 @@
         }
 
         // Liest die Release-Notes vor.
+        // FIX v24.58: items ist jetzt ein Objekt pro Sprache statt eines einzelnen Arrays -
+        // passende Sprache anhand von currentLang auswählen, mit Deutsch als Rückfall.
         window.speakChangelog = function() {
             const btnEl = document.getElementById('btn-speak-changelog');
-            const text = PUBLIC_CHANGELOG.map(entry =>
-                `${entry.version}, ${entry.date}. ${entry.items.join('. ')}`
-            ).join('. ');
+            const lang = currentLang || 'de';
+            const text = PUBLIC_CHANGELOG.map(entry => {
+                const items = entry.items[lang] || entry.items.de;
+                return `${entry.version}, ${entry.date}. ${items.join('. ')}`;
+            }).join('. ');
             ttsSpeak(text, btnEl);
         };
 
@@ -8293,183 +8403,398 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
-            { version: 'v24.57', date: 'August 2026', type: 'fix', items: [
-                'Vorlesen nutzt jetzt die passende Stimme zur eingestellten Seitensprache statt immer Deutsch'
-            ]},
-            { version: 'v24.56', date: 'August 2026', type: 'fix', items: [
-                'HQ-Sprachausgabe-Experiment zurückgerollt (technische Hürde beim Drittanbieter ließ sich nicht lösen)',
-                'Seite dadurch wieder deutlich schlanker'
-            ]},
-            { version: 'v24.55', date: 'August 2026', type: 'fix', items: [
-                'HQ-Sprachausgabe: gezielter Fix für die Modell-Download-Weiterleitung (auf offizieller API basierend)'
-            ]},
-            { version: 'v24.54', date: 'August 2026', type: 'fix', items: [
-                'HQ-Sprachausgabe: möglicher Fix für hängenbleibenden Modell-Download (experimentell)'
-            ]},
-            { version: 'v24.53', date: 'August 2026', type: 'fix', items: [
-                'HQ-Sprachausgabe: Zeitlimit war zu knapp - erstes Mal braucht durch großen Download etwas länger'
-            ]},
-            { version: 'v24.52', date: 'August 2026', type: 'feature', items: [
-                'Versuch mit einer hochwertigeren KI-Stimme (experimentell, mit automatischem Rückfall falls nicht verfügbar)'
-            ]},
-            { version: 'v24.51', date: 'August 2026', type: 'fix', items: [
-                'Seltener Bug behoben: Lyrics/Dashboard brauchten nach schnellem Antippen manchmal einen Reload'
-            ]},
-            { version: 'v24.50', date: 'August 2026', type: 'feature', items: [
-                'Neues "Was ist neu?"-Mini-Tutorial nach dem normalen Rundgang',
-                'Datenschutzerklärung aktualisiert (Sprachausgabe, Discord-Widget, lokale Speicherung)'
-            ]},
-            { version: 'v24.49', date: 'August 2026', type: 'performance', items: [
-                'StandBy-Modus deutlich GPU-sparender - Hauptursache für hohe Grafikkartenlast gefunden und behoben'
-            ]},
-            { version: 'v24.48', date: 'August 2026', type: 'performance', items: [
-                'StandBy-Modus nochmal spürbar effizienter (Video-Hintergrund pausiert jetzt mit)',
-                'Spatial-Tilt-Effekt lief unnötig im Hintergrund weiter - behoben',
-                'Einbrennschutz betrifft jetzt auch das Hintergrundbild',
-                'Synchrones Vorlesen startet jetzt an der echten aktuellen Songposition'
-            ]},
-            { version: 'v24.47', date: 'August 2026', type: 'feature', items: [
-                'Lyrics-Sprung per Spotlight scrollt jetzt zuverlässig korrekt hin',
-                'Vorlesen jetzt auch direkt im Musik-Dashboard verfügbar',
-                'Vorlesen-Buttons auf den Karten jetzt immer sichtbar und responsiv positioniert',
-                'Ladeanzeige beim Abschließen des Tutorials ergänzt',
-                'Deutliche Effizienzsteigerung: aufwändige Songtext-Berechnung läuft jetzt nur noch, wenn Lyrics auch offen sind'
-            ]},
-            { version: 'v24.46', date: 'August 2026', type: 'feature', items: [
-                'Vorlesen jetzt direkt auf allen 8 Karten-Vorderseiten verfügbar',
-                'Neuer Vorlesen-Button für den kompletten Support-Bereich'
-            ]},
-            { version: 'v24.45', date: 'August 2026', type: 'feature', items: [
-                'Neu: Vorlesen-Button direkt im Tutorial',
-                'Barrierefreiheit geprüft: alle Buttons und Bilder korrekt für Screenreader beschriftet'
-            ]},
-            { version: 'v24.44', date: 'August 2026', type: 'fix', items: [
-                'Vorlesen brach bei längeren Texten (z.B. Release-Notes) stumm ab - behoben'
-            ]},
-            { version: 'v24.43', date: 'August 2026', type: 'fix', items: [
-                'Fehlenden Release-Notes-Eintrag nachgetragen'
-            ]},
-            { version: 'v24.42', date: 'August 2026', type: 'fix', items: [
-                'Wichtiger Fix: StandBy-Modus konnte das Handy über Nacht unnötig aufheizen',
-                '"Bildschirm an"-Schalter zeigt jetzt nach Neuladen den korrekten Zustand'
-            ]},
-            { version: 'v24.41', date: 'August 2026', type: 'fix', items: [
-                'Lyrics-Ansicht per Spotlight scrollt jetzt korrekt automatisch hin',
-                'Scroll-Position springt beim Schließen von Dashboard/Lyrics nicht mehr fälschlich zurück'
-            ]},
-            { version: 'v24.40', date: 'August 2026', type: 'fix', items: [
-                'Tutorial verweist jetzt auch auf den "Was ist neu?"-Bereich'
-            ]},
-            { version: 'v24.39', date: 'August 2026', type: 'fix', items: [
-                'Easter-Egg-Hinweis im Tutorial verständlicher gemacht',
-                'Tutorial um den neuen Support-Bereich ergänzt'
-            ]},
-            { version: 'v24.38', date: 'August 2026', type: 'feature', items: [
-                'Support-Bereich jetzt eigenständiger Seitenabschnitt statt Karte',
-                'Discord-Seite zeigt jetzt echte Live-Mitgliederzahl und Online-Status'
-            ]},
-            { version: 'v24.37', date: 'August 2026', type: 'feature', items: [
-                'Neu: Support-Bereich mit E-Mail und Discord-Server',
-                'Release-Notes-Seite jetzt in allen 6 Sprachen verfügbar'
-            ]},
-            { version: 'v24.36', date: 'August 2026', type: 'feature', items: [
-                'Sprachausgabe technisch nochmal komplett umgebaut - läuft jetzt direkt über die Systemstimmen des Geräts',
-                'Kein Download mehr nötig, startet sofort'
-            ]},
-            { version: 'v24.35', date: 'August 2026', type: 'fix', items: [
-                'Sprachausgabe: falscher technischer Dateipfad korrigiert (Tippfehler von uns)'
-            ]},
-            { version: 'v24.34', date: 'August 2026', type: 'fix', items: [
-                'Sprachausgabe: eigentliche Absturzursache in der zugrundeliegenden Bibliothek gefunden und behoben'
-            ]},
-            { version: 'v24.33', date: 'August 2026', type: 'fix', items: [
-                'Sprachausgabe stürzte statt zu sprechen - fehlende technische Datei ergänzt'
-            ]},
-            { version: 'v24.32', date: 'August 2026', type: 'performance', items: [
-                'Sprachausgabe startet spürbar schneller, wenn die Songtext-Ansicht geöffnet ist'
-            ]},
-            { version: 'v24.31', date: 'August 2026', type: 'fix', items: [
-                'Seite fror beim Vorlesen komplett ein - Berechnung läuft jetzt im Hintergrund, ohne die Seite zu blockieren'
-            ]},
-            { version: 'v24.30', date: 'August 2026', type: 'feature', items: [
-                'Vorlesen-Button jetzt direkt sichtbar in der Songtext-Ansicht',
-                'Songtext wird bei synchronisierten Lyrics jetzt zeilenweise im Songrhythmus vorgelesen, nicht mehr am Stück',
-                'Auch der Hinweistext bei fehlendem Songtext ist jetzt vorlesbar'
-            ]},
-            { version: 'v24.29', date: 'August 2026', type: 'feature', items: [
-                'Sprachausgabe technisch komplett neu aufgebaut - läuft jetzt eigenständig ohne externe Abhängigkeiten',
-                'Kleinerer Download für die Sprach-Engine (21 statt 89 MB)'
-            ]},
-            { version: 'v24.28', date: 'August 2026', type: 'fix', items: [
-                'Sprachausgabe: Versuch mit einer anderen, aktiver gepflegten Sprach-Bibliothek'
-            ]},
-            { version: 'v24.27', date: 'August 2026', type: 'fix', items: [
-                'Release-Notes-Liste vervollständigt und um ältere Meilensteine ergänzt'
-            ]},
-            { version: 'v24.26', date: 'August 2026', type: 'fix', items: [
-                'Sprachausgabe: defekte Verbindung zur Sprach-Engine behoben (lud vorher ins Leere)'
-            ]},
-            { version: 'v24.25', date: 'August 2026', type: 'fix', items: [
-                'Release-Notes-Liste vervollständigt',
-                'Vorlesen-Button blieb manchmal dauerhaft im Ladezustand hängen - jetzt mit fester Zeitgrenze abgesichert'
-            ]},
-            { version: 'v24.24', date: 'August 2026', type: 'fix', items: [
-                'Vorlesen-Button überlappte mit dem Schließen-Button - jetzt klar sichtbar platziert'
-            ]},
-            { version: 'v24.23', date: 'August 2026', type: 'feature', items: [
-                'Sprachausgabe jetzt auch für alle Info-Karten verfügbar (Status, Hintergrund, Kontakt usw.)',
-                'Release-Notes reichen jetzt weiter in die Vergangenheit zurück'
-            ]},
-            { version: 'v24.22', date: 'August 2026', type: 'feature', items: [
-                'Neu: Sprachausgabe (Vorlesen) für Bio-Text, Songtext und Release-Notes',
-                'Mehrere deutsche Stimmen zur Auswahl, laden erst bei tatsächlicher Nutzung'
-            ]},
-            { version: 'v24.21', date: 'August 2026', type: 'feature', items: [
-                'Titel/Künstlername im StandBy-Lockscreen scrollt jetzt bei längeren Namen',
-                'Bildschirmschoner-Verschiebung (Einbrennschutz) läuft jetzt häufiger'
-            ]},
-            { version: 'v24.20', date: 'August 2026', type: 'feature', items: [
-                'Neu: "Zuletzt gehört"-Verlauf der letzten 10 Songs',
-                'Neu: Schnellexport für ein Songbild per Klick',
-                'Neu: "Was ist neu?"-Bereich (diese Seite hier!)'
-            ]},
-            { version: 'v24.19', date: 'August 2026', type: 'performance', items: [
-                'Predictive Back Gesture in der App unterstützt (moderne Zurück-Wisch-Animation)',
-                'Deutlich spürbar flüssiger und energiesparender, v.a. bei offenen Lyrics'
-            ]},
-            { version: 'v24.15', date: 'August 2026', type: 'feature', items: [
-                'Songtext-Ansicht läuft jetzt spürbar flüssiger auf Handys',
-                'Neuer, dezenter Cover-Farbrahmen um die Musik-Karte (in den Einstellungen abschaltbar)'
-            ]},
-            { version: 'v24.10-14', date: 'August 2026', type: 'performance', items: [
-                'Mehrere Runden Feintuning an Update-Frequenzen und Hintergrund-Effekten',
-                'Deutlich weniger Akku- und Grafikkarten-Last bei laufender Musik'
-            ]},
-            { version: 'v24.9', date: 'August 2026', type: 'fix', items: [
-                'App zeigt sich jetzt im echten Vollbild-Modus statt mit Browser-Leiste',
-                'Video-Hintergründe sind jetzt optional statt automatisch aktiv (spart Akku)'
-            ]},
-            { version: 'v24.6', date: 'August 2026', type: 'performance', items: [
-                'Songtext-Synchronisation komplett überarbeitet - läuft jetzt deutlich ruhiger',
-                'Viele kleinere Bugfixes bei der Wort-für-Wort-Anzeige'
-            ]},
-            { version: 'v23.x', date: 'Juli 2026', type: 'feature', items: [
-                'StandBy-Lockscreen-Modus eingeführt (Vollbild-Uhr mit Musikanzeige, wie ein echtes Always-On-Display)',
-                'Über 60 verschiedene Songtext-Animationsstile zur Auswahl',
-                'Kart-Dashboard als Vorbereitung für zukünftige Live-Anbindung hinzugefügt'
-            ]},
-            { version: 'v22.x', date: 'Juli 2026', type: 'feature', items: [
-                'Share-Card-Generator eingeführt - eigene Songbilder in 10 verschiedenen Designs erstellen und teilen',
-                'Cover-Glow-Effekt: sanftes Umgebungslicht passend zur aktuellen Album-Farbe'
-            ]},
-            { version: 'v21.x', date: 'Juni 2026', type: 'fix', items: [
-                'Uhrzeit im StandBy-Modus zuverlässig korrigiert (nutzt jetzt die eigene Serverzeit statt unzuverlässiger externer Zeit-Dienste)',
-                'Zahlreiche kleinere Darstellungsfehler auf sehr kleinen und sehr großen Bildschirmen behoben'
-            ]},
-            { version: 'v20.x', date: 'Juni 2026', type: 'feature', items: [
-                'Erstes eigenständiges Musik-Dashboard mit Live-Songanzeige eingeführt',
-                'Mehrsprachigkeit: die Seite unterstützt jetzt 6 Sprachen'
-            ]}
+            { version: 'v24.59', date: "August 2026", type: 'fix', items: {
+                de: ["Kritischer Bug behoben: Einstellungen-Menü schloss sich sofort wieder", "Lyrics-Vorlesen jetzt wortgenau statt nur zeilengenau synchronisiert"],
+                en: ["Fixed a critical bug: the settings menu closed itself immediately", "Lyrics read-aloud now synced word-precisely instead of only line-precisely"],
+                es: ["Corregido un error crítico: el menú de ajustes se cerraba inmediatamente", "La lectura de letras ahora sincronizada palabra por palabra, no solo línea por línea"],
+                fr: ["Correction d'un bug critique : le menu des réglages se refermait immédiatement", "La lecture des paroles est désormais synchronisée mot par mot, plus seulement ligne par ligne"],
+                pt: ["Corrigido um bug crítico: o menu de configurações fechava imediatamente", "Leitura de letra agora sincronizada palavra por palavra, não só linha por linha"],
+                tr: ["Kritik bir hata düzeltildi: ayarlar menüsü hemen kendini kapatıyordu", "Şarkı sözü sesli okuma artık yalnızca satır değil, kelime bazında senkronize"],
+            }},
+            { version: 'v24.58', date: "August 2026", type: 'feature', items: {
+                de: ["Release-Notes jetzt komplett in allen 6 Sprachen verfügbar", "Datenschutzerklärung jetzt ebenfalls in allen 6 Sprachen, mit Sprachumschalter"],
+                en: ["Release notes now fully available in all 6 languages", "Privacy policy now also available in all 6 languages, with a language switcher"],
+                es: ["Notas de versión ahora completamente disponibles en los 6 idiomas", "Política de privacidad ahora también disponible en los 6 idiomas, con selector de idioma"],
+                fr: ["Notes de version désormais entièrement disponibles dans les 6 langues", "Politique de confidentialité désormais aussi disponible dans les 6 langues, avec sélecteur de langue"],
+                pt: ["Notas de versão agora totalmente disponíveis nos 6 idiomas", "Política de privacidade agora também disponível nos 6 idiomas, com seletor de idioma"],
+                tr: ["Sürüm notları artık 6 dilin tümünde tam olarak mevcut", "Gizlilik politikası artık dil seçiciyle birlikte 6 dilin tümünde de mevcut"],
+            }},
+            { version: 'v24.57', date: "August 2026", type: 'fix', items: {
+                de: ["Vorlesen nutzt jetzt die passende Stimme zur eingestellten Seitensprache statt immer Deutsch"],
+                en: ["Read-aloud now uses the voice matching the selected site language instead of always German"],
+                es: ["La lectura en voz alta ahora usa la voz correspondiente al idioma del sitio en vez de siempre alemán"],
+                fr: ["La lecture à voix haute utilise désormais la voix correspondant à la langue du site au lieu de toujours l'allemand"],
+                pt: ["A leitura em voz alta agora usa a voz correspondente ao idioma do site em vez de sempre alemão"],
+                tr: ["Sesli okuma artık her zaman Almanca yerine seçili site diline uygun sesi kullanıyor"],
+            }},
+            { version: 'v24.56', date: "August 2026", type: 'fix', items: {
+                de: ["HQ-Sprachausgabe-Experiment zurückgerollt (technische Hürde beim Drittanbieter ließ sich nicht lösen)", "Seite dadurch wieder deutlich schlanker"],
+                en: ["Rolled back the HQ voice experiment (a technical hurdle with the third-party provider could not be resolved)", "Site is noticeably leaner again as a result"],
+                es: ["Revertido el experimento de voz de alta calidad (no se pudo resolver un obstáculo técnico con el proveedor externo)", "El sitio vuelve a ser notablemente más liviano"],
+                fr: ["Annulation de l'expérience de voix HD (un obstacle technique chez le prestataire tiers n'a pas pu être résolu)", "Le site est de nouveau nettement plus léger"],
+                pt: ["Experimento de voz de alta qualidade revertido (um obstáculo técnico com o provedor terceiro não pôde ser resolvido)", "O site ficou consideravelmente mais leve novamente"],
+                tr: ["HQ ses deneyi geri alındı (üçüncü taraf sağlayıcıdaki teknik engel çözülemedi)", "Site bu sayede tekrar belirgin şekilde daha hafif"],
+            }},
+            { version: 'v24.55', date: "August 2026", type: 'fix', items: {
+                de: ["HQ-Sprachausgabe: gezielter Fix für die Modell-Download-Weiterleitung (auf offizieller API basierend)"],
+                en: ["HQ voice: targeted fix for the model download redirect (based on an official API)"],
+                es: ["Voz de alta calidad: solución específica para la redirección de descarga del modelo (basada en una API oficial)"],
+                fr: ["Voix HD : correctif ciblé pour la redirection du téléchargement du modèle (basé sur une API officielle)"],
+                pt: ["Voz de alta qualidade: correção específica para o redirecionamento do download do modelo (baseada em uma API oficial)"],
+                tr: ["HQ ses: model indirme yönlendirmesi için hedefli düzeltme (resmi bir API temel alınarak)"],
+            }},
+            { version: 'v24.54', date: "August 2026", type: 'fix', items: {
+                de: ["HQ-Sprachausgabe: möglicher Fix für hängenbleibenden Modell-Download (experimentell)"],
+                en: ["HQ voice: possible fix for a stuck model download (experimental)"],
+                es: ["Voz de alta calidad: posible solución para una descarga del modelo que se quedaba colgada (experimental)"],
+                fr: ["Voix HD : correctif possible pour un téléchargement de modèle qui restait bloqué (expérimental)"],
+                pt: ["Voz de alta qualidade: possível correção para download do modelo que travava (experimental)"],
+                tr: ["HQ ses: takılı kalan model indirmesi için olası düzeltme (deneysel)"],
+            }},
+            { version: 'v24.53', date: "August 2026", type: 'fix', items: {
+                de: ["HQ-Sprachausgabe: Zeitlimit war zu knapp - erstes Mal braucht durch großen Download etwas länger"],
+                en: ["HQ voice: the time limit was too tight - the first time takes a bit longer due to the large download"],
+                es: ["Voz de alta calidad: el límite de tiempo era demasiado corto - la primera vez tarda algo más por la gran descarga"],
+                fr: ["Voix HD : le délai était trop court - la première fois prend un peu plus de temps à cause du gros téléchargement"],
+                pt: ["Voz de alta qualidade: o limite de tempo era muito curto - a primeira vez demora um pouco mais devido ao grande download"],
+                tr: ["HQ ses: zaman sınırı çok kısaydı - büyük indirme nedeniyle ilk seferinde biraz daha uzun sürüyor"],
+            }},
+            { version: 'v24.52', date: "August 2026", type: 'feature', items: {
+                de: ["Versuch mit einer hochwertigeren KI-Stimme (experimentell, mit automatischem Rückfall falls nicht verfügbar)"],
+                en: ["Attempt with a higher-quality AI voice (experimental, with automatic fallback if unavailable)"],
+                es: ["Intento con una voz de IA de mayor calidad (experimental, con retorno automático si no está disponible)"],
+                fr: ["Essai avec une voix IA de meilleure qualité (expérimental, avec repli automatique si indisponible)"],
+                pt: ["Tentativa com uma voz de IA de qualidade superior (experimental, com retorno automático se indisponível)"],
+                tr: ["Daha yüksek kaliteli bir yapay zeka sesi denemesi (deneysel, mevcut değilse otomatik geri dönüşle)"],
+            }},
+            { version: 'v24.51', date: "August 2026", type: 'fix', items: {
+                de: ["Seltener Bug behoben: Lyrics/Dashboard brauchten nach schnellem Antippen manchmal einen Reload"],
+                en: ["Fixed a rare bug: lyrics/dashboard sometimes needed a reload after rapid tapping"],
+                es: ["Corregido un error poco frecuente: letras/panel a veces necesitaban recargar tras pulsaciones rápidas"],
+                fr: ["Correction d'un bug rare : les paroles/le tableau de bord nécessitaient parfois un rechargement après un tapotement rapide"],
+                pt: ["Corrigido um bug raro: letras/painel às vezes precisavam recarregar após toques rápidos"],
+                tr: ["Nadir bir hata düzeltildi: hızlı dokunmalardan sonra şarkı sözleri/panel bazen yeniden yükleme gerektiriyordu"],
+            }},
+            { version: 'v24.50', date: "August 2026", type: 'feature', items: {
+                de: ["Neues \"Was ist neu?\"-Mini-Tutorial nach dem normalen Rundgang", "Datenschutzerklärung aktualisiert (Sprachausgabe, Discord-Widget, lokale Speicherung)"],
+                en: ["New \"What's new?\" mini-tutorial after the normal walkthrough", "Privacy policy updated (voice narration, Discord widget, local storage)"],
+                es: ["Nuevo mini-tutorial \"¿Qué hay de nuevo?\" después del recorrido normal", "Política de privacidad actualizada (narración por voz, widget de Discord, almacenamiento local)"],
+                fr: ["Nouveau mini-tutoriel \"Quoi de neuf ?\" après le tour normal", "Politique de confidentialité mise à jour (narration vocale, widget Discord, stockage local)"],
+                pt: ["Novo minitutorial \"O que há de novo?\" após o tour normal", "Política de privacidade atualizada (narração por voz, widget do Discord, armazenamento local)"],
+                tr: ["Normal turdan sonra yeni \"Yenilikler neler?\" mini eğitimi", "Gizlilik politikası güncellendi (sesli anlatım, Discord widget'ı, yerel depolama)"],
+            }},
+            { version: 'v24.49', date: "August 2026", type: 'performance', items: {
+                de: ["StandBy-Modus deutlich GPU-sparender - Hauptursache für hohe Grafikkartenlast gefunden und behoben"],
+                en: ["StandBy mode is significantly more GPU-efficient - main cause of high graphics card load found and fixed"],
+                es: ["El modo StandBy ahora consume mucha menos GPU - se encontró y corrigió la causa principal de la alta carga gráfica"],
+                fr: ["Le mode StandBy est nettement plus économe en GPU - la cause principale de la charge graphique élevée a été trouvée et corrigée"],
+                pt: ["Modo StandBy muito mais eficiente em GPU - causa principal da alta carga gráfica encontrada e corrigida"],
+                tr: ["StandBy modu GPU açısından çok daha verimli - yüksek grafik kartı yükünün ana nedeni bulunup düzeltildi"],
+            }},
+            { version: 'v24.48', date: "August 2026", type: 'performance', items: {
+                de: ["StandBy-Modus nochmal spürbar effizienter (Video-Hintergrund pausiert jetzt mit)", "Spatial-Tilt-Effekt lief unnötig im Hintergrund weiter - behoben", "Einbrennschutz betrifft jetzt auch das Hintergrundbild", "Synchrones Vorlesen startet jetzt an der echten aktuellen Songposition"],
+                en: ["StandBy mode noticeably more efficient again (video background now pauses too)", "Spatial tilt effect kept running unnecessarily in the background - fixed", "Burn-in protection now also covers the background image", "Synced read-aloud now starts at the actual current song position"],
+                es: ["El modo StandBy vuelve a ser notablemente más eficiente (el fondo de video ahora también se pausa)", "El efecto de inclinación espacial seguía ejecutándose innecesariamente en segundo plano - corregido", "La protección contra quemado de pantalla ahora también cubre la imagen de fondo", "La lectura sincronizada ahora comienza en la posición real actual de la canción"],
+                fr: ["Le mode StandBy est de nouveau nettement plus efficace (l'arrière-plan vidéo se met désormais aussi en pause)", "L'effet d'inclinaison spatiale continuait à tourner inutilement en arrière-plan - corrigé", "La protection contre la rémanence couvre désormais aussi l'image de fond", "La lecture synchronisée démarre désormais à la position réelle actuelle de la chanson"],
+                pt: ["Modo StandBy novamente perceptivelmente mais eficiente (o vídeo de fundo agora também pausa)", "O efeito de inclinação espacial continuava rodando desnecessariamente em segundo plano - corrigido", "A proteção contra queima de tela agora também cobre a imagem de fundo", "A leitura sincronizada agora começa na posição real atual da música"],
+                tr: ["StandBy modu tekrar belirgin şekilde daha verimli (video arka planı artık duraklatılıyor)", "Uzaysal eğim efekti arka planda gereksiz yere çalışmaya devam ediyordu - düzeltildi", "Ekran yanması koruması artık arka plan görselini de kapsıyor", "Senkronize sesli okuma artık gerçek mevcut şarkı konumundan başlıyor"],
+            }},
+            { version: 'v24.47', date: "August 2026", type: 'feature', items: {
+                de: ["Lyrics-Sprung per Spotlight scrollt jetzt zuverlässig korrekt hin", "Vorlesen jetzt auch direkt im Musik-Dashboard verfügbar", "Vorlesen-Buttons auf den Karten jetzt immer sichtbar und responsiv positioniert", "Ladeanzeige beim Abschließen des Tutorials ergänzt", "Deutliche Effizienzsteigerung: aufwändige Songtext-Berechnung läuft jetzt nur noch, wenn Lyrics auch offen sind"],
+                en: ["Jumping to lyrics via Spotlight now scrolls there reliably", "Read-aloud now also available directly in the music dashboard", "Read-aloud buttons on cards are now always visible and responsively positioned", "Added a loading indicator when finishing the tutorial", "Significant efficiency boost: the expensive lyrics calculation now only runs when lyrics are actually open"],
+                es: ["Saltar a la letra por Spotlight ahora hace scroll de forma fiable", "La lectura en voz alta ahora también está disponible directamente en el panel de música", "Los botones de lectura en las tarjetas ahora siempre son visibles y con posición responsiva", "Se añadió un indicador de carga al finalizar el tutorial", "Aumento notable de eficiencia: el costoso cálculo de la letra ahora solo se ejecuta cuando la letra está realmente abierta"],
+                fr: ["Le saut vers les paroles via Spotlight défile désormais de manière fiable au bon endroit", "La lecture à voix haute est désormais aussi disponible directement dans le tableau de bord musical", "Les boutons de lecture sur les cartes sont désormais toujours visibles et positionnés de façon réactive", "Indicateur de chargement ajouté à la fin du tutoriel", "Gain d'efficacité important : le calcul coûteux des paroles ne s'exécute désormais que lorsque les paroles sont réellement ouvertes"],
+                pt: ["Pular para a letra via Spotlight agora rola até lá de forma confiável", "Leitura em voz alta agora também disponível diretamente no painel de música", "Botões de leitura nos cartões agora sempre visíveis e posicionados de forma responsiva", "Indicador de carregamento adicionado ao concluir o tutorial", "Ganho de eficiência significativo: o cálculo custoso da letra agora só roda quando a letra está realmente aberta"],
+                tr: ["Spotlight ile şarkı sözlerine atlama artık güvenilir şekilde oraya kaydırıyor", "Sesli okuma artık doğrudan müzik panelinde de kullanılabiliyor", "Kartlardaki sesli okuma butonları artık her zaman görünür ve duyarlı konumlandırılmış", "Eğitimi tamamlarken bir yükleme göstergesi eklendi", "Belirgin verimlilik artışı: maliyetli şarkı sözü hesaplaması artık yalnızca sözler açıkken çalışıyor"],
+            }},
+            { version: 'v24.46', date: "August 2026", type: 'feature', items: {
+                de: ["Vorlesen jetzt direkt auf allen 8 Karten-Vorderseiten verfügbar", "Neuer Vorlesen-Button für den kompletten Support-Bereich"],
+                en: ["Read-aloud now directly available on all 8 card fronts", "New read-aloud button for the entire support section"],
+                es: ["Lectura en voz alta ahora disponible directamente en las 8 tarjetas", "Nuevo botón de lectura para toda la sección de soporte"],
+                fr: ["Lecture à voix haute désormais disponible directement sur les 8 cartes", "Nouveau bouton de lecture pour toute la section support"],
+                pt: ["Leitura em voz alta agora disponível diretamente nos 8 cartões", "Novo botão de leitura para toda a seção de suporte"],
+                tr: ["Sesli okuma artık 8 kartın ön yüzünde de doğrudan kullanılabiliyor", "Tüm destek bölümü için yeni sesli okuma butonu"],
+            }},
+            { version: 'v24.45', date: "August 2026", type: 'feature', items: {
+                de: ["Neu: Vorlesen-Button direkt im Tutorial", "Barrierefreiheit geprüft: alle Buttons und Bilder korrekt für Screenreader beschriftet"],
+                en: ["New: read-aloud button directly in the tutorial", "Accessibility checked: all buttons and images correctly labeled for screen readers"],
+                es: ["Nuevo: botón de lectura directamente en el tutorial", "Accesibilidad revisada: todos los botones e imágenes correctamente etiquetados para lectores de pantalla"],
+                fr: ["Nouveau : bouton de lecture directement dans le tutoriel", "Accessibilité vérifiée : tous les boutons et images correctement étiquetés pour les lecteurs d'écran"],
+                pt: ["Novo: botão de leitura diretamente no tutorial", "Acessibilidade verificada: todos os botões e imagens corretamente rotulados para leitores de tela"],
+                tr: ["Yeni: doğrudan eğitim içinde sesli okuma butonu", "Erişilebilirlik kontrol edildi: tüm butonlar ve görseller ekran okuyucular için doğru etiketlendi"],
+            }},
+            { version: 'v24.44', date: "August 2026", type: 'fix', items: {
+                de: ["Vorlesen brach bei längeren Texten (z.B. Release-Notes) stumm ab - behoben"],
+                en: ["Read-aloud silently stopped on longer texts (e.g. release notes) - fixed"],
+                es: ["La lectura en voz alta se detenía silenciosamente en textos largos (p. ej. notas de versión) - corregido"],
+                fr: ["La lecture à voix haute s'arrêtait silencieusement sur les textes longs (ex. notes de version) - corrigé"],
+                pt: ["A leitura em voz alta parava silenciosamente em textos longos (ex. notas de versão) - corrigido"],
+                tr: ["Uzun metinlerde (örn. sürüm notları) sesli okuma sessizce duruyordu - düzeltildi"],
+            }},
+            { version: 'v24.43', date: "August 2026", type: 'fix', items: {
+                de: ["Fehlenden Release-Notes-Eintrag nachgetragen"],
+                en: ["Added a missing release notes entry"],
+                es: ["Se añadió una entrada faltante en las notas de versión"],
+                fr: ["Ajout d'une entrée manquante dans les notes de version"],
+                pt: ["Entrada ausente nas notas de versão adicionada"],
+                tr: ["Eksik bir sürüm notu eklendi"],
+            }},
+            { version: 'v24.42', date: "August 2026", type: 'fix', items: {
+                de: ["Wichtiger Fix: StandBy-Modus konnte das Handy über Nacht unnötig aufheizen", "\"Bildschirm an\"-Schalter zeigt jetzt nach Neuladen den korrekten Zustand"],
+                en: ["Important fix: StandBy mode could unnecessarily heat up the phone overnight", "The \"keep screen on\" toggle now shows the correct state after reloading"],
+                es: ["Corrección importante: el modo StandBy podía calentar el teléfono innecesariamente durante la noche", "El interruptor \"mantener pantalla encendida\" ahora muestra el estado correcto tras recargar"],
+                fr: ["Correction importante : le mode StandBy pouvait faire chauffer inutilement le téléphone pendant la nuit", "Le bouton \"garder l'écran allumé\" affiche désormais le bon état après rechargement"],
+                pt: ["Correção importante: o modo StandBy podia esquentar o celular desnecessariamente durante a noite", "O botão \"manter tela ligada\" agora mostra o estado correto após recarregar"],
+                tr: ["Önemli düzeltme: StandBy modu telefonu gece boyunca gereksiz yere ısıtabiliyordu", "\"Ekranı açık tut\" düğmesi artık yeniden yüklemeden sonra doğru durumu gösteriyor"],
+            }},
+            { version: 'v24.41', date: "August 2026", type: 'fix', items: {
+                de: ["Lyrics-Ansicht per Spotlight scrollt jetzt korrekt automatisch hin", "Scroll-Position springt beim Schließen von Dashboard/Lyrics nicht mehr fälschlich zurück"],
+                en: ["Lyrics view via Spotlight now scrolls there automatically and correctly", "Scroll position no longer incorrectly jumps back when closing dashboard/lyrics"],
+                es: ["La vista de letras por Spotlight ahora hace scroll automáticamente y de forma correcta", "La posición de scroll ya no salta incorrectamente al cerrar panel/letra"],
+                fr: ["La vue des paroles via Spotlight défile désormais automatiquement et correctement", "La position de défilement ne saute plus incorrectement en arrière à la fermeture du tableau de bord/des paroles"],
+                pt: ["A visualização de letras via Spotlight agora rola automaticamente e corretamente", "A posição de rolagem não volta mais incorretamente ao fechar o painel/letra"],
+                tr: ["Spotlight ile şarkı sözü görünümü artık otomatik ve doğru şekilde kaydırılıyor", "Panel/şarkı sözleri kapatıldığında kaydırma konumu artık yanlışlıkla geri sıçramıyor"],
+            }},
+            { version: 'v24.40', date: "August 2026", type: 'fix', items: {
+                de: ["Tutorial verweist jetzt auch auf den \"Was ist neu?\"-Bereich"],
+                en: ["The tutorial now also points to the \"What's new?\" section"],
+                es: ["El tutorial ahora también hace referencia a la sección \"¿Qué hay de nuevo?\""],
+                fr: ["Le tutoriel fait désormais aussi référence à la section \"Quoi de neuf ?\""],
+                pt: ["O tutorial agora também menciona a seção \"O que há de novo?\""],
+                tr: ["Eğitim artık \"Yenilikler neler?\" bölümüne de işaret ediyor"],
+            }},
+            { version: 'v24.39', date: "August 2026", type: 'fix', items: {
+                de: ["Easter-Egg-Hinweis im Tutorial verständlicher gemacht", "Tutorial um den neuen Support-Bereich ergänzt"],
+                en: ["Made the Easter egg hint in the tutorial clearer", "Added the new support section to the tutorial"],
+                es: ["Se hizo más claro el indicio del huevo de pascua en el tutorial", "Se añadió la nueva sección de soporte al tutorial"],
+                fr: ["Indice sur les easter eggs rendu plus clair dans le tutoriel", "Nouvelle section support ajoutée au tutoriel"],
+                pt: ["Dica sobre easter egg tornada mais clara no tutorial", "Nova seção de suporte adicionada ao tutorial"],
+                tr: ["Eğitimdeki gizli özellik ipucu daha anlaşılır hale getirildi", "Yeni destek bölümü eğitime eklendi"],
+            }},
+            { version: 'v24.38', date: "August 2026", type: 'feature', items: {
+                de: ["Support-Bereich jetzt eigenständiger Seitenabschnitt statt Karte", "Discord-Seite zeigt jetzt echte Live-Mitgliederzahl und Online-Status"],
+                en: ["Support section is now its own page section instead of a card", "Discord section now shows real live member count and online status"],
+                es: ["La sección de soporte ahora es una sección independiente en vez de una tarjeta", "La sección de Discord ahora muestra el número real de miembros en vivo y el estado en línea"],
+                fr: ["La section support est désormais une section de page indépendante au lieu d'une carte", "La section Discord affiche désormais le vrai nombre de membres en direct et le statut en ligne"],
+                pt: ["A seção de suporte agora é uma seção independente da página em vez de um cartão", "A seção do Discord agora mostra o número real de membros ao vivo e o status online"],
+                tr: ["Destek bölümü artık bir kart yerine kendi bağımsız sayfa bölümü", "Discord bölümü artık gerçek canlı üye sayısını ve çevrimiçi durumunu gösteriyor"],
+            }},
+            { version: 'v24.37', date: "August 2026", type: 'feature', items: {
+                de: ["Neu: Support-Bereich mit E-Mail und Discord-Server", "Release-Notes-Seite jetzt in allen 6 Sprachen verfügbar"],
+                en: ["New: support section with email and Discord server", "Release notes page now available in all 6 languages"],
+                es: ["Nuevo: sección de soporte con email y servidor de Discord", "La página de notas de versión ahora disponible en los 6 idiomas"],
+                fr: ["Nouveau : section support avec email et serveur Discord", "La page des notes de version est désormais disponible dans les 6 langues"],
+                pt: ["Novo: seção de suporte com email e servidor do Discord", "Página de notas de versão agora disponível nos 6 idiomas"],
+                tr: ["Yeni: e-posta ve Discord sunucusuyla destek bölümü", "Sürüm notları sayfası artık 6 dilin tümünde mevcut"],
+            }},
+            { version: 'v24.36', date: "August 2026", type: 'feature', items: {
+                de: ["Sprachausgabe technisch nochmal komplett umgebaut - läuft jetzt direkt über die Systemstimmen des Geräts", "Kein Download mehr nötig, startet sofort"],
+                en: ["Voice narration technically rebuilt again - now runs directly via the device's system voices", "No download needed anymore, starts instantly"],
+                es: ["La narración por voz fue reconstruida técnicamente de nuevo - ahora funciona directamente con las voces del sistema del dispositivo", "Ya no requiere descarga, inicia al instante"],
+                fr: ["La narration vocale a été entièrement reconstruite techniquement - fonctionne désormais directement via les voix système de l'appareil", "Plus besoin de téléchargement, démarre instantanément"],
+                pt: ["A narração por voz foi reconstruída tecnicamente novamente - agora roda diretamente pelas vozes do sistema do dispositivo", "Não requer mais download, inicia instantaneamente"],
+                tr: ["Sesli anlatım teknik olarak yeniden tamamen yapılandırıldı - artık doğrudan cihazın sistem sesleri üzerinden çalışıyor", "Artık indirme gerekmiyor, anında başlıyor"],
+            }},
+            { version: 'v24.35', date: "August 2026", type: 'fix', items: {
+                de: ["Sprachausgabe: falscher technischer Dateipfad korrigiert (Tippfehler von uns)"],
+                en: ["Voice narration: fixed an incorrect technical file path (a typo on our end)"],
+                es: ["Narración por voz: se corrigió una ruta de archivo técnica incorrecta (un error tipográfico nuestro)"],
+                fr: ["Narration vocale : correction d'un chemin de fichier technique erroné (une faute de frappe de notre part)"],
+                pt: ["Narração por voz: corrigido um caminho de arquivo técnico incorreto (um erro de digitação nosso)"],
+                tr: ["Sesli anlatım: yanlış teknik dosya yolu düzeltildi (bizim yazım hatamız)"],
+            }},
+            { version: 'v24.34', date: "August 2026", type: 'fix', items: {
+                de: ["Sprachausgabe: eigentliche Absturzursache in der zugrundeliegenden Bibliothek gefunden und behoben"],
+                en: ["Voice narration: found and fixed the actual crash cause in the underlying library"],
+                es: ["Narración por voz: se encontró y corrigió la causa real del fallo en la biblioteca subyacente"],
+                fr: ["Narration vocale : la véritable cause du plantage dans la bibliothèque sous-jacente a été trouvée et corrigée"],
+                pt: ["Narração por voz: causa real da falha na biblioteca subjacente encontrada e corrigida"],
+                tr: ["Sesli anlatım: temel kütüphanedeki gerçek çökme nedeni bulundu ve düzeltildi"],
+            }},
+            { version: 'v24.33', date: "August 2026", type: 'fix', items: {
+                de: ["Sprachausgabe stürzte statt zu sprechen - fehlende technische Datei ergänzt"],
+                en: ["Voice narration crashed instead of speaking - added a missing technical file"],
+                es: ["La narración por voz fallaba en vez de hablar - se añadió un archivo técnico faltante"],
+                fr: ["La narration vocale plantait au lieu de parler - fichier technique manquant ajouté"],
+                pt: ["A narração por voz travava em vez de falar - arquivo técnico ausente adicionado"],
+                tr: ["Sesli anlatım konuşmak yerine çöküyordu - eksik teknik dosya eklendi"],
+            }},
+            { version: 'v24.32', date: "August 2026", type: 'performance', items: {
+                de: ["Sprachausgabe startet spürbar schneller, wenn die Songtext-Ansicht geöffnet ist"],
+                en: ["Voice narration starts noticeably faster when the lyrics view is open"],
+                es: ["La narración por voz inicia notablemente más rápido cuando la vista de letra está abierta"],
+                fr: ["La narration vocale démarre nettement plus vite lorsque la vue des paroles est ouverte"],
+                pt: ["A narração por voz inicia perceptivelmente mais rápido quando a visualização de letra está aberta"],
+                tr: ["Şarkı sözü görünümü açıkken sesli anlatım belirgin şekilde daha hızlı başlıyor"],
+            }},
+            { version: 'v24.31', date: "August 2026", type: 'fix', items: {
+                de: ["Seite fror beim Vorlesen komplett ein - Berechnung läuft jetzt im Hintergrund, ohne die Seite zu blockieren"],
+                en: ["The page completely froze during read-aloud - calculation now runs in the background without blocking the page"],
+                es: ["La página se congelaba por completo al leer en voz alta - el cálculo ahora se ejecuta en segundo plano sin bloquear la página"],
+                fr: ["La page se figeait complètement pendant la lecture à voix haute - le calcul s'exécute désormais en arrière-plan sans bloquer la page"],
+                pt: ["A página travava completamente durante a leitura em voz alta - o cálculo agora roda em segundo plano sem bloquear a página"],
+                tr: ["Sesli okuma sırasında sayfa tamamen donuyordu - hesaplama artık sayfayı engellemeden arka planda çalışıyor"],
+            }},
+            { version: 'v24.30', date: "August 2026", type: 'feature', items: {
+                de: ["Vorlesen-Button jetzt direkt sichtbar in der Songtext-Ansicht", "Songtext wird bei synchronisierten Lyrics jetzt zeilenweise im Songrhythmus vorgelesen, nicht mehr am Stück", "Auch der Hinweistext bei fehlendem Songtext ist jetzt vorlesbar"],
+                en: ["Read-aloud button now directly visible in the lyrics view", "For synced lyrics, text is now read line by line in the song's rhythm instead of all at once", "The hint text for missing lyrics is now also readable aloud"],
+                es: ["Botón de lectura ahora visible directamente en la vista de letra", "Para letras sincronizadas, el texto ahora se lee línea por línea al ritmo de la canción en vez de todo junto", "El texto de aviso cuando falta la letra también se puede leer ahora"],
+                fr: ["Bouton de lecture désormais directement visible dans la vue des paroles", "Pour les paroles synchronisées, le texte est désormais lu ligne par ligne au rythme de la chanson au lieu de tout à la fois", "Le texte d'information en l'absence de paroles est désormais aussi lisible à voix haute"],
+                pt: ["Botão de leitura agora visível diretamente na visualização de letra", "Para letras sincronizadas, o texto agora é lido linha por linha no ritmo da música em vez de tudo de uma vez", "O texto de aviso quando não há letra também pode ser lido agora"],
+                tr: ["Sesli okuma butonu artık şarkı sözü görünümünde doğrudan görünüyor", "Senkronize şarkı sözlerinde metin artık tek seferde değil, şarkının ritmine göre satır satır okunuyor", "Şarkı sözü bulunamadığında gösterilen ipucu metni de artık sesli okunabiliyor"],
+            }},
+            { version: 'v24.29', date: "August 2026", type: 'feature', items: {
+                de: ["Sprachausgabe technisch komplett neu aufgebaut - läuft jetzt eigenständig ohne externe Abhängigkeiten", "Kleinerer Download für die Sprach-Engine (21 statt 89 MB)"],
+                en: ["Voice narration rebuilt completely from scratch - now runs standalone without external dependencies", "Smaller download for the voice engine (21 instead of 89 MB)"],
+                es: ["La narración por voz fue reconstruida por completo - ahora funciona de forma independiente sin dependencias externas", "Descarga más pequeña para el motor de voz (21 en vez de 89 MB)"],
+                fr: ["La narration vocale a été entièrement reconstruite - fonctionne désormais de manière autonome sans dépendances externes", "Téléchargement plus léger pour le moteur vocal (21 au lieu de 89 Mo)"],
+                pt: ["A narração por voz foi totalmente reconstruída - agora roda de forma independente sem dependências externas", "Download menor para o mecanismo de voz (21 em vez de 89 MB)"],
+                tr: ["Sesli anlatım sıfırdan tamamen yeniden inşa edildi - artık harici bağımlılıklar olmadan bağımsız çalışıyor", "Ses motoru için daha küçük indirme (89 yerine 21 MB)"],
+            }},
+            { version: 'v24.28', date: "August 2026", type: 'fix', items: {
+                de: ["Sprachausgabe: Versuch mit einer anderen, aktiver gepflegten Sprach-Bibliothek"],
+                en: ["Voice narration: attempt with a different, more actively maintained voice library"],
+                es: ["Narración por voz: intento con una biblioteca de voz diferente y mantenida más activamente"],
+                fr: ["Narration vocale : essai avec une bibliothèque vocale différente, plus activement maintenue"],
+                pt: ["Narração por voz: tentativa com uma biblioteca de voz diferente e mais ativamente mantida"],
+                tr: ["Sesli anlatım: farklı, daha aktif bakımı yapılan bir ses kütüphanesiyle deneme"],
+            }},
+            { version: 'v24.27', date: "August 2026", type: 'fix', items: {
+                de: ["Release-Notes-Liste vervollständigt und um ältere Meilensteine ergänzt"],
+                en: ["Completed the release notes list and added older milestones"],
+                es: ["Se completó la lista de notas de versión y se añadieron hitos anteriores"],
+                fr: ["Liste des notes de version complétée et jalons plus anciens ajoutés"],
+                pt: ["Lista de notas de versão completada e marcos mais antigos adicionados"],
+                tr: ["Sürüm notları listesi tamamlandı ve eski kilometre taşları eklendi"],
+            }},
+            { version: 'v24.26', date: "August 2026", type: 'fix', items: {
+                de: ["Sprachausgabe: defekte Verbindung zur Sprach-Engine behoben (lud vorher ins Leere)"],
+                en: ["Voice narration: fixed a broken connection to the voice engine (previously loaded into nothing)"],
+                es: ["Narración por voz: se corrigió una conexión rota con el motor de voz (antes cargaba en el vacío)"],
+                fr: ["Narration vocale : connexion défectueuse au moteur vocal corrigée (chargeait auparavant dans le vide)"],
+                pt: ["Narração por voz: conexão quebrada com o mecanismo de voz corrigida (antes carregava no vazio)"],
+                tr: ["Sesli anlatım: ses motoruna bozuk bağlantı düzeltildi (önceden boşluğa yükleniyordu)"],
+            }},
+            { version: 'v24.25', date: "August 2026", type: 'fix', items: {
+                de: ["Release-Notes-Liste vervollständigt", "Vorlesen-Button blieb manchmal dauerhaft im Ladezustand hängen - jetzt mit fester Zeitgrenze abgesichert"],
+                en: ["Completed the release notes list", "Read-aloud button sometimes got permanently stuck in loading state - now secured with a fixed time limit"],
+                es: ["Se completó la lista de notas de versión", "El botón de lectura a veces se quedaba atascado permanentemente en estado de carga - ahora protegido con un límite de tiempo fijo"],
+                fr: ["Liste des notes de version complétée", "Le bouton de lecture restait parfois bloqué en permanence en état de chargement - désormais sécurisé par une limite de temps fixe"],
+                pt: ["Lista de notas de versão completada", "O botão de leitura às vezes ficava permanentemente travado em estado de carregamento - agora protegido com um limite de tempo fixo"],
+                tr: ["Sürüm notları listesi tamamlandı", "Sesli okuma butonu bazen kalıcı olarak yükleme durumunda takılı kalıyordu - artık sabit bir zaman sınırıyla güvence altında"],
+            }},
+            { version: 'v24.24', date: "August 2026", type: 'fix', items: {
+                de: ["Vorlesen-Button überlappte mit dem Schließen-Button - jetzt klar sichtbar platziert"],
+                en: ["Read-aloud button overlapped with the close button - now clearly placed"],
+                es: ["El botón de lectura se superponía con el botón de cerrar - ahora colocado con claridad"],
+                fr: ["Le bouton de lecture chevauchait le bouton de fermeture - désormais placé clairement"],
+                pt: ["O botão de leitura sobrepunha o botão de fechar - agora posicionado com clareza"],
+                tr: ["Sesli okuma butonu kapatma butonuyla çakışıyordu - artık net şekilde yerleştirildi"],
+            }},
+            { version: 'v24.23', date: "August 2026", type: 'feature', items: {
+                de: ["Sprachausgabe jetzt auch für alle Info-Karten verfügbar (Status, Hintergrund, Kontakt usw.)", "Release-Notes reichen jetzt weiter in die Vergangenheit zurück"],
+                en: ["Voice narration now also available for all info cards (status, background, contact, etc.)", "Release notes now go further back in time"],
+                es: ["Narración por voz ahora también disponible para todas las tarjetas de información (estado, antecedentes, contacto, etc.)", "Las notas de versión ahora se remontan más en el pasado"],
+                fr: ["Narration vocale désormais aussi disponible pour toutes les cartes d'information (statut, parcours, contact, etc.)", "Les notes de version remontent désormais plus loin dans le temps"],
+                pt: ["Narração por voz agora também disponível para todos os cartões de informação (status, histórico, contato etc.)", "As notas de versão agora remontam mais no passado"],
+                tr: ["Sesli anlatım artık tüm bilgi kartları için de kullanılabiliyor (durum, geçmiş, iletişim vb.)", "Sürüm notları artık daha eskiye kadar uzanıyor"],
+            }},
+            { version: 'v24.22', date: "August 2026", type: 'feature', items: {
+                de: ["Neu: Sprachausgabe (Vorlesen) für Bio-Text, Songtext und Release-Notes", "Mehrere deutsche Stimmen zur Auswahl, laden erst bei tatsächlicher Nutzung"],
+                en: ["New: voice narration (read-aloud) for bio text, lyrics, and release notes", "Multiple German voices to choose from, only load when actually used"],
+                es: ["Nuevo: narración por voz (lectura) para el texto biográfico, la letra y las notas de versión", "Varias voces en alemán para elegir, se cargan solo cuando se usan realmente"],
+                fr: ["Nouveau : narration vocale (lecture à voix haute) pour la bio, les paroles et les notes de version", "Plusieurs voix allemandes au choix, chargées uniquement lors d'une utilisation réelle"],
+                pt: ["Novo: narração por voz (leitura) para texto biográfico, letra e notas de versão", "Várias vozes em alemão para escolher, carregadas apenas quando realmente usadas"],
+                tr: ["Yeni: biyografi metni, şarkı sözü ve sürüm notları için sesli anlatım (sesli okuma)", "Seçilebilecek birden fazla Almanca ses, yalnızca fiilen kullanıldığında yükleniyor"],
+            }},
+            { version: 'v24.21', date: "August 2026", type: 'feature', items: {
+                de: ["Titel/Künstlername im StandBy-Lockscreen scrollt jetzt bei längeren Namen", "Bildschirmschoner-Verschiebung (Einbrennschutz) läuft jetzt häufiger"],
+                en: ["Title/artist name in the StandBy lockscreen now scrolls for longer names", "Screen-saver shift (burn-in protection) now runs more frequently"],
+                es: ["El título/nombre del artista en la pantalla de bloqueo StandBy ahora se desplaza para nombres largos", "El desplazamiento del protector de pantalla (protección contra quemado) ahora se ejecuta con más frecuencia"],
+                fr: ["Le titre/nom d'artiste dans l'écran de verrouillage StandBy défile désormais pour les noms longs", "Le décalage anti-rémanence de l'écran de veille s'exécute désormais plus fréquemment"],
+                pt: ["Título/nome do artista na tela de bloqueio StandBy agora rola para nomes longos", "O deslocamento de proteção contra queima de tela agora ocorre com mais frequência"],
+                tr: ["StandBy kilit ekranındaki başlık/sanatçı adı artık uzun isimlerde kayıyor", "Ekran koruyucu kayması (yanma koruması) artık daha sık çalışıyor"],
+            }},
+            { version: 'v24.20', date: "August 2026", type: 'feature', items: {
+                de: ["Neu: \"Zuletzt gehört\"-Verlauf der letzten 10 Songs", "Neu: Schnellexport für ein Songbild per Klick", "Neu: \"Was ist neu?\"-Bereich (diese Seite hier!)"],
+                en: ["New: \"Recently played\" history of the last 10 songs", "New: quick export for a song image with one click", "New: \"What's new?\" section (this very page!)"],
+                es: ["Nuevo: historial \"Escuchado recientemente\" de las últimas 10 canciones", "Nuevo: exportación rápida de una imagen de canción con un clic", "Nuevo: sección \"¿Qué hay de nuevo?\" (¡esta misma página!)"],
+                fr: ["Nouveau : historique \"Écouté récemment\" des 10 derniers titres", "Nouveau : export rapide d'une image de morceau en un clic", "Nouveau : section \"Quoi de neuf ?\" (cette page-ci !)"],
+                pt: ["Novo: histórico \"Ouvido recentemente\" das últimas 10 músicas", "Novo: exportação rápida de uma imagem da música com um clique", "Novo: seção \"O que há de novo?\" (esta página aqui!)"],
+                tr: ["Yeni: son 10 şarkının \"Son çalınanlar\" geçmişi", "Yeni: tek tıkla şarkı görseli için hızlı dışa aktarma", "Yeni: \"Yenilikler neler?\" bölümü (tam da bu sayfa!)"],
+            }},
+            { version: 'v24.19', date: "August 2026", type: 'performance', items: {
+                de: ["Predictive Back Gesture in der App unterstützt (moderne Zurück-Wisch-Animation)", "Deutlich spürbar flüssiger und energiesparender, v.a. bei offenen Lyrics"],
+                en: ["Predictive Back Gesture supported in the app (modern back-swipe animation)", "Noticeably smoother and more energy-efficient, especially with lyrics open"],
+                es: ["Gesto de retroceso predictivo compatible en la app (animación moderna de deslizar hacia atrás)", "Notablemente más fluido y eficiente energéticamente, especialmente con la letra abierta"],
+                fr: ["Geste de retour prédictif pris en charge dans l'app (animation moderne de balayage retour)", "Nettement plus fluide et économe en énergie, surtout avec les paroles ouvertes"],
+                pt: ["Gesto de retorno preditivo suportado no app (animação moderna de deslizar para trás)", "Perceptivelmente mais fluido e econômico em energia, especialmente com a letra aberta"],
+                tr: ["Uygulamada Öngörülü Geri hareketi destekleniyor (modern geri kaydırma animasyonu)", "Özellikle şarkı sözleri açıkken belirgin şekilde daha akıcı ve enerji tasarruflu"],
+            }},
+            { version: 'v24.15', date: "August 2026", type: 'feature', items: {
+                de: ["Songtext-Ansicht läuft jetzt spürbar flüssiger auf Handys", "Neuer, dezenter Cover-Farbrahmen um die Musik-Karte (in den Einstellungen abschaltbar)"],
+                en: ["Lyrics view now noticeably smoother on phones", "New, subtle cover color frame around the music card (can be turned off in settings)"],
+                es: ["La vista de letra ahora es notablemente más fluida en móviles", "Nuevo marco de color sutil de la portada alrededor de la tarjeta de música (desactivable en ajustes)"],
+                fr: ["La vue des paroles est désormais nettement plus fluide sur mobile", "Nouveau cadre de couleur discret autour de la carte musicale, basé sur la pochette (désactivable dans les réglages)"],
+                pt: ["A visualização de letra agora é perceptivelmente mais fluida em celulares", "Nova moldura de cor discreta da capa ao redor do cartão de música (desativável nas configurações)"],
+                tr: ["Şarkı sözü görünümü artık telefonlarda belirgin şekilde daha akıcı", "Müzik kartı çevresinde yeni, sade kapak renk çerçevesi (ayarlardan kapatılabilir)"],
+            }},
+            { version: 'v24.10-14', date: "August 2026", type: 'performance', items: {
+                de: ["Mehrere Runden Feintuning an Update-Frequenzen und Hintergrund-Effekten", "Deutlich weniger Akku- und Grafikkarten-Last bei laufender Musik"],
+                en: ["Several rounds of fine-tuning update frequencies and background effects", "Significantly less battery and graphics card load while music is playing"],
+                es: ["Varias rondas de ajuste fino en frecuencias de actualización y efectos de fondo", "Considerablemente menos carga de batería y GPU con música en reproducción"],
+                fr: ["Plusieurs cycles d'optimisation des fréquences de mise à jour et des effets d'arrière-plan", "Charge batterie et carte graphique nettement réduite pendant la lecture de musique"],
+                pt: ["Várias rodadas de ajuste fino nas frequências de atualização e efeitos de fundo", "Carga de bateria e GPU consideravelmente menor com música tocando"],
+                tr: ["Güncelleme sıklıkları ve arka plan efektlerinde birkaç tur ince ayar", "Müzik çalarken belirgin şekilde daha az pil ve grafik kartı yükü"],
+            }},
+            { version: 'v24.9', date: "August 2026", type: 'fix', items: {
+                de: ["App zeigt sich jetzt im echten Vollbild-Modus statt mit Browser-Leiste", "Video-Hintergründe sind jetzt optional statt automatisch aktiv (spart Akku)"],
+                en: ["App now shows in true fullscreen mode instead of with a browser bar", "Video backgrounds are now optional instead of automatically active (saves battery)"],
+                es: ["La app ahora se muestra en modo de pantalla completa real en lugar de con barra del navegador", "Los fondos de video ahora son opcionales en vez de estar activos automáticamente (ahorra batería)"],
+                fr: ["L'app s'affiche désormais en vrai plein écran au lieu d'avec la barre du navigateur", "Les arrière-plans vidéo sont désormais optionnels au lieu d'être actifs automatiquement (économise la batterie)"],
+                pt: ["O app agora é exibido em modo de tela cheia real em vez de com a barra do navegador", "Fundos de vídeo agora são opcionais em vez de ativos automaticamente (economiza bateria)"],
+                tr: ["Uygulama artık tarayıcı çubuğu yerine gerçek tam ekran modunda görünüyor", "Video arka planları artık otomatik olarak etkin değil, isteğe bağlı (pil tasarrufu sağlar)"],
+            }},
+            { version: 'v24.6', date: "August 2026", type: 'performance', items: {
+                de: ["Songtext-Synchronisation komplett überarbeitet - läuft jetzt deutlich ruhiger", "Viele kleinere Bugfixes bei der Wort-für-Wort-Anzeige"],
+                en: ["Lyrics synchronization completely reworked - now runs much more smoothly", "Many smaller bug fixes in the word-by-word display"],
+                es: ["La sincronización de la letra fue completamente rediseñada - ahora funciona mucho más estable", "Muchas correcciones menores en la visualización palabra por palabra"],
+                fr: ["La synchronisation des paroles a été entièrement retravaillée - fonctionne désormais beaucoup plus calmement", "De nombreuses petites corrections dans l'affichage mot par mot"],
+                pt: ["A sincronização da letra foi completamente reformulada - agora roda muito mais estável", "Muitas pequenas correções na exibição palavra por palavra"],
+                tr: ["Şarkı sözü senkronizasyonu tamamen yeniden yapıldı - artık çok daha sakin çalışıyor", "Kelime kelime gösterimde birçok küçük hata düzeltmesi"],
+            }},
+            { version: 'v23.x', date: "Juli 2026", type: 'feature', items: {
+                de: ["StandBy-Lockscreen-Modus eingeführt (Vollbild-Uhr mit Musikanzeige, wie ein echtes Always-On-Display)", "Über 60 verschiedene Songtext-Animationsstile zur Auswahl", "Kart-Dashboard als Vorbereitung für zukünftige Live-Anbindung hinzugefügt"],
+                en: ["Introduced StandBy lockscreen mode (fullscreen clock with music display, like a real always-on display)", "Over 60 different lyrics animation styles to choose from", "Added a kart dashboard in preparation for future live connectivity"],
+                es: ["Se introdujo el modo de pantalla de bloqueo StandBy (reloj a pantalla completa con música, como una pantalla always-on real)", "Más de 60 estilos de animación de letra para elegir", "Se añadió un panel de karting como preparación para una futura conexión en vivo"],
+                fr: ["Introduction du mode écran verrouillé StandBy (horloge plein écran avec affichage musical, comme un vrai écran always-on)", "Plus de 60 styles d'animation de paroles au choix", "Ajout d'un tableau de bord karting en préparation d'une future connexion en direct"],
+                pt: ["Introduzido o modo de tela de bloqueio StandBy (relógio em tela cheia com exibição de música, como uma tela always-on real)", "Mais de 60 estilos de animação de letra para escolher", "Painel de kart adicionado como preparação para uma futura conexão ao vivo"],
+                tr: ["StandBy kilit ekranı modu tanıtıldı (gerçek bir always-on ekran gibi müzik gösterimli tam ekran saat)", "Seçilebilecek 60'tan fazla farklı şarkı sözü animasyon stili", "Gelecekteki canlı bağlantı için hazırlık olarak kart paneli eklendi"],
+            }},
+            { version: 'v22.x', date: "Juli 2026", type: 'feature', items: {
+                de: ["Share-Card-Generator eingeführt - eigene Songbilder in 10 verschiedenen Designs erstellen und teilen", "Cover-Glow-Effekt: sanftes Umgebungslicht passend zur aktuellen Album-Farbe"],
+                en: ["Introduced the share card generator - create and share your own song images in 10 different designs", "Cover glow effect: soft ambient light matching the current album color"],
+                es: ["Se introdujo el generador de tarjetas para compartir - crea y comparte tus propias imágenes de canciones en 10 diseños diferentes", "Efecto de brillo de portada: luz ambiental suave a juego con el color actual del álbum"],
+                fr: ["Introduction du générateur de cartes à partager - créez et partagez vos propres images de morceaux dans 10 designs différents", "Effet de halo de pochette : lumière ambiante douce assortie à la couleur de l'album en cours"],
+                pt: ["Introduzido o gerador de cartões para compartilhar - crie e compartilhe suas próprias imagens de música em 10 designs diferentes", "Efeito de brilho da capa: luz ambiente suave combinando com a cor atual do álbum"],
+                tr: ["Paylaşım kartı oluşturucu tanıtıldı - 10 farklı tasarımda kendi şarkı görsellerinizi oluşturun ve paylaşın", "Kapak parıltısı efekti: mevcut albüm rengine uygun yumuşak ortam ışığı"],
+            }},
+            { version: 'v21.x', date: "Juni 2026", type: 'fix', items: {
+                de: ["Uhrzeit im StandBy-Modus zuverlässig korrigiert (nutzt jetzt die eigene Serverzeit statt unzuverlässiger externer Zeit-Dienste)", "Zahlreiche kleinere Darstellungsfehler auf sehr kleinen und sehr großen Bildschirmen behoben"],
+                en: ["Reliably fixed the time in StandBy mode (now uses our own server time instead of unreliable external time services)", "Fixed numerous smaller display bugs on very small and very large screens"],
+                es: ["Se corrigió de forma fiable la hora en el modo StandBy (ahora usa nuestra propia hora del servidor en lugar de servicios externos poco fiables)", "Se corrigieron numerosos errores menores de visualización en pantallas muy pequeñas y muy grandes"],
+                fr: ["L'heure en mode StandBy corrigée de manière fiable (utilise désormais notre propre heure serveur au lieu de services de temps externes peu fiables)", "De nombreux petits bugs d'affichage corrigés sur les très petits et très grands écrans"],
+                pt: ["Hora no modo StandBy corrigida de forma confiável (agora usa nosso próprio horário do servidor em vez de serviços externos pouco confiáveis)", "Numerosos pequenos erros de exibição corrigidos em telas muito pequenas e muito grandes"],
+                tr: ["StandBy modundaki saat güvenilir şekilde düzeltildi (artık güvenilmez harici zaman servisleri yerine kendi sunucu saatimizi kullanıyor)", "Çok küçük ve çok büyük ekranlarda çok sayıda küçük görüntüleme hatası düzeltildi"],
+            }},
+            { version: 'v20.x', date: "Juni 2026", type: 'feature', items: {
+                de: ["Erstes eigenständiges Musik-Dashboard mit Live-Songanzeige eingeführt", "Mehrsprachigkeit: die Seite unterstützt jetzt 6 Sprachen"],
+                en: ["Introduced the first standalone music dashboard with live song display", "Multilingual support: the site now supports 6 languages"],
+                es: ["Se introdujo el primer panel de música independiente con visualización de canción en vivo", "Compatibilidad multilingüe: el sitio ahora admite 6 idiomas"],
+                fr: ["Introduction du premier tableau de bord musical autonome avec affichage du morceau en direct", "Prise en charge multilingue : le site prend désormais en charge 6 langues"],
+                pt: ["Introduzido o primeiro painel de música independente com exibição de música ao vivo", "Suporte multilíngue: o site agora suporta 6 idiomas"],
+                tr: ["Canlı şarkı gösterimli ilk bağımsız müzik paneli tanıtıldı", "Çoklu dil desteği: site artık 6 dili destekliyor"],
+            }},
         ];
         // FIX v24.37: Labels jetzt übersetzbar (t()) statt fest auf Deutsch verdrahtet -
         // Funktion statt Konstante, da t() erst zur Laufzeit die aktuelle Sprache kennt.
@@ -8559,6 +8884,9 @@
                 <div class="space-y-4 xxs:space-y-5 sm:space-y-8 mb-4 xxs:mb-6 sm:mb-10 max-h-[50vh] overflow-y-auto pr-1">
                     ${PUBLIC_CHANGELOG.map(entry => {
                         const meta = getChangelogTypeMeta()[entry.type] || getChangelogTypeMeta().feature;
+                        // FIX v24.58: items ist jetzt pro Sprache aufgeteilt, passende Sprache
+                        // anhand von currentLang auswählen, Deutsch als Rückfall.
+                        const langItems = entry.items[currentLang || 'de'] || entry.items.de;
                         return `
                         <div>
                             <div class="flex items-center flex-wrap gap-2 mb-1.5">
@@ -8567,7 +8895,7 @@
                                 <span style="color:${meta.color};background:${meta.bg};" class="text-[8px] xxs:text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full">${escapeHTML(meta.label)}</span>
                             </div>
                             <ul class="list-disc list-inside space-y-1">
-                                ${entry.items.map(i => `<li class="text-slate-600 dark:text-slate-300 text-xs xxs:text-sm sm:text-base leading-relaxed">${escapeHTML(i)}</li>`).join('')}
+                                ${langItems.map(i => `<li class="text-slate-600 dark:text-slate-300 text-xs xxs:text-sm sm:text-base leading-relaxed">${escapeHTML(i)}</li>`).join('')}
                             </ul>
                         </div>
                     `;}).join('')}
@@ -9241,7 +9569,17 @@
             });
         })();
 
-        window.toggleLyricsSettings = function() {
+        // FIX v24.59: Nutzer meldete - das Einstellungen-Menü schließt sich sofort wieder von
+        // selbst, direkt nach dem Öffnen. Konnte den exakten Auslöser isoliert nicht
+        // reproduzieren (Logik selbst verhielt sich in Tests korrekt), aber das ist das
+        // klassische Symptom eines bekannten Bug-Musters: derselbe Klick, der das Menü öffnet,
+        // erreicht per Event-Bubbling im selben Tick auch den globalen "Außerhalb geklickt"-
+        // Listener auf document-Ebene. Absicherung: Event wird jetzt explizit entgegengenommen
+        // und dessen Ausbreitung gestoppt (stopPropagation) - kann den Listener dadurch
+        // kategorisch nie mehr im selben Klick erreichen, unabhängig vom genauen
+        // Auslöse-Szenario (Mobilgerät, Touch-Events, o.ä.).
+        window.toggleLyricsSettings = function(event) {
+            if (event) event.stopPropagation();
             isLyricsSettingsOpen = !isLyricsSettingsOpen;
             if (!lyricsSettingsMenu) return;
             clearTimeout(lyricsSettingsTimeout);
@@ -9261,7 +9599,7 @@
         };
 
         document.addEventListener('click', (e) => {
-            if (isLyricsSettingsOpen && !e.target.closest('#lyrics-settings-menu') && !e.target.closest('button[aria-label="Lyrics Einstellungen"]')) {
+            if (isLyricsSettingsOpen && !e.target.closest('#lyrics-settings-menu') && !e.target.closest('#btn-lyrics-settings')) {
                 toggleLyricsSettings();
             }
         });
