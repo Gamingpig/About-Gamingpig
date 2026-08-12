@@ -11,6 +11,25 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FIX] Release v24.57: Vorlesen nutzte immer Deutsch, egal welche Seitensprache eingestellt war
+      - Nutzer meldete: bei englischer Seite liest die Vorlesefunktion trotzdem mit deutscher
+        Stimme vor - nicht wie gewünscht. Ursache: getGermanVoices() war fest auf 'de'
+        verdrahtet, komplett unabhängig von der aktuell gewählten Seitensprache, und die
+        SpeechSynthesisUtterance selbst hatte an zwei Stellen u.lang = 'de-DE' hart
+        einprogrammiert.
+      - Fix: neue Funktion getVoicesForCurrentLang() nutzt die aktuelle Seitensprache
+        (currentLang) und eine Zuordnungstabelle (TTS_LANG_PREFIX/TTS_LANG_BCP47) für alle
+        6 Sprachen der Seite. ttsPickVoice(), populateTtsVoiceDropdown() und beide
+        Utterance-Erzeugungsstellen (speakChunkAndWait/speakUtteranceAndWait) darauf
+        umgestellt. Alte, fest verdrahtete getGermanVoices() komplett entfernt.
+      - Stimmen-Präferenz wird jetzt PRO SPRACHE separat gespeichert (ttsVoiceId_de,
+        ttsVoiceId_en usw.) statt global - ein gespeicherter deutscher Stimmname hätte sonst
+        keinen Sinn ergeben, wenn die Seite auf Englisch läuft.
+      - Stimmen-Dropdown in den Einstellungen wird jetzt automatisch bei jedem Sprachwechsel
+        neu befüllt, zeigt sofort die zur neuen Sprache passenden Stimmen.
+      - "Keine Stimme gefunden"-Meldung jetzt ebenfalls sprachabhängig übersetzt statt fest
+        Deutsch, alle 6 Sprachen.
+
     [REVERT + FIX] Release v24.56: HQ-TTS-Experiment komplett zurückgerollt + Effizienz-Rundgang
       - Nach vier gescheiterten, gezielten Fix-Versuchen (v24.52-v24.55) für die hochwertige
         KI-Stimme über @huggingface/transformers + Xenova/mms-tts-deu - Modell-Download blieb
@@ -3406,7 +3425,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.56 · 2026-08-12';
+        const SITE_VERSION = 'v24.57 · 2026-08-12';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -4386,6 +4405,7 @@
                 t_whatsnew2_title: '✨ Noch mehr Neues',
                 t_whatsnew2_text: 'Der Support-Bereich zeigt jetzt live, wer gerade auf meinem Discord-Server online ist. Und die Release-Notes im Footer wachsen ständig weiter - schau da gerne öfter mal rein. Das war\'s mit dem Extra-Rundgang - viel Spaß beim Entdecken!',
                 tutorial_whatsnew_badge: '✨ Bonus: Was ist neu',
+                tts_no_voice_found: 'Keine deutsche Stimme auf diesem Gerät gefunden - Wiedergabe nutzt die Standardstimme.',
                 support_section_title: 'Support', support_section_email_title: 'E-Mail', support_section_email_desc: 'Fragen, Bugs gefunden oder einfach quatschen? Schreib mir!',
                 support_section_discord_title: 'Discord', support_section_discord_desc: 'Tritt dem Support-Server bei - dort bin ich meistens am schnellsten erreichbar.',
                 support_email_open: 'Öffnen', support_email_copy: 'Kopieren', support_email_copied: 'Kopiert! ✓',
@@ -4569,6 +4589,7 @@
                 t_whatsnew2_title: '✨ Even more news',
                 t_whatsnew2_text: "The Support section now shows live who's currently online on my Discord server. And the release notes in the footer keep growing - feel free to check back often. That's the extra tour - have fun exploring!",
                 tutorial_whatsnew_badge: "✨ Bonus: What's new",
+                tts_no_voice_found: 'No English voice found on this device - playback uses the default voice.',
                 support_section_title: 'Support', support_section_email_title: 'Email', support_section_email_desc: 'Questions, found a bug, or just want to chat? Email me!',
                 support_section_discord_title: 'Discord', support_section_discord_desc: 'Join the support server - that\'s usually the fastest way to reach me.',
                 support_email_open: 'Open', support_email_copy: 'Copy', support_email_copied: 'Copied! ✓',
@@ -4752,6 +4773,7 @@
                 t_whatsnew2_title: '✨ Más novedades',
                 t_whatsnew2_text: 'La sección de Soporte ahora muestra en vivo quién está conectado en mi servidor de Discord. Y las notas de versión en el pie de página siguen creciendo - échales un vistazo de vez en cuando. Eso es todo el recorrido extra - ¡diviértete explorando!',
                 tutorial_whatsnew_badge: '✨ Extra: Novedades',
+                tts_no_voice_found: 'No se encontró ninguna voz en español en este dispositivo - la reproducción usa la voz predeterminada.',
                 support_section_title: 'Soporte', support_section_email_title: 'Email', support_section_email_desc: '¿Tienes preguntas, encontraste un error o solo quieres charlar? ¡Escríbeme!',
                 support_section_discord_title: 'Discord', support_section_discord_desc: 'Únete al servidor de soporte - ahí suelo responder más rápido.',
                 support_email_open: 'Abrir', support_email_copy: 'Copiar', support_email_copied: '¡Copiado! ✓',
@@ -4935,6 +4957,7 @@
                 t_whatsnew2_title: '✨ Encore plus de nouveautés',
                 t_whatsnew2_text: "La section Support affiche maintenant en direct qui est connecté sur mon serveur Discord. Et les notes de version dans le pied de page continuent de s'étoffer - n'hésite pas à y jeter un œil de temps en temps. C'est tout pour le tour supplémentaire - amuse-toi bien à explorer !",
                 tutorial_whatsnew_badge: '✨ Bonus : Nouveautés',
+                tts_no_voice_found: "Aucune voix française trouvée sur cet appareil - la lecture utilise la voix par défaut.",
                 support_section_title: 'Support', support_section_email_title: 'Email', support_section_email_desc: 'Des questions, un bug trouvé, ou juste envie de discuter ? Écris-moi !',
                 support_section_discord_title: 'Discord', support_section_discord_desc: 'Rejoins le serveur de support - c\'est souvent le moyen le plus rapide de me joindre.',
                 support_email_open: 'Ouvrir', support_email_copy: 'Copier', support_email_copied: 'Copié ! ✓',
@@ -5118,6 +5141,7 @@
                 t_whatsnew2_title: '✨ Ainda mais novidades',
                 t_whatsnew2_text: 'A seção de Suporte agora mostra ao vivo quem está online no meu servidor do Discord. E as notas de versão no rodapé continuam crescendo - dá uma olhada de vez em quando. Isso é tudo pelo tour extra - divirta-se explorando!',
                 tutorial_whatsnew_badge: '✨ Bônus: Novidades',
+                tts_no_voice_found: 'Nenhuma voz em português encontrada neste dispositivo - a reprodução usa a voz padrão.',
                 support_section_title: 'Suporte', support_section_email_title: 'Email', support_section_email_desc: 'Tem dúvidas, achou um bug, ou só quer bater um papo? Me manda um email!',
                 support_section_discord_title: 'Discord', support_section_discord_desc: 'Entra no servidor de suporte - geralmente é a forma mais rápida de me alcançar.',
                 support_email_open: 'Abrir', support_email_copy: 'Copiar', support_email_copied: 'Copiado! ✓',
@@ -5301,6 +5325,7 @@
                 t_whatsnew2_title: '✨ Daha fazla yenilik',
                 t_whatsnew2_text: 'Destek bölümü artık Discord sunucumda kimlerin çevrimiçi olduğunu canlı gösteriyor. Ve alt bilgideki sürüm notları büyümeye devam ediyor - ara sıra göz atmaktan çekinme. Ekstra tur bu kadardı - keşfetmenin tadını çıkar!',
                 tutorial_whatsnew_badge: '✨ Bonus: Yenilikler',
+                tts_no_voice_found: 'Bu cihazda Türkçe ses bulunamadı - oynatma varsayılan sesi kullanıyor.',
                 support_section_title: 'Destek', support_section_email_title: 'E-posta', support_section_email_desc: 'Sorun mu var, bir hata mı buldun, ya da sadece sohbet mi etmek istiyorsun? Bana yaz!',
                 support_section_discord_title: 'Discord', support_section_discord_desc: 'Destek sunucusuna katıl - genelde en hızlı ulaşım yolu bu.',
                 support_email_open: 'Aç', support_email_copy: 'Kopyala', support_email_copied: 'Kopyalandı! ✓',
@@ -5590,6 +5615,11 @@
                 if (lmTitleEl && !lmTitleEl.hasAttribute('data-i18n-placeholder')) lmTitleEl.innerText = t('status_offline_short');
                 if (lmArtistEl && !lmArtistEl.hasAttribute('data-i18n-placeholder')) lmArtistEl.innerText = t('status_no_music');
             }
+
+            // FIX v24.57: Vorlesen nutzte bisher immer eine deutsche Stimme, unabhängig von
+            // der Seitensprache - Dropdown jetzt bei jedem Sprachwechsel neu befüllen, damit
+            // sofort die passenden Stimmen für die neu gewählte Sprache angezeigt werden.
+            if (typeof populateTtsVoiceDropdown === 'function') populateTtsVoiceDropdown();
         }
 
         function getTutorialSteps() {
@@ -6106,8 +6136,19 @@
         //
         // Stimmqualität hängt vom jeweiligen Gerät/Browser ab - auf den meisten aktuellen
         // Chrome-Installationen sind das brauchbare, teils cloud-gestützte "Google"-Stimmen.
-        function getGermanVoices() {
-            return speechSynthesis.getVoices().filter(v => v.lang.toLowerCase().startsWith('de'));
+        // FIX v24.57: Nutzer meldete zurecht - die Vorlesefunktion nutzte IMMER eine deutsche
+        // Stimme, komplett unabhängig von der eingestellten Seitensprache. Jetzt wird die
+        // Stimme passend zur aktuell gewählten Sprache ausgesucht (alle 6 Sprachen der
+        // Seite). BCP-47-Sprachpräfixe, die zu speechSynthesis-Stimmen-lang-Codes passen -
+        // 'pt' deckt sowohl pt-BR als auch pt-PT ab, da beide Varianten für portugiesische
+        // Nutzer sinnvoll sind.
+        const TTS_LANG_PREFIX = { de: 'de', en: 'en', es: 'es', fr: 'fr', pt: 'pt', tr: 'tr' };
+        const TTS_LANG_BCP47 = { de: 'de-DE', en: 'en-US', es: 'es-ES', fr: 'fr-FR', pt: 'pt-BR', tr: 'tr-TR' };
+
+        function getVoicesForCurrentLang() {
+            const lang = currentLang || 'de';
+            const prefix = TTS_LANG_PREFIX[lang] || 'de';
+            return speechSynthesis.getVoices().filter(v => v.lang.toLowerCase().startsWith(prefix));
         }
 
         // Manche Browser laden die Stimmenliste asynchron nach - erst nach 'voiceschanged'
@@ -6127,28 +6168,33 @@
             });
         }
 
+        // FIX v24.57: Stimmen-Präferenz jetzt PRO SPRACHE gespeichert, nicht mehr global -
+        // ein deutscher Lieblingsname (z.B. "Anna") ergibt schließlich keinen Sinn, wenn die
+        // Seite gerade auf Englisch läuft.
         function getTtsVoiceId() {
-            return localStorage.getItem('ttsVoiceId') || '';
+            const lang = currentLang || 'de';
+            return localStorage.getItem('ttsVoiceId_' + lang) || '';
         }
         window.setTtsVoiceId = function(voiceId) {
-            localStorage.setItem('ttsVoiceId', voiceId);
+            const lang = currentLang || 'de';
+            localStorage.setItem('ttsVoiceId_' + lang, voiceId);
         };
 
         async function populateTtsVoiceDropdown() {
             const select = document.getElementById('tts-voice-select');
             if (!select) return;
             const voices = await ensureVoicesLoaded();
-            const german = voices.filter(v => v.lang.toLowerCase().startsWith('de'));
-            if (german.length === 0) {
-                select.innerHTML = '<option value="">Keine deutsche Stimme auf diesem Gerät gefunden</option>';
+            const matching = getVoicesForCurrentLang();
+            if (matching.length === 0) {
+                select.innerHTML = `<option value="">${escapeHTML(t('tts_no_voice_found'))}</option>`;
                 return;
             }
-            select.innerHTML = german.map(v =>
+            select.innerHTML = matching.map(v =>
                 `<option value="${escapeHTML(v.name)}">${escapeHTML(v.name)}${v.localService ? '' : ' (Online)'}</option>`
             ).join('');
             const saved = getTtsVoiceId();
-            if (saved && german.some(v => v.name === saved)) select.value = saved;
-            else select.value = german[0].name;
+            if (saved && matching.some(v => v.name === saved)) select.value = saved;
+            else select.value = matching[0].name;
         }
 
         function ttsSetButtonState(btnEl, state) {
@@ -6160,7 +6206,7 @@
         }
 
         function ttsPickVoice() {
-            const voices = getGermanVoices();
+            const voices = getVoicesForCurrentLang();
             if (voices.length === 0) return null;
             const saved = getTtsVoiceId();
             return voices.find(v => v.name === saved) || voices[0];
@@ -6203,7 +6249,7 @@
             return new Promise(resolve => {
                 const u = new SpeechSynthesisUtterance(text);
                 if (voice) u.voice = voice;
-                u.lang = 'de-DE';
+                u.lang = TTS_LANG_BCP47[currentLang || 'de'] || 'de-DE';
                 u.onend = resolve;
                 u.onerror = resolve;
                 speechSynthesis.speak(u);
@@ -6229,7 +6275,7 @@
 
             const voice = ttsPickVoice();
             if (!voice && typeof showToast === 'function') {
-                showToast('Keine deutsche Stimme auf diesem Gerät gefunden - Wiedergabe nutzt die Standardstimme.');
+                showToast(t('tts_no_voice_found'));
             }
 
             const chunks = splitIntoSpeechChunks(text.trim());
@@ -6268,7 +6314,7 @@
             return new Promise(resolve => {
                 const u = new SpeechSynthesisUtterance(text);
                 if (voice) u.voice = voice;
-                u.lang = 'de-DE';
+                u.lang = TTS_LANG_BCP47[currentLang || 'de'] || 'de-DE';
                 u.onend = resolve;
                 u.onerror = resolve;
                 speechSynthesis.speak(u);
@@ -8247,6 +8293,9 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.57', date: 'August 2026', type: 'fix', items: [
+                'Vorlesen nutzt jetzt die passende Stimme zur eingestellten Seitensprache statt immer Deutsch'
+            ]},
             { version: 'v24.56', date: 'August 2026', type: 'fix', items: [
                 'HQ-Sprachausgabe-Experiment zurückgerollt (technische Hürde beim Drittanbieter ließ sich nicht lösen)',
                 'Seite dadurch wieder deutlich schlanker'
