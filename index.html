@@ -11,6 +11,49 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FEATURE/FIX/PERFORMANCE] Release v24.47: Großer kombinierter Release - Scroll-Bug (Runde
+    2), Dashboard-Vorlesen, responsive Karten-Buttons, Tutorial-Ladeanzeige, Effizienz-Umbau
+      - Lyrics-Scroll-Bug (Runde 2): Ursache für weiterhin falsches Scrollen nach Spotlight-
+        Lyrics-Befehl gefunden - #main-music-card wächst per CSS (min-height: 80vh) deutlich,
+        SOBALD lyrics-open gesetzt wird (400ms nach dem ersten Scroll). Die erste, sorgfältig
+        per Doppel-rAF berechnete Scroll-Position bezog sich noch auf die kleinere
+        (Dashboard-only) Kartenhöhe - nach dem Wachstum stimmte sie nicht mehr. Fix: nach
+        Abschluss der CSS-Transition (450ms nach toggleLyrics(true)) nochmal neu zentrieren,
+        diesmal mit der tatsächlich gewachsenen Kartenhöhe.
+      - Vorlesen im Musik-Dashboard: neuer Button liest Titel + Künstler direkt vor,
+        unabhängig von der Lyrics-Ansicht (neue Funktion speakTrackInfo()).
+      - Karten-Vorlesen-Buttons responsiv gemacht: Nutzer merkte zurecht an, dass die Position
+        (starr oben rechts in der Ecke) inkonsistent zu allen anderen Vorlesen-Stellen der
+        Seite war. Umgebaut auf Flex-Wrap direkt neben dem Kartentitel - sitzt bei
+        ausreichend breiten Karten neben der Überschrift, bricht bei schmalen (z.B. 2-Spalten-
+        Grid auf Mobilgeräten) automatisch auf eine eigene Zeile darunter um, exakt wie
+        gewünscht. Per Skript auf allen 8 Karten gleichzeitig angewendet.
+      - Tutorial-Ladeanzeige: Klick auf "Fertig" löst eine ca. 1-sekündige Sequenz aus (Low-
+        End-Modus aus, Scrollen, Neuladen) - ohne Rückmeldung wirkte der Klick wie
+        wirkungslos. Button zeigt jetzt sofort einen Spinner + "Einen Moment..." und wird
+        deaktiviert, alle 6 Sprachen.
+      - GROSSER EFFIZIENZ-UMBAU (Nutzerwunsch: "der Lyrics-Loop soll nicht immer laufen, nur
+        wenn Lyrics auch aufgerufen werden"): Der volle 60fps-rAF-Loop (animateLoop) lief
+        bisher IMMER, sobald Musik spielt, unabhängig davon ob Lyrics überhaupt offen waren -
+        er aktualisierte dabei auch nur die (ohnehin gedrosselte) Fortschrittsanzeige. Neue
+        zentrale Steuerung startProgressTracking()/stopProgressTracking() entscheidet jetzt
+        automatisch: Lyrics offen -> voller rAF-Loop (für Wort-für-Wort-Sync nötig); Lyrics
+        zu -> simpler, deutlich günstigerer setInterval() (200ms, nur für die
+        Fortschrittsanzeige). toggleLyrics() schaltet aktiv zwischen beiden Modi um. Alle 6
+        verstreuten alten Start-Stellen sowie beide Pausier-Stellen (Track pausiert/neuer
+        Track kommt pausiert an) auf die neue zentrale Steuerung umgestellt, damit nirgends
+        ein verwaister Timer weiterläuft.
+      - Tutorial-Text (Support-Schritt) aktualisiert: erwähnt jetzt alle aktuellen Vorlesen-
+        Stellen (Karten-Vorderseite, Dashboard, Songtext, Release-Notes, Tutorial selbst)
+        statt der älteren, unvollständigeren Liste. Alle 6 Sprachen.
+      - HINWEIS: Beim Durchgehen des Codes wurde festgestellt, dass Teile dieser Anfrage
+        (Scroll-Fix Runde 1, Tutorial-Reihenfolge Low-End/Scroll/Reload, Karten-Button-
+        Sichtbarkeit ohne Hover-Zwang) bereits in einer früheren Bearbeitungsrunde im Code
+        umgesetzt worden waren, aber nie mit einer eigenen Versionsnummer/Changelog-Eintrag
+        veröffentlicht wurden (Version stand noch auf v24.46, obwohl Kommentare bereits
+        "v24.47" referenzierten). Alles zusammen jetzt hier sauber nachgezogen und
+        dokumentiert.
+
     [FEATURE - ACCESSIBILITY] Release v24.46: Vorlesen auf ALLE verbleibenden Text-Bereiche
     ausgeweitet (Karten-Vorderseiten + Support-Bereich)
       - Nutzer präzisierte v24.45-Wunsch: nicht nur im geöffneten Karten-Modal, sondern auch
@@ -3105,7 +3148,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.46 · 2026-08-12';
+        const SITE_VERSION = 'v24.47 · 2026-08-12';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -3322,90 +3365,74 @@
             </h2>
             
             <div class="grid grid-cols-2 gap-2.5 xxs:gap-3 xs:gap-4 sm:gap-5">
-                <div onclick="openModal('status')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group relative">
-                    <button onclick="event.stopPropagation(); speakCardFace('status')" aria-label="Diese Karte vorlesen" class="absolute top-1.5 right-1.5 xxs:top-2 xxs:right-2 z-10 p-1 xxs:p-1.5 rounded-full bg-black/5 dark:bg-white/5 text-slate-400 hover:text-blue-500 hover:bg-blue-500/10 transition-all opacity-0 group-hover:opacity-100 focus-visible:opacity-100"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button>
-                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-blue-500/10 text-blue-600 dark:text-blue-500 rounded-lg xxs:rounded-xl group-hover:bg-blue-500 group-hover:text-white transition-all shrink-0">
+                <div onclick="openModal('status')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group relative">                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-blue-500/10 text-blue-600 dark:text-blue-500 rounded-lg xxs:rounded-xl group-hover:bg-blue-500 group-hover:text-white transition-all shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                     </div>
                     <div>
-                        <h3 id="card-title-status" class="font-bold text-sm xxs:text-base sm:text-lg mb-0.5 xxs:mb-1">Status</h3>
+                        <div class="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 mb-0.5 xxs:mb-1"><h3 id="card-title-status" class="font-bold text-sm xxs:text-base sm:text-lg">Status</h3><button onclick="event.stopPropagation(); speakCardFace('status')" aria-label="Diese Karte vorlesen" class="shrink-0 p-0.5 xxs:p-1 rounded-full text-slate-400 hover:text-blue-500 hover:bg-blue-500/10 transition-all"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button></div>
                         <p id="card-teaser-status" class="text-slate-700 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">Ausbildung zum Fachinformatiker...</p>
                     </div>
                 </div>
 
-                <div onclick="openModal('background')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group relative">
-                    <button onclick="event.stopPropagation(); speakCardFace('background')" aria-label="Diese Karte vorlesen" class="absolute top-1.5 right-1.5 xxs:top-2 xxs:right-2 z-10 p-1 xxs:p-1.5 rounded-full bg-black/5 dark:bg-white/5 text-slate-400 hover:text-blue-500 hover:bg-blue-500/10 transition-all opacity-0 group-hover:opacity-100 focus-visible:opacity-100"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button>
-                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-purple-500/10 text-purple-600 dark:text-purple-500 rounded-lg xxs:rounded-xl group-hover:bg-purple-500 group-hover:text-white transition-all shrink-0">
+                <div onclick="openModal('background')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group relative">                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-purple-500/10 text-purple-600 dark:text-purple-500 rounded-lg xxs:rounded-xl group-hover:bg-purple-500 group-hover:text-white transition-all shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                     </div>
                     <div>
-                        <h3 id="card-title-background" class="font-bold text-sm xxs:text-base sm:text-lg mb-0.5 xxs:mb-1">Hintergrund</h3>
+                        <div class="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 mb-0.5 xxs:mb-1"><h3 id="card-title-background" class="font-bold text-sm xxs:text-base sm:text-lg">Hintergrund</h3><button onclick="event.stopPropagation(); speakCardFace('background')" aria-label="Diese Karte vorlesen" class="shrink-0 p-0.5 xxs:p-1 rounded-full text-slate-400 hover:text-blue-500 hover:bg-blue-500/10 transition-all"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button></div>
                         <p id="card-teaser-background" class="text-slate-700 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">Im Jugendalter & in Ausbildung...</p>
                     </div>
                 </div>
 
-                <div onclick="openModal('freizeit')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group relative">
-                    <button onclick="event.stopPropagation(); speakCardFace('freizeit')" aria-label="Diese Karte vorlesen" class="absolute top-1.5 right-1.5 xxs:top-2 xxs:right-2 z-10 p-1 xxs:p-1.5 rounded-full bg-black/5 dark:bg-white/5 text-slate-400 hover:text-blue-500 hover:bg-blue-500/10 transition-all opacity-0 group-hover:opacity-100 focus-visible:opacity-100"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button>
-                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-orange-500/10 text-orange-600 dark:text-orange-500 rounded-lg xxs:rounded-xl group-hover:bg-orange-500 group-hover:text-white transition-all shrink-0">
+                <div onclick="openModal('freizeit')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group relative">                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-orange-500/10 text-orange-600 dark:text-orange-500 rounded-lg xxs:rounded-xl group-hover:bg-orange-500 group-hover:text-white transition-all shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 12h.01M18 12h.01M15 10h.01M15 14h.01"/></svg>
                     </div>
                     <div>
-                        <h3 id="card-title-freizeit" class="font-bold text-sm xxs:text-base sm:text-lg mb-0.5 xxs:mb-1">Freizeit</h3>
+                        <div class="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 mb-0.5 xxs:mb-1"><h3 id="card-title-freizeit" class="font-bold text-sm xxs:text-base sm:text-lg">Freizeit</h3><button onclick="event.stopPropagation(); speakCardFace('freizeit')" aria-label="Diese Karte vorlesen" class="shrink-0 p-0.5 xxs:p-1 rounded-full text-slate-400 hover:text-blue-500 hover:bg-blue-500/10 transition-all"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button></div>
                         <p id="card-teaser-freizeit" class="text-slate-700 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">Forza Horizon 6 & Streaming...</p>
                     </div>
                 </div>
 
-                <div onclick="openModal('menschen')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group relative">
-                    <button onclick="event.stopPropagation(); speakCardFace('menschen')" aria-label="Diese Karte vorlesen" class="absolute top-1.5 right-1.5 xxs:top-2 xxs:right-2 z-10 p-1 xxs:p-1.5 rounded-full bg-black/5 dark:bg-white/5 text-slate-400 hover:text-blue-500 hover:bg-blue-500/10 transition-all opacity-0 group-hover:opacity-100 focus-visible:opacity-100"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button>
-                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-red-500/10 text-red-600 dark:text-red-500 rounded-lg xxs:rounded-xl group-hover:bg-red-500 group-hover:text-white transition-all shrink-0">
+                <div onclick="openModal('menschen')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group relative">                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-red-500/10 text-red-600 dark:text-red-500 rounded-lg xxs:rounded-xl group-hover:bg-red-500 group-hover:text-white transition-all shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
                     </div>
                     <div>
-                        <h3 id="card-title-menschen" class="font-bold text-sm xxs:text-base sm:text-lg mb-0.5 xxs:mb-1">Menschen</h3>
+                        <div class="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 mb-0.5 xxs:mb-1"><h3 id="card-title-menschen" class="font-bold text-sm xxs:text-base sm:text-lg">Menschen</h3><button onclick="event.stopPropagation(); speakCardFace('menschen')" aria-label="Diese Karte vorlesen" class="shrink-0 p-0.5 xxs:p-1 rounded-full text-slate-400 hover:text-blue-500 hover:bg-blue-500/10 transition-all"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button></div>
                         <p id="card-teaser-menschen" class="text-slate-700 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">Tom, Danilo, Jakob & Lukas...</p>
                     </div>
                 </div>
 
-                <div onclick="openModal('techstack')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group relative">
-                    <button onclick="event.stopPropagation(); speakCardFace('techstack')" aria-label="Diese Karte vorlesen" class="absolute top-1.5 right-1.5 xxs:top-2 xxs:right-2 z-10 p-1 xxs:p-1.5 rounded-full bg-black/5 dark:bg-white/5 text-slate-400 hover:text-blue-500 hover:bg-blue-500/10 transition-all opacity-0 group-hover:opacity-100 focus-visible:opacity-100"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button>
-                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 rounded-lg xxs:rounded-xl group-hover:bg-emerald-500 group-hover:text-white transition-all shrink-0">
+                <div onclick="openModal('techstack')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group relative">                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 rounded-lg xxs:rounded-xl group-hover:bg-emerald-500 group-hover:text-white transition-all shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="M20 16V7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v9m16 0H4m16 0 1.28 2.55a1 1 0 0 1-.9 1.45H3.62a1 1 0 0 1-.9-1.45L4 16"/></svg>
                     </div>
                     <div>
-                        <h3 id="card-title-techstack" class="font-bold text-sm xxs:text-base sm:text-lg mb-0.5 xxs:mb-1">Tech Stack</h3>
+                        <div class="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 mb-0.5 xxs:mb-1"><h3 id="card-title-techstack" class="font-bold text-sm xxs:text-base sm:text-lg">Tech Stack</h3><button onclick="event.stopPropagation(); speakCardFace('techstack')" aria-label="Diese Karte vorlesen" class="shrink-0 p-0.5 xxs:p-1 rounded-full text-slate-400 hover:text-blue-500 hover:bg-blue-500/10 transition-all"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button></div>
                         <p id="card-teaser-techstack" class="text-slate-700 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">Hardware, Linux, Windows...</p>
                     </div>
                 </div>
 
-                <div onclick="openModal('setup')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group relative">
-                    <button onclick="event.stopPropagation(); speakCardFace('setup')" aria-label="Diese Karte vorlesen" class="absolute top-1.5 right-1.5 xxs:top-2 xxs:right-2 z-10 p-1 xxs:p-1.5 rounded-full bg-black/5 dark:bg-white/5 text-slate-400 hover:text-blue-500 hover:bg-blue-500/10 transition-all opacity-0 group-hover:opacity-100 focus-visible:opacity-100"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button>
-                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-cyan-500/10 text-cyan-600 dark:text-cyan-500 rounded-lg xxs:rounded-xl group-hover:bg-cyan-500 group-hover:text-white transition-all shrink-0">
+                <div onclick="openModal('setup')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group relative">                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-cyan-500/10 text-cyan-600 dark:text-cyan-500 rounded-lg xxs:rounded-xl group-hover:bg-cyan-500 group-hover:text-white transition-all shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
                     </div>
                     <div>
-                        <h3 id="card-title-setup" class="font-bold text-sm xxs:text-base sm:text-lg mb-0.5 xxs:mb-1">Setup</h3>
+                        <div class="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 mb-0.5 xxs:mb-1"><h3 id="card-title-setup" class="font-bold text-sm xxs:text-base sm:text-lg">Setup</h3><button onclick="event.stopPropagation(); speakCardFace('setup')" aria-label="Diese Karte vorlesen" class="shrink-0 p-0.5 xxs:p-1 rounded-full text-slate-400 hover:text-blue-500 hover:bg-blue-500/10 transition-all"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button></div>
                         <p id="card-teaser-setup" class="text-slate-700 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">DT 770 Pro & Rockster Cross...</p>
                     </div>
                 </div>
 
-                <div onclick="openModal('labor')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group relative">
-                    <button onclick="event.stopPropagation(); speakCardFace('labor')" aria-label="Diese Karte vorlesen" class="absolute top-1.5 right-1.5 xxs:top-2 xxs:right-2 z-10 p-1 xxs:p-1.5 rounded-full bg-black/5 dark:bg-white/5 text-slate-400 hover:text-blue-500 hover:bg-blue-500/10 transition-all opacity-0 group-hover:opacity-100 focus-visible:opacity-100"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button>
-                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-yellow-500/10 text-yellow-600 dark:text-yellow-500 rounded-lg xxs:rounded-xl group-hover:bg-yellow-500 group-hover:text-white transition-all shrink-0">
+                <div onclick="openModal('labor')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group relative">                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-yellow-500/10 text-yellow-600 dark:text-yellow-500 rounded-lg xxs:rounded-xl group-hover:bg-yellow-500 group-hover:text-white transition-all shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="M10 2v7.31"/><path d="M14 9.3V1.99"/><path d="M8.5 2h7"/><path d="M14 9.3a6.5 6.5 0 1 1-4 0"/><path d="M5.52 16h12.96"/></svg>
                     </div>
                     <div>
-                        <h3 id="card-title-labor" class="font-bold text-sm xxs:text-base sm:text-lg mb-0.5 xxs:mb-1">Labor</h3>
+                        <div class="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 mb-0.5 xxs:mb-1"><h3 id="card-title-labor" class="font-bold text-sm xxs:text-base sm:text-lg">Labor</h3><button onclick="event.stopPropagation(); speakCardFace('labor')" aria-label="Diese Karte vorlesen" class="shrink-0 p-0.5 xxs:p-1 rounded-full text-slate-400 hover:text-blue-500 hover:bg-blue-500/10 transition-all"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button></div>
                         <p id="card-teaser-labor" class="text-slate-700 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">Server & Docker...</p>
                     </div>
                 </div>
 
-                <div onclick="openModal('contact')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group relative">
-                    <button onclick="event.stopPropagation(); speakCardFace('contact')" aria-label="Diese Karte vorlesen" class="absolute top-1.5 right-1.5 xxs:top-2 xxs:right-2 z-10 p-1 xxs:p-1.5 rounded-full bg-black/5 dark:bg-white/5 text-slate-400 hover:text-blue-500 hover:bg-blue-500/10 transition-all opacity-0 group-hover:opacity-100 focus-visible:opacity-100"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button>
-                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-indigo-500/10 text-indigo-600 dark:text-indigo-500 rounded-lg xxs:rounded-xl group-hover:bg-indigo-500 group-hover:text-white transition-all shrink-0">
+                <div onclick="openModal('contact')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group relative">                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-indigo-500/10 text-indigo-600 dark:text-indigo-500 rounded-lg xxs:rounded-xl group-hover:bg-indigo-500 group-hover:text-white transition-all shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
                     </div>
                     <div>
-                        <h3 id="card-title-contact" class="font-bold text-sm xxs:text-base sm:text-lg mb-0.5 xxs:mb-1">Kontakt</h3>
+                        <div class="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 mb-0.5 xxs:mb-1"><h3 id="card-title-contact" class="font-bold text-sm xxs:text-base sm:text-lg">Kontakt</h3><button onclick="event.stopPropagation(); speakCardFace('contact')" aria-label="Diese Karte vorlesen" class="shrink-0 p-0.5 xxs:p-1 rounded-full text-slate-400 hover:text-blue-500 hover:bg-blue-500/10 transition-all"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button></div>
                         <p id="card-teaser-contact" class="text-slate-700 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">Connect mit mir...</p>
                     </div>
                 </div>
@@ -3655,9 +3682,21 @@
                         </div>
 
                         <!-- NEU v24.20: "Zuletzt gehört"-Verlauf - rein clientseitig, ausklappbar -->
-                        <button onclick="toggleRecentlyPlayed()" id="btn-recently-played" class="relative z-10 flex items-center gap-1 text-[9px] xxs:text-[10px] sm:text-xs text-white/50 hover:text-white/80 transition-colors mb-2 xxs:mb-3 px-1 sm:px-2 shrink-0" aria-expanded="false" aria-controls="recently-played-panel">
-                            <span>🕓</span><span id="recently-played-toggle-label">Zuletzt gehört</span>
-                        </button>
+                        <div class="relative z-10 flex items-center gap-2 mb-2 xxs:mb-3 px-1 sm:px-2 shrink-0">
+                            <button onclick="toggleRecentlyPlayed()" id="btn-recently-played" class="flex items-center gap-1 text-[9px] xxs:text-[10px] sm:text-xs text-white/50 hover:text-white/80 transition-colors" aria-expanded="false" aria-controls="recently-played-panel">
+                                <span>🕓</span><span id="recently-played-toggle-label">Zuletzt gehört</span>
+                            </button>
+                            <!-- NEU v24.47: Vorlesen für Titel + Künstler direkt im Dashboard,
+                                 unabhängig von der Lyrics-Ansicht. -->
+                            <button onclick="speakTrackInfo(this)" id="btn-speak-track" aria-label="Titel und Künstler vorlesen" class="flex items-center gap-1 text-[9px] xxs:text-[10px] sm:text-xs text-white/50 hover:text-white/80 transition-colors">
+                                🔊
+                            </button>
+                            <!-- NEU v24.47: Vorlesen des aktuellen Songtitels + Künstlers direkt
+                                 im Dashboard, nicht nur in der Lyrics-Ansicht. -->
+                            <button onclick="speakNowPlaying(this)" id="btn-speak-nowplaying" aria-label="Aktuellen Song vorlesen" class="flex items-center gap-1 text-[9px] xxs:text-[10px] sm:text-xs text-white/50 hover:text-white/80 transition-colors">
+                                <span>🔊</span><span>Vorlesen</span>
+                            </button>
+                        </div>
                         <div id="recently-played-panel" class="relative z-10 w-full px-1 sm:px-2 mb-2 xxs:mb-3 shrink-0 overflow-hidden">
                             <div id="recently-played-list" class="flex flex-col gap-1.5"></div>
                             <p id="recently-played-empty" class="text-[9px] xxs:text-[10px] text-white/40 italic hidden">Noch keine Songs erfasst.</p>
@@ -3979,6 +4018,7 @@
                 onboard_title: 'Wähle deine Sprache',
                 onboard_subtitle: 'Du kannst das jederzeit später wieder ändern',
                 tutorial_next: 'Weiter', tutorial_back: 'Zurück', tutorial_finish: 'Fertig', tutorial_skip: 'Überspringen',
+                tutorial_finishing: 'Einen Moment...',
                 tutorial_step: (n, total) => `Schritt ${n}/${total}`,
                 t_step1_title: 'Willkommen in meiner Welt!',
                 t_step1_text: 'Dauert nur 30 Sekunden, versprochen! Das ist mein persönliches Portfolio - und ja, es gibt hier auch versteckte Easter Eggs zu entdecken. Lohnt sich wirklich. Übrigens: Der "🔊 Vorlesen"-Button oben rechts liest dir jeden Tutorial-Schritt vor, falls du lieber zuhörst - das gibt es an vielen Stellen der Seite.',
@@ -3991,7 +4031,7 @@
                 t_step5_title: 'StandBy: Dein Lockscreen',
                 t_step5_text: 'Dieser Button verwandelt die Seite in einen echten Lockscreen: große Uhrzeit, Datum und eine große Now-Playing-Karte, aktiviert automatisch den Vollbildmodus. Alles verschiebt sich alle paar Minuten minimal, damit nichts auf OLED-Displays einbrennt. Im Zahnrad-Menü findest du außerdem einen Schärfe-Regler fürs Hintergrundbild und einen Schalter, der den Bildschirm dauerhaft anlässt - perfekt fürs Nachttischhandy beim Laden.',
                 t_step_support_title: 'Fragen oder Bugs gefunden?',
-                t_step_support_text: 'Weiter unten findest du einen Support-Bereich mit meiner E-Mail-Adresse und einem Link zu meinem Discord-Server, wo du live siehst, wer gerade online ist. Übrigens: Fast überall auf der Seite - bei den Karten, dem Songtext und den Release-Notes - gibt es einen "🔊 Vorlesen"-Button, falls du lieber zuhörst statt zu lesen.',
+                t_step_support_text: 'Weiter unten findest du einen Support-Bereich mit meiner E-Mail-Adresse und einem Link zu meinem Discord-Server, wo du live siehst, wer gerade online ist. Übrigens: Mittlerweile gibt es fast überall auf der Seite einen "🔊"-Button zum Vorlesen - bei den Karten direkt auf der Vorderseite, im Musik-Dashboard, beim Songtext, in den Release-Notes und sogar hier im Tutorial selbst.',
                 t_step6_title: 'Spotlight-Suche (⌘K)',
                 t_step6_text: 'Drück Strg+K (oder Cmd+K auf dem Mac) und eine echte Befehlspalette öffnet sich - genau wie auf dem Mac! Tippe einfach, was du suchst: "Dark Mode", "Lyrics", "StandBy", oder sogar "Sprache" um die Sprache zu wechseln. Pfeiltasten zum Navigieren, Enter zum Ausführen. Auf dem Handy ohne Tastatur? Auch hier tippst du einfach in das Suchfeld.',
                 t_step7_title: 'Installier mich als App!',
@@ -4158,6 +4198,7 @@
                 onboard_title: 'Choose your language',
                 onboard_subtitle: 'You can change this anytime later',
                 tutorial_next: 'Next', tutorial_back: 'Back', tutorial_finish: 'Done', tutorial_skip: 'Skip',
+                tutorial_finishing: 'One moment...',
                 tutorial_step: (n, total) => `Step ${n}/${total}`,
                 t_step1_title: 'Welcome to my world!',
                 t_step1_text: "Only takes 30 seconds, promise! This is my personal portfolio - and yes, there are hidden Easter eggs to find here too. Genuinely worth it. By the way: the \"🔊 Read aloud\" button up top reads every tutorial step to you, if you'd rather listen - available in many spots across the site.",
@@ -4170,7 +4211,7 @@
                 t_step5_title: 'StandBy: your lock screen',
                 t_step5_text: 'This button turns the page into a real lock screen: a big clock, date, and a large now-playing card, and automatically enables fullscreen mode. Everything shifts slightly every few minutes so nothing burns into OLED screens. The gear menu also has a sharpness slider for the background image and a toggle to keep the screen on permanently - perfect for your nightstand while charging.',
                 t_step_support_title: 'Questions or found a bug?',
-                t_step_support_text: 'Further down you\'ll find a Support section with my email address and a link to my Discord server, where you can see live who\'s currently online. By the way: almost everywhere on the site - cards, lyrics, and release notes - there\'s a "🔊 Read aloud" button, in case you\'d rather listen than read.',
+                t_step_support_text: 'Further down you\'ll find a Support section with my email address and a link to my Discord server, where you can see live who\'s currently online. By the way: there\'s now a "🔊" read-aloud button almost everywhere on the site - right on the card fronts, in the music dashboard, for lyrics, in the release notes, and even here in the tutorial.',
                 t_step6_title: 'Spotlight search (⌘K)',
                 t_step6_text: 'Press Ctrl+K (or Cmd+K on Mac) and a real command palette opens - just like on a Mac! Just type what you\'re looking for: "dark mode", "lyrics", "standby", or even "language" to switch languages. Arrow keys to navigate, Enter to run. No keyboard on mobile? Just tap into the search box instead.',
                 t_step7_title: 'Install me as an app!',
@@ -4335,6 +4376,7 @@
                 onboard_title: 'Elige tu idioma',
                 onboard_subtitle: 'Puedes cambiarlo cuando quieras',
                 tutorial_next: 'Siguiente', tutorial_back: 'Atrás', tutorial_finish: 'Listo', tutorial_skip: 'Omitir',
+                tutorial_finishing: 'Un momento...',
                 tutorial_step: (n, total) => `Paso ${n}/${total}`,
                 t_step1_title: '¡Bienvenido a mi mundo!',
                 t_step1_text: '¡Solo toma 30 segundos, lo prometo! Este es mi portafolio personal - y sí, también hay Easter eggs escondidos por descubrir. Vale la pena de verdad. Por cierto: el botón "🔊 Escuchar" de arriba te lee cada paso del tutorial, por si prefieres escuchar - disponible en muchos lugares de la página.',
@@ -4347,7 +4389,7 @@
                 t_step5_title: 'StandBy: tu pantalla de bloqueo',
                 t_step5_text: 'Este botón convierte la página en una verdadera pantalla de bloqueo: hora grande, fecha y una gran tarjeta de reproducción con portada, ecualizador en vivo y barra de progreso frente a un fondo animado y difuminado. Todo se desplaza ligeramente cada pocos minutos para que nada se queme en pantallas OLED - perfecto para la mesita de noche mientras carga.',
                 t_step_support_title: '¿Preguntas o encontraste un error?',
-                t_step_support_text: 'Más abajo encontrarás una sección de Soporte con mi email y un enlace a mi servidor de Discord, donde puedes ver en vivo quién está conectado. Por cierto: casi en toda la página - tarjetas, letras de canciones y notas de versión - hay un botón "🔊 Escuchar", por si prefieres escuchar en vez de leer.',
+                t_step_support_text: 'Más abajo encontrarás una sección de Soporte con mi email y un enlace a mi servidor de Discord, donde puedes ver en vivo quién está conectado. Por cierto: ahora hay un botón "🔊" para escuchar en casi toda la página - directo en las tarjetas, en el panel de música, en las letras, en las notas de versión, e incluso aquí en el tutorial.',
                 t_step6_title: 'Búsqueda Spotlight (⌘K)',
                 t_step6_text: 'Presiona Ctrl+K (o Cmd+K en Mac) y se abre una paleta de comandos real, ¡igual que en Mac! Simplemente escribe lo que buscas: "modo oscuro", "letras", "standby", o incluso "idioma" para cambiar de idioma. Flechas para navegar, Enter para ejecutar. ¿Sin teclado en el móvil? Simplemente toca el cuadro de búsqueda.',
                 t_step7_title: '¡Instálame como app!',
@@ -4512,6 +4554,7 @@
                 onboard_title: 'Choisis ta langue',
                 onboard_subtitle: 'Tu peux changer ça à tout moment',
                 tutorial_next: 'Suivant', tutorial_back: 'Retour', tutorial_finish: 'Terminé', tutorial_skip: 'Passer',
+                tutorial_finishing: 'Un instant...',
                 tutorial_step: (n, total) => `Étape ${n}/${total}`,
                 t_step1_title: 'Bienvenue dans mon monde !',
                 t_step1_text: "Ça ne prend que 30 secondes, promis ! C'est mon portfolio personnel - et oui, il y a aussi des easter eggs cachés à découvrir. Ça vaut vraiment le coup. Au fait : le bouton \"🔊 Écouter\" en haut te lit chaque étape du tutoriel, si tu préfères écouter - disponible à plein d'endroits sur le site.",
@@ -4524,7 +4567,7 @@
                 t_step5_title: "StandBy : ton écran verrouillé",
                 t_step5_text: "Ce bouton transforme la page en véritable écran verrouillé : grande horloge, date, et une grande carte de lecture avec pochette, égaliseur en direct et barre de progression devant un fond flouté animé en douceur. Tout se décale légèrement toutes les quelques minutes pour éviter la marque d'écran sur les écrans OLED - parfait sur la table de nuit pendant la charge.",
                 t_step_support_title: "Des questions ou un bug trouvé ?",
-                t_step_support_text: "Plus bas, tu trouveras une section Support avec mon email et un lien vers mon serveur Discord, où tu peux voir en direct qui est connecté. Au fait : presque partout sur le site - cartes, paroles et notes de version - il y a un bouton \"🔊 Écouter\", si tu préfères écouter plutôt que lire.",
+                t_step_support_text: "Plus bas, tu trouveras une section Support avec mon email et un lien vers mon serveur Discord, où tu peux voir en direct qui est connecté. Au fait : il y a maintenant un bouton \"🔊\" pour écouter presque partout sur le site - directement sur les cartes, dans le tableau de bord musique, pour les paroles, dans les notes de version, et même ici dans le tutoriel.",
                 t_step6_title: 'Recherche Spotlight (⌘K)',
                 t_step6_text: 'Appuie sur Ctrl+K (ou Cmd+K sur Mac) et une vraie palette de commandes s\'ouvre - exactement comme sur Mac ! Tape simplement ce que tu cherches : "mode sombre", "paroles", "standby", ou même "langue" pour changer de langue. Flèches pour naviguer, Entrée pour valider. Pas de clavier sur mobile ? Touche simplement le champ de recherche.',
                 t_step7_title: 'Installe-moi comme appli !',
@@ -4689,6 +4732,7 @@
                 onboard_title: 'Escolha seu idioma',
                 onboard_subtitle: 'Você pode mudar isso quando quiser',
                 tutorial_next: 'Próximo', tutorial_back: 'Voltar', tutorial_finish: 'Concluir', tutorial_skip: 'Pular',
+                tutorial_finishing: 'Um momento...',
                 tutorial_step: (n, total) => `Passo ${n}/${total}`,
                 t_step1_title: 'Bem-vindo ao meu mundo!',
                 t_step1_text: 'Leva só 30 segundos, prometo! Este é meu portfólio pessoal - e sim, também tem easter eggs escondidos pra descobrir aqui. Vale muito a pena. Aliás: o botão "🔊 Ouvir" lá em cima lê cada passo do tutorial pra você, caso prefira ouvir - disponível em vários lugares do site.',
@@ -4701,7 +4745,7 @@
                 t_step5_title: 'StandBy: sua tela de bloqueio',
                 t_step5_text: 'Este botão transforma a página em uma tela de bloqueio de verdade: relógio grande, data e um grande cartão do que está tocando, com capa, equalizador ao vivo e barra de progresso na frente de um fundo animado e desfocado. Tudo se desloca levemente a cada poucos minutos para não queimar telas OLED - perfeito para o criado-mudo enquanto carrega.',
                 t_step_support_title: 'Dúvidas ou achou um bug?',
-                t_step_support_text: 'Mais abaixo você encontra uma seção de Suporte com meu email e um link para o meu servidor do Discord, onde dá pra ver ao vivo quem está online. Aliás: quase em toda a página - cartões, letras de músicas e notas de versão - tem um botão "🔊 Ouvir", caso você prefira ouvir em vez de ler.',
+                t_step_support_text: 'Mais abaixo você encontra uma seção de Suporte com meu email e um link para o meu servidor do Discord, onde dá pra ver ao vivo quem está online. Aliás: agora tem um botão "🔊" pra ouvir em quase toda a página - direto nos cartões, no painel de música, nas letras, nas notas de versão, e até aqui no tutorial.',
                 t_step6_title: 'Busca Spotlight (⌘K)',
                 t_step6_text: 'Aperte Ctrl+K (ou Cmd+K no Mac) e uma paleta de comandos de verdade se abre - igualzinho ao Mac! É só digitar o que procura: "modo escuro", "letras", "standby", ou até "idioma" para mudar o idioma. Setas para navegar, Enter para executar. Sem teclado no celular? É só tocar na caixa de busca.',
                 t_step7_title: 'Me instale como app!',
@@ -4866,6 +4910,7 @@
                 onboard_title: 'Dilini seç',
                 onboard_subtitle: 'Bunu istediğin zaman değiştirebilirsin',
                 tutorial_next: 'İleri', tutorial_back: 'Geri', tutorial_finish: 'Bitir', tutorial_skip: 'Atla',
+                tutorial_finishing: 'Bir saniye...',
                 tutorial_step: (n, total) => `Adım ${n}/${total}`,
                 t_step1_title: 'Dünyama hoş geldin!',
                 t_step1_text: 'Sadece 30 saniye sürüyor, söz veriyorum! Bu benim kişisel portfolyom - ve evet, burada keşfedilecek gizli easter egg\'ler de var. Gerçekten değer. Bu arada: yukarıdaki "🔊 Sesli oku" butonu her eğitim adımını senin için okur, dinlemeyi tercih edersen - sitenin birçok yerinde bulunuyor.',
@@ -4878,7 +4923,7 @@
                 t_step5_title: 'StandBy: kilit ekranın',
                 t_step5_text: 'Bu buton sayfayı gerçek bir kilit ekranına dönüştürür: büyük saat, tarih ve kapak resmi, canlı ekolayzır ve ilerleme çubuğuyla büyük bir "şimdi çalıyor" kartı, yumuşakça hareket eden bulanık bir arka plan önünde. OLED ekranlarda iz bırakmaması için her şey birkaç dakikada bir hafifçe kayar - şarj olurken komodinde durması için mükemmel.',
                 t_step_support_title: 'Sorun mu var ya da hata mı buldun?',
-                t_step_support_text: 'Aşağıda, e-posta adresimin ve şu an kimlerin çevrimiçi olduğunu canlı görebileceğin Discord sunucumun bağlantısının bulunduğu bir Destek bölümü var. Bu arada: sitenin neredeyse her yerinde - kartlarda, şarkı sözlerinde ve sürüm notlarında - okumak yerine dinlemek istersen bir "🔊 Sesli oku" butonu bulunuyor.',
+                t_step_support_text: 'Aşağıda, e-posta adresimin ve şu an kimlerin çevrimiçi olduğunu canlı görebileceğin Discord sunucumun bağlantısının bulunduğu bir Destek bölümü var. Bu arada: artık sitenin neredeyse her yerinde bir "🔊" sesli okuma butonu var - kartların ön yüzünde, müzik panelinde, şarkı sözlerinde, sürüm notlarında ve hatta burada, eğitimde bile.',
                 t_step6_title: 'Spotlight arama (⌘K)',
                 t_step6_text: 'Ctrl+K (Mac\'te Cmd+K) tuşuna bas ve gerçek bir komut paleti açılsın - tıpkı Mac\'teki gibi! Ne aradığını yaz: "karanlık mod", "şarkı sözleri", "standby", hatta dili değiştirmek için "dil" bile yazabilirsin. Gezinmek için ok tuşları, çalıştırmak için Enter. Telefonda klavye yok mu? Arama kutusuna dokunman yeterli.',
                 t_step7_title: 'Beni uygulama olarak yükle!',
@@ -6012,6 +6057,15 @@
         // nötig (die Karten selbst sind keine Buttons mit Text-Fallback), daher wird hier
         // kein ttsSetButtonState-Label-Toggle gemacht - nur gestartet/gestoppt.
         // NEU v24.46: Liest den kompletten Support-Bereich vor (Titel + beide Beschreibungen).
+        // NEU v24.47: Liest Titel + Künstler des aktuell laufenden (oder zuletzt gespielten)
+        // Songs vor - direkt im Dashboard, unabhängig von der Lyrics-Ansicht.
+        window.speakTrackInfo = function(btnEl) {
+            const titleEl = document.getElementById('track-title');
+            const artistEl = document.getElementById('track-artist');
+            const text = [titleEl, artistEl].filter(Boolean).map(el => el.innerText).join('. ');
+            ttsSpeak(text, btnEl);
+        };
+
         window.speakSupportSection = function(btnEl) {
             const titleEl = document.getElementById('support-section-title');
             const emailTitleEl = document.getElementById('support-email-title');
@@ -6020,6 +6074,15 @@
             const discordDescEl = document.getElementById('support-discord-desc');
             const text = [titleEl, emailTitleEl, emailDescEl, discordTitleEl, discordDescEl]
                 .filter(Boolean).map(el => el.innerText).join('. ');
+            ttsSpeak(text, btnEl);
+        };
+
+        // NEU v24.47: Liest den aktuell gespielten Songtitel + Künstler direkt im
+        // Musik-Dashboard vor, ohne dass die Lyrics-Ansicht geöffnet werden muss.
+        window.speakNowPlaying = function(btnEl) {
+            const titleEl = document.getElementById('track-title');
+            const artistEl = document.getElementById('track-artist');
+            const text = [titleEl, artistEl].filter(Boolean).map(el => el.innerText).join('. ');
             ttsSpeak(text, btnEl);
         };
 
@@ -7184,7 +7247,26 @@
                 { icon: '🎵', label: t('cp_scroll_music'), keywords: 'music song track player', action: () => scrollToId('music-section') },
                 { icon: '📬', label: t('cp_scroll_footer'), keywords: 'footer contact kontakt ende', action: () => scrollToId('footer-section') },
                 { icon: '📖', label: t('cp_open_dashboard'), keywords: 'dashboard aufklappen open music', action: () => { if (!isDashboardOpen) toggleDashboard(); scrollToId('music-section'); } },
-                { icon: '🎤', label: t('cp_open_lyrics'), keywords: 'lyrics songtext text', action: () => { if (!isDashboardOpen) toggleDashboard(); scrollToId('music-section'); setTimeout(() => toggleLyrics(true), 400); } },
+                { icon: '🎤', label: t('cp_open_lyrics'), keywords: 'lyrics songtext text', action: () => {
+                    if (!isDashboardOpen) toggleDashboard();
+                    // FIX v24.47: scrollToId() lief bisher SOFORT nach toggleDashboard(), noch
+                    // bevor der Browser das neu sichtbar gemachte Dashboard tatsächlich
+                    // eingemessen/gerendert hatte - dadurch wurde teils noch die alte
+                    // (eingeklappte) Layout-Höhe für die Scroll-Berechnung genutzt. Doppeltes
+                    // requestAnimationFrame wartet zuverlässig, bis der Browser mindestens
+                    // einen echten Render-Durchlauf mit dem neuen Layout gemacht hat.
+                    requestAnimationFrame(() => requestAnimationFrame(() => scrollToId('music-section')));
+                    setTimeout(() => {
+                        toggleLyrics(true);
+                        // FIX v24.48: #main-music-card wächst beim Öffnen der Lyrics per CSS
+                        // (min-height: 80vh) deutlich in der Höhe - die Karte war vorher schon
+                        // korrekt zentriert scrollt, aber durch das nachträgliche Wachstum
+                        // verschiebt sich die tatsächlich sichtbare Position wieder. Nach der
+                        // CSS-Transition (400ms, siehe main-music-card transition) nochmal neu
+                        // zentrieren, diesmal mit der tatsächlichen (gewachsenen) Kartenhöhe.
+                        setTimeout(() => scrollToId('music-section'), 450);
+                    }, 400);
+                } },
                 { icon: '🌗', label: t('cp_toggle_dark'), keywords: 'dark light theme hell dunkel modus', action: () => themeToggle && themeToggle.click() },
                 { icon: '💧', label: t('cp_toggle_glass'), keywords: 'liquid glass apple design', action: () => liquidGlassToggle && liquidGlassToggle.click() },
                 { icon: '⚡', label: t('cp_toggle_perf'), keywords: 'performance low end animationen aus', action: () => perfToggle && perfToggle.click() },
@@ -7440,10 +7522,10 @@
                 // KRITISCHER FIX: animateLoop() sofort wieder starten, falls Musik läuft - der
                 // Loop war während StandBy komplett angehalten (siehe dort), sonst würde die
                 // Fortschrittsanzeige/Songtext-Sync nach Verlassen von StandBy eingefroren bleiben.
-                if (trackIsPlaying && !isAnimating) {
-                    isAnimating = true;
-                    lyricAnimFrame = requestAnimationFrame(animateLoop);
-                }
+                // NEU v24.47: nutzt jetzt die zentrale startProgressTracking(), die automatisch
+                // zwischen vollem rAF-Loop (Lyrics offen) und sparsamem Intervall (Lyrics zu)
+                // entscheidet, statt immer den vollen Loop zu erzwingen.
+                startProgressTracking();
             }
         };
 
@@ -7634,15 +7716,23 @@
                 clearTutorialHighlights();
                 localStorage.setItem('tutorialCompletedV2', 'true');
                 
+                // FIX v24.47: Nutzer meldete - Seite scrollt nach dem Tutorial nicht komplett
+                // nach oben. Ursache: behavior:'smooth' animiert über mehrere hundert ms, aber
+                // der Reload feuerte schon nach 300ms - die Animation wurde also mittendrin
+                // abgeschnitten. Da ohnehin gleich neu geladen wird, bringt eine sanfte
+                // Animation nichts (sieht man eh nicht mehr) - jetzt ein sofortiger Sprung
+                // (behavior:'auto'), garantiert komplett fertig, bevor der Reload startet.
+                // Reihenfolge bewusst wie gewünscht: 1) Low-End-Modus aus, 2) nach oben
+                // scrollen, 3) neu laden.
                 if (originalPerfModeState !== 'true' && window.innerWidth >= 360) {
                     applyPerformanceMode(false);
                     localStorage.setItem('perfMode', 'false');
                 }
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+                window.scrollTo({ top: 0, behavior: 'auto' });
                 
                 setTimeout(() => {
                     window.location.reload();
-                }, 300);
+                }, 150);
             }, 850);
         }
 
@@ -7727,6 +7817,23 @@
 
         if (btnNext) {
             btnNext.addEventListener('click', () => {
+                const steps = getTutorialSteps();
+                const isFinishing = currentStepIndex === steps.length - 1;
+
+                if (isFinishing) {
+                    // NEU v24.47: Beim letzten Schritt (Fertig-Klick) läuft danach noch die
+                    // Low-End-aus/Scroll/Reload-Sequenz (~1 Sekunde) - ohne Rückmeldung wirkte
+                    // der Klick, als würde nichts passieren. Button zeigt jetzt sofort einen
+                    // Lade-Zustand und wird deaktiviert, damit klar ist: "wird gerade erledigt,
+                    // bitte kurz warten" statt eines scheinbar wirkungslosen Klicks.
+                    btnNext.disabled = true;
+                    btnNext.classList.add('opacity-70', 'cursor-wait');
+                    btnNext.innerHTML = `<span class="inline-flex items-center gap-1.5">
+                        <svg class="animate-spin" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                        ${escapeHTML(t('tutorial_finishing'))}
+                    </span>`;
+                }
+
                 if (tutorialBox) {
                     tutorialBox.classList.remove('tutorial-morphing');
                     void tutorialBox.offsetWidth; // Trigger reflow
@@ -7765,6 +7872,13 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.47', date: 'August 2026', type: 'feature', items: [
+                'Lyrics-Sprung per Spotlight scrollt jetzt zuverlässig korrekt hin',
+                'Vorlesen jetzt auch direkt im Musik-Dashboard verfügbar',
+                'Vorlesen-Buttons auf den Karten jetzt immer sichtbar und responsiv positioniert',
+                'Ladeanzeige beim Abschließen des Tutorials ergänzt',
+                'Deutliche Effizienzsteigerung: aufwändige Songtext-Berechnung läuft jetzt nur noch, wenn Lyrics auch offen sind'
+            ]},
             { version: 'v24.46', date: 'August 2026', type: 'feature', items: [
                 'Vorlesen jetzt direkt auf allen 8 Karten-Vorderseiten verfügbar',
                 'Neuer Vorlesen-Button für den kompletten Support-Bereich'
@@ -8765,6 +8879,10 @@
                 // FIX v24.36: warmUpTts()-Aufruf entfernt - mit dem Umstieg auf die
                 // Browser-eigene Sprachausgabe (Web Speech API) gibt es keinen Download/
                 // Worker-Start mehr, den man vorwärmen müsste. Stimmen sind sofort verfügbar.
+                // NEU v24.47 (EFFIZIENZ): Vom sparsamen Intervall-Modus auf den vollen
+                // rAF-Loop umschalten, jetzt wo Lyrics wirklich sichtbar sind und die
+                // Wort-für-Wort-Synchronisation gebraucht wird.
+                startProgressTracking();
             } else {
                 mainMusicCard.classList.add('lyrics-closing-state');
                 // Wichtig: Um die Transition zurück auf Standard-Größe zu starten, direkt entfernen!
@@ -8772,6 +8890,10 @@
                 setTimeout(() => {
                     mainMusicCard.classList.remove('lyrics-closing-state');
                 }, 900); // Overlay Pop-Out Animation abwarten
+                // NEU v24.47 (EFFIZIENZ): Zurück auf den sparsamen Intervall-Modus wechseln -
+                // volle 60fps-Berechnung wird nicht mehr gebraucht, sobald niemand mehr die
+                // Songtext-Details sieht.
+                startProgressTracking();
             }
         };
 
@@ -9376,6 +9498,19 @@
                     return;
                 }
 
+                // NEU v24.47 (EFFIZIENZ): Dieser volle 60fps-rAF-Loop ist eigentlich nur für die
+                // Wort-für-Wort-Songtext-Synchronisation nötig - die läuft aber nur, wenn die
+                // Lyrics-Ansicht auch tatsächlich offen ist. Läuft sie nicht, gibt startProgress-
+                // Tracking()/stopProgressTracking() stattdessen einen simplen, viel günstigeren
+                // setInterval() den Vorzug für die reine Fortschrittsbalken-Aktualisierung - hier
+                // also sauber aussteigen, statt weiter mit voller Framerate zu rechnen, obwohl
+                // niemand gerade Songtext-Details sieht.
+                if (!mainMusicCard || !mainMusicCard.classList.contains('lyrics-open')) {
+                    isAnimating = false;
+                    startProgressTracking(); // schaltet automatisch auf den Intervall-Modus um
+                    return;
+                }
+
                 if (document.body.classList.contains('low-end')) {
                     if (now - lastLowEndUpdate < 250) { 
                         lyricAnimFrame = requestAnimationFrame(animateLoop);
@@ -9406,12 +9541,46 @@
             }
         }
 
-        // PERF-FIX: Sofortiger Wiedereinstieg, sobald der Tab wieder sichtbar wird, statt bis zu
-        // 5 Sekunden auf den nächsten fetchMusicData()-Poll zu warten.
-        document.addEventListener('visibilitychange', () => {
-            if (!document.hidden && trackIsPlaying && !isAnimating) {
+        // NEU v24.47 (EFFIZIENZ): Zentrale Steuerung, WIE der Song-Fortschritt aktuell gehalten
+        // wird - entweder über den vollen rAF-Loop (nur wenn Lyrics offen sind, für die
+        // Wort-für-Wort-Synchronisation nötig) oder über einen simplen, deutlich günstigeren
+        // setInterval() (wenn nur der Fortschrittsbalken aktualisiert werden muss). Ersetzt alle
+        // bisherigen verstreuten "isAnimating = true; requestAnimationFrame(animateLoop)"-Stellen.
+        let progressTickerInterval = null;
+
+        function startProgressTracking() {
+            stopProgressTracking(); // sauberer Neustart, keine doppelten Timer möglich
+            if (!trackIsPlaying || document.hidden || standByActive) return;
+
+            const lyricsOpen = mainMusicCard && mainMusicCard.classList.contains('lyrics-open');
+            if (lyricsOpen) {
                 isAnimating = true;
                 lyricAnimFrame = requestAnimationFrame(animateLoop);
+            } else {
+                updateProgressUI(); // sofort einmal aktualisieren, nicht erst nach dem ersten Intervall-Tick
+                progressTickerInterval = setInterval(updateProgressUI, PROGRESS_UI_THROTTLE_MS);
+            }
+        }
+
+        function stopProgressTracking() {
+            isAnimating = false;
+            if (lyricAnimFrame) cancelAnimationFrame(lyricAnimFrame);
+            if (progressTickerInterval) {
+                clearInterval(progressTickerInterval);
+                progressTickerInterval = null;
+            }
+        }
+
+        // PERF-FIX: Sofortiger Wiedereinstieg, sobald der Tab wieder sichtbar wird, statt bis zu
+        // 5 Sekunden auf den nächsten fetchMusicData()-Poll zu warten.
+        // NEU v24.47: pausiert/startet jetzt beide Modi (rAF-Loop UND Intervall-Ticker), nicht
+        // nur den rAF-Loop wie vorher - der Intervall-Ticker lief bisher auch im Hintergrund-Tab
+        // unnötig weiter.
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                stopProgressTracking();
+            } else if (trackIsPlaying) {
+                startProgressTracking();
             }
         });
 
@@ -9603,6 +9772,11 @@
 
             if (!hasTrack || !isPlaying) {
                 trackIsPlaying = false;
+                // NEU v24.47 (EFFIZIENZ): Fortschritts-Tracking (egal ob rAF-Loop oder
+                // Intervall-Modus) sofort stoppen, sobald die Musik pausiert/stoppt - der
+                // Intervall-Modus hätte sonst ohne trackIsPlaying-Prüfung einfach
+                // weitergezählt und unnötig updateProgressUI() aufgerufen.
+                stopProgressTracking();
                 if (!offlineTimeout) {
                     offlineTimeout = setTimeout(() => {
                         if (mainMusicCard) {
@@ -9809,6 +9983,7 @@
                     if (timeTotalEl) timeTotalEl.innerText = formatTime(totalMs);
                     
                     trackIsPlaying = isPlaying;
+                    if (!isPlaying) stopProgressTracking(); // NEU v24.47: falls der neue Track direkt pausiert startet
                     serverBaseProgress = apiProgress + addedDelay;
                     localStartTime = performance.now();
                     currentMs = serverBaseProgress;
@@ -9824,6 +9999,7 @@
                         syncLyricsUI(true, true);
                     } else if (trackIsPlaying && !isPlaying) {
                         trackIsPlaying = false;
+                        stopProgressTracking(); // NEU v24.47: Intervall/rAF-Loop sofort stoppen, nicht erst beim nächsten Tick
                         currentMs = apiProgress + addedDelay;
                         syncLyricsUI(true, true);
                     } else {
@@ -9846,9 +10022,8 @@
                     }
                 }
 
-                if (trackIsPlaying && !isAnimating) {
-                    isAnimating = true;
-                    lyricAnimFrame = requestAnimationFrame(animateLoop);
+                if (trackIsPlaying && !isAnimating && !progressTickerInterval) {
+                    startProgressTracking();
                 }
 
                 updateProgressUI();
@@ -10114,9 +10289,8 @@
         (async () => {
             setLyricsStyle(currentLyricsStyle); 
             await syncWorldwideTime();
-            if (trackIsPlaying && !isAnimating) {
-                isAnimating = true;
-                requestAnimationFrame(animateLoop);
+            if (trackIsPlaying) {
+                startProgressTracking();
             }
             fetchMusicData();
             setInterval(syncWorldwideTime, 600000);
