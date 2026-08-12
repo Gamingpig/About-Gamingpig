@@ -11,6 +11,28 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FIX - GEZIELT] Release v24.55: env.fetch-Override gefunden - eigene Fetch-Funktion
+    umgeht die fehlerhafte interne Weiterleitungs-Logik
+      - Nutzer schickte erneute Netzwerk-Daten nach v24.54 - Cache-Deaktivierung und fp32
+        allein reichten nicht, dieselbe Weiterleitungs-Schleife bei der Modell-Datei blieb
+        bestehen (jetzt model.onnx statt model_quantized.onnx, aber gleiches Muster: 302,
+        ~2KB, nie die volle Größe). WICHTIGE Beobachtung: kleine Dateien (config.json,
+        tokenizer_config.json) kommen über Wiederholungen am Ende durch - nur die GROSSE
+        Modell-Datei bleibt konsequent hängen. Das grenzt die Ursache klar auf die
+        Weiterleitungs-Behandlung bei größeren Antworten ein.
+      - Recherche ergab einen offiziell dokumentierten Haken: env.fetch (Teil der
+        Transformers.js-v4-API) erlaubt es, die komplette interne Fetch-Logik der Bibliothek
+        durch eine eigene Funktion zu ersetzen. Vermutung: die Bibliothek nutzt intern
+        vermutlich redirect:'manual' für ihre eigene Cache-Logik und behandelt die
+        anschließende Weiterleitung bei größeren Dateien nicht sauber zu Ende - schließt für
+        kleine, schnelle Antworten unbemerkt genug, für die große Modell-Datei jedoch nicht.
+      - Fix: env.fetch auf eine eigene, bewusst simple Funktion umgestellt, die
+        redirect:'follow' explizit erzwingt (Standard-Browser-Verhalten) - umgeht die
+        interne, vermutlich fehlerhafte Logik komplett, statt zu versuchen sie zu reparieren.
+      - Vierter gezielter Fix-Versuch in Folge, diesmal auf offizieller, dokumentierter API
+        basierend statt auf Vermutung - höhere Erfolgswahrscheinlichkeit als die vorherigen
+        Versuche, aber weiterhin ohne Live-Verifikation.
+
     [FIX - VERSUCH] Release v24.54: Echte Netzwerk-Analyse zeigt Weiterleitungs-Schleife bei
     der Modell-Datei
       - Nutzer schickte Network-Tab-Screenshots nach v24.53 - selber Fehler trotz erhöhtem
@@ -3361,7 +3383,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.54 · 2026-08-12';
+        const SITE_VERSION = 'v24.55 · 2026-08-12';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -8286,6 +8308,9 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.55', date: 'August 2026', type: 'fix', items: [
+                'HQ-Sprachausgabe: gezielter Fix für die Modell-Download-Weiterleitung (auf offizieller API basierend)'
+            ]},
             { version: 'v24.54', date: 'August 2026', type: 'fix', items: [
                 'HQ-Sprachausgabe: möglicher Fix für hängenbleibenden Modell-Download (experimentell)'
             ]},
