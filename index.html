@@ -11,6 +11,30 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FIX] Release v24.51: Overlay-Zustands-Drift-Bug (Lyrics/Dashboard brauchten gelegentlich
+    Reload) + Tilt-Fix erneut verifiziert + Hitze-Nachforschung
+      - Nutzer meldete: gelegentliche Bugs beim schnellen Öffnen/Schließen von Lyrics und
+        Dashboard, die eine manuelle Seite-neu-laden erfordern. ROOT CAUSE-Verdacht: das
+        Overlay-System nutzt einen EIGENSTÄNDIGEN Tiefen-Zähler (overlayHistoryDepth), der
+        mit dem tatsächlichen Sichtbarkeitszustand (CSS-Klassen) synchron bleiben MUSS - bei
+        sehr schnellem Antippen (innerhalb des 80ms-Unterdrückungsfensters von
+        popOverlayHistory) können beide auseinanderlaufen und bleiben das dann dauerhaft.
+      - Fix: neue Funktion resyncOverlayHistoryDepth() prüft den ECHTEN, sichtbaren Zustand
+        aller Overlays (Sharecard, Command Palette, StandBy, Lyrics, Dashboard) und
+        korrigiert den Zähler zwangsweise, falls kein Overlay mehr offen ist, der Zähler das
+        aber noch glaubt - eingehängt an allen drei "Overlay schließen"-Stellen
+        (toggleLyrics, toggleDashboard, toggleStandBy). Selbstheilend, ohne dass der Nutzer
+        selbst etwas merkt oder eingreifen muss - falls es doch nochmal auftritt, sollte sich
+        der Zustand jetzt spätestens beim nächsten Schließen eines Overlays von selbst
+        korrigieren, statt sich dauerhaft aufzubauen.
+      - Spatial-Tilt-Meldung geprüft: Quellcode bestätigt korrekt gegatet (siehe v24.48-Fix,
+        weiterhin intakt) - keine zweite, ungefixte Stelle gefunden. Wahrscheinlichste
+        Erklärung: veralteter Cache-Stand beim Nutzer, harter Reload empfohlen.
+      - Hitze-Meldung: Nutzer testet möglicherweise über die installierte Android-App statt
+        die Website - die App bekommt sämtliche Hitze-Fixes (v24.42/v24.48/v24.49) erst nach
+        einem Neu-Build + Play-Store-Update, bis dahin läuft dort noch alter Code. Im Chat
+        um Vergleichstest direkt über Chrome/Website gebeten, um das einzugrenzen.
+
     [FEATURE] Release v24.50: Tutorial-Flag zurückgesetzt + "Was ist neu?"-Mini-Tutorial +
     aktualisierte Datenschutzerklärung
       - Nutzer bat um Reset des Tutorial-Flags (nach den großen Updates der letzten Releases
@@ -3265,7 +3289,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.50 · 2026-08-12';
+        const SITE_VERSION = 'v24.51 · 2026-08-12';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -7601,6 +7625,33 @@
             if (isDashboardOpen) { toggleDashboard(); return; }
         }
 
+        // NEU v24.51 (FIX): Nutzer meldete, dass schnelles Öffnen/Schließen von Lyrics und
+        // Dashboard gelegentlich einen kaputten Zustand hinterlässt, der erst durch einen
+        // manuellen Reload behoben wird. Vermutete Ursache: overlayHistoryDepth ist ein
+        // EIGENSTÄNDIGER Zähler, der mit dem TATSÄCHLICHEN Sichtbarkeitszustand (CSS-Klassen)
+        // synchron bleiben MUSS - bei sehr schnellem Antippen (innerhalb des 80ms-
+        // Unterdrückungsfensters von popOverlayHistory) können beide auseinanderlaufen und
+        // bleiben das dann dauerhaft, bis zum nächsten Reload. Diese Funktion prüft den
+        // ECHTEN, sichtbaren Zustand aller Overlays und korrigiert den Zähler zwangsweise,
+        // falls er nicht mehr dazu passt - wird an sicheren Stellen aufgerufen (z.B. sobald
+        // ein Overlay-Schließen-Vorgang abgeschlossen ist), damit sich die Abweichung nicht
+        // unbemerkt über die Zeit aufbaut.
+        function resyncOverlayHistoryDepth() {
+            const scActive = document.getElementById('sharecard-picker-overlay')?.classList.contains('sc-active');
+            const cpActive = document.getElementById('command-palette-overlay')?.classList.contains('cp-active');
+            const standbyActiveNow = document.getElementById('standby-overlay')?.classList.contains('standby-active');
+            const lyricsActiveNow = mainMusicCard && mainMusicCard.classList.contains('lyrics-open');
+            const anyOverlayOpen = scActive || cpActive || standbyActiveNow || lyricsActiveNow || isDashboardOpen;
+
+            if (!anyOverlayOpen && overlayHistoryDepth !== 0) {
+                // Alle Overlays nachweislich zu, aber der Zähler denkt noch, es wäre was
+                // offen - das ist der klassische Drift-Fall. Zurücksetzen, ohne dabei
+                // nochmal history.back() auszulösen (das würde die Seite selbst verlassen).
+                overlayHistoryDepth = 0;
+                suppressPopHandling = false;
+            }
+        }
+
         // --- NEW: STANDBY / AMBIENT MODE LOGIC ---
         function updateStandByClock() {
             const now = typeof getTrueDateNow === 'function' ? new Date(getTrueDateNow()) : new Date();
@@ -7712,6 +7763,8 @@
                 // zwischen vollem rAF-Loop (Lyrics offen) und sparsamem Intervall (Lyrics zu)
                 // entscheidet, statt immer den vollen Loop zu erzwingen.
                 startProgressTracking();
+                // NEU v24.51 (FIX): Overlay-Tiefen-Zähler auf Drift prüfen und ggf. korrigieren.
+                resyncOverlayHistoryDepth();
             }
         };
 
@@ -8070,6 +8123,9 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.51', date: 'August 2026', type: 'fix', items: [
+                'Seltener Bug behoben: Lyrics/Dashboard brauchten nach schnellem Antippen manchmal einen Reload'
+            ]},
             { version: 'v24.50', date: 'August 2026', type: 'feature', items: [
                 'Neues "Was ist neu?"-Mini-Tutorial nach dem normalen Rundgang',
                 'Datenschutzerklärung aktualisiert (Sprachausgabe, Discord-Widget, lokale Speicherung)'
@@ -8830,6 +8886,8 @@
                         } 
                     }, 300);
                 }
+                // NEU v24.51 (FIX): Overlay-Tiefen-Zähler auf Drift prüfen und ggf. korrigieren.
+                resyncOverlayHistoryDepth();
             }
         };
 
@@ -9105,6 +9163,8 @@
                 // volle 60fps-Berechnung wird nicht mehr gebraucht, sobald niemand mehr die
                 // Songtext-Details sieht.
                 startProgressTracking();
+                // NEU v24.51 (FIX): Overlay-Tiefen-Zähler auf Drift prüfen und ggf. korrigieren.
+                resyncOverlayHistoryDepth();
             }
         };
 
