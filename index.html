@@ -11,6 +11,37 @@
     Neueste Einträge oben.
     ================================================================
 
+    [PERFORMANCE/FIX] Release v24.48: Weitere StandBy-Effizienz + Spatial-Tilt-Bug + echte
+    Songrhythmus-Synchronisation beim Vorlesen
+      - Nutzer meldete: Handy wird im StandBy-Modus immer noch warm, trotz des kritischen
+        Fixes aus v24.42 (animateLoop-Pausierung). Weitere Wärmequellen gefunden und behoben:
+        1) Video-Hintergrund (falls aktiviert) lief unter dem blickdichten StandBy-Overlay
+           unsichtbar weiter, wurde aber trotzdem laufend dekodiert - jetzt pausiert
+           toggleStandBy() das Video beim Betreten von StandBy und setzt es beim Verlassen
+           wieder fort (nur falls es deswegen pausiert wurde, nicht wenn der Nutzer es selbst
+           ausgeschaltet hatte).
+      - Spatial-Tilt-Bug bestätigt und behoben: handleDeviceTilt() feuerte mit bis zu 60Hz
+        Sensor-Rate weiter, auch wenn gar kein Cover sichtbar war (Dashboard minimiert,
+        StandBy aktiv, oder Lyrics offen - dort liegt nur eine blickdichte Ebene über dem
+        Cover, es bleibt technisch im Hintergrund bestehen). Handler steigt jetzt in all
+        diesen Fällen sofort aus, bevor überhaupt Berechnung stattfindet.
+      - Anti-Burn-in-Pixel-Shift erweitert: betraf bisher nur Uhr/Now-Playing-Karte, das
+        Hintergrundbild (#standby-bg) blieb bei langem Stehenlassen exakt an derselben
+        Stelle. Shift jetzt direkt in die bestehende Ken-Burns-Hintergrundanimation
+        eingerechnet (calc() mischt Prozent- und Pixel-Werte), kein zusätzlicher Wrapper
+        nötig, keine Kollision mit der bestehenden Animation.
+      - Synced-Vorlesen (v24.30) grundlegend korrigiert: startete bisher IMMER bei der
+        allerersten Zeile des kompletten Songs, komplett unabhängig von der tatsächlichen
+        Songposition - fühlte sich nie wirklich "im Songrhythmus" an, nur intern konsistent
+        mit sich selbst. speakLyricsSynced() nutzt jetzt currentMs (dieselbe Variable wie für
+        Songtext-Hervorhebung/Fortschrittsbalken) als Startpunkt - die Zeile, die gerade im
+        Song dran wäre, wird auch zuerst vorgelesen.
+      - Nutzerwunsch nach SoundCloud-Song-Previews (mindestens 320kbps) geprüft und aus
+        Urheberrechtsgründen bewusst NICHT umgesetzt - seriöse Preview-APIs bieten bewusst
+        niedrige Qualität/kurze Schnipsel an, das ist keine technische Einschränkung sondern
+        Teil der rechtlichen Absicherung. Alternative (offizielle, niedrig auflösende
+        Spotify-Previews) im Chat angeboten, noch keine Rückmeldung.
+
     [FEATURE/FIX/PERFORMANCE] Release v24.47: Großer kombinierter Release - Scroll-Bug (Runde
     2), Dashboard-Vorlesen, responsive Karten-Buttons, Tutorial-Ladeanzeige, Effizienz-Umbau
       - Lyrics-Scroll-Bug (Runde 2): Ursache für weiterhin falsches Scrollen nach Spotlight-
@@ -2920,7 +2951,17 @@
            verlangsamt (weniger Bewegungs-/Repaint-Arbeit pro Sekunde). Relevant, da der
            StandBy-Modus potenziell stundenlang offen bleibt (z.B. Nachttisch beim Laden). */
         body.low-end #standby-bg { filter: brightness(0.35); animation: none; }
-        @keyframes standby-kenburns { 0% { transform: scale(1.2) translate(0,0); } 100% { transform: scale(1.3) translate(-1.2%, -1.2%); } }
+        /* NEU v24.48: Anti-Burn-in-Verschiebung jetzt auch für den Hintergrund - vorher betraf
+           der Pixel-Shift nur Uhr/Now-Playing-Karte, das Hintergrundbild blieb bei langem
+           Stehenlassen immer exakt an derselben Stelle. Da #standby-bg schon eine eigene
+           Ken-Burns-transform-Animation hat, wird der Shift direkt mit reingerechnet (calc()
+           mischt Prozent- und Pixel-Werte problemlos), statt einen zusätzlichen Wrapper zu
+           brauchen, der mit der bestehenden Animation kollidieren würde.
+        */
+        @keyframes standby-kenburns {
+            0% { transform: scale(1.2) translate(var(--standby-shift-x, 0px), var(--standby-shift-y, 0px)); }
+            100% { transform: scale(1.3) translate(calc(-1.2% + var(--standby-shift-x, 0px)), calc(-1.2% + var(--standby-shift-y, 0px))); }
+        }
 
         #standby-clockzone { position: relative; z-index: 2; text-align: center; padding: 48px 20px 0; }
         #standby-clock { font-family: 'JetBrains Mono', monospace; font-weight: 800; color: #fff; font-size: clamp(2.6rem, 13vw, 6rem); line-height: 1; letter-spacing: -2px; text-shadow: 0 0 60px rgba(255,255,255,0.25); }
@@ -3153,7 +3194,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.47 · 2026-08-12';
+        const SITE_VERSION = 'v24.48 · 2026-08-12';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -6021,15 +6062,27 @@
             ttsSetButtonState(btnEl, 'speaking');
             ttsSyncedPlaybackActive = true;
 
-            const firstTime = lines[0].timeMs;
-            let cursor = 0; // Zeitpunkt (ms, relativ zur ersten Zeile), an dem die vorige Zeile endete
+            // FIX v24.48: Vorher startete die Wiedergabe IMMER bei der allerersten Zeile des
+            // ganzen Songs, komplett unabhängig davon, wo der Song gerade tatsächlich lief -
+            // das fühlte sich nie wirklich "im Songrhythmus" an, nur intern konsistent mit
+            // sich selbst. Jetzt: Startpunkt ist die tatsächliche aktuelle Songposition
+            // (currentMs, dieselbe Variable, die auch für die Songtext-Hervorhebung und den
+            // Fortschrittsbalken genutzt wird) - die Zeile, die JETZT im Song dran wäre, wird
+            // auch als erstes vorgelesen, alle folgenden Zeilen orientieren sich an der
+            // tatsächlich verbleibenden Zeit bis zu ihrem echten Zeitpunkt im Song.
+            const referenceMs = (typeof currentMs === 'number' && trackIsPlaying) ? currentMs : lines[0].timeMs;
+            let startIndex = lines.findIndex(l => l.timeMs >= referenceMs);
+            if (startIndex === -1) startIndex = 0; // Songende erreicht -> von vorn beginnen
 
-            for (let i = 0; i < lines.length; i++) {
+            const wallClockStart = performance.now();
+            let cursor = 0; // Zeit (ms), die seit Beginn dieser Vorlese-Sitzung real vergangen ist
+
+            for (let i = startIndex; i < lines.length; i++) {
                 if (!ttsSyncedPlaybackActive) break; // per Stopp-Klick abgebrochen
                 const lineText = lines[i].tokens.map(t => t.cleanText).join(' ').trim();
                 if (!lineText || lineText === '♪') continue;
 
-                const rawOffset = lines[i].timeMs - firstTime;
+                const rawOffset = lines[i].timeMs - referenceMs;
                 const scheduledOffset = Math.min(rawOffset, cursor + TTS_MAX_LINE_GAP_MS);
                 const waitMs = Math.max(0, scheduledOffset - cursor);
                 if (waitMs > 0) await ttsSleep(waitMs);
@@ -6192,6 +6245,14 @@
             // Frames anstößt.
             if (!tiltEnabled || document.body.classList.contains('low-end')) return;
             if (document.visibilityState !== 'visible') return;
+            // NEU v24.48 (EFFIZIENZ): Nutzer meldete zurecht - der Handler feuerte auch dann
+            // mit voller Sensor-Rate weiter, wenn gar kein Cover sichtbar war (Dashboard
+            // minimiert, StandBy aktiv, oder Lyrics offen - dabei liegt nur eine blickdichte
+            // Ebene über dem Cover, es bleibt technisch im Hintergrund vorhanden) - der
+            // Tilt-Effekt wirkt sich ausschließlich auf das Album-Cover aus, ist also in
+            // all diesen Zuständen komplett wirkungslose Arbeit.
+            if (!isDashboardOpen || standByActive) return;
+            if (mainMusicCard && mainMusicCard.classList.contains('lyrics-open')) return;
             if (deviceTiltRafPending) return;
             const gamma = Math.max(-24, Math.min(24, e.gamma || 0));
             const beta = Math.max(-24, Math.min(24, (e.beta || 0) - 45));
@@ -7501,6 +7562,13 @@
                 if (requestFs) {
                     requestFs.call(fsEl).catch(() => {}); // manche Browser/Kontexte verweigern das (z.B. iOS Safari) - kein Problem, wird einfach übersprungen
                 }
+                // NEU v24.48 (EFFIZIENZ): Video-Hintergrund (falls aktiviert) pausieren - er ist
+                // unter dem blickdichten StandBy-Overlay komplett unsichtbar, wird aber ohne
+                // diesen Fix trotzdem weiter dekodiert und kostet dadurch unnötig Akku/Wärme.
+                if (canvasVideo && !canvasVideo.paused) {
+                    canvasVideo.pause();
+                    canvasVideo.dataset.pausedByStandby = 'true';
+                }
             } else {
                 releaseStandbyWakeLock();
                 clearInterval(standByInterval);
@@ -7523,6 +7591,13 @@
                 if (document.fullscreenElement || document.webkitFullscreenElement) {
                     const exitFs = document.exitFullscreen || document.webkitExitFullscreen;
                     if (exitFs) exitFs.call(document).catch(() => {});
+                }
+                // NEU v24.48: Video-Hintergrund wieder fortsetzen, falls er wegen StandBy
+                // pausiert wurde (und nicht aus einem anderen Grund, z.B. weil der Nutzer
+                // ihn selbst deaktiviert hatte).
+                if (canvasVideo && canvasVideo.dataset.pausedByStandby === 'true') {
+                    delete canvasVideo.dataset.pausedByStandby;
+                    canvasVideo.play().catch(() => {});
                 }
                 // KRITISCHER FIX: animateLoop() sofort wieder starten, falls Musik läuft - der
                 // Loop war während StandBy komplett angehalten (siehe dort), sonst würde die
@@ -7877,6 +7952,12 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.48', date: 'August 2026', type: 'performance', items: [
+                'StandBy-Modus nochmal spürbar effizienter (Video-Hintergrund pausiert jetzt mit)',
+                'Spatial-Tilt-Effekt lief unnötig im Hintergrund weiter - behoben',
+                'Einbrennschutz betrifft jetzt auch das Hintergrundbild',
+                'Synchrones Vorlesen startet jetzt an der echten aktuellen Songposition'
+            ]},
             { version: 'v24.47', date: 'August 2026', type: 'feature', items: [
                 'Lyrics-Sprung per Spotlight scrollt jetzt zuverlässig korrekt hin',
                 'Vorlesen jetzt auch direkt im Musik-Dashboard verfügbar',
