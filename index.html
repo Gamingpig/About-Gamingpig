@@ -11,6 +11,28 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FIX - VERSUCH] Release v24.54: Echte Netzwerk-Analyse zeigt Weiterleitungs-Schleife bei
+    der Modell-Datei
+      - Nutzer schickte Network-Tab-Screenshots nach v24.53 - selber Fehler trotz erhöhtem
+        Zeitlimit. Konkrete Beweislage diesmal: model_quantized.onnx zeigt Status 302
+        (Weiterleitung), aber nur 2.0 KB übertragen statt der vollen Modellgröße - dazu eine
+        wachsende Gesamt-Anfragenzahl (14/42 -> 14/57 im Verlauf) bei gleichbleibender
+        "echter" Antwortzahl - klassisches Muster einer endlosen Weiterleitungs-Schleife,
+        kein einfaches "zu langsam" mehr.
+      - Verdacht: Hugging Face leitet Anfragen für große Dateien auf ein eigenes CDN um -
+        diese Weiterleitung könnte sich mit dem bibliothekseigenen Cache-Mechanismus
+        innerhalb eines Web Workers nicht sauber vertragen (bekannt komplexes Terrain -
+        Cache-API-Verhalten bei Redirects unterscheidet sich teils zwischen Haupt-Thread und
+        Worker-Kontext).
+      - Zwei Korrekturen versucht: 1) env.useBrowserCache auf false gestellt (schließt den
+        Cache-Mechanismus als Fehlerquelle aus), 2) dtype explizit auf 'fp32' gesetzt statt
+        automatischer Erkennung - die betroffene Datei (model_quantized.onnx) war genau die
+        QUANTISIERTE Variante, explizite Full-Precision-Anforderung könnte einen anderen,
+        funktionierenden Lade-Pfad auslösen.
+      - EHRLICH: kann hier nicht live verifizieren, ob das greift - echter Diagnose-
+        getriebener Versuch basierend auf den konkreten Beweisen, keine Garantie. Nutzer
+        wurde gebeten, erneut mit Network-Tab zu testen für den nächsten Datenpunkt.
+
     [FIX] Release v24.53: HQ-TTS-Zeitlimit war zu knapp bemessen (45s reichten nicht)
       - Nutzer testete v24.52 mit offener Konsole - konkrete Fehlermeldung: "Zeitüberschreitung
         bei: HQ-Sprache erzeugen". Wichtig: die Bibliothek selbst hat sauber geladen (kein
@@ -3339,7 +3361,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.53 · 2026-08-12';
+        const SITE_VERSION = 'v24.54 · 2026-08-12';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -8264,6 +8286,9 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.54', date: 'August 2026', type: 'fix', items: [
+                'HQ-Sprachausgabe: möglicher Fix für hängenbleibenden Modell-Download (experimentell)'
+            ]},
             { version: 'v24.53', date: 'August 2026', type: 'fix', items: [
                 'HQ-Sprachausgabe: Zeitlimit war zu knapp - erstes Mal braucht durch großen Download etwas länger'
             ]},
