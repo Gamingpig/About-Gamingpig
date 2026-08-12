@@ -11,6 +11,41 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FEATURE - EXPERIMENTELL] Release v24.52: Siebter Anlauf für eine hochwertige KI-Stimme -
+    diesmal mit robuster Infrastruktur UND sicherem Rückfall
+      - Nutzer bat um einen erneuten Versuch nach dem Umstieg auf Web Speech API in v24.36.
+        Recherche ergab einen vielversprechenden neuen Weg: @huggingface/transformers (aktiv
+        von Hugging Face selbst gepflegt, produktiv breit im Einsatz - deutlich robuster als
+        die kleinen Forks der ersten sechs Anläufe) kombiniert mit Xenova/mms-tts-deu (Metas
+        MMS-Projekt, VITS-basiert, bereits fertig zu ONNX konvertiert und für die Bibliothek
+        bereit - kein Selber-Konvertieren nötig). Lizenz: CC-BY-NC-4.0 (nicht-kommerziell) -
+        für ein persönliches Bewerbungs-Portfolio unproblematisch.
+      - EHRLICHER HINWEIS: Stimmengeschlecht war in der Modell-Dokumentation nicht
+        angegeben - erst beim tatsächlichen Testen durch den Nutzer feststellbar. Nur EINE
+        deutsche Stimme verfügbar (MMS trainiert typischerweise eine Stimme pro Sprache),
+        keine Auswahl zwischen mehreren wie ursprünglich beim ersten Anlauf angedacht.
+      - Eigener Build-Prozess (tts-build-v2/) mit Web Worker, wie bei den bewährten früheren
+        Erfolgen (TTS-Bundle v1, Kart-Feature-Vorbereitung) - Berechnung blockiert die Seite
+        nie. Beim Bauen aufgefallen: onnxruntime-web bettet seine WASM-Datei in dieser
+        Version direkt als Base64 im eigenen JS-Code ein (63MB) - unschön groß, aber dadurch
+        auch strukturell robuster (kann nicht an einer fehlenden externen Datei scheitern,
+        wie es bei mehreren der vorherigen sechs Anläufe der Fall war). Größenoptimierung
+        bewusst zurückgestellt, "erst zum Laufen bringen" hat Vorrang.
+      - WICHTIGSTE ENTSCHEIDUNG dieses Releases: Komplett OPTIONALES Upgrade mit
+        automatischem, stillem Rückfall auf die bereits bewährte Web-Speech-API-Lösung aus
+        v24.36 - falls das HQ-Modell aus irgendeinem Grund nicht lädt oder fehlschlägt
+        (Zeitüberschreitung nach 20s/45s), merkt sich die Seite das für die laufende Sitzung
+        und nutzt automatisch die Standard-Sprachausgabe weiter, ohne dass der Nutzer aktiv
+        etwas davon mitbekommt oder eingreifen muss. Die bereits funktionierende Lösung wird
+        durch diesen siebten Versuch NICHT ersetzt oder gefährdet, nur optional überlagert.
+      - Kleiner Fund beim Umbau: withTimeout()-Hilfsfunktion war beim Umstieg auf Web Speech
+        API in v24.36 versehentlich mitentfernt worden, obwohl noch an einer Stelle
+        referenziert - wieder ergänzt.
+
+      - Aufräumarbeit: alter, seit v24.36 ungenutzter tts/-Ordner (Piper/ONNX-Reste, ~41MB)
+        endlich entfernt, da wir eh gerade an der TTS-Infrastruktur arbeiten - Repo-Größe von
+        103MB auf 63MB reduziert.
+
     [FIX] Release v24.51: Overlay-Zustands-Drift-Bug (Lyrics/Dashboard brauchten gelegentlich
     Reload) + Tilt-Fix erneut verifiziert + Hitze-Nachforschung
       - Nutzer meldete: gelegentliche Bugs beim schnellen Öffnen/Schließen von Lyrics und
@@ -3289,7 +3324,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.51 · 2026-08-12';
+        const SITE_VERSION = 'v24.52 · 2026-08-12';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -6093,14 +6128,90 @@
             });
         }
 
+        // Verhindert, dass eine Netzwerk-/Ladeoperation für immer hängen bleibt, falls sie
+        // aus irgendeinem Grund nie erfolgreich abschließt oder fehlschlägt.
+        function withTimeout(promise, ms, label) {
+            return Promise.race([
+                promise,
+                new Promise((_, reject) => setTimeout(() => reject(new Error(`Zeitüberschreitung bei: ${label}`)), ms))
+            ]);
+        }
+
+        // ========================================================= //
+        // --- NEU v24.52: Optionales hochwertiges TTS-Upgrade ------ //
+        // Siebter Anlauf für eine echte KI-Stimme (siehe Chat-Verlauf für die Geschichte
+        // der ersten sechs gescheiterten Versuche). Diesmal über @huggingface/transformers
+        // (aktiv gepflegt, produktiv breit eingesetzt) + Xenova/mms-tts-deu (fertig
+        // konvertiertes deutsches VITS-Modell). WICHTIG: komplett optional und mit
+        // automatischem Rückfall - falls das hier aus irgendeinem Grund nicht klappt, nutzt
+        // die Seite einfach weiterhin die bereits bewährte Web-Speech-API ohne dass der
+        // Nutzer etwas davon merkt. Die bestehende, funktionierende Lösung wird durch diesen
+        // Versuch NICHT ersetzt, nur optional überlagert.
+        const TTS_HQ_BUNDLE_URL = './tts-v2/gamingpig-tts-v2.js';
+        let ttsHqModulePromise = null;
+        let ttsHqBroken = false; // wird true, sobald ein Versuch fehlschlägt - kein erneuter Versuch in dieser Sitzung
+
+        function loadHqTtsModule() {
+            if (!ttsHqModulePromise) {
+                ttsHqModulePromise = import(TTS_HQ_BUNDLE_URL).then(() => {
+                    if (!window.GamingpigTTS) throw new Error('HQ-TTS-Bundle hat sich nicht korrekt initialisiert.');
+                    return window.GamingpigTTS;
+                });
+            }
+            return ttsHqModulePromise;
+        }
+
+        async function tryHqSpeak(text, btnEl) {
+            const gpTts = await withTimeout(loadHqTtsModule(), 20000, 'HQ-Bibliothek laden');
+            const wav = await withTimeout(
+                gpTts.speak(text, (progress) => {
+                    if (btnEl && progress && progress.total) {
+                        const pct = Math.round((progress.loaded * 100) / progress.total);
+                        btnEl.textContent = `⏳ Hochwertige Stimme lädt... ${pct}%`;
+                    }
+                }),
+                45000, // Modell ist groß (>60MB), braucht mehr Zeit als eine normale Anfrage
+                'HQ-Sprache erzeugen'
+            );
+            return new Promise((resolve, reject) => {
+                const audio = new Audio();
+                audio.src = URL.createObjectURL(wav);
+                ttsCurrentHqAudio = audio;
+                audio.onended = resolve;
+                audio.onerror = reject;
+                audio.play().then(() => {}).catch(reject);
+            });
+        }
+        let ttsCurrentHqAudio = null;
+
         async function ttsSpeak(text, btnEl) {
             if (!text || !text.trim()) return;
 
-            if (ttsQueueActive || speechSynthesis.speaking || speechSynthesis.pending) {
+            if (ttsQueueActive || speechSynthesis.speaking || speechSynthesis.pending || (ttsCurrentHqAudio && !ttsCurrentHqAudio.paused)) {
                 ttsQueueActive = false;
                 speechSynthesis.cancel();
+                if (ttsCurrentHqAudio) { ttsCurrentHqAudio.pause(); ttsCurrentHqAudio = null; }
                 ttsSetButtonState(btnEl, 'idle');
                 return;
+            }
+
+            // Erster Versuch: hochwertige KI-Stimme, falls sie in dieser Sitzung noch nicht
+            // fehlgeschlagen ist. Läuft am Stück (kein Chunking nötig, da hier kein Chrome-
+            // Utterance-Bug greift - das Problem betraf nur die Web-Speech-API).
+            if (!ttsHqBroken) {
+                try {
+                    ttsQueueActive = true;
+                    ttsSetButtonState(btnEl, 'speaking');
+                    await tryHqSpeak(text.trim(), btnEl);
+                    ttsQueueActive = false;
+                    ttsSetButtonState(btnEl, 'idle');
+                    return;
+                } catch (err) {
+                    console.error('HQ-TTS fehlgeschlagen, falle auf Web Speech API zurück:', err);
+                    ttsHqBroken = true;
+                    ttsCurrentHqAudio = null;
+                    // Kein return hier - fällt unten sauber auf die bewährte Lösung durch.
+                }
             }
 
             const voice = ttsPickVoice();
@@ -8123,6 +8234,9 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.52', date: 'August 2026', type: 'feature', items: [
+                'Versuch mit einer hochwertigeren KI-Stimme (experimentell, mit automatischem Rückfall falls nicht verfügbar)'
+            ]},
             { version: 'v24.51', date: 'August 2026', type: 'fix', items: [
                 'Seltener Bug behoben: Lyrics/Dashboard brauchten nach schnellem Antippen manchmal einen Reload'
             ]},
