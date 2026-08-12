@@ -11,6 +11,27 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FEATURE - ACCESSIBILITY] Release v24.45: Vorlesen im Tutorial + Barrierefreiheits-Audit
+      - Nutzerwunsch: weitere Sprachausgabe-Stellen ergänzen, insbesondere fürs Tutorial, im
+        Hinblick auf blinde/sehbehinderte Nutzer und Barrierefreiheit allgemein.
+      - Barrierefreiheits-Audit durchgeführt (Python-Skript, tag-balanciertes Parsing statt
+        naivem Regex): ALLE Icon-only-Buttons haben bereits aria-label (0 gefunden ohne),
+        ALLE <img>-Tags (statisch wie dynamisch per JS erzeugt) haben bereits alt-Attribute -
+        Grundgerüst war schon solide, kein Nachholbedarf an dieser Front.
+      - Neuer Vorlesen-Button direkt im Tutorial-Kasten selbst (oben rechts neben der
+        Schritt-Anzeige) - liest Titel + Text des gerade angezeigten Schritts vor (neue
+        Funktion speakTutorialStep()). Wichtig für Menschen mit Sehbehinderung, die das
+        Tutorial sonst gar nicht verfolgen könnten, aber auch für alle, die lieber zuhören.
+      - Sprachausgabe stoppt jetzt automatisch beim Schrittwechsel (Weiter/Zurück) und beim
+        Beenden/Überspringen des Tutorials - sonst hätte alter Text über neuen weiterlaufen
+        können.
+      - aria-label des Buttons wird bei jedem Schrittwechsel korrekt in der aktuell
+        eingestellten Sprache gesetzt (neuer Übersetzungsschlüssel tutorial_speak_aria, alle
+        6 Sprachen).
+      - Willkommens-Schritt (erster Tutorial-Schritt) weist jetzt explizit auf das
+        Vorlesen-Feature hin, damit Nutzer von Anfang an wissen, dass es diese Option gibt -
+        alle 6 Sprachen aktualisiert.
+
     [FIX] Release v24.44: Vorlesen der Release-Notes brach stumm ab - bekannter Chrome-Bug bei
     langen Utterances
       - Nutzer meldete: Vorlesen der Release-Notes funktioniert nicht mehr. Ursache: Chrome hat
@@ -3064,7 +3085,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.44 · 2026-08-12';
+        const SITE_VERSION = 'v24.45 · 2026-08-12';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -3224,7 +3245,12 @@
                  noch übrig ist. Fühlt sich dadurch weniger nach einer langen Verpflichtung
                  an, was hoffentlich die extrem hohe Überspringen-Rate senkt. -->
             <div class="flex gap-1 mb-3" id="tutorial-progress-dots"></div>
-            <div class="text-[10px] font-black uppercase tracking-widest text-blue-500 mb-2" id="tutorial-step-indicator">Schritt 1/4</div>
+            <div class="flex items-center justify-between mb-2">
+                <div class="text-[10px] font-black uppercase tracking-widest text-blue-500" id="tutorial-step-indicator">Schritt 1/4</div>
+                <!-- NEU v24.45: Vorlesen-Button direkt im Tutorial - liest Titel + Text des
+                     aktuellen Schritts vor, wird bei jedem Weiter/Zurück-Klick neu befüllt. -->
+                <button onclick="speakTutorialStep(this)" id="btn-speak-tutorial" aria-label="Diesen Schritt vorlesen" class="text-[9px] sm:text-[10px] font-bold text-slate-500 dark:text-slate-400 hover:text-blue-500 transition-colors flex items-center gap-1">🔊 Vorlesen</button>
+            </div>
             <h3 id="tutorial-title" class="text-xl sm:text-2xl font-extrabold mb-2 text-slate-900 dark:text-white">Willkommen in meiner Welt!</h3>
             <p id="tutorial-text" class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mb-8 font-medium">Das ist mein persönliches Portfolio. Hier erfährst du alles Wichtige über mich, meinen Weg in die Systemintegration und was mich antreibt. Mein Hyperfokus ist hier Programm!</p>
             <div class="flex justify-between items-center mt-auto">
@@ -3922,7 +3948,7 @@
                 tutorial_next: 'Weiter', tutorial_back: 'Zurück', tutorial_finish: 'Fertig', tutorial_skip: 'Überspringen',
                 tutorial_step: (n, total) => `Schritt ${n}/${total}`,
                 t_step1_title: 'Willkommen in meiner Welt!',
-                t_step1_text: 'Dauert nur 30 Sekunden, versprochen! Das ist mein persönliches Portfolio - und ja, es gibt hier auch versteckte Easter Eggs zu entdecken. Lohnt sich wirklich.',
+                t_step1_text: 'Dauert nur 30 Sekunden, versprochen! Das ist mein persönliches Portfolio - und ja, es gibt hier auch versteckte Easter Eggs zu entdecken. Lohnt sich wirklich. Übrigens: Der "🔊 Vorlesen"-Button oben rechts liest dir jeden Tutorial-Schritt vor, falls du lieber zuhörst - das gibt es an vielen Stellen der Seite.',
                 t_step2_title: 'Dein Kontrollzentrum',
                 t_step2_text: 'Oben rechts hast du die volle Kontrolle: "Apple Liquid Glass" schaltet den edlen, aber leistungshungrigen Blur-Look ein, Dark Mode wechselt zwischen hell/dunkel, Low-End-Modus deaktiviert aufwendige Animationen für ältere/langsamere Geräte, StandBy öffnet den Lockscreen-Modus, und der letzte Button startet dieses Tutorial jederzeit neu.',
                 t_step3_title: 'Deep Dive: Wer bin ich?',
@@ -4023,6 +4049,7 @@
                 support_discord_join: 'Server beitreten',
                 changelog_whats_new: 'Was ist neu?', changelog_release_notes: 'Release-Notes',
                 changelog_type_feature: 'Neu', changelog_type_performance: 'Performance', changelog_type_fix: 'Fehlerbehebung',
+                tutorial_speak_aria: 'Diesen Schritt vorlesen',
                 support_section_title: 'Support', support_section_email_title: 'E-Mail', support_section_email_desc: 'Fragen, Bugs gefunden oder einfach quatschen? Schreib mir!',
                 support_section_discord_title: 'Discord', support_section_discord_desc: 'Tritt dem Support-Server bei - dort bin ich meistens am schnellsten erreichbar.',
                 support_email_open: 'Öffnen', support_email_copy: 'Kopieren', support_email_copied: 'Kopiert! ✓',
@@ -4100,7 +4127,7 @@
                 tutorial_next: 'Next', tutorial_back: 'Back', tutorial_finish: 'Done', tutorial_skip: 'Skip',
                 tutorial_step: (n, total) => `Step ${n}/${total}`,
                 t_step1_title: 'Welcome to my world!',
-                t_step1_text: "Only takes 30 seconds, promise! This is my personal portfolio - and yes, there are hidden Easter eggs to find here too. Genuinely worth it.",
+                t_step1_text: "Only takes 30 seconds, promise! This is my personal portfolio - and yes, there are hidden Easter eggs to find here too. Genuinely worth it. By the way: the \"🔊 Read aloud\" button up top reads every tutorial step to you, if you'd rather listen - available in many spots across the site.",
                 t_step2_title: 'Your control center',
                 t_step2_text: 'Top right you have full control: "Apple Liquid Glass" turns on the fancy but performance-hungry blur look, Dark Mode switches between light/dark, Low-End Mode disables heavy animations for older/slower devices, StandBy opens lock-screen mode, and the last button restarts this tutorial anytime.',
                 t_step3_title: 'Deep dive: who am I?',
@@ -4199,6 +4226,7 @@
                 support_discord_join: 'Join server',
                 changelog_whats_new: "What's new?", changelog_release_notes: 'Release Notes',
                 changelog_type_feature: 'New', changelog_type_performance: 'Performance', changelog_type_fix: 'Fix',
+                tutorial_speak_aria: 'Read this step aloud',
                 support_section_title: 'Support', support_section_email_title: 'Email', support_section_email_desc: 'Questions, found a bug, or just want to chat? Email me!',
                 support_section_discord_title: 'Discord', support_section_discord_desc: 'Join the support server - that\'s usually the fastest way to reach me.',
                 support_email_open: 'Open', support_email_copy: 'Copy', support_email_copied: 'Copied! ✓',
@@ -4276,7 +4304,7 @@
                 tutorial_next: 'Siguiente', tutorial_back: 'Atrás', tutorial_finish: 'Listo', tutorial_skip: 'Omitir',
                 tutorial_step: (n, total) => `Paso ${n}/${total}`,
                 t_step1_title: '¡Bienvenido a mi mundo!',
-                t_step1_text: '¡Solo toma 30 segundos, lo prometo! Este es mi portafolio personal - y sí, también hay Easter eggs escondidos por descubrir. Vale la pena de verdad.',
+                t_step1_text: '¡Solo toma 30 segundos, lo prometo! Este es mi portafolio personal - y sí, también hay Easter eggs escondidos por descubrir. Vale la pena de verdad. Por cierto: el botón "🔊 Escuchar" de arriba te lee cada paso del tutorial, por si prefieres escuchar - disponible en muchos lugares de la página.',
                 t_step2_title: 'Tu centro de control',
                 t_step2_text: 'Arriba a la derecha tienes el control total: "Apple Liquid Glass" activa el elegante pero exigente efecto de desenfoque, Modo Oscuro cambia entre claro/oscuro, Modo de Bajo Rendimiento desactiva animaciones pesadas para dispositivos más antiguos/lentos, StandBy abre el modo de pantalla de bloqueo, y el último botón reinicia este tutorial cuando quieras.',
                 t_step3_title: 'A fondo: ¿quién soy?',
@@ -4375,6 +4403,7 @@
                 support_discord_join: 'Unirse al servidor',
                 changelog_whats_new: '¿Qué hay de nuevo?', changelog_release_notes: 'Notas de la versión',
                 changelog_type_feature: 'Nuevo', changelog_type_performance: 'Rendimiento', changelog_type_fix: 'Corrección',
+                tutorial_speak_aria: 'Escuchar este paso',
                 support_section_title: 'Soporte', support_section_email_title: 'Email', support_section_email_desc: '¿Tienes preguntas, encontraste un error o solo quieres charlar? ¡Escríbeme!',
                 support_section_discord_title: 'Discord', support_section_discord_desc: 'Únete al servidor de soporte - ahí suelo responder más rápido.',
                 support_email_open: 'Abrir', support_email_copy: 'Copiar', support_email_copied: '¡Copiado! ✓',
@@ -4452,7 +4481,7 @@
                 tutorial_next: 'Suivant', tutorial_back: 'Retour', tutorial_finish: 'Terminé', tutorial_skip: 'Passer',
                 tutorial_step: (n, total) => `Étape ${n}/${total}`,
                 t_step1_title: 'Bienvenue dans mon monde !',
-                t_step1_text: "Ça ne prend que 30 secondes, promis ! C'est mon portfolio personnel - et oui, il y a aussi des easter eggs cachés à découvrir. Ça vaut vraiment le coup.",
+                t_step1_text: "Ça ne prend que 30 secondes, promis ! C'est mon portfolio personnel - et oui, il y a aussi des easter eggs cachés à découvrir. Ça vaut vraiment le coup. Au fait : le bouton \"🔊 Écouter\" en haut te lit chaque étape du tutoriel, si tu préfères écouter - disponible à plein d'endroits sur le site.",
                 t_step2_title: 'Ton centre de contrôle',
                 t_step2_text: 'En haut à droite, tu as le contrôle total : "Apple Liquid Glass" active le look flou chic mais gourmand en performances, le mode sombre bascule entre clair/sombre, le mode basse consommation désactive les animations lourdes pour les appareils plus anciens/lents, StandBy ouvre le mode écran verrouillé, et le dernier bouton relance ce tutoriel à tout moment.',
                 t_step3_title: 'Plongée en profondeur : qui suis-je ?',
@@ -4551,6 +4580,7 @@
                 support_discord_join: 'Rejoindre le serveur',
                 changelog_whats_new: 'Quoi de neuf ?', changelog_release_notes: 'Notes de version',
                 changelog_type_feature: 'Nouveau', changelog_type_performance: 'Performance', changelog_type_fix: 'Correction',
+                tutorial_speak_aria: 'Écouter cette étape',
                 support_section_title: 'Support', support_section_email_title: 'Email', support_section_email_desc: 'Des questions, un bug trouvé, ou juste envie de discuter ? Écris-moi !',
                 support_section_discord_title: 'Discord', support_section_discord_desc: 'Rejoins le serveur de support - c\'est souvent le moyen le plus rapide de me joindre.',
                 support_email_open: 'Ouvrir', support_email_copy: 'Copier', support_email_copied: 'Copié ! ✓',
@@ -4628,7 +4658,7 @@
                 tutorial_next: 'Próximo', tutorial_back: 'Voltar', tutorial_finish: 'Concluir', tutorial_skip: 'Pular',
                 tutorial_step: (n, total) => `Passo ${n}/${total}`,
                 t_step1_title: 'Bem-vindo ao meu mundo!',
-                t_step1_text: 'Leva só 30 segundos, prometo! Este é meu portfólio pessoal - e sim, também tem easter eggs escondidos pra descobrir aqui. Vale muito a pena.',
+                t_step1_text: 'Leva só 30 segundos, prometo! Este é meu portfólio pessoal - e sim, também tem easter eggs escondidos pra descobrir aqui. Vale muito a pena. Aliás: o botão "🔊 Ouvir" lá em cima lê cada passo do tutorial pra você, caso prefira ouvir - disponível em vários lugares do site.',
                 t_step2_title: 'Sua central de controle',
                 t_step2_text: 'No canto superior direito você tem controle total: "Apple Liquid Glass" ativa o visual desfocado chique mas pesado, Modo Escuro alterna entre claro/escuro, Modo de Baixo Desempenho desativa animações pesadas para aparelhos mais antigos/lentos, StandBy abre o modo tela de bloqueio, e o último botão reinicia este tutorial quando quiser.',
                 t_step3_title: 'Aprofundando: quem sou eu?',
@@ -4727,6 +4757,7 @@
                 support_discord_join: 'Entrar no servidor',
                 changelog_whats_new: 'O que há de novo?', changelog_release_notes: 'Notas da versão',
                 changelog_type_feature: 'Novo', changelog_type_performance: 'Performance', changelog_type_fix: 'Correção',
+                tutorial_speak_aria: 'Ouvir esta etapa',
                 support_section_title: 'Suporte', support_section_email_title: 'Email', support_section_email_desc: 'Tem dúvidas, achou um bug, ou só quer bater um papo? Me manda um email!',
                 support_section_discord_title: 'Discord', support_section_discord_desc: 'Entra no servidor de suporte - geralmente é a forma mais rápida de me alcançar.',
                 support_email_open: 'Abrir', support_email_copy: 'Copiar', support_email_copied: 'Copiado! ✓',
@@ -4804,7 +4835,7 @@
                 tutorial_next: 'İleri', tutorial_back: 'Geri', tutorial_finish: 'Bitir', tutorial_skip: 'Atla',
                 tutorial_step: (n, total) => `Adım ${n}/${total}`,
                 t_step1_title: 'Dünyama hoş geldin!',
-                t_step1_text: 'Sadece 30 saniye sürüyor, söz veriyorum! Bu benim kişisel portfolyom - ve evet, burada keşfedilecek gizli easter egg\'ler de var. Gerçekten değer.',
+                t_step1_text: 'Sadece 30 saniye sürüyor, söz veriyorum! Bu benim kişisel portfolyom - ve evet, burada keşfedilecek gizli easter egg\'ler de var. Gerçekten değer. Bu arada: yukarıdaki "🔊 Sesli oku" butonu her eğitim adımını senin için okur, dinlemeyi tercih edersen - sitenin birçok yerinde bulunuyor.',
                 t_step2_title: 'Kontrol merkezin',
                 t_step2_text: 'Sağ üstte tüm kontrol sende: "Apple Liquid Glass" şık ama performans yiyen bulanıklık görünümünü açar, Karanlık Mod açık/koyu arasında geçiş yapar, Düşük Performans Modu eski/yavaş cihazlar için ağır animasyonları kapatır, StandBy kilit ekranı modunu açar, ve son buton bu eğitimi istediğin zaman yeniden başlatır.',
                 t_step3_title: 'Derinlemesine: ben kimim?',
@@ -4903,6 +4934,7 @@
                 support_discord_join: 'Sunucuya katıl',
                 changelog_whats_new: 'Yenilikler neler?', changelog_release_notes: 'Sürüm Notları',
                 changelog_type_feature: 'Yeni', changelog_type_performance: 'Performans', changelog_type_fix: 'Düzeltme',
+                tutorial_speak_aria: 'Bu adımı sesli oku',
                 support_section_title: 'Destek', support_section_email_title: 'E-posta', support_section_email_desc: 'Sorun mu var, bir hata mı buldun, ya da sadece sohbet mi etmek istiyorsun? Bana yaz!',
                 support_section_discord_title: 'Discord', support_section_discord_desc: 'Destek sunucusuna katıl - genelde en hızlı ulaşım yolu bu.',
                 support_email_open: 'Aç', support_email_copy: 'Kopyala', support_email_copied: 'Kopyalandı! ✓',
@@ -7519,6 +7551,11 @@
         }
 
         function endTutorial() {
+            // FIX v24.45: laufende Vorlesen-Wiedergabe beim Beenden/Überspringen sauber stoppen
+            if (typeof speechSynthesis !== 'undefined' && (speechSynthesis.speaking || speechSynthesis.pending)) {
+                ttsQueueActive = false;
+                speechSynthesis.cancel();
+            }
             document.body.classList.remove('tutorial-mode');
             if (tutorialBox) {
                 clearTimeout(tutorialTimeout);
@@ -7552,8 +7589,26 @@
             }, 850);
         }
 
+        // NEU v24.45: Liest Titel + Text des gerade angezeigten Tutorial-Schritts vor - für
+        // Nutzer, die lieber zuhören als lesen (Sehbehinderung, Legasthenie, oder einfach
+        // Vorliebe). Liest direkt aus dem gerade gerenderten DOM statt aus dem Datenarray,
+        // damit garantiert genau das vorgelesen wird, was auch sichtbar ist.
+        window.speakTutorialStep = function(btnEl) {
+            const titleEl = document.getElementById('tutorial-title');
+            const textEl = document.getElementById('tutorial-text');
+            const text = [titleEl, textEl].filter(Boolean).map(el => el.innerText).join('. ');
+            ttsSpeak(text, btnEl);
+        };
+
         function showTutorialStep(index) {
             clearTutorialHighlights();
+            // FIX v24.45: Laufende Vorlesen-Wiedergabe beim Schrittwechsel stoppen, sonst würde
+            // beim Weiterklicken während des Vorlesens der alte Text über den neuen weiterlaufen.
+            if (typeof speechSynthesis !== 'undefined' && (speechSynthesis.speaking || speechSynthesis.pending)) {
+                ttsQueueActive = false;
+                speechSynthesis.cancel();
+                ttsSetButtonState(document.getElementById('btn-speak-tutorial'), 'idle');
+            }
             const steps = getTutorialSteps();
             if (index >= steps.length) {
                 endTutorial();
@@ -7577,6 +7632,8 @@
             }
             if (tutorialTitle) tutorialTitle.innerText = step.title;
             if (tutorialText) tutorialText.innerText = step.text;
+            const speakTutorialBtn = document.getElementById('btn-speak-tutorial');
+            if (speakTutorialBtn) speakTutorialBtn.setAttribute('aria-label', t('tutorial_speak_aria'));
 
             if (btnNext) {
                 if (index === steps.length - 1) {
@@ -7651,6 +7708,10 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.45', date: 'August 2026', type: 'feature', items: [
+                'Neu: Vorlesen-Button direkt im Tutorial',
+                'Barrierefreiheit geprüft: alle Buttons und Bilder korrekt für Screenreader beschriftet'
+            ]},
             { version: 'v24.44', date: 'August 2026', type: 'fix', items: [
                 'Vorlesen brach bei längeren Texten (z.B. Release-Notes) stumm ab - behoben'
             ]},
