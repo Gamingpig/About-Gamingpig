@@ -11,6 +11,24 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FIX] Release v24.44: Vorlesen der Release-Notes brach stumm ab - bekannter Chrome-Bug bei
+    langen Utterances
+      - Nutzer meldete: Vorlesen der Release-Notes funktioniert nicht mehr. Ursache: Chrome hat
+        einen seit Jahren bekannten, nie behobenen Bug - eine einzelne SpeechSynthesisUtterance
+        mit sehr langem Text bricht nach ca. 15 Sekunden einfach STUMM ab, ohne Fehler oder
+        onend-Event. Der Changelog-Text war mit mittlerweile 28 Einträgen als EIN einziges
+        riesiges Textobjekt zusammengesetzt - traf genau diese Grenze.
+      - Fix: ttsSpeak() grundsätzlich umgebaut - Text wird jetzt immer in kleine Häppchen
+        (an Satzenden, bei zu langen Sätzen zusätzlich an Wortgrenzen, max. ~180 Zeichen pro
+        Stück) zerlegt und als Warteschlange aus mehreren kurzen Utterances nacheinander
+        abgespielt (neue Funktionen splitIntoSpeechChunks()/speakChunkAndWait()) - jeder
+        einzelne Happen bleibt sicher unter der Problemgrenze. Betrifft automatisch ALLE
+        Vorlesen-Stellen (Bio, Karten, Changelog), nicht nur die Release-Notes, da alle
+        dieselbe zentrale ttsSpeak()-Funktion nutzen.
+      - Stopp-Funktion (erneuter Klick während Wiedergabe) funktioniert weiterhin normal -
+        neue Flag ttsQueueActive wird zwischen den Häppchen geprüft, bricht die Warteschlange
+        sofort sauber ab statt bis zum Ende aller restlichen Häppchen weiterzulaufen.
+
     [FIX] Release v24.43: Fehlender v24.27-Changelog-Eintrag nachgetragen
       - Beim Vorbereiten neuer Play-Store-Release-Notes aufgefallen: v24.27 (ironischerweise
         genau der Release, der die "Changelog immer sofort mitpflegen"-Regel eingeführt hatte)
@@ -3046,7 +3064,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.43 · 2026-08-12';
+        const SITE_VERSION = 'v24.44 · 2026-08-12';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -5747,10 +5765,53 @@
 
         // Zentrale Vorlesefunktion - erneuter Klick während der Wiedergabe stoppt statt neu
         // zu starten.
-        function ttsSpeak(text, btnEl) {
+        // FIX: Chrome hat einen bekannten Bug (seit Jahren nicht behoben) - bei einer
+        // einzelnen, sehr langen SpeechSynthesisUtterance bricht die Sprachausgabe nach ca.
+        // 15 Sekunden einfach stumm ab, ohne Fehler oder onend-Event. Betraf v.a. die
+        // Release-Notes, die mittlerweile mit 28 Einträgen deutlich über diese Grenze
+        // hinausgehen. Fix: Text wird jetzt grundsätzlich in kleine Sätze/Häppchen zerlegt
+        // und als WARTESCHLANGE aus mehreren kurzen Utterances nacheinander abgespielt -
+        // jede einzelne bleibt sicher unter der Problemgrenze.
+        function splitIntoSpeechChunks(text, maxLen = 180) {
+            // Erst grob an Satzenden trennen, dann zu große Sätze zusätzlich an Kommas/
+            // Leerzeichen weiter aufteilen, damit kein einzelner Happen zu lang wird.
+            const sentences = text.split(/(?<=[.!?])\s+/);
+            const chunks = [];
+            for (const sentence of sentences) {
+                if (sentence.length <= maxLen) {
+                    if (sentence.trim()) chunks.push(sentence.trim());
+                    continue;
+                }
+                let rest = sentence;
+                while (rest.length > maxLen) {
+                    let cut = rest.lastIndexOf(' ', maxLen);
+                    if (cut <= 0) cut = maxLen;
+                    chunks.push(rest.slice(0, cut).trim());
+                    rest = rest.slice(cut).trim();
+                }
+                if (rest) chunks.push(rest);
+            }
+            return chunks;
+        }
+
+        let ttsQueueActive = false;
+
+        function speakChunkAndWait(text, voice) {
+            return new Promise(resolve => {
+                const u = new SpeechSynthesisUtterance(text);
+                if (voice) u.voice = voice;
+                u.lang = 'de-DE';
+                u.onend = resolve;
+                u.onerror = resolve;
+                speechSynthesis.speak(u);
+            });
+        }
+
+        async function ttsSpeak(text, btnEl) {
             if (!text || !text.trim()) return;
 
-            if (speechSynthesis.speaking || speechSynthesis.pending) {
+            if (ttsQueueActive || speechSynthesis.speaking || speechSynthesis.pending) {
+                ttsQueueActive = false;
                 speechSynthesis.cancel();
                 ttsSetButtonState(btnEl, 'idle');
                 return;
@@ -5761,16 +5822,20 @@
                 showToast('Keine deutsche Stimme auf diesem Gerät gefunden - Wiedergabe nutzt die Standardstimme.');
             }
 
-            const utterance = new SpeechSynthesisUtterance(text.trim());
-            if (voice) utterance.voice = voice;
-            utterance.lang = 'de-DE';
+            const chunks = splitIntoSpeechChunks(text.trim());
+            if (chunks.length === 0) return;
+
+            ttsQueueActive = true;
             ttsSetButtonState(btnEl, 'speaking');
-            utterance.onend = () => ttsSetButtonState(btnEl, 'idle');
-            utterance.onerror = () => {
+            try {
+                for (const chunk of chunks) {
+                    if (!ttsQueueActive) break; // per Stopp-Klick abgebrochen
+                    await speakChunkAndWait(chunk, voice);
+                }
+            } finally {
+                ttsQueueActive = false;
                 ttsSetButtonState(btnEl, 'idle');
-                if (typeof showToast === 'function') showToast('Sprachausgabe auf diesem Gerät nicht verfügbar.');
-            };
-            speechSynthesis.speak(utterance);
+            }
         }
 
         // Sammelt den reinen Bio-Text und liest ihn vor.
@@ -7586,6 +7651,12 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.44', date: 'August 2026', type: 'fix', items: [
+                'Vorlesen brach bei längeren Texten (z.B. Release-Notes) stumm ab - behoben'
+            ]},
+            { version: 'v24.43', date: 'August 2026', type: 'fix', items: [
+                'Fehlenden Release-Notes-Eintrag nachgetragen'
+            ]},
             { version: 'v24.42', date: 'August 2026', type: 'fix', items: [
                 'Wichtiger Fix: StandBy-Modus konnte das Handy über Nacht unnötig aufheizen',
                 '"Bildschirm an"-Schalter zeigt jetzt nach Neuladen den korrekten Zustand'
