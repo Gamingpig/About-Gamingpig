@@ -11,6 +11,39 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FIX - KRITISCH] Release v24.60: Root Cause für "Fortschrittsbalken friert ein" + "Cover-Art
+    verschwindet nach Songwechsel" gefunden - Timing-Bug im Polling
+      - Nutzer meldete zwei zusammenhängende Bugs: Cover-Art zeigt sich nach einem Songwechsel
+        GANZ KURZ korrekt, dann verschwindet sie wieder (Bug, der laut Nutzer schon einmal
+        genau so aufgetreten war); Fortschrittsbalken komplett eingefroren, überall auf der
+        Seite, auch in der Dynamic Island.
+      - ROOT CAUSE gefunden: Musikdaten werden alle 5 Sekunden abgefragt (setInterval), aber
+        der Offline-Wipe-Timer lief bisher mit nur 2.5 Sekunden - KÜRZER als der Abstand
+        zwischen zwei Abfragen! Ein einziger kurzer API-Aussetzer (z.B. genau während eines
+        Songwechsels, oder der 402-Fehler-Typ, den wir bei npc-api.aikins.xyz schon einmal
+        beobachtet haben) reichte, um sofort SYNCHRON stopProgressTracking() auszulösen -
+        das erklärt das sofortige Einfrieren exakt - und 2.5 Sekunden später das Cover zu
+        löschen, lange bevor die nächste, eigentlich gute Antwort (erst nach 5s) überhaupt
+        ankommen konnte.
+      - Fix 1: updateMusicUI() verlangt jetzt mehrere AUFEINANDERFOLGENDE "kein Track"-
+        Antworten (neuer Zähler consecutiveEmptyPolls), bevor überhaupt reagiert wird - ein
+        einzelner Aussetzer wird jetzt einfach ignoriert, erst beim zweiten Mal in Folge wird
+        tatsächlich reagiert. Zähler wird bei jeder erfolgreichen Antwort zurückgesetzt.
+      - Fix 2: Der Offline-Wipe-Timer selbst zusätzlich von 2.5s auf 6s erhöht - komfortabel
+        länger als der 5s-Poll-Abstand, als weitere Sicherheitsmarge.
+      - Fix 3: fetchMusicData()-Fehler wurden bisher komplett stillschweigend verschluckt
+        (.catch(() => {})) - dadurch war die Fehlersuche praktisch unmöglich, da nichts in
+        der Konsole sichtbar war. Jetzt werden Fehler geloggt (inkl. HTTP-Statuscode) und
+        mitgezählt.
+      - Fix 4 (Watchdog): neuer setInterval alle 15s prüft, ob trotz vermeintlich laufender
+        Musik seit über 30 Sekunden kein erfolgreiches Update mehr angekommen ist - falls
+        doch, wird aktiv ein sofortiger neuer Abrufversuch erzwungen UND das Fortschritts-
+        Tracking sicherheitshalber neu gestartet, falls es aus irgendeinem Grund doch hängen
+        geblieben sein sollte. Selbstheilend, ohne dass der Nutzer manuell neu laden muss.
+      - Mit Playwright verifiziert: simulierter einzelner Aussetzer mitten in normaler
+        Wiedergabe wird jetzt korrekt toleriert (trackIsPlaying/progressTicker bleiben aktiv),
+        Erholung beim nächsten guten Poll funktioniert nahtlos.
+
     [FIX - KRITISCH] Release v24.59: Einstellungen-Menü schloss sich sofort nach dem Öffnen +
     Lyrics-Vorlesen jetzt wortgenau statt nur zeilengenau synchronisiert
       - Nutzer meldete kritischen Blocker: Einstellungen-Menü ließ sich nicht mehr öffnen,
@@ -3482,7 +3515,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.59 · 2026-08-12';
+        const SITE_VERSION = 'v24.60 · 2026-08-12';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -5911,6 +5944,9 @@
         let userScrollTimeout = null;
         let currentFetchId = 0;
         let offlineTimeout = null;
+        // FIX v24.60: zählt aufeinanderfolgende "kein Track"-Antworten, um kurze
+        // API-Aussetzer von echtem "Musik wurde gestoppt" zu unterscheiden.
+        let consecutiveEmptyPolls = 0;
         let lastLowEndUpdate = 0;
 
         // --- NEW FEATURE STATE ---
@@ -8403,6 +8439,14 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.60', date: "August 2026", type: 'fix', items: {
+                de: ["Kritischer Fix: Fortschrittsbalken fror bei kurzen Verbindungsaussetzern komplett ein", "Cover-Art verschwand teils direkt nach dem Songwechsel wieder - behoben"],
+                en: ["Critical fix: progress bar completely froze during brief connection hiccups", "Cover art sometimes disappeared right after a song change - fixed"],
+                es: ["Corrección crítica: la barra de progreso se congelaba por completo ante breves cortes de conexión", "La portada a veces desaparecía justo después de un cambio de canción - corregido"],
+                fr: ["Correction critique : la barre de progression se figeait complètement lors de brèves coupures de connexion", "La pochette disparaissait parfois juste après un changement de morceau - corrigé"],
+                pt: ["Correção crítica: a barra de progresso travava completamente durante breves falhas de conexão", "A capa às vezes desaparecia logo após a troca de música - corrigido"],
+                tr: ["Kritik düzeltme: kısa bağlantı kesintilerinde ilerleme çubuğu tamamen donuyordu", "Kapak görseli bazen şarkı değişiminden hemen sonra kayboluyordu - düzeltildi"],
+            }},
             { version: 'v24.59', date: "August 2026", type: 'fix', items: {
                 de: ["Kritischer Bug behoben: Einstellungen-Menü schloss sich sofort wieder", "Lyrics-Vorlesen jetzt wortgenau statt nur zeilengenau synchronisiert"],
                 en: ["Fixed a critical bug: the settings menu closed itself immediately", "Lyrics read-aloud now synced word-precisely instead of only line-precisely"],
@@ -10568,7 +10612,23 @@
             const hasTrack = data && data.track;
             const isPlaying = data && data.status === "playing";
 
+            // FIX v24.60 (KRITISCH): Root Cause für "Fortschrittsbalken friert ein" +
+            // "Cover-Art verschwindet kurz nach dem Songwechsel wieder" gefunden: Der Poll-
+            // Abstand beträgt 5 Sekunden, aber der Offline-Wipe-Timer lief bisher mit nur
+            // 2.5 Sekunden - KÜRZER als der Abstand zwischen zwei Abfragen! Ein einziger
+            // kurzer API-Aussetzer (z.B. mitten in einem Songwechsel, oder der 402-Fehler-
+            // Typ, den wir schon einmal beobachtet haben) reichte, um sofort synchron
+            // stopProgressTracking() auszulösen und 2.5s später das Cover zu löschen - lange
+            // bevor die nächste, eigentlich gute Antwort (erst nach 5s) überhaupt ankommen
+            // konnte. Fix: statt bei der ERSTEN "kein Track"-Antwort sofort zu reagieren,
+            // werden jetzt mehrere AUFEINANDERFOLGENDE schlechte Antworten verlangt (echte
+            // Aussetzer-Toleranz), bevor überhaupt etwas als offline behandelt wird.
             if (!hasTrack || !isPlaying) {
+                consecutiveEmptyPolls++;
+                if (consecutiveEmptyPolls < 2) {
+                    // Erster Aussetzer - noch nicht reagieren, auf die nächste Antwort warten.
+                    return;
+                }
                 trackIsPlaying = false;
                 // NEU v24.47 (EFFIZIENZ): Fortschritts-Tracking (egal ob rAF-Loop oder
                 // Intervall-Modus) sofort stoppen, sobald die Musik pausiert/stoppt - der
@@ -10618,10 +10678,14 @@
                         offlineTimeout = null;
                         syncStandByTrackInfo(null, null, null); // NEW: StandBy-Anzeige zurücksetzen
                         hideIslandCompletely(); // NEW: Dynamic Island ausblenden, kein Track mehr aktiv
-                    }, 2500);
+                    }, 6000); // FIX v24.60: von 2.5s auf 6s erhöht - komfortabel länger als der
+                    // 5s-Poll-Abstand, damit ein kurzer Aussetzer nicht sofort alles löscht
                 }
                 return;
             }
+
+            // FIX v24.60: Zähler zurücksetzen - dieser Poll hat einen echten Track geliefert.
+            consecutiveEmptyPolls = 0;
 
             if (offlineTimeout) {
                 clearTimeout(offlineTimeout);
@@ -10963,6 +11027,18 @@
             return sorted[Math.floor(sorted.length / 2)]; // Median: robust gegen einzelne Ausreißer-Requests
         }
 
+        // FIX v24.60: Nutzer meldete zwei zusammenhängende Bugs - Cover-Art verschwindet kurz
+        // nach dem Songwechsel wieder, UND der Fortschrittsbalken friert komplett ein
+        // (überall, auch in der Dynamic Island). Root Cause vermutet: Fehler beim Abrufen der
+        // Musikdaten wurden bisher komplett stillschweigend verschluckt (.catch(() => {})) -
+        // wenn die externe API (die wir schon einmal mit einem kurzen 402-Aussetzer erlebt
+        // haben) mal einen Fehler zurückgibt, passierte NICHTS sichtbares, aber auch keine
+        // Fehlermeldung, die beim Debuggen geholfen hätte. Jetzt: Fehler werden geloggt, UND
+        // ein Watchdog erkennt, wenn trotz laufender Musik zu lange kein erfolgreiches Update
+        // mehr ankam, und erzwingt dann aktiv einen Wiederherstellungsversuch.
+        let lastSuccessfulFetchAt = Date.now();
+        let consecutiveFetchFailures = 0;
+
         function fetchMusicData() {
             let pStart = performance.now();
             // NEW: Bugfix - gibt die Promise-Kette jetzt zurück, damit Aufrufer (z.B.
@@ -10970,18 +11046,40 @@
             // Abfrage warten können, statt sofort (ohne echtes Warten) weiterzumachen.
             return fetch('https://npc-api.aikins.xyz/v1/users/gamingpig/now')
                 .then(r => {
-                    if (!r.ok) throw new Error("Fetch failed");
+                    if (!r.ok) throw new Error("Fetch failed mit Status " + r.status);
                     return r.text();
                 })
                 .then(text => {
                     const rtt = performance.now() - pStart;
                     recordFetchLatency(rtt / 2);
                     if (text) updateMusicUI(JSON.parse(text), getSmoothedLatency());
+                    lastSuccessfulFetchAt = Date.now();
+                    consecutiveFetchFailures = 0;
                 })
-                .catch(() => {});
+                .catch((err) => {
+                    consecutiveFetchFailures++;
+                    console.error(`Musikdaten-Abruf fehlgeschlagen (${consecutiveFetchFailures}. Fehlversuch in Folge):`, err);
+                });
         }
 
         setInterval(fetchMusicData, 5000);
+
+        // NEU v24.60: Watchdog - prüft alle 15s, ob trotz vermeintlich laufender Musik seit
+        // über 30 Sekunden kein erfolgreiches Update mehr angekommen ist. Falls doch, wird
+        // aktiv ein sofortiger neuer Abrufversuch erzwungen UND das Fortschritts-Tracking
+        // sicherheitshalber neu gestartet, falls es aus irgendeinem Grund hängen geblieben
+        // sein sollte, statt dass der Nutzer erst manuell neu laden muss.
+        setInterval(() => {
+            if (!trackIsPlaying) return;
+            const silentForMs = Date.now() - lastSuccessfulFetchAt;
+            if (silentForMs > 30000) {
+                console.warn(`Watchdog: seit ${Math.round(silentForMs / 1000)}s kein erfolgreiches Musikdaten-Update mehr erhalten - erzwinge Wiederherstellungsversuch.`);
+                fetchMusicData();
+                if (!isAnimating && !progressTickerInterval) {
+                    startProgressTracking();
+                }
+            }
+        }, 15000);
 
         // NEW: Falls der Nutzer den Vollbildmodus direkt verlässt (z.B. Escape-Taste,
         // Browser-eigenes Vollbild-Verlassen-UI), soll StandBy synchron mit verlassen
