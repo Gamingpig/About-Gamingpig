@@ -11,6 +11,39 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FIX - KRITISCH] Release v24.42: Handy wurde im StandBy-Modus über Nacht gefährlich heiß -
+    Ladevorgang von Android sicherheitshalber gestoppt
+      - Nutzer meldete ernsten Vorfall: Pixel-Smartphone wurde über Nacht (StandBy aktiv,
+        Musik lief, Handy am Ladekabel) so heiß, dass Android den Ladevorgang aus
+        Sicherheitsgründen abbrach. Ein Smartphone darf durch eine Web-App niemals so heiß
+        werden - höchste Priorität.
+      - ROOT CAUSE gefunden: animateLoop() (Songtext-Fortschritt/-Synchronisation) läuft per
+        requestAnimationFrame mit bis zu 60 Bildern pro Sekunde, sobald Musik spielt. Die
+        einzige eingebaute Bremse war eine document.hidden-Prüfung (pausiert im
+        Hintergrund-Tab) - aber StandBy ist technisch KEIN Tab-Wechsel, sondern nur eine
+        Overlay-Ebene auf derselben Seite, document.hidden bleibt dabei false. Ergebnis: der
+        komplette Loop lief die ganze Nacht mit voller Framerate weiter, obwohl im
+        StandBy-Overlay selbst gar keine Songtext-Details sichtbar sind - stundenlange
+        sinnlose Berechnung, kombiniert mit dem Ladevorgang die wahrscheinliche Ursache der
+        Überhitzung.
+      - Fix: animateLoop() pausiert jetzt zusätzlich vollständig, wenn standByActive true ist
+        (genau wie im Hintergrund-Tab-Fall) - kein einziger Frame Berechnung mehr während
+        StandBy. toggleStandBy() startet den Loop beim Verlassen von StandBy sofort wieder,
+        falls Musik läuft, damit Fortschrittsanzeige/Songtext nicht eingefroren bleiben.
+      - Bonus-Fix im selben Codeabschnitt gefunden: requestStandbyWakeLock() wurde beim
+        Öffnen von StandBy versehentlich zweimal hintereinander aufgerufen (redundant,
+        harmlos aber unsauber) - dedupliziert.
+      - FIX: "Bildschirm an (StandBy)"-Schalter zeigte nach Neuladen/Neustart der Seite immer
+        "AUS" an, unabhängig vom tatsächlich in localStorage gespeicherten Wert (nur der
+        Klick selbst aktualisierte das Label, nicht der Ladevorgang) - wirkte wie ein
+        zurückgesetzter Schalter und hätte bei einem Klick in diesem Zustand versehentlich
+        eine bereits aktive Einstellung abgeschaltet. Label wird jetzt beim Laden UND bei
+        jedem Sprachwechsel korrekt mit dem echten gespeicherten Zustand synchronisiert.
+      - Android-App: targetSdkVersion/compileSdkVersion-Patch-Skript um einen erzwungenen
+        Gradle-Clean-Schritt vor dem Build ergänzt (vermuteter Grund, warum der Wert 36
+        bisher nicht im tatsächlichen Build ankam, obwohl build.gradle korrekt gepatcht war -
+        vermutlich Gradle-Build-Cache mit veralteter Konfiguration).
+
     [FIX] Release v24.41: Zwei Scroll-Bugs bei Lyrics/Dashboard behoben (App + Website)
       - Nutzer meldete zwei zusammenhängende Bugs: 1) Spotlight-Befehl "Lyrics anzeigen"
         scrollte nicht automatisch zum Musik-Dashboard hin. 2) Nach dem Scrollen zum
@@ -3006,7 +3039,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.41 · 2026-08-10';
+        const SITE_VERSION = 'v24.42 · 2026-08-10';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -5066,6 +5099,10 @@
             setText('support-discord-title', t('support_section_discord_title'));
             setText('support-discord-desc', t('support_section_discord_desc'));
             setText('support-discord-join-btn', t('support_discord_join'));
+            // FIX: Wake-Lock-Button-Label muss bei Sprachwechsel den ECHTEN Zustand
+            // widerspiegeln, nicht einen festen Text - siehe Begründung bei syncWakeLockButtonLabel.
+            const wakeLockBtn = document.getElementById('btn-toggle-wakelock');
+            if (wakeLockBtn) wakeLockBtn.textContent = t('settings_wakelock') + ': ' + (standbyWakeLockEnabled ? t('on_label') : t('off_label'));
             setText('footer-created-by', t('footer_created_by'));
 
             // NEW: fallbackMessages / secretMessages Arrays in-place mit neuer Sprache befüllen
@@ -7216,11 +7253,6 @@
                 if (requestFs) {
                     requestFs.call(fsEl).catch(() => {}); // manche Browser/Kontexte verweigern das (z.B. iOS Safari) - kein Problem, wird einfach übersprungen
                 }
-                // NEW: Display anlassen (Wake Lock) - hält den Bildschirm aktiv wach, damit
-                // er nicht mitten im StandBy-Betrieb (z.B. über Nacht am Ladekabel) von
-                // selbst dunkel schaltet. Nur wenn der Nutzer das explizit in den
-                // Einstellungen aktiviert hat, da das zusätzlichen Akku verbraucht.
-                requestStandbyWakeLock();
             } else {
                 releaseStandbyWakeLock();
                 clearInterval(standByInterval);
@@ -7243,6 +7275,13 @@
                 if (document.fullscreenElement || document.webkitFullscreenElement) {
                     const exitFs = document.exitFullscreen || document.webkitExitFullscreen;
                     if (exitFs) exitFs.call(document).catch(() => {});
+                }
+                // KRITISCHER FIX: animateLoop() sofort wieder starten, falls Musik läuft - der
+                // Loop war während StandBy komplett angehalten (siehe dort), sonst würde die
+                // Fortschrittsanzeige/Songtext-Sync nach Verlassen von StandBy eingefroren bleiben.
+                if (trackIsPlaying && !isAnimating) {
+                    isAnimating = true;
+                    lyricAnimFrame = requestAnimationFrame(animateLoop);
                 }
             }
         };
@@ -7540,6 +7579,10 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.42', date: 'August 2026', type: 'fix', items: [
+                'Wichtiger Fix: StandBy-Modus konnte das Handy über Nacht unnötig aufheizen',
+                '"Bildschirm an"-Schalter zeigt jetzt nach Neuladen den korrekten Zustand'
+            ]},
             { version: 'v24.41', date: 'August 2026', type: 'fix', items: [
                 'Lyrics-Ansicht per Spotlight scrollt jetzt korrekt automatisch hin',
                 'Scroll-Position springt beim Schließen von Dashboard/Lyrics nicht mehr fälschlich zurück'
@@ -9115,6 +9158,21 @@
                     return;
                 }
 
+                // KRITISCHER FIX: Im StandBy-Modus (Lockscreen-Feature) lief dieser Loop bisher mit
+                // voller Bildwiederholrate weiter, obwohl document.hidden dabei NICHT true wird -
+                // StandBy ist nur eine Overlay-Ebene auf derselben Seite, kein Tab-Wechsel. Nutzer
+                // meldete: Handy wurde über Nacht (StandBy an, Musik lief, Handy lud) so heiß, dass
+                // Android den Ladevorgang aus Sicherheitsgründen abgebrochen hat - stundenlange
+                // Berechnung von Songtext-Fortschritt und -Synchronisation, die während StandBy gar
+                // nicht sichtbar ist (StandBy zeigt sein eigenes, einfaches Overlay), war die
+                // Ursache. Loop jetzt genauso wie im Hintergrund-Tab-Fall komplett anhalten -
+                // toggleStandBy() startet ihn beim Verlassen von StandBy sofort wieder neu (siehe
+                // dort), kein Datenverlust, kein Drift.
+                if (standByActive) {
+                    isAnimating = false;
+                    return;
+                }
+
                 if (document.body.classList.contains('low-end')) {
                     if (now - lastLowEndUpdate < 250) { 
                         lyricAnimFrame = requestAnimationFrame(animateLoop);
@@ -9871,6 +9929,15 @@
 
         populateLyricsStyleDropdown();
         populateTtsVoiceDropdown();
+        // FIX: Button-Beschriftung zeigte nach Neuladen/Neustart immer "AUS" an, egal was
+        // tatsächlich gespeichert war (nur toggleStandbyWakeLock() selbst aktualisierte den
+        // Text, nicht der Ladevorgang) - wirkte für Nutzer wie ein zurückgesetzter Schalter,
+        // obwohl die Einstellung im Hintergrund korrekt erhalten blieb. Beim Draufklicken in
+        // diesem Zustand hätte man versehentlich eine bereits aktive Einstellung abgeschaltet.
+        (function syncWakeLockButtonLabel() {
+            const btn = document.getElementById('btn-toggle-wakelock');
+            if (btn) btn.textContent = t('settings_wakelock') + ': ' + (standbyWakeLockEnabled ? t('on_label') : t('off_label'));
+        })();
         loadDiscordWidget();
         // NEW: Beim Laden nur einmalig statisch vorrendern (Menü ist ja noch geschlossen) -
         // die eigentliche Dauerschleife startet erst, wenn das Menü tatsächlich geöffnet
