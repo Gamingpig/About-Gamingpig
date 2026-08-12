@@ -11,6 +11,21 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FIX] Release v24.53: HQ-TTS-Zeitlimit war zu knapp bemessen (45s reichten nicht)
+      - Nutzer testete v24.52 mit offener Konsole - konkrete Fehlermeldung: "Zeitüberschreitung
+        bei: HQ-Sprache erzeugen". Wichtig: die Bibliothek selbst hat sauber geladen (kein
+        Absturz, kein defekter Pfad wie bei den ersten sechs Anläufen) - es war schlicht eine
+        zu knapp bemessene Zeitgrenze. Das Stimm-Modell (>60MB) muss beim allerersten Mal
+        komplett heruntergeladen UND die erste, einzelsträngige Berechnung durchlaufen
+        werden - 45 Sekunden reichten dafür nicht.
+      - Fix: Zeitlimit auf 100 Sekunden erhöht (nur beim allerersten Mal relevant - danach
+        ist das Modell im Browser gecacht, deutlich schneller).
+      - Zusätzlich Rückmeldung verbessert: Worker meldet jetzt einen eigenen "computing"-
+        Status, sobald der Download fertig ist und die eigentliche Sprachberechnung beginnt -
+        vorher blieb der Fortschrittsbalken bei 100% stehen, während im Hintergrund noch
+        aktiv gerechnet wurde, was wie ein Hänger aussehen konnte. Button zeigt jetzt
+        "Sprache wird berechnet..." in dieser Phase.
+
     [FEATURE - EXPERIMENTELL] Release v24.52: Siebter Anlauf für eine hochwertige KI-Stimme -
     diesmal mit robuster Infrastruktur UND sicherem Rückfall
       - Nutzer bat um einen erneuten Versuch nach dem Umstieg auf Web Speech API in v24.36.
@@ -3324,7 +3339,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.52 · 2026-08-12';
+        const SITE_VERSION = 'v24.53 · 2026-08-12';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -6164,13 +6179,28 @@
         async function tryHqSpeak(text, btnEl) {
             const gpTts = await withTimeout(loadHqTtsModule(), 20000, 'HQ-Bibliothek laden');
             const wav = await withTimeout(
-                gpTts.speak(text, (progress) => {
-                    if (btnEl && progress && progress.total) {
-                        const pct = Math.round((progress.loaded * 100) / progress.total);
-                        btnEl.textContent = `⏳ Hochwertige Stimme lädt... ${pct}%`;
+                gpTts.speak(
+                    text,
+                    (progress) => {
+                        if (btnEl && progress && progress.total) {
+                            const pct = Math.round((progress.loaded * 100) / progress.total);
+                            btnEl.textContent = `⏳ Hochwertige Stimme lädt... ${pct}%`;
+                        }
+                    },
+                    () => {
+                        // NEU v24.53: Download fertig, Berechnung läuft jetzt - ohne diese
+                        // Rückmeldung sah es nach 100% Download so aus, als wäre alles
+                        // hängen geblieben, obwohl im Hintergrund noch aktiv gerechnet wurde.
+                        if (btnEl) btnEl.textContent = '⏳ Sprache wird berechnet...';
                     }
-                }),
-                45000, // Modell ist groß (>60MB), braucht mehr Zeit als eine normale Anfrage
+                ),
+                // FIX v24.53: Nutzer testete - Zeitüberschreitung genau hier, nach 45s. Das
+                // Stimm-Modell (>60MB) muss beim allerersten Mal komplett heruntergeladen UND
+                // die erste (einzelsträngige, also langsamere) Berechnung durchlaufen werden -
+                // 45s war dafür schlicht zu knapp bemessen. Auf 100s erhöht (nur beim ersten
+                // Mal relevant - danach ist das Modell im Browser gecacht und deutlich
+                // schneller).
+                100000,
                 'HQ-Sprache erzeugen'
             );
             return new Promise((resolve, reject) => {
@@ -8234,6 +8264,9 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.53', date: 'August 2026', type: 'fix', items: [
+                'HQ-Sprachausgabe: Zeitlimit war zu knapp - erstes Mal braucht durch großen Download etwas länger'
+            ]},
             { version: 'v24.52', date: 'August 2026', type: 'feature', items: [
                 'Versuch mit einer hochwertigeren KI-Stimme (experimentell, mit automatischem Rückfall falls nicht verfügbar)'
             ]},
