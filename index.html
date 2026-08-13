@@ -11,6 +11,69 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FIX/FEATURE] Release v24.74: StandBy "Einfrieren"-Erklärung + echter Fade beim
+    Cover/Hintergrund-Wechsel + smartes Wake-Lock + "Willkommen zurück"-Meldung
+      - Nutzer meldete: StandBy läuft beim ersten Öffnen dauerhaft flüssig, "friert" aber nach
+        Verlassen+späterem Wiederöffnen ein, Hintergrund/Cover laden dann langsam nach.
+      - KEIN Bug, sondern erklärbares Verhalten: Der Screen Wake Lock war bisher standardmäßig
+        AUS (bewusste Akku-Entscheidung aus früherer Version) - ohne ihn schläft das Handy nach
+        der normalen Display-Timeout-Zeit tatsächlich komplett ein (echter System-Tiefschlaf).
+        Der Nutzer hatte das Handy beim ersten Test vermutlich unbewusst in der Hand (Touch
+        hält den Bildschirm wach), beim zweiten Mal schlief es wirklich ein. Das "eingefroren"-
+        Gefühl und die langsam nachladenden Bilder sind normales Browser-Verhalten nach
+        echtem System-Tiefschlaf (Chrome muss Bild-/GPU-Puffer neu aufbauen), kein CSS/JS-Fehler.
+      - Fix (nach Rücksprache mit Nutzer, Variante 2+3 gewählt): Wake Lock jetzt SMART statt
+        blind an/aus - hält den Bildschirm nur, SOLANGE tatsächlich Musik läuft
+        (updateWakeLockForPlaybackState(), an drei Stellen eingehängt: Songwechsel,
+        Play/Pause-Wechsel, StandBy-Öffnen). Pausiert die Musik, schläft das Handy normal
+        weiter ein, spart Akku in der Pause automatisch. Standardmäßig jetzt AN (opt-out statt
+        opt-in), da diese smarte Variante deutlich günstiger ist als das alte blinde
+        Dauer-An. Einstellungstext im Menü um eine erklärende Zeile ergänzt (Nutzerwunsch:
+        "besser aufklären"), alle 6 Sprachen.
+      - Zusatzwunsch "Willkommen zurück"-Benachrichtigung: Wenn Musik pausiert war, während man
+        weg war (Bildschirm gesperrt), und innerhalb von 30 Minuten wieder fortgesetzt wurde,
+        jetzt Toast + (falls erlaubt) System-Benachrichtigung beim nächsten Wiederaufwachen der
+        Seite. EHRLICHE EINSCHRÄNKUNG dem Nutzer klar kommuniziert: eine echte Push-Meldung
+        MITTEN im Tiefschlaf ist auf einer statischen GitHub-Pages-Seite ohne eigenen
+        Push-Server technisch nicht machbar (bräuchte Web Push API + Backend) - die Meldung
+        kommt zuverlässig erst beim nächsten tatsächlichen Wiederaufwachen, nicht währenddessen.
+        Notification-Erlaubnis wird einmalig beim ersten StandBy-Öffnen dezent angefragt.
+      - Separater Wunsch "effiziente Fade-Animation" beim Cover/Hintergrund-Wechsel: bisheriges
+        "transition: background-image" im CSS war reiner Totcode (per Spezifikation nicht
+        animierbar, kein Browser unterstützt das) - der Wechsel war seit jeher hart/abrupt.
+        Durch echten opacity-Crossfade in JS ersetzt (syncStandByTrackInfo()), der NUR bei
+        tatsächlicher Bild-URL-Änderung greift (nicht bei jedem 5s-Poll mit demselben Song) -
+        kein Dauerloop, kostet also nichts im Ruhezustand.
+
+    [FIX/FEATURE] Release v24.73: Drei Nutzer-Meldungen behoben - App-Start zeigt laufende
+    Musik nicht sofort, Plattform-Auswahl braucht 2 Taps nach "Abbrechen", fehlendes Haptic
+      - Problem 1: App startet oft, während bereits Musik läuft, zeigt aber "Aktuell ist es
+        ruhig..." an, statt sofort den laufenden Song - erst irgendwann später (Nutzer dachte,
+        es bräuchte einen Songwechsel) taucht was auf. Root Cause: der allererste
+        fetchMusicData()-Aufruf beim Laden wartete bisher auf ein vorangestelltes
+        "await syncWorldwideTime()" - diese Funktion macht bis zu 3 SEQUENZIELLE eigene
+        Netzwerk-Anfragen (Zeit-Sync-Messung per HEAD-Request gegen die eigene Seite), bevor
+        der erste Musikdaten-Abruf überhaupt losgeht. Auf langsamerem Netz durchaus mehrere
+        Sekunden Verzögerung für etwas, das mit dem Musik-Status nichts zu tun hat. Fix:
+        fetchMusicData() läuft jetzt sofort und unabhängig, Zeit-Sync parallel im Hintergrund
+        statt blockierend davor. Nebenbei toten Code entfernt (der ursprüngliche
+        "if (trackIsPlaying) startProgressTracking()" direkt beim Laden konnte nie greifen,
+        da trackIsPlaying an dieser Stelle synchron immer noch false war, bevor überhaupt ein
+        Fetch zurückkam - updateMusicUI() ruft startProgressTracking() bei Bedarf ohnehin
+        selbst auf, sobald echte Daten da sind).
+      - Problem 2: Nutzer meldete - nach Antippen des Covers (Plattform-Auswahl öffnet sich)
+        und "Abbrechen" muss man 2x aufs Cover tippen, damit sie wieder erscheint. Root Cause:
+        toggleMusicPicker()s Schließen-Zweig hatte seinen eigenen setTimeout (900ms bis zum
+        endgültigen Verstecken) bisher NICHT in der pickerTimeout-Variable gespeichert, anders
+        als der Öffnen-Zweig. clearTimeout(pickerTimeout) am Funktionsanfang konnte ihn dadurch
+        nie abbrechen. Tippt man kurz nach "Abbrechen" erneut aufs Cover, öffnet sich das Menü
+        sichtbar neu, aber der alte, nie abgebrochene Timer feuert kurz danach trotzdem noch
+        und versteckt es sofort wieder - der zweite Tap trifft dann auf einen bereits
+        "beruhigten" Zustand. Fix: beide Timeouts nutzen jetzt dieselbe Variable.
+      - Problem 3 (Feature-Wunsch): Haptic-Feedback ergänzt bei echtem Songwechsel (nicht beim
+        Erstladen der Seite - das wäre unerwartetes Vibrieren direkt beim Öffnen) und beim
+        Öffnen/Schließen der Plattform-Auswahl - fehlte an beiden Stellen bisher komplett.
+
     [PERFORMANCE - KRITISCH] Release v24.72: GPU-Last im StandBy laut Nutzer nach v24.71
     IMMER NOCH zu hoch - zweite Kostenquelle gefunden + Blur-Radius direkt an der Wurzel reduziert
       - Nutzer-Feedback nach v24.71: keine spürbare Besserung.
@@ -3568,11 +3631,13 @@
         #standby-bg {
             position: absolute; inset: -30px; background-size: cover; background-position: center;
             filter: blur(var(--standby-bg-blur, 36px)) brightness(0.4) saturate(160%); transform: scale(1.28);
-            transition: background-image 0.8s ease, filter 0.3s ease;
+            /* FIX v24.74: "transition: background-image" ist reiner Totcode - background-image
+               lässt sich per CSS-Spezifikation gar nicht animieren, kein Browser unterstützt
+               das, der Wechsel war deshalb schon immer hart/abrupt. Entfernt, durch echten
+               opacity-Crossfade in syncStandByTrackInfo() (JS) ersetzt - siehe dort. opacity
+               hier ergänzt, filter/transform-Übergänge unverändert übernommen. */
+            transition: opacity 0.5s ease, filter 0.3s ease;
             animation: standby-kenburns 60s ease-in-out 1 forwards;
-            /* NEW: Korrektur - der Regler soll NICHT ein-/ausblenden (Opazität), sondern
-               den Weichzeichner-Grad steuern: höherer Regler-Wert = weniger Blur = das
-               Cover-Bild wird klarer/schärfer sichtbar, statt komplett zu verschwinden. */
         }
         /* KRITISCHER FIX v24.49: Nutzer maß per Task-Manager 14-16% DAUERHAFTE GPU-Last im
            StandBy auf einem Laptop (AMD Ryzen 7 4700U) - für einen fast statischen Screen
@@ -3628,7 +3693,7 @@
         }
         #standby-track { display: flex; align-items: center; gap: 20px; }
         #standby-track-art-wrap { position: relative; width: clamp(120px, 34vw, 190px); height: clamp(120px, 34vw, 190px); flex-shrink: 0; border-radius: 28px; overflow: hidden; box-shadow: 0 14px 40px rgba(0,0,0,0.65); }
-        #standby-track-art { width: 100%; height: 100%; object-fit: cover; display: block; }
+        #standby-track-art { width: 100%; height: 100%; object-fit: cover; display: block; transition: opacity 0.45s ease; }
         #standby-eq { position: absolute; bottom: 8px; left: 8px; display: flex; align-items: flex-end; gap: 3.5px; height: 20px; background: rgba(0,0,0,0.4); padding: 4px 7px; border-radius: 8px; }
         /* FIX v24.71 (KRITISCH - GPU): Nutzer maß per Task-Manager 10-15% GPU-Dauerlast im
            StandBy auf einer AMD-Ryzen-7-4700U-Laptop-GPU (Spitzen bis 20% bei Songwechsel) -
@@ -3871,7 +3936,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.72 · 2026-08-13';
+        const SITE_VERSION = 'v24.74 · 2026-08-13';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -4341,7 +4406,10 @@
                                             <input type="range" id="standby-opacity-slider" min="0" max="100" step="5" value="0" class="w-full accent-blue-500" oninput="updateStandbyOpacity(this.value)">
                                         </div>
                                         <!-- NEW: Bildschirm-an-Regler für StandBy (Screen Wake Lock API) -->
-                                        <button onclick="toggleStandbyWakeLock()" id="btn-toggle-wakelock" class="text-left text-[10px] xxs:text-xs sm:text-sm text-teal-400 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">Bildschirm an (StandBy): AUS</button>
+                                        <button onclick="toggleStandbyWakeLock()" id="btn-toggle-wakelock" class="text-left text-[10px] xxs:text-xs sm:text-sm text-teal-400 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">Bildschirm an (StandBy): AN</button>
+                                        <!-- NEU v24.74: Nutzer wünschte sich bessere Aufklärung darüber, was diese
+                                             Einstellung eigentlich tut, statt nur "AN/AUS" ohne Kontext. -->
+                                        <p id="settings-wakelock-hint" class="text-left text-[8px] xxs:text-[9px] text-slate-500 px-2 leading-snug -mt-1 mb-1">Hält den Bildschirm nur wach, solange Musik läuft - pausiert sie, darf das Handy normal einschlafen.</p>
                                         <p id="settings-version-label" class="text-left text-[9px] xxs:text-[10px] text-slate-500 px-2 py-1.5 font-mono select-all">Version —</p>
                                         
                                         <div class="h-px w-full bg-slate-700 my-1"></div>
@@ -4847,9 +4915,9 @@
                 changelog_type_feature: 'Neu', changelog_type_performance: 'Performance', changelog_type_fix: 'Fehlerbehebung',
                 tutorial_speak_aria: 'Diesen Schritt vorlesen',
                 t_whatsnew1_title: '✨ Was ist neu seit deinem letzten Besuch?',
-                t_whatsnew1_text: 'Noch ein GPU-Fix im StandBy-Lockscreen: die Text-Scroll-Animation bei langen Songtiteln hatte dasselbe Problem wie die EQ-Balken, plus der Weichzeichner-Radius der Karte wurde spürbar reduziert - insgesamt deutlich kühler.',
+                t_whatsnew1_text: 'StandBy bleibt jetzt smart wach, solange Musik läuft (spart Akku in Pausen automatisch), Cover/Hintergrund wechseln mit echtem Fade statt hartem Schnitt, und du bekommst Bescheid, falls Musik pausiert war während du weg warst.',
                 t_whatsnew2_title: '✨ Noch mehr Neues',
-                t_whatsnew2_text: 'StandBy-Lockscreen: Fortschrittsbalken und Sekunden-Anzeige liefen bisher gar nicht live mit, sondern sprangen nur alle 5 Sekunden - fühlte sich eingefroren an. Läuft jetzt sanft und sparsam mit.',
+                t_whatsnew2_text: 'App zeigt beim Start jetzt sofort den bereits laufenden Song statt erst später. Außerdem: Plattform-Auswahl beim Cover-Tap öffnet sich nach "Abbrechen" jetzt zuverlässig beim ersten Versuch, plus etwas mehr Haptic-Feedback.',
                 t_whatsnew3_title: '✨ Unter der Haube',
                 t_whatsnew3_text: 'Ich hab außerdem einmal gründlich durch den gesamten Code geschaut - Timer, Animationen, Speicherverbrauch - um sicherzugehen, dass sonst nichts unnötig Akku frisst. Alle Details wie immer in den vollständigen Release-Notes hier unten im Footer.',
                 tutorial_whatsnew_badge: '✨ Bonus: Was ist neu',
@@ -4909,6 +4977,9 @@
                 greeting_late_night: '🌙 Nachteule, wie ich sehe. Willkommen!',
                                 label_unsynced: 'Unsynced',
                                 toast_perf_suggestion: '📉 Läuft gerade etwas ruckelig? Aktivier den Low-End-Modus oben rechts für mehr Flüssigkeit.',
+                                standby_resumed_notice: '🎵 Willkommen zurück! Die Musik lief während du weg warst pausiert und läuft jetzt wieder.',
+                                standby_resumed_notice_title: 'Musik läuft wieder',
+                                standby_resumed_notice_body: 'Die Wiedergabe war pausiert, während dein Bildschirm gesperrt war, und wurde inzwischen fortgesetzt.',
                                 card_title_karting: 'Kartfahren',
                 card_teaser_karting: 'Kartland Sinn seit 19.07.2026...',
                 detail_karting_title: 'Kartfahren',
@@ -4921,7 +4992,7 @@
                 kart_stat_besttime: 'Bestzeit',
                 kart_stat_sessions: 'Sessions',
                 kart_stat_since: 'Seit',
-                                settings_wakelock: 'Bildschirm an (StandBy)',
+                                settings_wakelock: 'Bildschirm an (StandBy)', settings_wakelock_hint: 'Hält den Bildschirm nur wach, solange Musik läuft - pausiert sie, darf das Handy normal einschlafen.',
                 mini_click_to_open: 'Klicken zum Öffnen', mini_click_to_close: 'Klicken zum Schließen',
                 aria_cp: 'Befehlspalette öffnen', aria_install: 'Als App installieren', aria_island: 'Song-Details öffnen, nach oben wischen zum Ausblenden'
             },
@@ -5033,9 +5104,9 @@
                 changelog_type_feature: 'New', changelog_type_performance: 'Performance', changelog_type_fix: 'Fix',
                 tutorial_speak_aria: 'Read this step aloud',
                 t_whatsnew1_title: '✨ What\'s new since your last visit?',
-                t_whatsnew1_text: "Another GPU fix in the StandBy lock screen: the text-scroll animation for long song titles had the same issue as the EQ bars, plus the card's blur radius itself was reduced - noticeably cooler overall.",
+                t_whatsnew1_text: "StandBy now stays smartly awake while music plays (auto-saves battery during pauses), cover/background changes now use a real fade instead of a hard cut, and you'll get notified if music was paused while you were away.",
                 t_whatsnew2_title: '✨ Even more news',
-                t_whatsnew2_text: "StandBy lock screen: the progress bar and seconds display weren't updating live at all, only jumping every 5 seconds - felt frozen. Now runs smoothly and efficiently.",
+                t_whatsnew2_text: "The app now shows the already-playing song immediately on start instead of only later. Also: the platform picker on cover tap now reliably reopens on the first try after 'Cancel', plus a bit more haptic feedback.",
                 t_whatsnew3_title: '✨ Under the hood',
                 t_whatsnew3_text: "I also did a thorough pass through the whole codebase - timers, animations, memory usage - to make sure nothing else is quietly draining battery. Full details as always in the release notes down in the footer.",
                 tutorial_whatsnew_badge: "✨ Bonus: What's new",
@@ -5095,6 +5166,9 @@
                 greeting_late_night: '🌙 A night owl, I see. Welcome!',
                                 label_unsynced: 'Unsynced',
                                 toast_perf_suggestion: '📉 Feeling a bit choppy? Turn on Low-End Mode (top right) for smoother performance.',
+                                standby_resumed_notice: '🎵 Welcome back! Playback was paused while you were away and has resumed.',
+                                standby_resumed_notice_title: 'Playback resumed',
+                                standby_resumed_notice_body: 'Playback was paused while your screen was locked and has since resumed.',
                                 card_title_karting: 'Go-Karting',
                 card_teaser_karting: 'Kartland Sinn since 07/19/2026...',
                 detail_karting_title: 'Go-Karting',
@@ -5107,7 +5181,7 @@
                 kart_stat_besttime: 'Best Time',
                 kart_stat_sessions: 'Sessions',
                 kart_stat_since: 'Since',
-                                settings_wakelock: 'Keep Screen On (StandBy)',
+                                settings_wakelock: 'Keep Screen On (StandBy)', settings_wakelock_hint: 'Keeps the screen on only while music is playing - once paused, the phone can sleep normally.',
                 mini_click_to_open: 'Click to open', mini_click_to_close: 'Click to close',
                 aria_cp: 'Open command palette', aria_install: 'Install as app', aria_island: 'Open song details, swipe up to dismiss'
             },
@@ -5219,9 +5293,9 @@
                 changelog_type_feature: 'Nuevo', changelog_type_performance: 'Rendimiento', changelog_type_fix: 'Corrección',
                 tutorial_speak_aria: 'Escuchar este paso',
                 t_whatsnew1_title: '✨ ¿Qué hay de nuevo desde tu última visita?',
-                t_whatsnew1_text: 'Otra corrección de GPU en la pantalla de bloqueo StandBy: la animación de desplazamiento de texto tenía el mismo problema que las barras de EQ, además se redujo el radio de desenfoque de la tarjeta - notablemente más fresco en general.',
+                t_whatsnew1_text: 'StandBy ahora se mantiene encendida de forma inteligente mientras suena música (ahorra batería en las pausas), la portada/fondo cambian con un fundido real en vez de un corte abrupto, y recibirás un aviso si la música estuvo pausada mientras no estabas.',
                 t_whatsnew2_title: '✨ Más novedades',
-                t_whatsnew2_text: 'Pantalla de bloqueo StandBy: la barra de progreso y el contador de segundos no se actualizaban en vivo, solo saltaban cada 5 segundos - se sentía congelado. Ahora funciona de forma suave y eficiente.',
+                t_whatsnew2_text: 'La app ahora muestra la canción que ya está sonando inmediatamente al iniciar, en vez de más tarde. Además: el selector de plataformas al tocar la portada ahora se reabre de forma fiable al primer intento tras "Cancelar", más algo de retroalimentación háptica.',
                 t_whatsnew3_title: '✨ Bajo el capó',
                 t_whatsnew3_text: 'También revisé a fondo todo el código - temporizadores, animaciones, uso de memoria - para asegurarme de que nada más consuma batería innecesariamente. Todos los detalles, como siempre, en las notas de versión completas al pie de página.',
                 tutorial_whatsnew_badge: '✨ Extra: Novedades',
@@ -5281,6 +5355,9 @@
                 greeting_late_night: '🌙 Búho nocturno, por lo que veo. ¡Bienvenido!',
                                 label_unsynced: 'Sin sincronizar',
                                 toast_perf_suggestion: '📉 ¿Va un poco lento? Activa el Modo de Bajo Rendimiento (arriba a la derecha) para más fluidez.',
+                                standby_resumed_notice: '🎵 ¡Bienvenido de nuevo! La reproducción estuvo pausada mientras no estabas y ya se reanudó.',
+                                standby_resumed_notice_title: 'Reproducción reanudada',
+                                standby_resumed_notice_body: 'La reproducción estuvo pausada mientras tu pantalla estaba bloqueada y ya se reanudó.',
                                 card_title_karting: 'Karting',
                 card_teaser_karting: 'Kartland Sinn desde el 19/07/2026...',
                 detail_karting_title: 'Karting',
@@ -5293,7 +5370,7 @@
                 kart_stat_besttime: 'Mejor Tiempo',
                 kart_stat_sessions: 'Sesiones',
                 kart_stat_since: 'Desde',
-                                settings_wakelock: 'Pantalla Encendida (StandBy)',
+                                settings_wakelock: 'Pantalla Encendida (StandBy)', settings_wakelock_hint: 'Mantiene la pantalla encendida solo mientras suena música - al pausar, el teléfono puede dormir normalmente.',
                 mini_click_to_open: 'Clic para abrir', mini_click_to_close: 'Clic para cerrar',
                 aria_cp: 'Abrir paleta de comandos', aria_install: 'Instalar como app', aria_island: 'Abrir detalles de la canción, desliza arriba para ocultar'
             },
@@ -5405,9 +5482,9 @@
                 changelog_type_feature: 'Nouveau', changelog_type_performance: 'Performance', changelog_type_fix: 'Correction',
                 tutorial_speak_aria: 'Écouter cette étape',
                 t_whatsnew1_title: '✨ Quoi de neuf depuis ta dernière visite ?',
-                t_whatsnew1_text: "Encore une correction GPU dans l'écran de verrouillage StandBy : l'animation de défilement du texte avait le même problème que les barres d'égaliseur, et le rayon de flou de la carte a été réduit - nettement plus frais dans l'ensemble.",
+                t_whatsnew1_text: "StandBy reste désormais allumé intelligemment pendant que la musique joue (économise la batterie en pause), la pochette/le fond changent avec un vrai fondu au lieu d'un changement brutal, et tu seras averti si la musique était en pause pendant ton absence.",
                 t_whatsnew2_title: '✨ Encore plus de nouveautés',
-                t_whatsnew2_text: "Écran de verrouillage StandBy : la barre de progression et l'affichage des secondes ne se mettaient pas à jour en direct, ils sautaient toutes les 5 secondes - ça paraissait figé. Fonctionne désormais en douceur et efficacement.",
+                t_whatsnew2_text: "L'application affiche désormais immédiatement le morceau déjà en cours au démarrage, au lieu de plus tard. De plus : le sélecteur de plateformes en tapant sur la pochette se rouvre maintenant de façon fiable dès le premier essai après « Annuler », avec un peu plus de retour haptique.",
                 t_whatsnew3_title: '✨ Sous le capot',
                 t_whatsnew3_text: "J'ai aussi fait une revue complète et approfondie du code - minuteurs, animations, utilisation mémoire - pour m'assurer que rien d'autre ne consomme discrètement de la batterie. Tous les détails, comme toujours, dans les notes de version complètes en bas de page.",
                 tutorial_whatsnew_badge: '✨ Bonus : Nouveautés',
@@ -5467,6 +5544,9 @@
                 greeting_late_night: '🌙 Un oiseau de nuit, à ce que je vois. Bienvenue !',
                                 label_unsynced: 'Non synchronisé',
                                 toast_perf_suggestion: '📉 Un peu saccadé ? Active le mode basse consommation (en haut à droite) pour plus de fluidité.',
+                                standby_resumed_notice: '🎵 Content de te revoir ! La lecture était en pause pendant ton absence et a repris.',
+                                standby_resumed_notice_title: 'Lecture reprise',
+                                standby_resumed_notice_body: "La lecture était en pause pendant que ton écran était verrouillé, et a repris depuis.",
                                 card_title_karting: 'Karting',
                 card_teaser_karting: 'Kartland Sinn depuis le 19/07/2026...',
                 detail_karting_title: 'Karting',
@@ -5479,7 +5559,7 @@
                 kart_stat_besttime: 'Meilleur Temps',
                 kart_stat_sessions: 'Sessions',
                 kart_stat_since: 'Depuis',
-                                settings_wakelock: 'Écran Allumé (StandBy)',
+                                settings_wakelock: 'Écran Allumé (StandBy)', settings_wakelock_hint: "Garde l'écran allumé uniquement pendant que la musique joue - une fois en pause, le téléphone peut s'endormir normalement.",
                 mini_click_to_open: 'Cliquer pour ouvrir', mini_click_to_close: 'Cliquer pour fermer',
                 aria_cp: 'Ouvrir la palette de commandes', aria_install: 'Installer comme appli', aria_island: 'Ouvrir les détails du morceau, glisser vers le haut pour masquer'
             },
@@ -5591,9 +5671,9 @@
                 changelog_type_feature: 'Novo', changelog_type_performance: 'Performance', changelog_type_fix: 'Correção',
                 tutorial_speak_aria: 'Ouvir esta etapa',
                 t_whatsnew1_title: '✨ O que há de novo desde sua última visita?',
-                t_whatsnew1_text: 'Mais uma correção de GPU na tela de bloqueio StandBy: a animação de rolagem de texto tinha o mesmo problema das barras de EQ, além disso o raio de desfoque do cartão foi reduzido - visivelmente mais fresco no geral.',
+                t_whatsnew1_text: 'O StandBy agora permanece ligado de forma inteligente enquanto a música toca (economiza bateria nas pausas), a capa/fundo mudam com um fade real em vez de um corte abrupto, e você será avisado se a música estava pausada enquanto estava fora.',
                 t_whatsnew2_title: '✨ Ainda mais novidades',
-                t_whatsnew2_text: 'Tela de bloqueio StandBy: a barra de progresso e o contador de segundos não atualizavam ao vivo, só pulavam a cada 5 segundos - parecia congelado. Agora roda de forma suave e eficiente.',
+                t_whatsnew2_text: 'O app agora mostra a música que já está tocando imediatamente ao iniciar, em vez de só depois. Além disso: o seletor de plataformas ao tocar na capa agora reabre de forma confiável na primeira tentativa após "Cancelar", com um pouco mais de feedback tátil.',
                 t_whatsnew3_title: '✨ Por baixo do capô',
                 t_whatsnew3_text: 'Também revisei todo o código a fundo - temporizadores, animações, uso de memória - para garantir que mais nada consuma bateria desnecessariamente. Todos os detalhes, como sempre, nas notas de versão completas no rodapé.',
                 tutorial_whatsnew_badge: '✨ Bônus: Novidades',
@@ -5653,6 +5733,9 @@
                 greeting_late_night: '🌙 Uma coruja noturna, pelo visto. Seja bem-vindo!',
                                 label_unsynced: 'Não sincronizado',
                                 toast_perf_suggestion: '📉 Meio travando? Ative o Modo de Baixo Desempenho (canto superior direito) pra ficar mais suave.',
+                                standby_resumed_notice: '🎵 Bem-vindo de volta! A reprodução estava pausada enquanto você estava fora e foi retomada.',
+                                standby_resumed_notice_title: 'Reprodução retomada',
+                                standby_resumed_notice_body: 'A reprodução estava pausada enquanto sua tela estava bloqueada e foi retomada.',
                                 card_title_karting: 'Kart',
                 card_teaser_karting: 'Kartland Sinn desde 19/07/2026...',
                 detail_karting_title: 'Kart',
@@ -5665,7 +5748,7 @@
                 kart_stat_besttime: 'Melhor Tempo',
                 kart_stat_sessions: 'Sessões',
                 kart_stat_since: 'Desde',
-                                settings_wakelock: 'Tela Ligada (StandBy)',
+                                settings_wakelock: 'Tela Ligada (StandBy)', settings_wakelock_hint: 'Mantém a tela ligada apenas enquanto a música toca - ao pausar, o celular pode dormir normalmente.',
                 mini_click_to_open: 'Clique para abrir', mini_click_to_close: 'Clique para fechar',
                 aria_cp: 'Abrir paleta de comandos', aria_install: 'Instalar como app', aria_island: 'Abrir detalhes da música, deslize para cima para ocultar'
             },
@@ -5777,9 +5860,9 @@
                 changelog_type_feature: 'Yeni', changelog_type_performance: 'Performans', changelog_type_fix: 'Düzeltme',
                 tutorial_speak_aria: 'Bu adımı sesli oku',
                 t_whatsnew1_title: '✨ Son ziyaretinden beri neler değişti?',
-                t_whatsnew1_text: 'StandBy kilit ekranında bir GPU düzeltmesi daha: metin kaydırma animasyonu EQ çubuklarıyla aynı soruna sahipti, ayrıca kartın bulanıklık yarıçapı azaltıldı - genel olarak gözle görülür şekilde daha serin.',
+                t_whatsnew1_text: 'StandBy artık müzik çalarken akıllıca uyanık kalıyor (duraklamalarda otomatik pil tasarrufu), kapak/arka plan artık sert kesme yerine gerçek geçişle değişiyor ve sen yokken müzik duraklatılmışsa bildirim alacaksın.',
                 t_whatsnew2_title: '✨ Daha fazla yenilik',
-                t_whatsnew2_text: 'StandBy kilit ekranı: ilerleme çubuğu ve saniye göstergesi canlı güncellenmiyordu, sadece her 5 saniyede bir atlıyordu - donmuş gibi hissettiriyordu. Artık akıcı ve verimli şekilde çalışıyor.',
+                t_whatsnew2_text: 'Uygulama artık başlangıçta zaten çalmakta olan şarkıyı daha sonra değil hemen gösteriyor. Ayrıca: kapak resmine dokunarak açılan platform seçici artık "İptal"den sonra ilk denemede güvenilir şekilde yeniden açılıyor, biraz daha fazla dokunsal geri bildirimle birlikte.',
                 t_whatsnew3_title: '✨ Perde arkasında',
                 t_whatsnew3_text: 'Ayrıca tüm kod tabanını baştan sona derinlemesine gözden geçirdim - zamanlayıcılar, animasyonlar, bellek kullanımı - başka hiçbir şeyin sessizce pil tüketmediğinden emin olmak için. Her zamanki gibi tüm ayrıntılar alt bilgideki sürüm notlarında.',
                 tutorial_whatsnew_badge: '✨ Bonus: Yenilikler',
@@ -5839,6 +5922,9 @@
                 greeting_late_night: '🌙 Anlaşılan gece kuşusun. Hoş geldin!',
                                 label_unsynced: 'Senkronize Değil',
                                 toast_perf_suggestion: '📉 Biraz takılıyor mu? Daha akıcı olması için sağ üstteki Düşük Performans Modunu aç.',
+                                standby_resumed_notice: '🎵 Tekrar hoş geldin! Sen yokken çalma duraklatılmıştı, şimdi devam ediyor.',
+                                standby_resumed_notice_title: 'Çalma devam ediyor',
+                                standby_resumed_notice_body: 'Ekranın kilitliyken çalma duraklatılmıştı ve o zamandan beri devam ediyor.',
                                 card_title_karting: 'Kart Yarışı',
                 card_teaser_karting: '19.07.2026\'dan beri Kartland Sinn...',
                 detail_karting_title: 'Kart Yarışı',
@@ -5851,7 +5937,7 @@
                 kart_stat_besttime: 'En İyi Süre',
                 kart_stat_sessions: 'Seanslar',
                 kart_stat_since: 'Beri',
-                                settings_wakelock: 'Ekranı Açık Tut (StandBy)',
+                                settings_wakelock: 'Ekranı Açık Tut (StandBy)', settings_wakelock_hint: 'Ekranı yalnızca müzik çalarken açık tutar - duraklatıldığında telefon normal şekilde uyuyabilir.',
                 mini_click_to_open: 'Açmak için tıkla', mini_click_to_close: 'Kapatmak için tıkla',
                 aria_cp: 'Komut paletini aç', aria_install: 'Uygulama olarak yükle', aria_island: 'Şarkı detaylarını aç, gizlemek için yukarı kaydır'
             }
@@ -6009,6 +6095,7 @@
             // widerspiegeln, nicht einen festen Text - siehe Begründung bei syncWakeLockButtonLabel.
             const wakeLockBtn = document.getElementById('btn-toggle-wakelock');
             if (wakeLockBtn) wakeLockBtn.textContent = t('settings_wakelock') + ': ' + (standbyWakeLockEnabled ? t('on_label') : t('off_label'));
+            setText('settings-wakelock-hint', t('settings_wakelock_hint'));
             setText('footer-created-by', t('footer_created_by'));
 
             // NEW: fallbackMessages / secretMessages Arrays in-place mit neuer Sprache befüllen
@@ -6385,9 +6472,18 @@
         let standByActive = false;
         // NEW: Screen Wake Lock - hält den Bildschirm während StandBy aktiv wach, damit
         // das Handy nicht nach der üblichen Zeit automatisch abdunkelt/sperrt, während man
-        // es z.B. als Nachttisch-Uhr/Now-Playing-Anzeige nutzt. Standardmäßig AUS, da das
-        // mehr Akku verbraucht - bewusst eine Nutzer-Entscheidung, keine Vorgabe.
-        let standbyWakeLockEnabled = localStorage.getItem('standbyWakeLock') === 'true';
+        // es z.B. als Nachttisch-Uhr/Now-Playing-Anzeige nutzt.
+        // FIX v24.74: Nutzer meldete - StandBy "friert ein" und Bilder laden nach dem
+        // Wiederöffnen langsam. Root Cause war KEIN Bug, sondern genau dieses Feature: bisher
+        // standardmäßig AUS (Akku-Grund), das Handy schlief dadurch nach der normalen
+        // Display-Timeout-Zeit tatsächlich komplett ein (echter System-Tiefschlaf, kein
+        // JS/CSS-Fehler) - danach braucht Chrome beim Aufwachen wieder Zeit, um
+        // Bild-Puffer neu aufzubauen, was wie "eingefroren" wirkt. Jetzt smart statt blunt:
+        // Wake Lock standardmäßig AN, aber nur gehalten, SOLANGE tatsächlich Musik läuft -
+        // pausiert die Musik, wird der Wake Lock automatisch freigegeben (siehe
+        // updateWakeLockForPlaybackState()), das Handy darf dann ganz normal schlafen. Deutlich
+        // günstiger als ein blindes Dauer-An, aber deckt trotzdem den Hauptnutzen ab.
+        let standbyWakeLockEnabled = localStorage.getItem('standbyWakeLock') !== 'false';
         let activeWakeLockSentinel = null;
         window.toggleStandbyWakeLock = function() {
             haptic(10);
@@ -6395,7 +6491,7 @@
             localStorage.setItem('standbyWakeLock', standbyWakeLockEnabled);
             const btn = document.getElementById('btn-toggle-wakelock');
             if (btn) btn.textContent = t('settings_wakelock') + ': ' + (standbyWakeLockEnabled ? t('on_label') : t('off_label'));
-            if (standbyWakeLockEnabled && standByActive) requestStandbyWakeLock();
+            if (standbyWakeLockEnabled && standByActive) updateWakeLockForPlaybackState();
             else releaseStandbyWakeLock();
         };
         async function requestStandbyWakeLock() {
@@ -6410,14 +6506,58 @@
                 activeWakeLockSentinel = null;
             }
         }
+        // NEU v24.74: Zentrale Stelle, die Wake Lock automatisch mit dem tatsächlichen
+        // Wiedergabe-Status synchron hält, statt ihn nur einmalig beim Öffnen von StandBy zu
+        // setzen. Läuft Musik -> Wake Lock halten. Pausiert sie -> freigeben, Handy darf normal
+        // einschlafen (spart Akku in der Pause, ohne dass der Nutzer manuell eingreifen muss).
+        function updateWakeLockForPlaybackState() {
+            if (!standByActive || !standbyWakeLockEnabled) return;
+            if (trackIsPlaying) requestStandbyWakeLock();
+            else releaseStandbyWakeLock();
+        }
         // Manche Browser geben den Wake Lock automatisch frei, sobald der Tab kurz in den
         // Hintergrund wechselt (z.B. beim Umschalten der App) - beim Zurückkehren muss er
         // dann erneut angefragt werden, falls StandBy noch aktiv ist.
         document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'visible' && standByActive && standbyWakeLockEnabled && !activeWakeLockSentinel) {
+            if (document.visibilityState === 'visible' && standByActive && standbyWakeLockEnabled && trackIsPlaying && !activeWakeLockSentinel) {
                 requestStandbyWakeLock();
             }
         });
+
+        // NEU v24.74: "Willkommen zurück"-Meldung - Nutzerwunsch: irgendwie informiert werden,
+        // wenn während man weg war (Bildschirm gesperrt/Tab nicht sichtbar) die Musik pausiert
+        // UND danach innerhalb von 30 Minuten wieder fortgesetzt wurde. EHRLICHE EINSCHRÄNKUNG:
+        // eine echte Push-Benachrichtigung MITTEN im Tiefschlaf des Geräts ist auf einer
+        // statischen GitHub-Pages-Seite ohne eigenen Push-Server technisch nicht machbar
+        // (bräuchte die Web Push API + ein eigenes Backend, das den Push auslöst). Was
+        // zuverlässig geht: sofort beim nächsten tatsächlichen Wiederaufwachen der Seite
+        // prüfen und melden - Toast in der Seite + System-Benachrichtigung, falls erlaubt.
+        let awayInfo = null;
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                awayInfo = { at: Date.now(), wasPlaying: trackIsPlaying, wasStandBy: standByActive };
+            } else if (awayInfo) {
+                const info = awayInfo;
+                awayInfo = null;
+                const awayMs = Date.now() - info.at;
+                if (info.wasStandBy && !info.wasPlaying && awayMs <= 30 * 60 * 1000) {
+                    fetchMusicData().then(() => {
+                        if (trackIsPlaying) notifyPlaybackResumedWhileAway();
+                    });
+                }
+            }
+        });
+        function notifyPlaybackResumedWhileAway() {
+            if (typeof showToast === 'function') showToast(t('standby_resumed_notice'), 6000);
+            if ('Notification' in window && Notification.permission === 'granted') {
+                try {
+                    new Notification(t('standby_resumed_notice_title'), {
+                        body: t('standby_resumed_notice_body'),
+                        icon: 'icon-192.png'
+                    });
+                } catch (e) { /* egal, der In-App-Toast oben wurde ja schon gezeigt */ }
+            }
+        }
         let standByInterval = null;
         let standByShiftInterval = null;
         let diHideTimeout = null;
@@ -8471,7 +8611,18 @@
                 // StandBy sich wirklich wie ein echter Lockscreen anfühlt, ohne Browser-UI
                 // oder sichtbare Scrollbar drumherum.
                 document.documentElement.classList.add('standby-fullscreen-lock');
-                requestStandbyWakeLock();
+                // FIX v24.74: unbedingtes requestStandbyWakeLock() durch die smarte Variante
+                // ersetzt - hält den Bildschirm nur wach, wenn beim Öffnen von StandBy
+                // tatsächlich Musik läuft, nicht blind immer.
+                updateWakeLockForPlaybackState();
+                // NEU v24.74: Einmalige, dezente Anfrage für System-Benachrichtigungen -
+                // ermöglicht die "Willkommen zurück"-Meldung (siehe notifyPlaybackResumedWhileAway())
+                // auch als echte System-Benachrichtigung, nicht nur als In-App-Toast. Fragt nur,
+                // wenn der Nutzer noch nie gefragt wurde (Notification.permission === 'default')
+                // - lehnt er ab oder ignoriert es, wird nie wieder gefragt, Toast bleibt trotzdem.
+                if ('Notification' in window && Notification.permission === 'default') {
+                    Notification.requestPermission().catch(() => {});
+                }
                 const fsEl = document.documentElement;
                 const requestFs = fsEl.requestFullscreen || fsEl.webkitRequestFullscreen || fsEl.msRequestFullscreen;
                 if (requestFs) {
@@ -8623,14 +8774,19 @@
             if (standByActive) setupStandbyMarquee();
 
             if (isIdle) {
-                if (img) img.removeAttribute('src');
-                if (bg) bg.style.backgroundImage = 'none';
+                if (img) { img.removeAttribute('src'); img.style.opacity = ''; }
+                if (bg) { bg.style.backgroundImage = 'none'; bg.style.opacity = ''; }
             } else {
-                // FIX v24.63: Nutzer meldete - kein Cover im StandBy-Lockscreen, wenn die
-                // Haupt-Bildquelle mal ausfällt. Weder das Bild noch der Ambient-Hintergrund
-                // hatten bisher eine Fehlerbehandlung - jetzt derselbe Rückfall wie bei der
-                // Haupt-Musikkarte und der Dynamic Island: iTunes-Suche versuchen, sonst
-                // generisches Platzhalterbild.
+                // FIX v24.74: Nutzer wünschte sich eine "effiziente Fade-Animation" beim
+                // Cover/Hintergrund-Wechsel im StandBy - bisher hart/abrupt, da
+                // "transition: background-image" (siehe CSS-Kommentar bei #standby-bg) gar
+                // nicht funktioniert. Echter opacity-Crossfade: nur wenn sich die Bild-URL
+                // TATSÄCHLICH ändert (nicht bei jedem 5s-Poll mit demselben Song, sonst würde
+                // ständig unnötig neu geblendet) - kurz ausblenden, neues Bild vorladen,
+                // wieder einblenden. Bewusst nur EINMALIG pro echtem Wechsel (kein Dauerloop),
+                // kostet also nichts im Ruhezustand.
+                const isNewArt = !!artUrl && img && img.src !== artUrl;
+
                 if (img && artUrl) {
                     img.onerror = async function() {
                         this.onerror = null;
@@ -8638,11 +8794,31 @@
                         const finalUrl = itunesUrl || fallbackImg;
                         this.src = finalUrl;
                         if (bg) bg.style.backgroundImage = `url('${finalUrl}')`;
+                        this.style.opacity = '1';
                         this.onerror = () => { this.src = fallbackImg; };
                     };
-                    img.src = artUrl;
+                    if (isNewArt) {
+                        img.style.opacity = '0';
+                        img.onload = () => { img.style.opacity = '1'; };
+                        img.src = artUrl;
+                    } else {
+                        img.src = artUrl;
+                    }
                 }
-                if (bg && artUrl) bg.style.backgroundImage = `url('${artUrl}')`;
+                if (bg && artUrl) {
+                    if (isNewArt) {
+                        bg.style.opacity = '0';
+                        const preload = new Image();
+                        preload.onload = () => {
+                            bg.style.backgroundImage = `url('${artUrl}')`;
+                            requestAnimationFrame(() => { bg.style.opacity = '1'; });
+                        };
+                        preload.onerror = () => { bg.style.opacity = '1'; }; // Fallback: nicht dauerhaft unsichtbar bleiben
+                        preload.src = artUrl;
+                    } else {
+                        bg.style.backgroundImage = `url('${artUrl}')`;
+                    }
+                }
             }
         }
 
@@ -8956,6 +9132,22 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.74', date: "August 2026", type: 'feature', items: {
+                de: ["StandBy-Bildschirm bleibt jetzt smart wach, solange Musik läuft (spart Akku in Pausen automatisch)", "Echter Fade statt hartem Wechsel bei Cover/Hintergrund im StandBy", "Neu: Meldung, falls die Musik pausiert war während du weg warst und inzwischen weiterläuft"],
+                en: ["StandBy screen now stays smartly awake while music plays (auto-saves battery during pauses)", "Real fade instead of a hard cut for cover/background changes in StandBy", "New: notice if music was paused while you were away and has since resumed"],
+                es: ["La pantalla StandBy ahora se mantiene encendida de forma inteligente mientras suena música (ahorra batería automáticamente en las pausas)", "Fundido real en vez de cambio abrupto para la portada/fondo en StandBy", "Nuevo: aviso si la música estuvo pausada mientras no estabas y ya se reanudó"],
+                fr: ["L'écran StandBy reste désormais allumé intelligemment pendant que la musique joue (économise la batterie automatiquement en pause)", "Vrai fondu au lieu d'un changement brutal pour la pochette/le fond en StandBy", "Nouveau : notification si la musique était en pause pendant ton absence et a repris depuis"],
+                pt: ["A tela StandBy agora permanece ligada de forma inteligente enquanto a música toca (economiza bateria automaticamente nas pausas)", "Fade real em vez de troca abrupta para capa/fundo no StandBy", "Novo: aviso se a música estava pausada enquanto você estava fora e já foi retomada"],
+                tr: ["StandBy ekranı artık müzik çalarken akıllıca uyanık kalıyor (duraklamalarda otomatik pil tasarrufu)", "StandBy'da kapak/arka plan değişiminde sert geçiş yerine gerçek geçiş efekti", "Yeni: sen yokken müzik duraklatılmışsa ve o zamandan beri devam ediyorsa bildirim"],
+            }},
+            { version: 'v24.73', date: "August 2026", type: 'fix', items: {
+                de: ["App zeigt beim Start jetzt sofort den bereits laufenden Song statt erst später", "Plattform-Auswahl beim Cover-Tap brauchte nach \"Abbrechen\" manchmal 2 Taps zum erneuten Öffnen - behoben", "Haptic-Feedback bei Songwechsel und beim Öffnen der Plattform-Auswahl ergänzt"],
+                en: ["The app now shows the already-playing song immediately on start instead of only later", "The platform picker on cover tap sometimes needed 2 taps to reopen after \"Cancel\" - fixed", "Added haptic feedback on track change and when opening the platform picker"],
+                es: ["La app ahora muestra la canción que ya está sonando de inmediato al iniciar, en lugar de más tarde", "El selector de plataformas al tocar la portada a veces necesitaba 2 toques para reabrirse tras \"Cancelar\" - corregido", "Se añadió retroalimentación háptica al cambiar de canción y al abrir el selector de plataformas"],
+                fr: ["L'application affiche désormais immédiatement le morceau déjà en cours au démarrage, au lieu de plus tard", "Le sélecteur de plateformes en tapant sur la pochette nécessitait parfois 2 appuis pour se rouvrir après « Annuler » - corrigé", "Retour haptique ajouté au changement de morceau et à l'ouverture du sélecteur de plateformes"],
+                pt: ["O app agora mostra a música que já está tocando imediatamente ao iniciar, em vez de só depois", "O seletor de plataformas ao tocar na capa às vezes precisava de 2 toques para reabrir após \"Cancelar\" - corrigido", "Feedback tátil adicionado na troca de música e ao abrir o seletor de plataformas"],
+                tr: ["Uygulama artık başlangıçta zaten çalmakta olan şarkıyı daha sonra değil hemen gösteriyor", "Kapak resmine dokunarak açılan platform seçici, \"İptal\"den sonra bazen yeniden açılmak için 2 dokunuş gerektiriyordu - düzeltildi", "Şarkı değişiminde ve platform seçici açılırken dokunsal geri bildirim eklendi"],
+            }},
             { version: 'v24.72', date: "August 2026", type: 'performance', items: {
                 de: ["StandBy-Lockscreen: noch ein GPU-Fix - die Text-Scroll-Animation bei langen Songtiteln hatte dasselbe Problem wie die EQ-Balken, plus der Weichzeichner-Radius der Karte selbst wurde spürbar reduziert"],
                 en: ["StandBy lock screen: another GPU fix - the text-scroll animation for long song titles had the same issue as the EQ bars, plus the card's blur radius itself was noticeably reduced"],
@@ -10069,6 +10261,10 @@
         window.toggleMusicPicker = function(show) {
             if (mainMusicCard && !mainMusicCard.classList.contains('offline') && mPicker) {
                 clearTimeout(pickerTimeout);
+                // NEU v24.73: Haptic-Feedback beim Öffnen/Schließen der Plattform-Auswahl
+                // ergänzt (fehlte bisher komplett an dieser Stelle) - Nutzerwunsch nach mehr
+                // spürbarem "Leben" bei Interaktionen.
+                haptic(show ? 10 : 8);
                 if(show) {
                     mPicker.classList.remove('hidden', 'picker-closing');
                     void mPicker.offsetWidth;
@@ -10080,7 +10276,17 @@
                 } else {
                     mPicker.classList.remove('picker-opening');
                     mPicker.classList.add('picker-closing');
-                    setTimeout(() => {
+                    // FIX v24.73: Nutzer meldete - nach "Abbrechen" muss man 2x aufs Cover
+                    // tippen, damit die Plattform-Auswahl wieder erscheint. Root Cause: dieser
+                    // Schließen-Timeout wurde bisher NICHT in pickerTimeout gespeichert (anders
+                    // als der Öffnen-Timeout oben) - clearTimeout(pickerTimeout) am Funktions-
+                    // anfang konnte ihn dadurch nie abbrechen. Tippt man kurz nach "Abbrechen"
+                    // erneut aufs Cover, öffnet sich das Menü sichtbar neu, aber dieser alte,
+                    // nie abgebrochene Timer feuert kurz danach trotzdem noch und versteckt es
+                    // sofort wieder - der zweite Tap trifft dann auf einen bereits "beruhigten"
+                    // Zustand. Jetzt in derselben Variable gespeichert wie der Öffnen-Timeout,
+                    // damit clearTimeout() ihn zuverlässig erwischt.
+                    pickerTimeout = setTimeout(() => {
                         mPicker.classList.add('hidden');
                         mPicker.classList.remove('flex', 'picker-closing');
                     }, 900); 
@@ -11496,12 +11702,19 @@
                     // NEW: Dynamic Island 2.0 - kurzes Aufpoppen bei echtem Songwechsel
                     if (!isFirstLoad && isPlaying) {
                         triggerDynamicIsland(data.track.title, rawArtist, imgUrl);
+                        // NEU v24.73: Nutzer wünschte sich, dass sich die Seite "lebendiger"
+                        // anfühlt - kurzer, dezenter Haptic-Puls bei echtem Songwechsel
+                        // (NICHT beim Erstladen der Seite, das wäre unerwartetes Vibrieren
+                        // direkt beim Öffnen). Gleiche dezente Stärke wie die übrigen
+                        // Mini-Interaktionen auf der Seite (haptic(10)).
+                        haptic(10);
                     }
                     totalMs = trackDuration;
                     if (timeTotalEl) timeTotalEl.innerText = formatTime(totalMs);
                     
                     trackIsPlaying = isPlaying;
                     if (!isPlaying) stopProgressTracking(); // NEU v24.47: falls der neue Track direkt pausiert startet
+                    updateWakeLockForPlaybackState(); // NEU v24.74
                     serverBaseProgress = apiProgress + addedDelay;
                     localStartTime = performance.now();
                     currentMs = serverBaseProgress;
@@ -11511,12 +11724,14 @@
                 } else {
                     if (!trackIsPlaying && isPlaying) {
                         trackIsPlaying = true;
+                        updateWakeLockForPlaybackState(); // NEU v24.74
                         serverBaseProgress = apiProgress + addedDelay;
                         localStartTime = performance.now();
                         currentMs = serverBaseProgress;
                         syncLyricsUI(true, true);
                     } else if (trackIsPlaying && !isPlaying) {
                         trackIsPlaying = false;
+                        updateWakeLockForPlaybackState(); // NEU v24.74
                         stopProgressTracking(); // NEU v24.47: Intervall/rAF-Loop sofort stoppen, nicht erst beim nächsten Tick
                         currentMs = apiProgress + addedDelay;
                         syncLyricsUI(true, true);
@@ -11924,12 +12139,18 @@
         });
 
         (async () => {
-            setLyricsStyle(currentLyricsStyle); 
-            await syncWorldwideTime();
-            if (trackIsPlaying) {
-                startProgressTracking();
-            }
+            setLyricsStyle(currentLyricsStyle);
+            // FIX v24.73 (KRITISCH): Nutzer meldete - App startet oft, während bereits Musik
+            // läuft, zeigt aber "Aktuell ist es ruhig..." an statt sofort den laufenden Song,
+            // erst beim nächsten Songwechsel taucht was auf. Root Cause: fetchMusicData()
+            // wartete bisher auf ein vorangestelltes "await syncWorldwideTime()" - das macht
+            // bis zu 3 SEQUENZIELLE eigene Netzwerk-Anfragen (Zeit-Sync-Messung), bevor der
+            // erste Musikdaten-Abruf überhaupt losgeht. Auf langsamerem Netz durchaus mehrere
+            // Sekunden Verzögerung für etwas, das mit dem eigentlichen Musik-Status gar nichts
+            // zu tun hat. fetchMusicData() läuft jetzt sofort und unabhängig, Zeit-Sync
+            // parallel im Hintergrund statt blockierend davor.
             fetchMusicData();
+            syncWorldwideTime();
             setInterval(syncWorldwideTime, 600000);
         })();
 
