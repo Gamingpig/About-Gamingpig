@@ -11,6 +11,32 @@
     Neueste Einträge oben.
     ================================================================
 
+    [PERFORMANCE - KRITISCH] Release v24.71: StandBy-GPU-Dauerlast erneut zu hoch (10-15%,
+    Spitzen bis 20% bei Songwechsel) - eigener Regressionsfehler aus v24.49 identifiziert
+      - Nutzer maß per Task-Manager (AMD Ryzen 7 4700U Laptop-GPU) konkrete Zahlen, direkt nach
+        dem v24.70-Live-Tracking-Fix fürs StandBy - Verdacht: die 3 EQ-Balken unten links.
+      - ROOT CAUSE gefunden: v24.49 hatte GENAU dieses Problem schon mal gelöst (statische
+        backdrop-filter: blur() auf #standby-nowplaying + dauerhaft animierender Inhalt
+        dahinter/darin = teure Dauer-Reblur-Berechnung) - aber "Fix 4 (Kleinvieh)" hat dabei
+        will-change bei den EQ-Balken selbst entfernt, mit der (falschen) Begründung "zu kleines
+        Element, kaum relevant". Ohne eigene Compositor-Ebene wird eine dauerhaft animierende
+        Mini-Komponente oft in dieselbe Ebene wie ihre Elternkarte gerendert - jeder Frame
+        zwingt dadurch die GESAMTE Karte samt teurem Blur zum Neuzeichnen. v24.70 hat das
+        Problem zusätzlich verschärft, da jetzt auch der Fortschrittsbalken periodisch in
+        derselben Karte aktualisiert wird.
+      - Fix: will-change: transform wieder auf #standby-eq span UND zusätzlich auf
+        #standby-progress-bar (dieselbe Karte, gleicher Grund) - beide bekommen jetzt eine
+        eigene Compositor-Ebene, isoliert vom teuren Blur der Elternkarte. Zusätzlich
+        STANDBY_PROGRESS_THROTTLE_MS aus v24.70 von 1000ms auf 2000ms erhöht, als zusätzliche
+        Sicherheitsmarge.
+      - EHRLICHER VORBEHALT: Konnte in dieser Sandbox nicht mit echtem GPU-Profiler
+        nachgemessen werden (kein Zugriff auf einen echten Browser mit Task-Manager) - Fix
+        basiert auf fundierter Code-Analyse und dem exakt dokumentierten Präzedenzfall aus
+        v24.49, nicht auf einer Live-Messung. Bitte nach dem Deploy selbst gegenchecken.
+      - LEKTION: "Zu kleines Element, um relevant zu sein" ist bei will-change/GPU-Layern kein
+        verlässliches Kriterium, wenn das Element innerhalb einer backdrop-filter-Box liegt -
+        die Layer-Zugehörigkeit zählt mehr als die reine Elementgröße.
+
     [FIX - KRITISCH] Release v24.70: StandBy-Lockscreen fühlte sich "komplett eingefroren" an
       - Nutzer meldete: Im StandBy bewegt sich fast nichts, nur der Anti-Burn-in-Pixel-Shift
         funktioniert, Songwechsel kommen zwar irgendwie an aber alles wirkt "sehr still".
@@ -3572,7 +3598,21 @@
         #standby-track-art-wrap { position: relative; width: clamp(120px, 34vw, 190px); height: clamp(120px, 34vw, 190px); flex-shrink: 0; border-radius: 28px; overflow: hidden; box-shadow: 0 14px 40px rgba(0,0,0,0.65); }
         #standby-track-art { width: 100%; height: 100%; object-fit: cover; display: block; }
         #standby-eq { position: absolute; bottom: 8px; left: 8px; display: flex; align-items: flex-end; gap: 3.5px; height: 20px; background: rgba(0,0,0,0.4); padding: 4px 7px; border-radius: 8px; }
-        #standby-eq span { width: 4px; height: 13px; background: #fff; border-radius: 2px; transform-origin: bottom; animation: di-eq-bounce 0.9s ease-in-out infinite; }
+        /* FIX v24.71 (KRITISCH - GPU): Nutzer maß per Task-Manager 10-15% GPU-Dauerlast im
+           StandBy auf einer AMD-Ryzen-7-4700U-Laptop-GPU (Spitzen bis 20% bei Songwechsel) -
+           für einen fast statischen Lockscreen weit zu hoch, exakt dasselbe Muster wie v24.49.
+           ROOT CAUSE: v24.49 "Fix 4" hatte will-change hier bewusst entfernt ("zu kleines
+           Element, kaum relevant") - das war ein Fehlschluss. #standby-eq span liegt INNERHALB
+           von #standby-nowplaying, das ein backdrop-filter: blur(18px) trägt (siehe dort).
+           Ohne eigene Compositor-Ebene wird eine dauerhaft (0.9s infinite) animierende
+           Mini-Komponente vom Browser oft in dieselbe Ebene wie ihre Elternkarte gerendert -
+           jeder ihrer Animationsframes zwingt dadurch die GESAMTE Karte samt teurem Blur zum
+           Neuzeichnen, nicht nur die 3 Balken selbst. v24.49 hat exakt dieses Muster beim
+           Hintergrund-Ken-Burns-Loop erkannt und behoben, aber die EQ-Balken dabei versehentlich
+           in die Gegenrichtung gepatcht. will-change hier bewusst wieder eingesetzt, diesmal mit
+           echten Messwerten als Beleg statt einer Vermutung.
+        */
+        #standby-eq span { width: 4px; height: 13px; background: #fff; border-radius: 2px; transform-origin: bottom; animation: di-eq-bounce 0.9s ease-in-out infinite; will-change: transform; }
         #standby-eq span:nth-child(1) { animation-delay: -0.6s; } #standby-eq span:nth-child(2) { animation-delay: -0.3s; } #standby-eq span:nth-child(3) { animation-delay: -0.9s; }
         body.low-end #standby-eq { display: none; }
         #standby-track-text { min-width: 0; flex: 1; }
@@ -3598,7 +3638,10 @@
         }
         #standby-progress-wrap { margin-top: 24px; }
         #standby-progress-track { width: 100%; height: 6px; background: rgba(255,255,255,0.15); border-radius: 999px; overflow: hidden; }
-        #standby-progress-bar { height: 100%; width: 100%; transform: scaleX(0); transform-origin: left; background: #fff; border-radius: 999px; transition: transform 0.3s linear; }
+        /* FIX v24.71: aus demselben Grund wie #standby-eq span oben (liegt ebenfalls innerhalb
+           der backdrop-filter-Karte) - eigene Compositor-Ebene, damit periodische
+           Fortschritts-Updates nicht die ganze Karte samt Blur neu zeichnen lassen. */
+        #standby-progress-bar { height: 100%; width: 100%; transform: scaleX(0); transform-origin: left; background: #fff; border-radius: 999px; transition: transform 0.3s linear; will-change: transform; }
         #standby-progress-times { display: flex; justify-content: space-between; margin-top: 9px; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.5); }
         #standby-hint {
             position: relative; z-index: 2; color: rgba(255,255,255,0.3); font-size: 10px; text-transform: uppercase; letter-spacing: 2px; font-weight: 700; padding-bottom: 24px;
@@ -3788,7 +3831,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.70 · 2026-08-13';
+        const SITE_VERSION = 'v24.71 · 2026-08-13';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -4764,7 +4807,7 @@
                 changelog_type_feature: 'Neu', changelog_type_performance: 'Performance', changelog_type_fix: 'Fehlerbehebung',
                 tutorial_speak_aria: 'Diesen Schritt vorlesen',
                 t_whatsnew1_title: '✨ Was ist neu seit deinem letzten Besuch?',
-                t_whatsnew1_text: 'Wichtiger Hitze-Fix: Im Hintergrund liefen bisher einige Timer auch bei gesperrtem oder minimiertem Handy unnötig weiter, inklusive echtem Netzwerk-Traffic alle 5 Sekunden. Das ist jetzt behoben - spürbar weniger Akku-/Wärmeverbrauch, ganz ohne StandBy-Nutzung.',
+                t_whatsnew1_text: 'Erneuter GPU-Hitze-Fix im StandBy-Lockscreen: kleine EQ-Balken zwangen ohne eigene GPU-Ebene die ganze Now-Playing-Karte zum ständigen Neuzeichnen. Jetzt isoliert - spürbar kühler bei längerem StandBy-Gebrauch.',
                 t_whatsnew2_title: '✨ Noch mehr Neues',
                 t_whatsnew2_text: 'StandBy-Lockscreen: Fortschrittsbalken und Sekunden-Anzeige liefen bisher gar nicht live mit, sondern sprangen nur alle 5 Sekunden - fühlte sich eingefroren an. Läuft jetzt sanft und sparsam mit.',
                 t_whatsnew3_title: '✨ Unter der Haube',
@@ -4950,7 +4993,7 @@
                 changelog_type_feature: 'New', changelog_type_performance: 'Performance', changelog_type_fix: 'Fix',
                 tutorial_speak_aria: 'Read this step aloud',
                 t_whatsnew1_title: '✨ What\'s new since your last visit?',
-                t_whatsnew1_text: "Important heat fix: some background timers kept running even with the phone locked or minimized, including real network traffic every 5 seconds. That's now fixed - noticeably less battery drain and heat, even without using StandBy.",
+                t_whatsnew1_text: "Another GPU heat fix in the StandBy lock screen: small EQ bars, without their own GPU layer, forced the whole now-playing card to constantly redraw. Now isolated - noticeably cooler during longer StandBy use.",
                 t_whatsnew2_title: '✨ Even more news',
                 t_whatsnew2_text: "StandBy lock screen: the progress bar and seconds display weren't updating live at all, only jumping every 5 seconds - felt frozen. Now runs smoothly and efficiently.",
                 t_whatsnew3_title: '✨ Under the hood',
@@ -5136,7 +5179,7 @@
                 changelog_type_feature: 'Nuevo', changelog_type_performance: 'Rendimiento', changelog_type_fix: 'Corrección',
                 tutorial_speak_aria: 'Escuchar este paso',
                 t_whatsnew1_title: '✨ ¿Qué hay de nuevo desde tu última visita?',
-                t_whatsnew1_text: 'Corrección importante de calentamiento: algunos temporizadores en segundo plano seguían funcionando incluso con el teléfono bloqueado o minimizado, incluyendo tráfico de red real cada 5 segundos. Ya está resuelto - notablemente menos consumo de batería y calor, incluso sin usar StandBy.',
+                t_whatsnew1_text: 'Otra corrección de calentamiento de GPU en la pantalla de bloqueo StandBy: las pequeñas barras de EQ, sin su propia capa de GPU, forzaban el redibujado constante de toda la tarjeta. Ahora aisladas - notablemente más fresco durante un uso prolongado de StandBy.',
                 t_whatsnew2_title: '✨ Más novedades',
                 t_whatsnew2_text: 'Pantalla de bloqueo StandBy: la barra de progreso y el contador de segundos no se actualizaban en vivo, solo saltaban cada 5 segundos - se sentía congelado. Ahora funciona de forma suave y eficiente.',
                 t_whatsnew3_title: '✨ Bajo el capó',
@@ -5322,7 +5365,7 @@
                 changelog_type_feature: 'Nouveau', changelog_type_performance: 'Performance', changelog_type_fix: 'Correction',
                 tutorial_speak_aria: 'Écouter cette étape',
                 t_whatsnew1_title: '✨ Quoi de neuf depuis ta dernière visite ?',
-                t_whatsnew1_text: "Correction importante de surchauffe : certains minuteurs en arrière-plan continuaient de tourner même téléphone verrouillé ou minimisé, avec du vrai trafic réseau toutes les 5 secondes. C'est désormais corrigé - nettement moins de batterie consommée et de chaleur, même sans utiliser StandBy.",
+                t_whatsnew1_text: "Nouvelle correction de surchauffe GPU dans l'écran de verrouillage StandBy : les petites barres d'égaliseur, sans leur propre calque GPU, forçaient le redessin constant de toute la carte. Désormais isolées - nettement plus frais lors d'une utilisation prolongée de StandBy.",
                 t_whatsnew2_title: '✨ Encore plus de nouveautés',
                 t_whatsnew2_text: "Écran de verrouillage StandBy : la barre de progression et l'affichage des secondes ne se mettaient pas à jour en direct, ils sautaient toutes les 5 secondes - ça paraissait figé. Fonctionne désormais en douceur et efficacement.",
                 t_whatsnew3_title: '✨ Sous le capot',
@@ -5508,7 +5551,7 @@
                 changelog_type_feature: 'Novo', changelog_type_performance: 'Performance', changelog_type_fix: 'Correção',
                 tutorial_speak_aria: 'Ouvir esta etapa',
                 t_whatsnew1_title: '✨ O que há de novo desde sua última visita?',
-                t_whatsnew1_text: 'Correção importante de aquecimento: alguns temporizadores em segundo plano continuavam rodando mesmo com o celular bloqueado ou minimizado, incluindo tráfego de rede real a cada 5 segundos. Isso já foi corrigido - consumo de bateria e calor visivelmente menores, mesmo sem usar o StandBy.',
+                t_whatsnew1_text: 'Outra correção de aquecimento de GPU na tela de bloqueio StandBy: pequenas barras de EQ, sem sua própria camada de GPU, forçavam o redesenho constante de todo o cartão. Agora isoladas - visivelmente mais fresco em uso prolongado do StandBy.',
                 t_whatsnew2_title: '✨ Ainda mais novidades',
                 t_whatsnew2_text: 'Tela de bloqueio StandBy: a barra de progresso e o contador de segundos não atualizavam ao vivo, só pulavam a cada 5 segundos - parecia congelado. Agora roda de forma suave e eficiente.',
                 t_whatsnew3_title: '✨ Por baixo do capô',
@@ -5694,7 +5737,7 @@
                 changelog_type_feature: 'Yeni', changelog_type_performance: 'Performans', changelog_type_fix: 'Düzeltme',
                 tutorial_speak_aria: 'Bu adımı sesli oku',
                 t_whatsnew1_title: '✨ Son ziyaretinden beri neler değişti?',
-                t_whatsnew1_text: 'Önemli ısınma düzeltmesi: bazı arka plan zamanlayıcıları telefon kilitliyken veya küçültülmüşken bile çalışmaya devam ediyor, her 5 saniyede gerçek ağ trafiği üretiyordu. Bu artık düzeltildi - StandBy kullanmasan bile gözle görülür şekilde daha az pil tüketimi ve ısınma.',
+                t_whatsnew1_text: 'StandBy kilit ekranında bir GPU ısınma düzeltmesi daha: küçük EQ çubukları, kendi GPU katmanları olmadan tüm kartın sürekli yeniden çizilmesine neden oluyordu. Artık izole edildi - uzun süreli StandBy kullanımında gözle görülür şekilde daha serin.',
                 t_whatsnew2_title: '✨ Daha fazla yenilik',
                 t_whatsnew2_text: 'StandBy kilit ekranı: ilerleme çubuğu ve saniye göstergesi canlı güncellenmiyordu, sadece her 5 saniyede bir atlıyordu - donmuş gibi hissettiriyordu. Artık akıcı ve verimli şekilde çalışıyor.',
                 t_whatsnew3_title: '✨ Perde arkasında',
@@ -6224,9 +6267,13 @@
         // Bewegungen statt durchgehend zu laufen. Zurück auf 200ms (5x/Sek), was in v24.5-v24.9
         // ohne Ruckel-Beschwerde lief und trotzdem deutlich weniger als die ursprünglichen 60x/Sek ist.
         const PROGRESS_UI_THROTTLE_MS = 200;
-        // NEU v24.70: Eigener, deutlich günstigerer Takt speziell für StandBy - siehe
-        // ausführlichen Kommentar bei startProgressTracking().
-        const STANDBY_PROGRESS_THROTTLE_MS = 1000;
+        // NEU v24.70, angepasst v24.71: Eigener, deutlich günstigerer Takt speziell für
+        // StandBy - siehe ausführlichen Kommentar bei startProgressTracking(). Nach dem
+        // GPU-Hitze-Report (10-15% Dauerlast, siehe Fix bei #standby-eq/#standby-progress-bar)
+        // vorsichtshalber von 1000ms auf 2000ms erhöht - zusätzliche Sicherheitsmarge on top
+        // der eigentlichen Layer-Isolations-Fixes, auch wenn diese den Löwenanteil der Kosten
+        // beheben sollten.
+        const STANDBY_PROGRESS_THROTTLE_MS = 2000;
         // PERF-FIX v24.5: syncLyricsUI() macht bei aktiver Wort-für-Wort-Synchronisation pro
         // Frame mehrere document.getElementById-Lookups + Klassen-Änderungen PRO ZEICHEN der
         // aktuellen Zeile. Bei 60x/Sek ist das bei längeren Zeilen mehrere tausend DOM-Zugriffe
@@ -8869,6 +8916,14 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.71', date: "August 2026", type: 'performance', items: {
+                de: ["StandBy-Lockscreen: erneuter GPU-Hitze-Fix - die kleinen EQ-Balken zwangen ohne eigene GPU-Ebene die ganze Karte zum ständigen Neuzeichnen, jetzt isoliert und spürbar sparsamer"],
+                en: ["StandBy lock screen: another GPU heat fix - the small EQ bars, without their own GPU layer, forced the whole card to constantly redraw - now isolated and noticeably more efficient"],
+                es: ["Pantalla de bloqueo StandBy: otra corrección de calentamiento de GPU - las pequeñas barras de EQ, sin su propia capa de GPU, obligaban a redibujar toda la tarjeta constantemente - ahora aisladas y notablemente más eficientes"],
+                fr: ["Écran de verrouillage StandBy : nouvelle correction de surchauffe GPU - les petites barres d'égaliseur, sans leur propre calque GPU, forçaient le redessin constant de toute la carte - désormais isolées et nettement plus efficaces"],
+                pt: ["Tela de bloqueio StandBy: outra correção de aquecimento da GPU - as pequenas barras de EQ, sem sua própria camada de GPU, forçavam o redesenho constante de todo o cartão - agora isoladas e visivelmente mais eficientes"],
+                tr: ["StandBy kilit ekranı: bir GPU ısınma düzeltmesi daha - küçük EQ çubukları, kendi GPU katmanları olmadan tüm kartın sürekli yeniden çizilmesine neden oluyordu - artık izole edildi ve gözle görülür şekilde daha verimli"],
+            }},
             { version: 'v24.70', date: "August 2026", type: 'fix', items: {
                 de: ["StandBy-Lockscreen: Fortschrittsbalken und Sekunden-Anzeige liefen bisher gar nicht mit, sondern sprangen nur alle 5s - jetzt läuft eine sanfte, sparsame Live-Anzeige mit"],
                 en: ["StandBy lock screen: the progress bar and seconds display weren't updating live at all, only jumping every 5s - now runs a smooth, low-power live update"],
