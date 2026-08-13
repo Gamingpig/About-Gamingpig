@@ -11,6 +11,24 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FEATURE] Release v24.82: Drei weitere StandBy-Designs auf Nutzerwunsch ("Wollen wir MEHR
+    LAYOUTS machen?")
+      - "Vinyl": Cover kreisrund wie eine Schallplatte samt dezentem Rillen-Ring und Mittelloch-
+        Illusion (per ::after) - bewusst OHNE Dreh-Animation, um nach mehreren Runden GPU-
+        Optimierung nicht wieder eine neue Dauerschleife einzuführen. EQ-Balken hier
+        ausgeblendet, passen optisch nicht zur runden Karte.
+      - "Split": edge-to-edge geteilter Bildschirm, Uhr auf der einen, Now-Playing-Karte auf
+        der anderen Seite - nutzt dafür bewusst KEIN backdrop-filter (spart sogar zusätzlich
+        GPU gegenüber "Classic"). Funktioniert dank der bestehenden Landscape-Regel aus v24.77
+        automatisch auch im Querformat vernünftig (wird dort untereinander statt nebeneinander).
+      - "Typografie": kein Cover, dafür der Songtitel selbst groß und in der gewählten
+        Akzentfarbe (Design-Baukasten aus v24.81) als zentrales Gestaltungselement - nutzt den
+        Baukasten direkter als jedes andere Layout.
+      - Alle drei nach demselben risikoarmen Prinzip wie die ersten vier: reine CSS-Klasse auf
+        #standby-overlay, keine neue Logik/Animation, kein zusätzliches Netzwerk/Berechtigung.
+        Design-Code-Validierung (v24.81) und Dropdown-Liste um die drei neuen Werte erweitert,
+        alle 6 Sprachen.
+
     [FEATURE - KRITISCH] Release v24.81: StandBy-Design-Baukasten (Akzentfarbe + Eckenradius)
     + Design-Code zum Teilen (Alleinstellungsmerkmal auf Nutzerwunsch)
       - Nutzerwunsch: "mehr anpassbare individuelle Designs" statt nur fester Presets, plus ein
@@ -3949,6 +3967,50 @@
         #standby-overlay.standby-design-clock-only #standby-nowplaying { display: none; }
         #standby-overlay.standby-design-clock-only #standby-shift-wrapper { justify-content: center; }
         #standby-overlay.standby-design-clock-only #standby-clock { font-size: clamp(3.2rem, 16vw, 7.5rem); }
+        /* NEU v24.82: Drei weitere Designs auf Nutzerwunsch ("Wollen wir MEHR LAYOUTS
+           machen?"). Gleiches risikoarmes Prinzip wie die ersten vier: reine CSS-Varianten
+           über eine Klasse auf #standby-overlay, keine neue Logik/Animation, keine
+           zusätzlichen Netzwerk-/Berechtigungs-Abhängigkeiten. */
+        /* Design "Vinyl": Cover kreisrund wie eine Schallplatte, mit dezentem Rillen-Ring -
+           bewusst OHNE Dreh-Animation, um nicht wieder eine Dauerschleife einzuführen, nachdem
+           gerade erst mehrere Runden GPU-Arbeit in genau sowas gesteckt wurden. */
+        #standby-overlay.standby-design-vinyl #standby-track-art-wrap {
+            border-radius: 50%; width: clamp(150px, 42vw, 230px); height: clamp(150px, 42vw, 230px);
+            box-shadow: 0 14px 40px rgba(0,0,0,0.65), inset 0 0 0 10px rgba(0,0,0,0.4), inset 0 0 0 11px rgba(255,255,255,0.08);
+        }
+        #standby-overlay.standby-design-vinyl #standby-track-art { border-radius: 50%; }
+        #standby-overlay.standby-design-vinyl #standby-track-art-wrap::after {
+            content: ''; position: absolute; top: 50%; left: 50%; width: 14%; height: 14%;
+            transform: translate(-50%, -50%); border-radius: 50%; background: #111;
+            box-shadow: 0 0 0 3px rgba(255,255,255,0.15); pointer-events: none;
+        }
+        #standby-overlay.standby-design-vinyl #standby-eq { display: none; } /* passt optisch nicht zur runden Karte */
+        /* Design "Split": edge-to-edge geteilter Bildschirm, Uhr links/Now-Playing rechts (im
+           Querformat automatisch übereinander dank der bereits bestehenden Landscape-Regel).
+           Kein backdrop-filter hier - spart sogar zusätzlich GPU gegenüber "Classic". */
+        #standby-overlay.standby-design-split #standby-shift-wrapper { flex-direction: row; align-items: stretch; gap: 0; padding: 0; }
+        #standby-overlay.standby-design-split #standby-clockzone { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 0 24px; }
+        #standby-overlay.standby-design-split #standby-nowplaying {
+            flex: 1; margin: 0; width: auto; max-width: none; height: 100%; border-radius: 0;
+            display: flex; flex-direction: column; justify-content: center;
+            backdrop-filter: none; -webkit-backdrop-filter: none;
+            background: rgba(0,0,0,0.32); border: none; border-left: 1px solid rgba(255,255,255,0.1); box-shadow: none;
+        }
+        #standby-overlay.standby-design-split #standby-track { flex-direction: column; text-align: center; }
+        #standby-overlay.standby-design-split #standby-track-art-wrap { width: clamp(130px, 28vw, 210px); height: clamp(130px, 28vw, 210px); margin: 0 auto; }
+        #standby-overlay.standby-design-split #standby-track-text { text-align: center; flex: none; }
+        /* Design "Typografie": kein Cover, dafür der Songtitel selbst als großes, in der
+           gewählten Akzentfarbe eingefärbtes Gestaltungselement - nutzt den Design-Baukasten
+           aus v24.81 am direktesten von allen Layouts. */
+        #standby-overlay.standby-design-typography #standby-track-art-wrap { display: none; }
+        #standby-overlay.standby-design-typography #standby-track { justify-content: center; }
+        #standby-overlay.standby-design-typography #standby-track-text { text-align: center; flex: none; }
+        #standby-overlay.standby-design-typography #standby-track-title {
+            font-size: clamp(28px, 9vw, 56px); font-weight: 900; line-height: 1.05;
+            color: var(--standby-accent, #fff); white-space: normal; text-overflow: clip; -webkit-line-clamp: 3;
+        }
+        #standby-overlay.standby-design-typography #standby-track-artist { font-size: clamp(16px, 4.5vw, 22px); margin-top: 10px; }
+        #standby-overlay.standby-design-typography #standby-clock { font-size: clamp(1.6rem, 7vw, 2.8rem); opacity: 0.7; }
         /* ========================================================= */
         /* FIX v24.72 (KRITISCH - GPU): v24.71 hat dasselbe Muster bei den EQ-Balken gefixt,
            aber DIESE Stelle übersehen - Nutzer meldete danach immer noch zu hohe GPU-Last.
@@ -4164,7 +4226,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.81 · 2026-08-13';
+        const SITE_VERSION = 'v24.82 · 2026-08-13';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -4647,6 +4709,9 @@
                                                 <option value="minimal" id="opt-standby-design-minimal">Minimal</option>
                                                 <option value="cover-focus" id="opt-standby-design-cover-focus">Cover-Fokus</option>
                                                 <option value="clock-only" id="opt-standby-design-clock-only">Nur Uhr</option>
+                                                <option value="vinyl" id="opt-standby-design-vinyl">Vinyl</option>
+                                                <option value="split" id="opt-standby-design-split">Split</option>
+                                                <option value="typography" id="opt-standby-design-typography">Typografie</option>
                                             </select>
                                         </div>
                                         <!-- NEU v24.81: Design-Baukasten (Akzentfarbe + Eckenradius) + Design-Code
@@ -5182,7 +5247,7 @@
                 changelog_type_feature: 'Neu', changelog_type_performance: 'Performance', changelog_type_fix: 'Fehlerbehebung',
                 tutorial_speak_aria: 'Diesen Schritt vorlesen',
                 t_whatsnew1_title: '✨ Was ist neu seit deinem letzten Besuch?',
-                t_whatsnew1_text: 'StandBy-Design-Baukasten: Akzentfarbe und Eckenradius jetzt frei wählbar, plus ein Design-Code zum Teilen mit Freunden - kopiere deinen Look, sie laden ihn 1:1.',
+                t_whatsnew1_text: '3 weitere StandBy-Designs: "Vinyl" (rundes Cover wie eine Schallplatte), "Split" (geteilter Bildschirm) und "Typografie" (großer Songtitel in deiner Akzentfarbe statt Cover).',
                 t_whatsnew2_title: '✨ Noch mehr Neues',
                 t_whatsnew2_text: 'App zeigt beim Start jetzt sofort den bereits laufenden Song statt erst später. Außerdem: Plattform-Auswahl beim Cover-Tap öffnet sich nach "Abbrechen" jetzt zuverlässig beim ersten Versuch, plus etwas mehr Haptic-Feedback.',
                 t_whatsnew3_title: '✨ Unter der Haube',
@@ -5259,7 +5324,7 @@
                 kart_stat_besttime: 'Bestzeit',
                 kart_stat_sessions: 'Sessions',
                 kart_stat_since: 'Seit',
-                                settings_wakelock: 'Bildschirm an (StandBy)', settings_wakelock_hint: 'Hält den Bildschirm nur wach, solange Musik läuft - pausiert sie, darf das Handy normal einschlafen.', settings_notifications: 'Benachrichtigungen', notifications_unsupported: 'nicht verfügbar', notifications_on: 'AN', notifications_blocked: 'blockiert - in Browser-Einstellungen ändern', notifications_not_set: 'nicht eingerichtet, antippen', notifications_denied_hint: 'Du hast Benachrichtigungen blockiert - das kann ich nicht per Klick zurücksetzen, nur du selbst in den Browser-/System-Einstellungen für diese Seite.', notifications_enabled_toast: '🔔 Benachrichtigungen sind jetzt aktiviert.', settings_notification_hint: 'Für die "Willkommen zurück"-Meldung, falls Musik pausiert war während du weg warst.', settings_standby_design: 'StandBy-Design', standby_design_classic: 'Classic', standby_design_minimal: 'Minimal', standby_design_cover_focus: 'Cover-Fokus', standby_design_clock_only: 'Nur Uhr', label_standby_accent: 'Akzentfarbe', label_standby_radius: 'Eckenradius', label_standby_design_code: 'Design-Code teilen', design_code_placeholder: 'Code hier einfügen...', btn_design_code_copy: 'Kopieren', btn_design_code_load: 'Laden', settings_design_code_hint: 'Kopiere deinen StandBy-Look als Code und schick ihn Freunden - die laden ihn hier ein und haben genau denselben Style.', standby_design_code_copied: '📋 Code kopiert - jetzt an Freunde weitergeben!', standby_design_code_loaded: '✨ Design geladen!', standby_design_code_invalid: 'Das war kein gültiger Design-Code.',
+                                settings_wakelock: 'Bildschirm an (StandBy)', settings_wakelock_hint: 'Hält den Bildschirm nur wach, solange Musik läuft - pausiert sie, darf das Handy normal einschlafen.', settings_notifications: 'Benachrichtigungen', notifications_unsupported: 'nicht verfügbar', notifications_on: 'AN', notifications_blocked: 'blockiert - in Browser-Einstellungen ändern', notifications_not_set: 'nicht eingerichtet, antippen', notifications_denied_hint: 'Du hast Benachrichtigungen blockiert - das kann ich nicht per Klick zurücksetzen, nur du selbst in den Browser-/System-Einstellungen für diese Seite.', notifications_enabled_toast: '🔔 Benachrichtigungen sind jetzt aktiviert.', settings_notification_hint: 'Für die "Willkommen zurück"-Meldung, falls Musik pausiert war während du weg warst.', settings_standby_design: 'StandBy-Design', standby_design_classic: 'Classic', standby_design_minimal: 'Minimal', standby_design_cover_focus: 'Cover-Fokus', standby_design_clock_only: 'Nur Uhr', standby_design_vinyl: 'Vinyl', standby_design_split: 'Split', standby_design_typography: 'Typografie', label_standby_accent: 'Akzentfarbe', label_standby_radius: 'Eckenradius', label_standby_design_code: 'Design-Code teilen', design_code_placeholder: 'Code hier einfügen...', btn_design_code_copy: 'Kopieren', btn_design_code_load: 'Laden', settings_design_code_hint: 'Kopiere deinen StandBy-Look als Code und schick ihn Freunden - die laden ihn hier ein und haben genau denselben Style.', standby_design_code_copied: '📋 Code kopiert - jetzt an Freunde weitergeben!', standby_design_code_loaded: '✨ Design geladen!', standby_design_code_invalid: 'Das war kein gültiger Design-Code.',
                 mini_click_to_open: 'Klicken zum Öffnen', mini_click_to_close: 'Klicken zum Schließen',
                 aria_cp: 'Befehlspalette öffnen', aria_install: 'Als App installieren', aria_island: 'Song-Details öffnen, nach oben wischen zum Ausblenden'
             },
@@ -5371,7 +5436,7 @@
                 changelog_type_feature: 'New', changelog_type_performance: 'Performance', changelog_type_fix: 'Fix',
                 tutorial_speak_aria: 'Read this step aloud',
                 t_whatsnew1_title: '✨ What\'s new since your last visit?',
-                t_whatsnew1_text: "StandBy design kit: accent color and corner radius are now freely customizable, plus a shareable design code - copy your look, friends load it 1:1.",
+                t_whatsnew1_text: '3 more StandBy designs: "Vinyl" (round cover like a record), "Split" (split screen), and "Typography" (large song title in your accent color instead of a cover).',
                 t_whatsnew2_title: '✨ Even more news',
                 t_whatsnew2_text: "The app now shows the already-playing song immediately on start instead of only later. Also: the platform picker on cover tap now reliably reopens on the first try after 'Cancel', plus a bit more haptic feedback.",
                 t_whatsnew3_title: '✨ Under the hood',
@@ -5448,7 +5513,7 @@
                 kart_stat_besttime: 'Best Time',
                 kart_stat_sessions: 'Sessions',
                 kart_stat_since: 'Since',
-                                settings_wakelock: 'Keep Screen On (StandBy)', settings_wakelock_hint: 'Keeps the screen on only while music is playing - once paused, the phone can sleep normally.', settings_notifications: 'Notifications', notifications_unsupported: 'not available', notifications_on: 'ON', notifications_blocked: 'blocked - change in browser settings', notifications_not_set: 'not set up, tap to enable', notifications_denied_hint: "You've blocked notifications - I can't reset that with a click, only you can in this site's browser/system settings.", notifications_enabled_toast: '🔔 Notifications are now enabled.', settings_notification_hint: "For the 'welcome back' notice if music was paused while you were away.", settings_standby_design: 'StandBy Design', standby_design_classic: 'Classic', standby_design_minimal: 'Minimal', standby_design_cover_focus: 'Cover Focus', standby_design_clock_only: 'Clock Only', label_standby_accent: 'Accent Color', label_standby_radius: 'Corner Radius', label_standby_design_code: 'Share Design Code', design_code_placeholder: 'Paste code here...', btn_design_code_copy: 'Copy', btn_design_code_load: 'Load', settings_design_code_hint: 'Copy your StandBy look as a code and send it to friends - they paste it here and get the exact same style.', standby_design_code_copied: '📋 Code copied - now share it with friends!', standby_design_code_loaded: '✨ Design loaded!', standby_design_code_invalid: "That wasn't a valid design code.",
+                                settings_wakelock: 'Keep Screen On (StandBy)', settings_wakelock_hint: 'Keeps the screen on only while music is playing - once paused, the phone can sleep normally.', settings_notifications: 'Notifications', notifications_unsupported: 'not available', notifications_on: 'ON', notifications_blocked: 'blocked - change in browser settings', notifications_not_set: 'not set up, tap to enable', notifications_denied_hint: "You've blocked notifications - I can't reset that with a click, only you can in this site's browser/system settings.", notifications_enabled_toast: '🔔 Notifications are now enabled.', settings_notification_hint: "For the 'welcome back' notice if music was paused while you were away.", settings_standby_design: 'StandBy Design', standby_design_classic: 'Classic', standby_design_minimal: 'Minimal', standby_design_cover_focus: 'Cover Focus', standby_design_clock_only: 'Clock Only', standby_design_vinyl: 'Vinyl', standby_design_split: 'Split', standby_design_typography: 'Typography', label_standby_accent: 'Accent Color', label_standby_radius: 'Corner Radius', label_standby_design_code: 'Share Design Code', design_code_placeholder: 'Paste code here...', btn_design_code_copy: 'Copy', btn_design_code_load: 'Load', settings_design_code_hint: 'Copy your StandBy look as a code and send it to friends - they paste it here and get the exact same style.', standby_design_code_copied: '📋 Code copied - now share it with friends!', standby_design_code_loaded: '✨ Design loaded!', standby_design_code_invalid: "That wasn't a valid design code.",
                 mini_click_to_open: 'Click to open', mini_click_to_close: 'Click to close',
                 aria_cp: 'Open command palette', aria_install: 'Install as app', aria_island: 'Open song details, swipe up to dismiss'
             },
@@ -5560,7 +5625,7 @@
                 changelog_type_feature: 'Nuevo', changelog_type_performance: 'Rendimiento', changelog_type_fix: 'Corrección',
                 tutorial_speak_aria: 'Escuchar este paso',
                 t_whatsnew1_title: '✨ ¿Qué hay de nuevo desde tu última visita?',
-                t_whatsnew1_text: 'Kit de diseño StandBy: color de acento y radio de esquina ahora personalizables, más un código de diseño para compartir con amigos - copia tu estilo, ellos lo cargan idéntico.',
+                t_whatsnew1_text: '3 diseños StandBy más: "Vinilo" (portada redonda como un disco), "Dividido" (pantalla dividida) y "Tipografía" (título grande en tu color de acento en vez de portada).',
                 t_whatsnew2_title: '✨ Más novedades',
                 t_whatsnew2_text: 'La app ahora muestra la canción que ya está sonando inmediatamente al iniciar, en vez de más tarde. Además: el selector de plataformas al tocar la portada ahora se reabre de forma fiable al primer intento tras "Cancelar", más algo de retroalimentación háptica.',
                 t_whatsnew3_title: '✨ Bajo el capó',
@@ -5637,7 +5702,7 @@
                 kart_stat_besttime: 'Mejor Tiempo',
                 kart_stat_sessions: 'Sesiones',
                 kart_stat_since: 'Desde',
-                                settings_wakelock: 'Pantalla Encendida (StandBy)', settings_wakelock_hint: 'Mantiene la pantalla encendida solo mientras suena música - al pausar, el teléfono puede dormir normalmente.', settings_notifications: 'Notificaciones', notifications_unsupported: 'no disponible', notifications_on: 'ACTIVADAS', notifications_blocked: 'bloqueadas - cambiar en ajustes del navegador', notifications_not_set: 'no configuradas, toca para activar', notifications_denied_hint: 'Has bloqueado las notificaciones - no puedo restablecer eso con un clic, solo tú puedes hacerlo en los ajustes del navegador/sistema para este sitio.', notifications_enabled_toast: '🔔 Las notificaciones ya están activadas.', settings_notification_hint: 'Para el aviso de "bienvenido de nuevo" si la música estuvo pausada mientras no estabas.', settings_standby_design: 'Diseño de StandBy', standby_design_classic: 'Clásico', standby_design_minimal: 'Minimalista', standby_design_cover_focus: 'Portada al frente', standby_design_clock_only: 'Solo reloj', label_standby_accent: 'Color de acento', label_standby_radius: 'Radio de esquina', label_standby_design_code: 'Compartir código de diseño', design_code_placeholder: 'Pega el código aquí...', btn_design_code_copy: 'Copiar', btn_design_code_load: 'Cargar', settings_design_code_hint: 'Copia tu estilo StandBy como código y envíaselo a tus amigos - ellos lo pegan aquí y tienen exactamente el mismo estilo.', standby_design_code_copied: '📋 Código copiado - ¡compártelo con tus amigos!', standby_design_code_loaded: '✨ ¡Diseño cargado!', standby_design_code_invalid: 'Ese no era un código de diseño válido.',
+                                settings_wakelock: 'Pantalla Encendida (StandBy)', settings_wakelock_hint: 'Mantiene la pantalla encendida solo mientras suena música - al pausar, el teléfono puede dormir normalmente.', settings_notifications: 'Notificaciones', notifications_unsupported: 'no disponible', notifications_on: 'ACTIVADAS', notifications_blocked: 'bloqueadas - cambiar en ajustes del navegador', notifications_not_set: 'no configuradas, toca para activar', notifications_denied_hint: 'Has bloqueado las notificaciones - no puedo restablecer eso con un clic, solo tú puedes hacerlo en los ajustes del navegador/sistema para este sitio.', notifications_enabled_toast: '🔔 Las notificaciones ya están activadas.', settings_notification_hint: 'Para el aviso de "bienvenido de nuevo" si la música estuvo pausada mientras no estabas.', settings_standby_design: 'Diseño de StandBy', standby_design_classic: 'Clásico', standby_design_minimal: 'Minimalista', standby_design_cover_focus: 'Portada al frente', standby_design_clock_only: 'Solo reloj', standby_design_vinyl: 'Vinilo', standby_design_split: 'Dividido', standby_design_typography: 'Tipografía', label_standby_accent: 'Color de acento', label_standby_radius: 'Radio de esquina', label_standby_design_code: 'Compartir código de diseño', design_code_placeholder: 'Pega el código aquí...', btn_design_code_copy: 'Copiar', btn_design_code_load: 'Cargar', settings_design_code_hint: 'Copia tu estilo StandBy como código y envíaselo a tus amigos - ellos lo pegan aquí y tienen exactamente el mismo estilo.', standby_design_code_copied: '📋 Código copiado - ¡compártelo con tus amigos!', standby_design_code_loaded: '✨ ¡Diseño cargado!', standby_design_code_invalid: 'Ese no era un código de diseño válido.',
                 mini_click_to_open: 'Clic para abrir', mini_click_to_close: 'Clic para cerrar',
                 aria_cp: 'Abrir paleta de comandos', aria_install: 'Instalar como app', aria_island: 'Abrir detalles de la canción, desliza arriba para ocultar'
             },
@@ -5749,7 +5814,7 @@
                 changelog_type_feature: 'Nouveau', changelog_type_performance: 'Performance', changelog_type_fix: 'Correction',
                 tutorial_speak_aria: 'Écouter cette étape',
                 t_whatsnew1_title: '✨ Quoi de neuf depuis ta dernière visite ?',
-                t_whatsnew1_text: "Kit de design StandBy : couleur d'accent et rayon de coin désormais personnalisables, plus un code de design à partager avec des amis - copie ton look, ils le chargent à l'identique.",
+                t_whatsnew1_text: "3 designs StandBy de plus : « Vinyle » (pochette ronde comme un disque), « Partagé » (écran divisé) et « Typographie » (grand titre dans ta couleur d'accent au lieu d'une pochette).",
                 t_whatsnew2_title: '✨ Encore plus de nouveautés',
                 t_whatsnew2_text: "L'application affiche désormais immédiatement le morceau déjà en cours au démarrage, au lieu de plus tard. De plus : le sélecteur de plateformes en tapant sur la pochette se rouvre maintenant de façon fiable dès le premier essai après « Annuler », avec un peu plus de retour haptique.",
                 t_whatsnew3_title: '✨ Sous le capot',
@@ -5826,7 +5891,7 @@
                 kart_stat_besttime: 'Meilleur Temps',
                 kart_stat_sessions: 'Sessions',
                 kart_stat_since: 'Depuis',
-                                settings_wakelock: 'Écran Allumé (StandBy)', settings_wakelock_hint: "Garde l'écran allumé uniquement pendant que la musique joue - une fois en pause, le téléphone peut s'endormir normalement.", settings_notifications: 'Notifications', notifications_unsupported: 'non disponible', notifications_on: 'ACTIVÉES', notifications_blocked: 'bloquées - à changer dans les paramètres du navigateur', notifications_not_set: 'non configurées, touche pour activer', notifications_denied_hint: "Tu as bloqué les notifications - je ne peux pas réinitialiser ça par un clic, seulement toi dans les paramètres navigateur/système de ce site.", notifications_enabled_toast: '🔔 Les notifications sont maintenant activées.', settings_notification_hint: "Pour la notification « content de te revoir » si la musique était en pause pendant ton absence.", settings_standby_design: 'Design StandBy', standby_design_classic: 'Classique', standby_design_minimal: 'Minimal', standby_design_cover_focus: 'Pochette en avant', standby_design_clock_only: 'Horloge seule', label_standby_accent: "Couleur d'accent", label_standby_radius: 'Rayon des coins', label_standby_design_code: 'Partager le code du design', design_code_placeholder: 'Colle le code ici...', btn_design_code_copy: 'Copier', btn_design_code_load: 'Charger', settings_design_code_hint: "Copie ton look StandBy en tant que code et envoie-le à des amis - ils le collent ici et obtiennent exactement le même style.", standby_design_code_copied: '📋 Code copié - partage-le avec tes amis !', standby_design_code_loaded: '✨ Design chargé !', standby_design_code_invalid: "Ce n'était pas un code de design valide.",
+                                settings_wakelock: 'Écran Allumé (StandBy)', settings_wakelock_hint: "Garde l'écran allumé uniquement pendant que la musique joue - une fois en pause, le téléphone peut s'endormir normalement.", settings_notifications: 'Notifications', notifications_unsupported: 'non disponible', notifications_on: 'ACTIVÉES', notifications_blocked: 'bloquées - à changer dans les paramètres du navigateur', notifications_not_set: 'non configurées, touche pour activer', notifications_denied_hint: "Tu as bloqué les notifications - je ne peux pas réinitialiser ça par un clic, seulement toi dans les paramètres navigateur/système de ce site.", notifications_enabled_toast: '🔔 Les notifications sont maintenant activées.', settings_notification_hint: "Pour la notification « content de te revoir » si la musique était en pause pendant ton absence.", settings_standby_design: 'Design StandBy', standby_design_classic: 'Classique', standby_design_minimal: 'Minimal', standby_design_cover_focus: 'Pochette en avant', standby_design_clock_only: 'Horloge seule', standby_design_vinyl: 'Vinyle', standby_design_split: 'Partagé', standby_design_typography: 'Typographie', label_standby_accent: "Couleur d'accent", label_standby_radius: 'Rayon des coins', label_standby_design_code: 'Partager le code du design', design_code_placeholder: 'Colle le code ici...', btn_design_code_copy: 'Copier', btn_design_code_load: 'Charger', settings_design_code_hint: "Copie ton look StandBy en tant que code et envoie-le à des amis - ils le collent ici et obtiennent exactement le même style.", standby_design_code_copied: '📋 Code copié - partage-le avec tes amis !', standby_design_code_loaded: '✨ Design chargé !', standby_design_code_invalid: "Ce n'était pas un code de design valide.",
                 mini_click_to_open: 'Cliquer pour ouvrir', mini_click_to_close: 'Cliquer pour fermer',
                 aria_cp: 'Ouvrir la palette de commandes', aria_install: 'Installer comme appli', aria_island: 'Ouvrir les détails du morceau, glisser vers le haut pour masquer'
             },
@@ -5938,7 +6003,7 @@
                 changelog_type_feature: 'Novo', changelog_type_performance: 'Performance', changelog_type_fix: 'Correção',
                 tutorial_speak_aria: 'Ouvir esta etapa',
                 t_whatsnew1_title: '✨ O que há de novo desde sua última visita?',
-                t_whatsnew1_text: 'Kit de design StandBy: cor de destaque e raio de canto agora personalizáveis, além de um código de design para compartilhar com amigos - copie seu visual, eles carregam idêntico.',
+                t_whatsnew1_text: 'Mais 3 designs StandBy: "Vinil" (capa redonda como um disco), "Dividido" (tela dividida) e "Tipografia" (título grande na sua cor de destaque em vez de capa).',
                 t_whatsnew2_title: '✨ Ainda mais novidades',
                 t_whatsnew2_text: 'O app agora mostra a música que já está tocando imediatamente ao iniciar, em vez de só depois. Além disso: o seletor de plataformas ao tocar na capa agora reabre de forma confiável na primeira tentativa após "Cancelar", com um pouco mais de feedback tátil.',
                 t_whatsnew3_title: '✨ Por baixo do capô',
@@ -6015,7 +6080,7 @@
                 kart_stat_besttime: 'Melhor Tempo',
                 kart_stat_sessions: 'Sessões',
                 kart_stat_since: 'Desde',
-                                settings_wakelock: 'Tela Ligada (StandBy)', settings_wakelock_hint: 'Mantém a tela ligada apenas enquanto a música toca - ao pausar, o celular pode dormir normalmente.', settings_notifications: 'Notificações', notifications_unsupported: 'indisponível', notifications_on: 'ATIVADAS', notifications_blocked: 'bloqueadas - altere nas configurações do navegador', notifications_not_set: 'não configuradas, toque para ativar', notifications_denied_hint: 'Você bloqueou as notificações - não posso redefinir isso com um clique, só você pode nas configurações de navegador/sistema deste site.', notifications_enabled_toast: '🔔 As notificações agora estão ativadas.', settings_notification_hint: 'Para o aviso de "bem-vindo de volta" caso a música estivesse pausada enquanto você estava fora.', settings_standby_design: 'Design do StandBy', standby_design_classic: 'Clássico', standby_design_minimal: 'Minimalista', standby_design_cover_focus: 'Capa em destaque', standby_design_clock_only: 'Só relógio', label_standby_accent: 'Cor de destaque', label_standby_radius: 'Raio de canto', label_standby_design_code: 'Compartilhar código de design', design_code_placeholder: 'Cole o código aqui...', btn_design_code_copy: 'Copiar', btn_design_code_load: 'Carregar', settings_design_code_hint: 'Copie seu visual StandBy como um código e mande para amigos - eles colam aqui e ficam com exatamente o mesmo estilo.', standby_design_code_copied: '📋 Código copiado - compartilhe com amigos!', standby_design_code_loaded: '✨ Design carregado!', standby_design_code_invalid: 'Esse não era um código de design válido.',
+                                settings_wakelock: 'Tela Ligada (StandBy)', settings_wakelock_hint: 'Mantém a tela ligada apenas enquanto a música toca - ao pausar, o celular pode dormir normalmente.', settings_notifications: 'Notificações', notifications_unsupported: 'indisponível', notifications_on: 'ATIVADAS', notifications_blocked: 'bloqueadas - altere nas configurações do navegador', notifications_not_set: 'não configuradas, toque para ativar', notifications_denied_hint: 'Você bloqueou as notificações - não posso redefinir isso com um clique, só você pode nas configurações de navegador/sistema deste site.', notifications_enabled_toast: '🔔 As notificações agora estão ativadas.', settings_notification_hint: 'Para o aviso de "bem-vindo de volta" caso a música estivesse pausada enquanto você estava fora.', settings_standby_design: 'Design do StandBy', standby_design_classic: 'Clássico', standby_design_minimal: 'Minimalista', standby_design_cover_focus: 'Capa em destaque', standby_design_clock_only: 'Só relógio', standby_design_vinyl: 'Vinil', standby_design_split: 'Dividido', standby_design_typography: 'Tipografia', label_standby_accent: 'Cor de destaque', label_standby_radius: 'Raio de canto', label_standby_design_code: 'Compartilhar código de design', design_code_placeholder: 'Cole o código aqui...', btn_design_code_copy: 'Copiar', btn_design_code_load: 'Carregar', settings_design_code_hint: 'Copie seu visual StandBy como um código e mande para amigos - eles colam aqui e ficam com exatamente o mesmo estilo.', standby_design_code_copied: '📋 Código copiado - compartilhe com amigos!', standby_design_code_loaded: '✨ Design carregado!', standby_design_code_invalid: 'Esse não era um código de design válido.',
                 mini_click_to_open: 'Clique para abrir', mini_click_to_close: 'Clique para fechar',
                 aria_cp: 'Abrir paleta de comandos', aria_install: 'Instalar como app', aria_island: 'Abrir detalhes da música, deslize para cima para ocultar'
             },
@@ -6127,7 +6192,7 @@
                 changelog_type_feature: 'Yeni', changelog_type_performance: 'Performans', changelog_type_fix: 'Düzeltme',
                 tutorial_speak_aria: 'Bu adımı sesli oku',
                 t_whatsnew1_title: '✨ Son ziyaretinden beri neler değişti?',
-                t_whatsnew1_text: "StandBy tasarım kiti: vurgu rengi ve köşe yarıçapı artık özgürce özelleştirilebiliyor, ayrıca arkadaşlarla paylaşılabilir bir tasarım kodu - görünümünü kopyala, onlar birebir yükleyebilir.",
+                t_whatsnew1_text: '3 yeni StandBy tasarımı: "Plak" (plak gibi yuvarlak kapak), "Bölünmüş" (bölünmüş ekran) ve "Tipografi" (kapak yerine vurgu renginde büyük şarkı başlığı).',
                 t_whatsnew2_title: '✨ Daha fazla yenilik',
                 t_whatsnew2_text: 'Uygulama artık başlangıçta zaten çalmakta olan şarkıyı daha sonra değil hemen gösteriyor. Ayrıca: kapak resmine dokunarak açılan platform seçici artık "İptal"den sonra ilk denemede güvenilir şekilde yeniden açılıyor, biraz daha fazla dokunsal geri bildirimle birlikte.',
                 t_whatsnew3_title: '✨ Perde arkasında',
@@ -6204,7 +6269,7 @@
                 kart_stat_besttime: 'En İyi Süre',
                 kart_stat_sessions: 'Seanslar',
                 kart_stat_since: 'Beri',
-                                settings_wakelock: 'Ekranı Açık Tut (StandBy)', settings_wakelock_hint: 'Ekranı yalnızca müzik çalarken açık tutar - duraklatıldığında telefon normal şekilde uyuyabilir.', settings_notifications: 'Bildirimler', notifications_unsupported: 'kullanılamıyor', notifications_on: 'AÇIK', notifications_blocked: 'engellendi - tarayıcı ayarlarından değiştir', notifications_not_set: 'ayarlanmadı, etkinleştirmek için dokun', notifications_denied_hint: 'Bildirimleri engelledin - bunu bir tıklamayla sıfırlayamam, yalnızca sen bu sitenin tarayıcı/sistem ayarlarından yapabilirsin.', notifications_enabled_toast: '🔔 Bildirimler artık etkin.', settings_notification_hint: 'Sen yokken müzik duraklatılmışsa "tekrar hoş geldin" bildirimi için.', settings_standby_design: 'StandBy Tasarımı', standby_design_classic: 'Klasik', standby_design_minimal: 'Minimal', standby_design_cover_focus: 'Kapak Odaklı', standby_design_clock_only: 'Sadece Saat', label_standby_accent: 'Vurgu Rengi', label_standby_radius: 'Köşe Yarıçapı', label_standby_design_code: 'Tasarım Kodunu Paylaş', design_code_placeholder: 'Kodu buraya yapıştır...', btn_design_code_copy: 'Kopyala', btn_design_code_load: 'Yükle', settings_design_code_hint: 'StandBy görünümünü kod olarak kopyala ve arkadaşlarına gönder - onlar buraya yapıştırır ve tam olarak aynı stile sahip olur.', standby_design_code_copied: '📋 Kod kopyalandı - şimdi arkadaşlarınla paylaş!', standby_design_code_loaded: '✨ Tasarım yüklendi!', standby_design_code_invalid: 'Bu geçerli bir tasarım kodu değildi.',
+                                settings_wakelock: 'Ekranı Açık Tut (StandBy)', settings_wakelock_hint: 'Ekranı yalnızca müzik çalarken açık tutar - duraklatıldığında telefon normal şekilde uyuyabilir.', settings_notifications: 'Bildirimler', notifications_unsupported: 'kullanılamıyor', notifications_on: 'AÇIK', notifications_blocked: 'engellendi - tarayıcı ayarlarından değiştir', notifications_not_set: 'ayarlanmadı, etkinleştirmek için dokun', notifications_denied_hint: 'Bildirimleri engelledin - bunu bir tıklamayla sıfırlayamam, yalnızca sen bu sitenin tarayıcı/sistem ayarlarından yapabilirsin.', notifications_enabled_toast: '🔔 Bildirimler artık etkin.', settings_notification_hint: 'Sen yokken müzik duraklatılmışsa "tekrar hoş geldin" bildirimi için.', settings_standby_design: 'StandBy Tasarımı', standby_design_classic: 'Klasik', standby_design_minimal: 'Minimal', standby_design_cover_focus: 'Kapak Odaklı', standby_design_clock_only: 'Sadece Saat', standby_design_vinyl: 'Plak', standby_design_split: 'Bölünmüş', standby_design_typography: 'Tipografi', label_standby_accent: 'Vurgu Rengi', label_standby_radius: 'Köşe Yarıçapı', label_standby_design_code: 'Tasarım Kodunu Paylaş', design_code_placeholder: 'Kodu buraya yapıştır...', btn_design_code_copy: 'Kopyala', btn_design_code_load: 'Yükle', settings_design_code_hint: 'StandBy görünümünü kod olarak kopyala ve arkadaşlarına gönder - onlar buraya yapıştırır ve tam olarak aynı stile sahip olur.', standby_design_code_copied: '📋 Kod kopyalandı - şimdi arkadaşlarınla paylaş!', standby_design_code_loaded: '✨ Tasarım yüklendi!', standby_design_code_invalid: 'Bu geçerli bir tasarım kodu değildi.',
                 mini_click_to_open: 'Açmak için tıkla', mini_click_to_close: 'Kapatmak için tıkla',
                 aria_cp: 'Komut paletini aç', aria_install: 'Uygulama olarak yükle', aria_island: 'Şarkı detaylarını aç, gizlemek için yukarı kaydır'
             }
@@ -6370,6 +6435,9 @@
             setText('opt-standby-design-minimal', t('standby_design_minimal'));
             setText('opt-standby-design-cover-focus', t('standby_design_cover_focus'));
             setText('opt-standby-design-clock-only', t('standby_design_clock_only'));
+            setText('opt-standby-design-vinyl', t('standby_design_vinyl'));
+            setText('opt-standby-design-split', t('standby_design_split'));
+            setText('opt-standby-design-typography', t('standby_design_typography'));
             setText('label-standby-accent', t('label_standby_accent'));
             setText('label-standby-radius', t('label_standby_radius'));
             setText('label-standby-design-code', t('label_standby_design_code'));
@@ -6777,7 +6845,8 @@
             if (!overlay) return;
             standbyDesign = design;
             localStorage.setItem('standbyDesign', design);
-            overlay.classList.remove('standby-design-minimal', 'standby-design-cover-focus', 'standby-design-clock-only');
+            // NEU v24.82: um drei weitere Designs (vinyl, split, typography) ergänzt.
+            overlay.classList.remove('standby-design-minimal', 'standby-design-cover-focus', 'standby-design-clock-only', 'standby-design-vinyl', 'standby-design-split', 'standby-design-typography');
             if (design !== 'classic') overlay.classList.add('standby-design-' + design);
             const select = document.getElementById('standby-design-select');
             if (select && select.value !== design) select.value = design;
@@ -6852,7 +6921,7 @@
             if (!input || !input.value.trim()) return;
             try {
                 const payload = JSON.parse(atob(input.value.trim()));
-                const validDesigns = ['classic', 'minimal', 'cover-focus', 'clock-only'];
+                const validDesigns = ['classic', 'minimal', 'cover-focus', 'clock-only', 'vinyl', 'split', 'typography'];
                 if (payload.d && validDesigns.includes(payload.d)) applyStandbyDesign(payload.d);
                 if (payload.a && /^#[0-9a-fA-F]{6}$/.test(payload.a)) window.changeStandbyAccent(payload.a);
                 if (typeof payload.r === 'number') window.changeStandbyRadius(payload.r);
@@ -9620,6 +9689,14 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.82', date: "August 2026", type: 'feature', items: {
+                de: ["3 weitere StandBy-Designs: \"Vinyl\" (rundes Cover wie eine Schallplatte), \"Split\" (geteilter Bildschirm), \"Typografie\" (großer Songtitel in deiner Akzentfarbe statt Cover)"],
+                en: ["3 more StandBy designs: \"Vinyl\" (round cover like a record), \"Split\" (split screen), \"Typography\" (large song title in your accent color instead of a cover)"],
+                es: ["3 diseños StandBy más: \"Vinilo\" (portada redonda como un disco), \"Dividido\" (pantalla dividida), \"Tipografía\" (título grande en tu color de acento en vez de portada)"],
+                fr: ["3 designs StandBy de plus : « Vinyle » (pochette ronde comme un disque), « Partagé » (écran divisé), « Typographie » (grand titre dans ta couleur d'accent au lieu d'une pochette)"],
+                pt: ["Mais 3 designs StandBy: \"Vinil\" (capa redonda como um disco), \"Dividido\" (tela dividida), \"Tipografia\" (título grande na sua cor de destaque em vez de capa)"],
+                tr: ["3 yeni StandBy tasarımı: \"Plak\" (plak gibi yuvarlak kapak), \"Bölünmüş\" (bölünmüş ekran), \"Tipografi\" (kapak yerine vurgu renginde büyük şarkı başlığı)"],
+            }},
             { version: 'v24.81', date: "August 2026", type: 'feature', items: {
                 de: ["StandBy-Design-Baukasten: Akzentfarbe und Eckenradius frei wählbar in den Einstellungen", "Neu: Design-Code zum Teilen - kopiere deinen StandBy-Look und schick ihn Freunden, die laden ihn 1:1"],
                 en: ["StandBy design kit: freely choose an accent color and corner radius in settings", "New: shareable design code - copy your StandBy look and send it to friends, who can load it 1:1"],
