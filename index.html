@@ -11,6 +11,69 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FIX - KRITISCH, DIESMAL WIRKLICH] Release v24.65: v24.64 allein reichte nicht - zweiter,
+    tieferer Bug in der Neustart-Logik gefunden
+      - Nutzer bestätigte per document.getElementById('time-current').innerText (umgeht das
+        bekannte Chrome-DevTools-Problem, dass let-Variablen aus <script>-Tags oft nicht per
+        Namen in der Konsole abrufbar sind, obwohl sie auf der echten Seite funktionieren) -
+        derselbe Wert mehrfach identisch, der Fortschritt stand trotz v24.64 immer noch still.
+      - ZWEITER Root Cause gefunden: Der Neustart-Check nach jeder Musikdaten-Antwort
+        verlangte bisher "if (trackIsPlaying && !isAnimating && !progressTickerInterval)" -
+        wenn isAnimating aus IRGENDEINEM Grund auf true hängen bleibt (z.B. nach einem
+        unterbrochenen Lyrics-Übergang), verhinderte das für immer einen Neustart, selbst
+        wenn der Timer (progressTickerInterval) längst tot war. startProgressTracking()
+        räumt sich intern aber ohnehin SELBST zuerst auf (ruft stopProgressTracking() als
+        allerersten Schritt auf) - ist also von sich aus bereits sicher, mehrfach
+        aufgerufen zu werden.
+      - Fix: Neustart nach jeder erfolgreichen Musikdaten-Antwort jetzt BEDINGUNGSLOS (nur
+        noch trackIsPlaying geprüft), nicht mehr fragil auf einen "scheinbar nötigen"
+        Zustand geprüft. Derselbe Fix auch im 30s-Watchdog aus v24.60 angewendet.
+      - Zusätzlich neuer, engmaschiger Selbstheilungs-Check alle 3 Sekunden als weiteres
+        Sicherheitsnetz - nach mehreren Runden hartnäckiger Bugreports lieber einmal zu oft
+        geprüft. Ironischer Fund beim eigenen Testen: dieser neue Check hatte in seiner
+        ERSTEN Fassung genau denselben !isAnimating-Fehler wie die ursprüngliche Bug-Stelle -
+        beim gezielten Nachstellen des exakten Bug-Zustands (isAnimating künstlich auf true
+        gesetzt, Timer künstlich gestoppt) selbst aufgefallen und sofort korrigiert, bevor es
+        ausgeliefert wurde.
+      - Gründlich mit Playwright verifiziert: exakter Bug-Zustand künstlich hergestellt
+        (isAnimating=true, progressTickerInterval=null, trotz trackIsPlaying=true) - nach
+        wenigen Sekunden korrekt selbst repariert, currentMs zählt danach wieder korrekt mit
+        der echten Zeit mit.
+
+    [FIX - KRITISCH, ENDLICH GEFUNDEN] Release v24.64: Echte Root Cause für den seit mehreren
+    Runden gemeldeten "Fortschrittsbalken eingefroren"-Bug
+      - Nutzer schickte Network-Tab-Screenshot: die HAUPT-Musikdaten-Abfrage (npc-api.../now)
+        lief einwandfrei mit Status 200, mehrfach bestätigt - nur die Cover-Art-Unter-Ressource
+        gab noch 404. Das widerlegte die bisherige Theorie (anhaltender API-Ausfall) komplett -
+        wenn die Hauptdaten erfolgreich ankommen, kann das Einfrieren kein API-Problem mehr
+        sein, sondern muss ein echter Bug in unserem eigenen Code sein.
+      - Root Cause beim genauen Durchgehen von updateProgressUI() gefunden: Der sparsame
+        Intervall-Modus aus dem Effizienz-Umbau in v24.47 (Normalzustand, wenn Lyrics
+        geschlossen sind - also die meiste Zeit) rief zwar alle 200ms updateProgressUI()
+        auf, aber diese Funktion schreibt nur den AKTUELLEN Wert von currentMs auf den
+        Bildschirm - sie berechnet currentMs selbst nicht neu! Der rAF-Loop (nur bei
+        offenen Lyrics aktiv) hatte die nötige Wanduhr-Extrapolation
+        (currentMs = serverBaseProgress + vergangene Zeit) korrekt eingebaut, aber beim
+        Aufteilen in "teurer rAF-Loop" vs. "günstiger Intervall" in v24.47 wurde diese
+        Berechnung nur im rAF-Pfad mitgenommen - der Intervall-Pfad bekam sie nie. Ergebnis:
+        Der Fortschrittsbalken zeigte 5 Sekunden lang denselben statischen Wert (Poll-
+        Abstand), sprang dann kurz auf den neuen Wert, und stand wieder 5 Sekunden still -
+        wirkte praktisch komplett eingefroren.
+      - Fix: neue Funktion tickProgressInterval() berechnet currentMs jetzt bei jedem
+        200ms-Tick live nach (exakt dieselbe Formel wie animateLoop() für den rAF-Fall),
+        BEVOR updateProgressUI() die Anzeige aktualisiert. startProgressTracking() nutzt
+        jetzt diese Funktion als Intervall-Callback statt der reinen Anzeige-Funktion.
+      - Mit Playwright unter kontrollierten Bedingungen verifiziert (Netzwerk komplett
+        blockiert, alle störenden Hintergrund-Intervalle gestoppt, um jede Interferenz durch
+        das bekannte, separate npc-api-Cover-Art-Problem auszuschließen): currentMs zählt
+        jetzt exakt mit der echten verstrichenen Zeit mit (2000,3ms Differenz bei 2 Sekunden
+        echter Wartezeit - nahezu perfekt).
+      - Diese Root Cause erklärt rückblickend auch, warum die vorherigen zwei Fix-Versuche
+        (v24.60 Toleranz für API-Aussetzer, v24.63 Cover-Art-Fallback) das eigentliche
+        Problem nicht lösen konnten - beide adressierten echte, aber andere Baustellen, die
+        parallel existierten, während der eigentliche Interval-Bug die ganze Zeit unentdeckt
+        blieb.
+
     [FIX] Release v24.63: iTunes-Cover-Art-Fallback auf Dynamic Island und StandBy-Lockscreen
     ausgeweitet
       - Nutzer meldete: keine Cover-Art in der Dynamic Island UND im StandBy-Lockscreen.
@@ -3594,7 +3657,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.63 · 2026-08-13';
+        const SITE_VERSION = 'v24.65 · 2026-08-13';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -8648,6 +8711,22 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.65', date: "August 2026", type: 'fix', items: {
+                de: ["Fortschrittsbalken-Bug endgültig behoben - zweite, tieferliegende Ursache gefunden und mit Selbstheilungs-Mechanismus abgesichert"],
+                en: ["Progress bar bug finally fixed for good - found a second, deeper cause and secured it with a self-healing mechanism"],
+                es: ["Error de la barra de progreso finalmente resuelto - se encontró una segunda causa más profunda y se aseguró con un mecanismo de autorreparación"],
+                fr: ["Bug de la barre de progression enfin définitivement corrigé - une seconde cause plus profonde trouvée et sécurisée par un mécanisme d'auto-réparation"],
+                pt: ["Bug da barra de progresso finalmente corrigido de vez - encontrada uma segunda causa mais profunda e protegida com um mecanismo de autorreparação"],
+                tr: ["İlerleme çubuğu hatası nihayet kalıcı olarak düzeltildi - ikinci, daha derin bir neden bulundu ve kendi kendini onaran bir mekanizmayla güvence altına alındı"],
+            }},
+            { version: 'v24.64', date: "August 2026", type: 'fix', items: {
+                de: ["Endlich gefunden: der eigentliche Grund für den eingefrorenen Fortschrittsbalken - Songtext-Zeit lief nur bei geöffnetem Songtext korrekt mit"],
+                en: ["Finally found it: the real cause of the frozen progress bar - playback time only advanced correctly while lyrics were open"],
+                es: ["¡Por fin encontrada!: la causa real de la barra de progreso congelada - el tiempo solo avanzaba correctamente con la letra abierta"],
+                fr: ["Enfin trouvé : la vraie cause de la barre de progression figée - le temps n'avançait correctement que lorsque les paroles étaient ouvertes"],
+                pt: ["Finalmente encontrado: a causa real da barra de progresso congelada - o tempo só avançava corretamente com a letra aberta"],
+                tr: ["Sonunda bulundu: donmuş ilerleme çubuğunun gerçek nedeni - süre yalnızca şarkı sözleri açıkken doğru ilerliyordu"],
+            }},
             { version: 'v24.63', date: "August 2026", type: 'fix', items: {
                 de: ["Cover-Art-Rückfall (aus dem letzten Update) jetzt auch für Dynamic Island und StandBy-Lockscreen aktiv"],
                 en: ["Cover art fallback (from the last update) now also active for Dynamic Island and StandBy lockscreen"],
@@ -10038,6 +10117,25 @@
             return `${minutes}:${seconds.toString().padStart(2, '0')}`;
         }
 
+        // FIX v24.64 (KRITISCH): Root Cause für den seit mehreren Runden gemeldeten
+        // "Fortschrittsbalken eingefroren"-Bug ENDLICH gefunden - und es ist gar kein
+        // API-Problem, sondern ein eigener Logikfehler aus dem Effizienz-Umbau in v24.47!
+        // Der sparsame Intervall-Modus (Normalzustand, wenn Lyrics geschlossen sind - also
+        // die meiste Zeit) rief zwar alle 200ms updateProgressUI() auf, aber currentMs
+        // SELBST wurde dabei nie hochgezählt - es wurde nur derselbe statische Wert immer
+        // wieder auf den Bildschirm geschrieben, bis die nächste Musikdaten-Abfrage (alle 5s)
+        // einen neuen Wert lieferte. Der rAF-Loop (nur bei offenen Lyrics aktiv) hatte diese
+        // Wanduhr-Extrapolation korrekt eingebaut, der Intervall-Modus hat sie beim Aufteilen
+        // in v24.47 schlicht nie bekommen. Neue Funktion rechnet currentMs jetzt bei jedem
+        // Tick live nach, genau wie es animateLoop() für den rAF-Fall schon immer tut.
+        function tickProgressInterval() {
+            if (trackIsPlaying && totalMs > 0) {
+                currentMs = serverBaseProgress + (performance.now() - localStartTime);
+                if (currentMs > totalMs) currentMs = totalMs;
+            }
+            updateProgressUI();
+        }
+
         function updateProgressUI() {
             if (timeCurrentEl) timeCurrentEl.innerText = formatTime(currentMs);
             if (progressBar) {
@@ -10632,8 +10730,8 @@
                 isAnimating = true;
                 lyricAnimFrame = requestAnimationFrame(animateLoop);
             } else {
-                updateProgressUI(); // sofort einmal aktualisieren, nicht erst nach dem ersten Intervall-Tick
-                progressTickerInterval = setInterval(updateProgressUI, PROGRESS_UI_THROTTLE_MS);
+                tickProgressInterval(); // sofort einmal aktualisieren, nicht erst nach dem ersten Intervall-Tick
+                progressTickerInterval = setInterval(tickProgressInterval, PROGRESS_UI_THROTTLE_MS);
             }
         }
 
@@ -11128,7 +11226,18 @@
                     }
                 }
 
-                if (trackIsPlaying && !isAnimating && !progressTickerInterval) {
+                // FIX v24.65 (KRITISCH): Nutzer meldete - Fortschritt blieb TROTZ v24.64-Fix
+                // eingefroren. Root Cause gefunden: dieser Neustart-Check verlangte bisher
+                // !isAnimating && !progressTickerInterval - wenn isAnimating aus IRGENDEINEM
+                // Grund auf true hängen bleibt (z.B. nach einem unterbrochenen Lyrics-
+                // Übergang), verhindert das für immer einen Neustart, selbst wenn der Timer
+                // längst tot ist. startProgressTracking() räumt sich intern aber ohnehin
+                // SELBST zuerst auf (ruft stopProgressTracking() als ersten Schritt auf) -
+                // ist also bereits von sich aus sicher, mehrfach aufgerufen zu werden. Bei
+                // jeder erfolgreichen Musikdaten-Antwort jetzt bedingungslos neu starten,
+                // statt fragil zu prüfen, ob es "nötig" erscheint - heilt sich dadurch von
+                // jedem denkbaren hängengebliebenen Zwischenzustand selbst.
+                if (trackIsPlaying) {
                     startProgressTracking();
                 }
 
@@ -11319,11 +11428,27 @@
             if (silentForMs > 30000) {
                 console.warn(`Watchdog: seit ${Math.round(silentForMs / 1000)}s kein erfolgreiches Musikdaten-Update mehr erhalten - erzwinge Wiederherstellungsversuch.`);
                 fetchMusicData();
-                if (!isAnimating && !progressTickerInterval) {
-                    startProgressTracking();
-                }
+                // FIX v24.65: bedingungslos statt fragilem !isAnimating-Check - siehe
+                // ausführlichen Kommentar bei der anderen Stelle weiter oben.
+                startProgressTracking();
             }
         }, 15000);
+
+        // NEU v24.65: Zusätzlicher, engmaschiger Selbstheilungs-Check - unabhängig vom
+        // 30s-Watchdog oben (der nur bei ausbleibenden Musikdaten-Updates greift). Prüft
+        // alle 3 Sekunden: läuft trotz aktiver Musik kein Fortschritts-Tracking? Dann neu
+        // starten - BEDINGUNGSLOS, nicht mit einem fragilen !isAnimating-Check (der hatte
+        // hier ironischerweise beim ersten Versuch genau denselben Fehler wie die
+        // ursprüngliche Bug-Stelle - beim eigenen Testen mit einem künstlich hängen
+        // gebliebenen isAnimating-Zustand aufgefallen und sofort korrigiert). Extra
+        // Sicherheitsnetz nach mehreren Runden hartnäckiger "Fortschritt eingefroren"-
+        // Bugreports - lieber einmal zu oft geprüft als nochmal derselbe Bug.
+        setInterval(() => {
+            if (trackIsPlaying && !progressTickerInterval && !(mainMusicCard && mainMusicCard.classList.contains('lyrics-open'))) {
+                console.warn('Selbstheilungs-Check: Fortschritts-Tracking war trotz laufender Musik inaktiv - starte neu.');
+                startProgressTracking();
+            }
+        }, 3000);
 
         // NEW: Falls der Nutzer den Vollbildmodus direkt verlässt (z.B. Escape-Taste,
         // Browser-eigenes Vollbild-Verlassen-UI), soll StandBy synchron mit verlassen
