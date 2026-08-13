@@ -11,6 +11,28 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FIX/FEATURE] Release v24.69: "Was ist neu?"-Mini-Tutorial zeigte seit v24.50 bei
+    JEDEM Versionssprung unverändert dieselben, längst veralteten "Neuigkeiten"
+      - Root Cause: whatsNewSeenVersion wird zwar korrekt pro SITE_VERSION zurückgesetzt (löst
+        die Tour also bei jedem Update erneut aus), aber t_whatsnew1/2_title/text selbst wurden
+        seit ihrer Einführung in v24.50 nie inhaltlich aktualisiert - Nutzer sahen seither bei
+        jedem einzelnen Release (v24.51 bis v24.68, über ein Dutzend Versionen) wortgleich
+        dieselbe "neue" Info über Sprachausgabe/Discord-Live-Status.
+      - Fix: Inhalt aller 6 Sprachen auf den tatsächlich aktuellen Stand gebracht (Hitze-Fix,
+        Fortschrittsbalken-Saga final gelöst), plus dritten Schritt "Unter der Haube" ergänzt
+        (verweist auf die vollständigen Release-Notes im Footer). Zielelement von Schritt 2 von
+        support-section auf main-music-card geändert, da inhaltlich passender.
+      - EIGENER FEHLER KORRIGIERT: Dieser Fix lief zunächst versehentlich noch unter v24.68 -
+        korrekt wäre eine eigene, neue Versionsnummer gewesen, da v24.68 (nur Hitze-Fix) vom
+        Nutzer bereits separat live deployed war, BEVOR dieser Tutorial-Fix fertig war. Bei
+        identischer Versionsnummer hätten Nutzer, die den (noch unkorrigierten) Tour-Text in
+        v24.68 schon gesehen hatten, die korrigierte Fassung nie zu Gesicht bekommen
+        (whatsNewSeenVersion wäre schon auf 'v24.68' gestanden). Auf v24.69 korrigiert.
+      - AB SOFORT VERBINDLICH (analog zur PUBLIC_CHANGELOG-Regel aus v24.25): Bei jedem
+        zukünftigen Release mit spürbaren Nutzer-Änderungen wird t_whatsnew1/2/3_title/text
+        (alle 6 Sprachen) IMMER im selben Arbeitsschritt wie PUBLIC_CHANGELOG und interner
+        Dev-Changelog aktualisiert, nicht erst nachträglich.
+
     [PERFORMANCE - KRITISCH] Release v24.68: Handy wurde generell warm (nicht nur im StandBy) -
     Ursache: drei Hintergrund-Timer aus der Fortschrittsbalken-Saga prüften nie document.hidden
       - Nutzer meldete: ganzes Handy fühlt sich zu warm an, auch ohne dass StandBy überhaupt
@@ -3737,7 +3759,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.68 · 2026-08-13';
+        const SITE_VERSION = 'v24.69 · 2026-08-13';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -4713,9 +4735,11 @@
                 changelog_type_feature: 'Neu', changelog_type_performance: 'Performance', changelog_type_fix: 'Fehlerbehebung',
                 tutorial_speak_aria: 'Diesen Schritt vorlesen',
                 t_whatsnew1_title: '✨ Was ist neu seit deinem letzten Besuch?',
-                t_whatsnew1_text: 'Kurzer Extra-Rundgang: Die Sprachausgabe ist jetzt fast überall verfügbar - Songtext, Bio, Karten, Dashboard, Release-Notes, sogar hier im Tutorial. Und der StandBy-Modus wurde komplett überarbeitet: ein ernster Akku-/Hitze-Bug wurde behoben, außerdem läuft er jetzt insgesamt deutlich sparsamer.',
+                t_whatsnew1_text: 'Wichtiger Hitze-Fix: Im Hintergrund liefen bisher einige Timer auch bei gesperrtem oder minimiertem Handy unnötig weiter, inklusive echtem Netzwerk-Traffic alle 5 Sekunden. Das ist jetzt behoben - spürbar weniger Akku-/Wärmeverbrauch, ganz ohne StandBy-Nutzung.',
                 t_whatsnew2_title: '✨ Noch mehr Neues',
-                t_whatsnew2_text: 'Der Support-Bereich zeigt jetzt live, wer gerade auf meinem Discord-Server online ist. Und die Release-Notes im Footer wachsen ständig weiter - schau da gerne öfter mal rein. Das war\'s mit dem Extra-Rundgang - viel Spaß beim Entdecken!',
+                t_whatsnew2_text: 'Der hartnäckige "Fortschrittsbalken eingefroren"-Bug ist nach mehreren Anläufen jetzt wirklich vollständig gelöst, inklusive Selbstheilung, falls es doch nochmal klemmen sollte - und ohne dass sich StandBy dabei fälschlich mit reinmischt.',
+                t_whatsnew3_title: '✨ Unter der Haube',
+                t_whatsnew3_text: 'Ich hab außerdem einmal gründlich durch den gesamten Code geschaut - Timer, Animationen, Speicherverbrauch - um sicherzugehen, dass sonst nichts unnötig Akku frisst. Alle Details wie immer in den vollständigen Release-Notes hier unten im Footer.',
                 tutorial_whatsnew_badge: '✨ Bonus: Was ist neu',
                 tts_no_voice_found: 'Keine deutsche Stimme auf diesem Gerät gefunden - Wiedergabe nutzt die Standardstimme.',
                 support_section_title: 'Support', support_section_email_title: 'E-Mail', support_section_email_desc: 'Fragen, Bugs gefunden oder einfach quatschen? Schreib mir!',
@@ -4897,9 +4921,11 @@
                 changelog_type_feature: 'New', changelog_type_performance: 'Performance', changelog_type_fix: 'Fix',
                 tutorial_speak_aria: 'Read this step aloud',
                 t_whatsnew1_title: '✨ What\'s new since your last visit?',
-                t_whatsnew1_text: 'Quick extra tour: Voice narration is now available almost everywhere - lyrics, bio, cards, dashboard, release notes, even here in the tutorial. And StandBy mode got a full overhaul: a serious battery/heat bug was fixed, and it now runs noticeably more efficiently overall.',
+                t_whatsnew1_text: "Important heat fix: some background timers kept running even with the phone locked or minimized, including real network traffic every 5 seconds. That's now fixed - noticeably less battery drain and heat, even without using StandBy.",
                 t_whatsnew2_title: '✨ Even more news',
-                t_whatsnew2_text: "The Support section now shows live who's currently online on my Discord server. And the release notes in the footer keep growing - feel free to check back often. That's the extra tour - have fun exploring!",
+                t_whatsnew2_text: 'The stubborn "frozen progress bar" bug is now genuinely fully resolved after several rounds, including a self-healing safety net in case it ever acts up again - without StandBy getting incorrectly caught up in it.',
+                t_whatsnew3_title: '✨ Under the hood',
+                t_whatsnew3_text: "I also did a thorough pass through the whole codebase - timers, animations, memory usage - to make sure nothing else is quietly draining battery. Full details as always in the release notes down in the footer.",
                 tutorial_whatsnew_badge: "✨ Bonus: What's new",
                 tts_no_voice_found: 'No English voice found on this device - playback uses the default voice.',
                 support_section_title: 'Support', support_section_email_title: 'Email', support_section_email_desc: 'Questions, found a bug, or just want to chat? Email me!',
@@ -5081,9 +5107,11 @@
                 changelog_type_feature: 'Nuevo', changelog_type_performance: 'Rendimiento', changelog_type_fix: 'Corrección',
                 tutorial_speak_aria: 'Escuchar este paso',
                 t_whatsnew1_title: '✨ ¿Qué hay de nuevo desde tu última visita?',
-                t_whatsnew1_text: 'Recorrido extra rápido: la narración por voz ahora está disponible en casi todas partes - letras, biografía, tarjetas, panel, notas de versión, incluso aquí en el tutorial. Y el modo StandBy fue completamente renovado: se corrigió un error grave de batería/calor, y ahora funciona notablemente más eficiente en general.',
+                t_whatsnew1_text: 'Corrección importante de calentamiento: algunos temporizadores en segundo plano seguían funcionando incluso con el teléfono bloqueado o minimizado, incluyendo tráfico de red real cada 5 segundos. Ya está resuelto - notablemente menos consumo de batería y calor, incluso sin usar StandBy.',
                 t_whatsnew2_title: '✨ Más novedades',
-                t_whatsnew2_text: 'La sección de Soporte ahora muestra en vivo quién está conectado en mi servidor de Discord. Y las notas de versión en el pie de página siguen creciendo - échales un vistazo de vez en cuando. Eso es todo el recorrido extra - ¡diviértete explorando!',
+                t_whatsnew2_text: 'El persistente error de la "barra de progreso congelada" ahora está realmente resuelto por completo tras varias rondas, incluyendo una red de autorreparación por si volviera a pasar - sin que StandBy se vea afectado incorrectamente.',
+                t_whatsnew3_title: '✨ Bajo el capó',
+                t_whatsnew3_text: 'También revisé a fondo todo el código - temporizadores, animaciones, uso de memoria - para asegurarme de que nada más consuma batería innecesariamente. Todos los detalles, como siempre, en las notas de versión completas al pie de página.',
                 tutorial_whatsnew_badge: '✨ Extra: Novedades',
                 tts_no_voice_found: 'No se encontró ninguna voz en español en este dispositivo - la reproducción usa la voz predeterminada.',
                 support_section_title: 'Soporte', support_section_email_title: 'Email', support_section_email_desc: '¿Tienes preguntas, encontraste un error o solo quieres charlar? ¡Escríbeme!',
@@ -5265,9 +5293,11 @@
                 changelog_type_feature: 'Nouveau', changelog_type_performance: 'Performance', changelog_type_fix: 'Correction',
                 tutorial_speak_aria: 'Écouter cette étape',
                 t_whatsnew1_title: '✨ Quoi de neuf depuis ta dernière visite ?',
-                t_whatsnew1_text: "Petit tour supplémentaire : la narration vocale est maintenant disponible presque partout - paroles, bio, cartes, tableau de bord, notes de version, même ici dans le tutoriel. Et le mode StandBy a été entièrement revu : un bug sérieux de batterie/chaleur a été corrigé, et il tourne maintenant nettement plus efficacement dans l'ensemble.",
+                t_whatsnew1_text: "Correction importante de surchauffe : certains minuteurs en arrière-plan continuaient de tourner même téléphone verrouillé ou minimisé, avec du vrai trafic réseau toutes les 5 secondes. C'est désormais corrigé - nettement moins de batterie consommée et de chaleur, même sans utiliser StandBy.",
                 t_whatsnew2_title: '✨ Encore plus de nouveautés',
-                t_whatsnew2_text: "La section Support affiche maintenant en direct qui est connecté sur mon serveur Discord. Et les notes de version dans le pied de page continuent de s'étoffer - n'hésite pas à y jeter un œil de temps en temps. C'est tout pour le tour supplémentaire - amuse-toi bien à explorer !",
+                t_whatsnew2_text: "Le tenace bug de la « barre de progression figée » est maintenant vraiment résolu après plusieurs tentatives, avec un filet de sécurité auto-réparateur en cas de récidive - sans que StandBy ne soit plus pris à tort dans l'histoire.",
+                t_whatsnew3_title: '✨ Sous le capot',
+                t_whatsnew3_text: "J'ai aussi fait une revue complète et approfondie du code - minuteurs, animations, utilisation mémoire - pour m'assurer que rien d'autre ne consomme discrètement de la batterie. Tous les détails, comme toujours, dans les notes de version complètes en bas de page.",
                 tutorial_whatsnew_badge: '✨ Bonus : Nouveautés',
                 tts_no_voice_found: "Aucune voix française trouvée sur cet appareil - la lecture utilise la voix par défaut.",
                 support_section_title: 'Support', support_section_email_title: 'Email', support_section_email_desc: 'Des questions, un bug trouvé, ou juste envie de discuter ? Écris-moi !',
@@ -5449,9 +5479,11 @@
                 changelog_type_feature: 'Novo', changelog_type_performance: 'Performance', changelog_type_fix: 'Correção',
                 tutorial_speak_aria: 'Ouvir esta etapa',
                 t_whatsnew1_title: '✨ O que há de novo desde sua última visita?',
-                t_whatsnew1_text: 'Tour extra rápido: a narração por voz agora está disponível em quase todos os lugares - letras, bio, cartões, painel, notas de versão, até aqui no tutorial. E o modo StandBy foi totalmente reformulado: um bug sério de bateria/calor foi corrigido, e agora roda notavelmente mais eficiente no geral.',
+                t_whatsnew1_text: 'Correção importante de aquecimento: alguns temporizadores em segundo plano continuavam rodando mesmo com o celular bloqueado ou minimizado, incluindo tráfego de rede real a cada 5 segundos. Isso já foi corrigido - consumo de bateria e calor visivelmente menores, mesmo sem usar o StandBy.',
                 t_whatsnew2_title: '✨ Ainda mais novidades',
-                t_whatsnew2_text: 'A seção de Suporte agora mostra ao vivo quem está online no meu servidor do Discord. E as notas de versão no rodapé continuam crescendo - dá uma olhada de vez em quando. Isso é tudo pelo tour extra - divirta-se explorando!',
+                t_whatsnew2_text: 'O teimoso bug da "barra de progresso congelada" agora está realmente resolvido de vez após várias rodadas, com uma rede de autorreparação caso volte a acontecer - sem que o StandBy seja mais afetado incorretamente.',
+                t_whatsnew3_title: '✨ Por baixo do capô',
+                t_whatsnew3_text: 'Também revisei todo o código a fundo - temporizadores, animações, uso de memória - para garantir que mais nada consuma bateria desnecessariamente. Todos os detalhes, como sempre, nas notas de versão completas no rodapé.',
                 tutorial_whatsnew_badge: '✨ Bônus: Novidades',
                 tts_no_voice_found: 'Nenhuma voz em português encontrada neste dispositivo - a reprodução usa a voz padrão.',
                 support_section_title: 'Suporte', support_section_email_title: 'Email', support_section_email_desc: 'Tem dúvidas, achou um bug, ou só quer bater um papo? Me manda um email!',
@@ -5633,9 +5665,11 @@
                 changelog_type_feature: 'Yeni', changelog_type_performance: 'Performans', changelog_type_fix: 'Düzeltme',
                 tutorial_speak_aria: 'Bu adımı sesli oku',
                 t_whatsnew1_title: '✨ Son ziyaretinden beri neler değişti?',
-                t_whatsnew1_text: 'Kısa ekstra tur: sesli anlatım artık neredeyse her yerde mevcut - şarkı sözleri, biyografi, kartlar, panel, sürüm notları, hatta burada eğitimde bile. Ve StandBy modu tamamen yenilendi: ciddi bir pil/ısınma hatası düzeltildi, ayrıca artık genel olarak belirgin şekilde daha verimli çalışıyor.',
+                t_whatsnew1_text: 'Önemli ısınma düzeltmesi: bazı arka plan zamanlayıcıları telefon kilitliyken veya küçültülmüşken bile çalışmaya devam ediyor, her 5 saniyede gerçek ağ trafiği üretiyordu. Bu artık düzeltildi - StandBy kullanmasan bile gözle görülür şekilde daha az pil tüketimi ve ısınma.',
                 t_whatsnew2_title: '✨ Daha fazla yenilik',
-                t_whatsnew2_text: 'Destek bölümü artık Discord sunucumda kimlerin çevrimiçi olduğunu canlı gösteriyor. Ve alt bilgideki sürüm notları büyümeye devam ediyor - ara sıra göz atmaktan çekinme. Ekstra tur bu kadardı - keşfetmenin tadını çıkar!',
+                t_whatsnew2_text: 'Israrcı "ilerleme çubuğu donması" hatası birkaç turdan sonra artık gerçekten tamamen çözüldü, tekrar olursa diye kendi kendini onaran bir güvenlik ağıyla birlikte - StandBy artık bu sürece yanlışlıkla karışmıyor.',
+                t_whatsnew3_title: '✨ Perde arkasında',
+                t_whatsnew3_text: 'Ayrıca tüm kod tabanını baştan sona derinlemesine gözden geçirdim - zamanlayıcılar, animasyonlar, bellek kullanımı - başka hiçbir şeyin sessizce pil tüketmediğinden emin olmak için. Her zamanki gibi tüm ayrıntılar alt bilgideki sürüm notlarında.',
                 tutorial_whatsnew_badge: '✨ Bonus: Yenilikler',
                 tts_no_voice_found: 'Bu cihazda Türkçe ses bulunamadı - oynatma varsayılan sesi kullanıyor.',
                 support_section_title: 'Destek', support_section_email_title: 'E-posta', support_section_email_desc: 'Sorun mu var, bir hata mı buldun, ya da sadece sohbet mi etmek istiyorsun? Bana yaz!',
@@ -5955,9 +5989,17 @@
         // Änderungen noch nicht gesehen haben. Alle isNew-Markierungen bleiben für die
         // visuelle Badge-Unterscheidung erhalten.
         function getWhatsNewSteps() {
+            // FIX v24.69: Dritten Schritt ergänzt (siehe internen Dev-Changelog) + Inhalt aller
+            // drei Schritte auf den aktuellen Stand gebracht - vorher zeigte diese Tour bei
+            // JEDEM Versionssprung seit v24.50 unverändert dieselben, längst veralteten
+            // "Neuigkeiten" (Sprachausgabe/Discord-Live-Status), weil whatsNewSeenVersion zwar
+            // korrekt pro Version zurückgesetzt wird, der TEXT selbst aber nie mit aktualisiert
+            // wurde. Zielt jetzt auf footer-whats-new-btn statt support-section, da Schritt 3
+            // direkt dorthin verweist.
             return [
                 { targetId: 'standby-toggle', title: t('t_whatsnew1_title'), text: t('t_whatsnew1_text'), isNew: true },
-                { targetId: 'support-section', title: t('t_whatsnew2_title'), text: t('t_whatsnew2_text'), isNew: true }
+                { targetId: 'main-music-card', title: t('t_whatsnew2_title'), text: t('t_whatsnew2_text'), isNew: true },
+                { targetId: 'footer-whats-new-btn', title: t('t_whatsnew3_title'), text: t('t_whatsnew3_text'), isNew: true }
             ];
         }
 
@@ -8791,6 +8833,14 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.69', date: "August 2026", type: 'fix', items: {
+                de: ["\"Was ist neu?\"-Mini-Tutorial zeigte seit v24.50 veraltete Inhalte trotz Update bei jedem Release - jetzt aktuell und um einen dritten Schritt erweitert"],
+                en: ["The \"What's new?\" mini tutorial had been showing outdated content on every release since v24.50 - now up to date and extended with a third step"],
+                es: ["El mini-tutorial \"¿Qué hay de nuevo?\" mostraba contenido desactualizado en cada versión desde v24.50 - ahora está al día y ampliado con un tercer paso"],
+                fr: ["Le mini-tutoriel « Quoi de neuf ? » affichait un contenu obsolète à chaque version depuis v24.50 - désormais à jour et enrichi d'une troisième étape"],
+                pt: ["O mini-tutorial \"O que há de novo?\" mostrava conteúdo desatualizado a cada versão desde v24.50 - agora está atualizado e ganhou uma terceira etapa"],
+                tr: ["\"Yenilikler neler?\" mini eğitimi v24.50'den beri her sürümde güncel olmayan içerik gösteriyordu - artık güncel ve üçüncü bir adımla genişletildi"],
+            }},
             { version: 'v24.68', date: "August 2026", type: 'fix', items: {
                 de: ["Wichtiger Hitze-Fix: einige Hintergrund-Timer liefen bisher auch bei gesperrtem/minimiertem Handy unnötig weiter - jetzt pausieren sie korrekt, spürbar weniger Akku-/Wärmeverbrauch"],
                 en: ["Important heat fix: some background timers kept running unnecessarily even with the phone locked or minimized - now they pause correctly, noticeably less battery drain and heat"],
