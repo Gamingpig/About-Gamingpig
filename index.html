@@ -11,6 +11,30 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FIX - KRITISCH] Release v24.67: Notfall-Reload aus v24.66 löste sich fälschlich auch
+    während StandBy aus - genau während der beabsichtigten Übernacht-Nutzung
+      - Nutzer meldete: Seite lädt sich nachts während des StandBy-Lockscreens unerwünscht
+        selbst neu, genau während er das Handy bewusst über Nacht als Ambient-Display stehen
+        lassen wollte - das komplette Gegenteil vom beabsichtigten Nutzen.
+      - Root Cause: Der neue Notfall-Check aus v24.66 wusste nichts vom StandBy-Modus -
+        dort wird das Fortschritts-Tracking aber ganz ABSICHTLICH komplett angehalten
+        (kritischer Hitze-Fix aus v24.42/v24.48/v24.49) - ein unveränderter Zeit-Text ist
+        während StandBy also das ERWARTETE, korrekte Verhalten, kein Bug. Der Notfall-Check
+        hat das fälschlich als Einfrieren interpretiert und genau in dem Moment neu geladen,
+        wo ein Reload am unerwünschtesten ist.
+      - Fix: StandBy-Modus (und zur Konsistenz auch der Hintergrund-Tab-Fall) explizit vom
+        Notfall-Check ausgenommen, mit Zähler-Reset statt reinem Überspringen, damit direkt
+        nach dem Verlassen von StandBy nicht sofort fälschlich "40s alt" gilt.
+      - Beim Verifizieren selbst auf eine Verwirrung in der eigenen Testmethode gestoßen:
+        ein Test zeigte scheinbar weiterhin einen Reload trotz des Fixes - stellte sich nach
+        genauerer Untersuchung als Fehlalarm heraus: der eigene Testaufbau hatte den
+        Tutorial-Skip-Button angeklickt, der einen KOMPLETT SEPARATEN, schon lange
+        bestehenden Reload auslöst (Tutorial-Ende setzt den Low-End-Modus zurück und lädt
+        danach neu) - dieser hat sich mit dem eigentlichen Test vermischt. Mit sauber
+        getrenntem Test (Tutorial-Reload erst abwarten, dann erst den StandBy-Fall testen)
+        eindeutig bestätigt: kein Reload mehr während StandBy, trotz künstlich 41 Sekunden
+        eingefrorenem Zustand.
+
     [FEATURE - NOTFALL-SICHERHEITSNETZ] Release v24.66: Automatischer Seiten-Reload, falls der
     Fortschritt trotz aller bisherigen Fixes doch nochmal einfriert
       - Nutzer meldete nach v24.65 weiterhin einen eingefrorenen Fortschritt, wollte aber
@@ -3687,7 +3711,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.66 · 2026-08-13';
+        const SITE_VERSION = 'v24.67 · 2026-08-13';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -8741,6 +8765,14 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.67', date: "August 2026", type: 'fix', items: {
+                de: ["Wichtiger Fix: die neue Notfall-Erkennung löste sich fälschlich auch im StandBy-Lockscreen aus - jetzt korrekt nur noch dort, wo es wirklich nötig ist"],
+                en: ["Important fix: the new emergency detection also triggered incorrectly during the StandBy lockscreen - now only fires where actually needed"],
+                es: ["Corrección importante: la nueva detección de emergencia también se activaba incorrectamente durante la pantalla de bloqueo StandBy - ahora solo se dispara donde realmente es necesario"],
+                fr: ["Correction importante : la nouvelle détection d'urgence se déclenchait aussi à tort pendant l'écran verrouillé StandBy - ne se déclenche désormais que là où c'est vraiment nécessaire"],
+                pt: ["Correção importante: a nova detecção de emergência também disparava incorretamente durante a tela de bloqueio StandBy - agora só é acionada onde realmente necessário"],
+                tr: ["Önemli düzeltme: yeni acil durum tespiti StandBy kilit ekranında da yanlışlıkla tetikleniyordu - artık yalnızca gerçekten gerekli olduğunda çalışıyor"],
+            }},
             { version: 'v24.66', date: "August 2026", type: 'feature', items: {
                 de: ["Notfall-Sicherheitsnetz: Seite lädt sich jetzt automatisch selbst neu, falls der Fortschritt doch mal einfrieren sollte - kein Zutun mehr nötig"],
                 en: ["Emergency safety net: the page now automatically reloads itself if progress should ever freeze - no action needed from you"],
@@ -11501,6 +11533,19 @@
         let lastVisibleTimeText = null;
         let lastVisibleTimeChangeAt = Date.now();
         setInterval(() => {
+            // FIX v24.67 (KRITISCH): Nutzer meldete - die Seite lädt sich nachts während des
+            // StandBy-Lockscreens unerwünscht selbst neu, genau während er sie bewusst über
+            // Nacht als Ambient-Display stehen lassen wollte. Root Cause: Dieser Notfall-Check
+            // wusste nichts vom StandBy-Modus - dort wird das Fortschritts-Tracking aber ganz
+            // ABSICHTLICH komplett angehalten (siehe der kritische Hitze-Fix aus v24.42/v24.48/
+            // v24.49) - ein unveränderter Zeit-Text ist während StandBy also das ERWARTETE,
+            // korrekte Verhalten, kein Bug. Genauso im Hintergrund-Tab (document.hidden), wo
+            // aus denselben Effizienzgründen ebenfalls pausiert wird. Beide Zustände jetzt
+            // explizit übersprungen, bevor überhaupt gemessen wird.
+            if (standByActive || document.hidden) {
+                lastVisibleTimeChangeAt = Date.now(); // Zähler zurücksetzen statt einfach zu pausieren, damit direkt nach dem Verlassen von StandBy nicht sofort ein "40s alt" fälschlich gilt
+                return;
+            }
             if (!trackIsPlaying || !timeCurrentEl) return;
             const nowText = timeCurrentEl.innerText;
             if (nowText !== lastVisibleTimeText) {
