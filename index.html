@@ -11,6 +11,32 @@
     Neueste Einträge oben.
     ================================================================
 
+    [PERFORMANCE - KRITISCH] Release v24.68: Handy wurde generell warm (nicht nur im StandBy) -
+    Ursache: drei Hintergrund-Timer aus der Fortschrittsbalken-Saga prüften nie document.hidden
+      - Nutzer meldete: ganzes Handy fühlt sich zu warm an, auch ohne dass StandBy überhaupt
+        offen ist - dazu allgemein das Gefühl, die App sei "nur noch zusammengeflickt".
+      - Root Cause gefunden (Code direkt aus dem GitHub-Repo geprüft, nicht geraten): Die drei
+        in v24.60/v24.65/v24.66 nacheinander hinzugefügten Sicherheitsnetz-Timer
+        (fetchMusicData alle 5s inkl. echtem Netzwerk-Call, 30s-Watchdog alle 15s,
+        Selbstheilungs-Check alle 3s) hatten - anders als der längst korrekt abgesicherte
+        animateLoop()/startProgressTracking() - schlicht vergessen, document.hidden zu prüfen.
+        Sie liefen dadurch auch bei gesperrtem/minimiertem Handy für immer im vollen Takt
+        weiter, inklusive echtem Netzwerk-Traffic alle 5 Sekunden - stundenlang, hält
+        CPU/Funkmodul wach, erklärt die generelle Wärme unabhängig von StandBy.
+      - Fix: Gemeinsame shouldPauseBackgroundWork()-Prüfung eingeführt (aktuell = document.hidden)
+        und allen drei Timern vorangestellt, statt für dieses Problem einen sechsten Timer
+        draufzusetzen. Bewusst NICHT die drei bestehenden, aber inhaltlich unterschiedlichen
+        visibilitychange-Listener (WakeLock-Reacquire, Progress-Neustart, page-hidden-CSS-Klasse)
+        zu einem einzigen verschmolzen - das wäre ein deutlich größerer, riskanterer Umbau
+        gewesen für denselben Effekt; chirurgischer Fix statt Rundum-Refactor.
+      - Verifiziert per Node-Syntax-Check (sauber) und isoliertem Logik-Test der drei
+        Callbacks mit gemocktem document.hidden (Hintergrund = 0 Netzwerk-/Neustart-Aufrufe,
+        sichtbar = unverändertes Normalverhalten). Echter Playwright-Browsertest war diesmal
+        nicht möglich (Chromium-Download in der Sandbox netzwerkgesperrt) - bitte nach dem
+        Deploy einmal selbst gegenchecken: Tab/App minimieren, ein paar Minuten warten,
+        Netzwerk-Tab in den DevTools sollte in der Zeit keine neuen Requests zu
+        npc-api.aikins.xyz zeigen.
+
     [FIX - KRITISCH] Release v24.67: Notfall-Reload aus v24.66 löste sich fälschlich auch
     während StandBy aus - genau während der beabsichtigten Übernacht-Nutzung
       - Nutzer meldete: Seite lädt sich nachts während des StandBy-Lockscreens unerwünscht
@@ -3711,7 +3737,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.67 · 2026-08-13';
+        const SITE_VERSION = 'v24.68 · 2026-08-13';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -8765,6 +8791,14 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.68', date: "August 2026", type: 'fix', items: {
+                de: ["Wichtiger Hitze-Fix: einige Hintergrund-Timer liefen bisher auch bei gesperrtem/minimiertem Handy unnötig weiter - jetzt pausieren sie korrekt, spürbar weniger Akku-/Wärmeverbrauch"],
+                en: ["Important heat fix: some background timers kept running unnecessarily even with the phone locked or minimized - now they pause correctly, noticeably less battery drain and heat"],
+                es: ["Corrección importante de calentamiento: algunos temporizadores en segundo plano seguían funcionando innecesariamente incluso con el teléfono bloqueado o minimizado - ahora se pausan correctamente, notablemente menos consumo de batería y calor"],
+                fr: ["Correction importante de surchauffe : certains minuteurs en arrière-plan continuaient de tourner inutilement même téléphone verrouillé ou minimisé - ils se mettent désormais correctement en pause, nettement moins de batterie consommée et de chaleur"],
+                pt: ["Correção importante de aquecimento: alguns temporizadores em segundo plano continuavam rodando desnecessariamente mesmo com o celular bloqueado ou minimizado - agora pausam corretamente, com consumo de bateria e calor visivelmente menores"],
+                tr: ["Önemli ısınma düzeltmesi: bazı arka plan zamanlayıcıları telefon kilitliyken veya küçültülmüşken bile gereksiz yere çalışmaya devam ediyordu - artık doğru şekilde duraklatılıyor, gözle görülür şekilde daha az pil tüketimi ve ısınma"],
+            }},
             { version: 'v24.67', date: "August 2026", type: 'fix', items: {
                 de: ["Wichtiger Fix: die neue Notfall-Erkennung löste sich fälschlich auch im StandBy-Lockscreen aus - jetzt korrekt nur noch dort, wo es wirklich nötig ist"],
                 en: ["Important fix: the new emergency detection also triggered incorrectly during the StandBy lockscreen - now only fires where actually needed"],
@@ -11485,7 +11519,24 @@
                 });
         }
 
-        setInterval(fetchMusicData, 5000);
+        // FIX v24.68 (KRITISCH - HITZE): fetchMusicData() und die beiden Watchdogs darunter
+        // prüften bisher NIE document.hidden - liefen also auch bei gesperrtem Handy oder
+        // minimierter App für immer im vollen Takt weiter (5s echter Netzwerk-Call, 15s- und
+        // 3s-Watchdog). Nutzer meldete: ganzes Handy wird warm, nicht nur im StandBy. Root
+        // Cause gefunden: anders als startProgressTracking()/animateLoop() (die document.hidden
+        // längst korrekt prüfen) hatten genau diese drei aus der "Fortschrittsbalken
+        // eingefroren"-Saga (v24.60/v24.65) nachträglich hinzugefügten Sicherheitsnetze diesen
+        // Check schlicht vergessen. Alle drei jetzt einheitlich mit einer gemeinsamen
+        // shouldPauseBackgroundWork()-Prüfung ausgestattet, statt noch einen sechsten Timer
+        // draufzusetzen.
+        function shouldPauseBackgroundWork() {
+            return document.hidden;
+        }
+
+        setInterval(() => {
+            if (shouldPauseBackgroundWork()) return;
+            fetchMusicData();
+        }, 5000);
 
         // NEU v24.60: Watchdog - prüft alle 15s, ob trotz vermeintlich laufender Musik seit
         // über 30 Sekunden kein erfolgreiches Update mehr angekommen ist. Falls doch, wird
@@ -11493,7 +11544,7 @@
         // sicherheitshalber neu gestartet, falls es aus irgendeinem Grund hängen geblieben
         // sein sollte, statt dass der Nutzer erst manuell neu laden muss.
         setInterval(() => {
-            if (!trackIsPlaying) return;
+            if (shouldPauseBackgroundWork() || !trackIsPlaying) return;
             const silentForMs = Date.now() - lastSuccessfulFetchAt;
             if (silentForMs > 30000) {
                 console.warn(`Watchdog: seit ${Math.round(silentForMs / 1000)}s kein erfolgreiches Musikdaten-Update mehr erhalten - erzwinge Wiederherstellungsversuch.`);
@@ -11514,6 +11565,7 @@
         // Sicherheitsnetz nach mehreren Runden hartnäckiger "Fortschritt eingefroren"-
         // Bugreports - lieber einmal zu oft geprüft als nochmal derselbe Bug.
         setInterval(() => {
+            if (shouldPauseBackgroundWork()) return;
             if (trackIsPlaying && !progressTickerInterval && !(mainMusicCard && mainMusicCard.classList.contains('lyrics-open'))) {
                 console.warn('Selbstheilungs-Check: Fortschritts-Tracking war trotz laufender Musik inaktiv - starte neu.');
                 startProgressTracking();
