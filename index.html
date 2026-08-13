@@ -11,6 +11,89 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FEATURE - KRITISCH] Release v24.78: Dynamische Sprechrate für synchrones Lyrics-Vorlesen
+    bei textreichen/schnellen Songs (z.B. "Turn It Up" von ILKO)
+      - Nutzer meldete: bei Songs mit schnellem/dichtem Text kommt die Sprachausgabe nicht
+        hinterher, bewusst NUR dieser eine Fix gewünscht, Rest erstmal so lassen zum Testen.
+      - Root Cause: die Sprechrate (SpeechSynthesisUtterance.rate) war bisher IMMER fest bei
+        1.0 (Browser-Standard), komplett unabhängig davon, wie viel Text in wie wenig Zeit
+        gesprochen werden musste. Bei dichten Passagen blieb die Ausgabe dadurch zwangsläufig
+        hinter der Musik zurück - und driftete danach dauerhaft weiter auseinander, statt je
+        wieder aufzuholen (der bestehende TTS_MAX_LINE_GAP_MS-Deckel verhindert nur endloses
+        Weiterdriften über 6s hinaus, holt aber nichts auf).
+      - Fix: speakLyricsSynced() umgebaut - baut jetzt vorab eine FLACHE Liste aller zu
+        sprechenden Häppchen (Zeile oder Wort-Gruppe) mit Ziel-Zeitpunkt, statt verschachtelt
+        während der Wiedergabe zu planen. Dadurch kann für jedes Häppchen sauber auf das
+        NÄCHSTE vorausgeschaut werden: verfügbare Zeit bis dahin ermitteln, grob abschätzen,
+        wie lange der Text bei normaler Rate bräuchte (Erfahrungswert ~380ms/Wort), Sprechrate
+        nur so weit hochsetzen wie nötig (TTS_MS_PER_WORD_AT_RATE1, gedeckelt bei
+        TTS_MAX_SYNC_RATE = 2.2x, damit es bei extrem dichten Passagen nicht komplett
+        unverständlich wird). Bei normalem Songtempo bleibt rate=1.0, unverändertes Verhalten.
+      - Nebeneffekt: Code dabei auch etwas aufgeräumt - die vorherige verschachtelte
+        Zeile/Wort-Gruppen-Logik mit doppeltem Warte-/Sprech-Code ist jetzt eine einzige,
+        flache Schleife.
+
+    [FIX - KRITISCH] Release v24.77: StandBy-Querformat-Layout + zuverlässige
+    Benachrichtigungs-Anfrage (v24.75-Ansatz wurde von Browsern oft lautlos blockiert)
+      - Querformat-Problem: Nutzer meldete - StandBy sieht im Querformat schlecht aus, "der
+        Rest der Seite sieht perfekt auch quer aus". Root Cause: keine einzige
+        @media (orientation: landscape)-Regel existierte auf der ganzen Seite.
+        #standby-shift-wrapper nutzt starre "flex-direction: column" (Uhr oben, Karte unten
+        UNTEREINANDER), Uhr-Schriftgröße war rein an die Viewport-BREITE gekoppelt
+        (clamp(2.6rem, 13vw, 6rem)) - im Querformat ist die Breite groß (riesige Schrift),
+        die Höhe gleichzeitig klein (~360-430px), beides zusammen sprengt den Platz nach
+        unten. Fix: eigenes Querformat-Layout - Uhr und Now-Playing-Karte NEBENEINANDER,
+        Uhr-Schriftgröße auf vh statt vw umgestellt, Abstände reduziert.
+      - Benachrichtigungs-Problem: Nutzer meldete - es kommen nie Benachrichtigungen an.
+        Root Cause: die automatische Notification.requestPermission()-Anfrage beim Laden
+        (v24.75) wird von Browsern (besonders Chrome/Android) oft komplett LAUTLOS
+        unterdrückt, wenn sie nicht an einen echten Klick gekoppelt ist ("abusive permission
+        request"-Schutz) - kein Fehler, kein Absturz, einfach gar kein Dialog, Erlaubnis
+        bleibt für immer auf "default". Fix: zusätzlicher Button im Einstellungsmenü, direkt
+        an onclick gekoppelt, zeigt den echten System-Dialog dadurch zuverlässig. Zeigt auch
+        den aktuellen Status an (AN / blockiert / nicht eingerichtet) und erklärt bei
+        "blockiert", dass das nur über die Browser-/System-Einstellungen selbst zurückgesetzt
+        werden kann, nicht per Klick auf der Seite.
+      - Klarstellung: Cover-Art-2x-Tap-Bug war schon in v24.76 durch einen zweiten,
+        unabhängigen Fix (pointer-events während der Schließen-Animation) behoben - Was-ist-
+        neu-Tour war dafür allerdings noch nicht aktualisiert, jetzt nachgeholt.
+
+    [FIX - KRITISCH] Release v24.76: Cover-Art-2x-Tap-Bug bestand TROTZ v24.73-Fix weiterhin -
+    zweiter, wahrscheinlich dominanter Root Cause gefunden
+      - Nutzer meldete nach v24.73 (Timeout-Race-Condition-Fix): Bug besteht weiterhin,
+        unverändert. v24.73-Fix war real und richtig, aber offenbar nicht die einzige Ursache.
+      - Zweiter Root Cause gefunden: #music-picker (das Plattform-Auswahl-Overlay, "absolute
+        inset-0 z-50" - liegt exakt über der gesamten Musikkarte inkl. Cover) hatte während
+        der gesamten 900ms-Ausblend-Animation (.picker-closing) KEIN pointer-events: none -
+        blieb die ganze Zeit voll klickbar UND physisch über dem Cover liegend, auch wenn es
+        optisch schon fast unsichtbar war. Ein Tap kurz nach "Abbrechen" trifft dadurch auf das
+        fast-transparente, aber noch aktive Overlay statt auf das Cover darunter - "passiert"
+        scheinbar nichts (das Overlay selbst hat an der getroffenen Stelle keinen eigenen
+        Klick-Handler). Erst der zweite Tap, nach Ende der 900ms-Animation, trifft wirklich
+        das Cover und öffnet die Auswahl erneut.
+      - Fix: pointer-events jetzt exakt an den sichtbaren/interaktiven Zustand gekoppelt (auto
+        nur bei .flex ohne .picker-closing, sonst none) - der Picker wird sofort beim Start der
+        Schließen-Animation klick-durchlässig, nicht erst nach deren Ende.
+      - LEKTION: Ein Race-Condition-Fix (v24.73) kann korrekt UND trotzdem nicht ausreichend
+        sein, wenn es mehrere unabhängige Ursachen für dasselbe beobachtbare Symptom gibt -
+        bei "Fix bestätigt, Bug besteht trotzdem" IMMER nochmal komplett neu von vorne suchen,
+        nicht am selben (bereits korrigierten) Mechanismus weiterdrehen.
+
+    [FIX/FEATURE] Release v24.75: Notification-Anfrage vorgezogen + Klarstellung zu zwei
+    bereits erledigten Punkten
+      - Klarstellung 1: Cover-Art-2x-Tap-Bug im Music Dashboard war bereits in v24.73 gefixt
+        (Race-Condition im Schließen-Timer von toggleMusicPicker) - Nutzer hatte 36/v24.73
+        beim Testen übersprungen (35 direkt zu 37), daher kein neuer Code nötig, nur bestätigt.
+      - Klarstellung 2: Die "AB SOFORT VERBINDLICH"-Regel aus v24.69 (Was-ist-neu-Tour bei
+        jedem Release mitaktualisieren) wurde bereits bei JEDEM Release seit v24.69 eingehalten
+        (v24.69-v24.74, alle 6 Sprachen) - Nutzer hatte das durch übersprungene Test-Versionen
+        vermutlich noch nicht live gesehen.
+      - Fix: Notification-Anfrage für die "Willkommen zurück"-Meldung (v24.74) lief bisher erst
+        beim ersten StandBy-Öffnen - manche Nutzer kommen dort vielleicht nie hin. Jetzt gleich
+        beim Laden der Seite (einmalig, nur falls noch nie entschieden). HINWEIS für Nutzer:
+        in der installierten Android-App (TWA) greift das erst nach eigenem App-Rebuild +
+        Play-Store-Upload, ein reiner Website-Deploy reicht dafür laut Projektdoku nicht.
+
     [FIX/FEATURE] Release v24.74: StandBy "Einfrieren"-Erklärung + echter Fade beim
     Cover/Hintergrund-Wechsel + smartes Wake-Lock + "Willkommen zurück"-Meldung
       - Nutzer meldete: StandBy läuft beim ersten Öffnen dauerhaft flüssig, "friert" aber nach
@@ -3308,9 +3391,20 @@
         #modal-overlay.flex { opacity: 1; }
         #modal-overlay.modal-closing { opacity: 0; }
         
-        #music-picker { transition: opacity 0.5s var(--apple-ease); opacity: 0; }
-        #music-picker.flex { opacity: 1; }
-        #music-picker.picker-closing { opacity: 0; }
+        /* FIX v24.76 (KRITISCH): Nutzer meldete - Cover-Art-2x-Tap-Bug besteht TROTZ v24.73-Fix
+           weiterhin. Der v24.73-Fix (Timeout-Race-Condition) war real, aber nicht die einzige
+           Ursache. Zweiter, wahrscheinlich der eigentlich dominante Root Cause hier gefunden:
+           #music-picker hatte während der gesamten 900ms-Ausblend-Animation (.picker-closing)
+           KEIN pointer-events: none - blieb also die ganze Zeit voll klickbar UND lag weiterhin
+           physisch über #media-container (Cover), auch wenn es optisch schon fast unsichtbar
+           war. Ein Tap kurz nach "Abbrechen" trifft dadurch auf das fast-transparente, aber
+           noch aktive Overlay statt auf das Cover darunter - "passiert" scheinbar nichts. Erst
+           der zweite Tap, nach Ende der Animation, trifft wirklich das Cover. Fix: pointer-events
+           jetzt exakt an den sichtbaren Zustand gekoppelt - sobald die Schließen-Animation
+           beginnt, ist der Picker sofort klick-durchlässig, nicht erst nach 900ms. */
+        #music-picker { transition: opacity 0.5s var(--apple-ease); opacity: 0; pointer-events: none; }
+        #music-picker.flex { opacity: 1; pointer-events: auto; }
+        #music-picker.picker-closing { opacity: 0; pointer-events: none; }
         
         #tutorial-wrapper { transition: opacity 0.5s var(--apple-ease); opacity: 0; z-index: 99999 !important; }
         #tutorial-wrapper.flex { opacity: 1; }
@@ -3672,6 +3766,34 @@
         #standby-clock { font-family: 'JetBrains Mono', monospace; font-weight: 800; color: #fff; font-size: clamp(2.6rem, 13vw, 6rem); line-height: 1; letter-spacing: -2px; text-shadow: 0 0 60px rgba(255,255,255,0.25); }
         #standby-date { color: rgba(255,255,255,0.6); font-size: clamp(0.75rem, 2.8vw, 1rem); font-weight: 600; margin-top: 6px; text-transform: capitalize; }
 
+        /* FIX v24.77 (KRITISCH): Nutzer meldete - StandBy sieht im Querformat schlecht aus,
+           "der Rest der Seite sieht perfekt auch quer aus". Root Cause: #standby-shift-wrapper
+           nutzt "flex-direction: column" (Uhr oben, Now-Playing-Karte unten UNTEREINANDER) und
+           die Uhr ist per "clamp(2.6rem, 13vw, 6rem)" an die VIEWPORT-BREITE gekoppelt - im
+           Querformat ist die Breite auf einem Handy plötzlich groß (viel vw = riesige Schrift),
+           während die Höhe gleichzeitig klein ist (typisch 360-430px) - beides zusammen sprengt
+           den verfügbaren Platz nach unten, die Now-Playing-Karte wird gequetscht/abgeschnitten.
+           Es gab bisher GAR KEINE @media (orientation: landscape)-Regel auf der ganzen Seite -
+           das erklärt auch, warum "der Rest der Seite perfekt aussieht": der Rest nutzt keine
+           derart hohen, rein breiten-basierten clamp()-Werte in einer starren Spalten-Anordnung.
+           Fix: eigenes Querformat-Layout - Uhr und Now-Playing-Karte NEBENEINANDER statt
+           untereinander (nutzt die vorhandene Breite sinnvoll aus), Uhr-Schriftgröße auf
+           Höhen-Basis (vh statt vw) umgestellt, Abstände reduziert. */
+        @media (orientation: landscape) and (max-height: 600px) {
+            #standby-shift-wrapper {
+                flex-direction: row;
+                justify-content: center;
+                align-items: center;
+                gap: clamp(1.25rem, 5vw, 3.5rem);
+                padding: 0 clamp(1rem, 4vw, 3rem);
+            }
+            #standby-clockzone { padding: 0; flex-shrink: 0; }
+            #standby-clock { font-size: clamp(1.8rem, 13vh, 3.4rem); }
+            #standby-date { font-size: clamp(0.6rem, 3.2vh, 0.85rem); margin-top: 4px; }
+            #standby-nowplaying { width: min(46vw, 380px); margin-bottom: 0; padding: clamp(14px, 3.5vh, 22px); }
+            #standby-hint { padding-bottom: 10px; }
+        }
+
         /* --- Große Now-Playing Lockscreen-Karte --- */
         #standby-nowplaying {
             position: relative; z-index: 2; width: min(94vw, 520px); margin-bottom: 40px;
@@ -3936,7 +4058,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.74 · 2026-08-13';
+        const SITE_VERSION = 'v24.78 · 2026-08-13';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -4410,6 +4532,12 @@
                                         <!-- NEU v24.74: Nutzer wünschte sich bessere Aufklärung darüber, was diese
                                              Einstellung eigentlich tut, statt nur "AN/AUS" ohne Kontext. -->
                                         <p id="settings-wakelock-hint" class="text-left text-[8px] xxs:text-[9px] text-slate-500 px-2 leading-snug -mt-1 mb-1">Hält den Bildschirm nur wach, solange Musik läuft - pausiert sie, darf das Handy normal einschlafen.</p>
+                                        <!-- NEU v24.77: Nutzer meldete - Benachrichtigungen kommen nie an. Root Cause:
+                                             Browser blockieren Berechtigungsanfragen ohne echten Klick oft komplett,
+                                             lautlos, ganz ohne sichtbaren Dialog. Dieser Button ist an einen echten
+                                             Klick gekoppelt und zeigt den System-Dialog dadurch zuverlässig. -->
+                                        <button onclick="requestNotificationPermissionManually()" id="btn-notification-permission" class="text-left text-[10px] xxs:text-xs sm:text-sm text-teal-400 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">Benachrichtigungen: nicht eingerichtet</button>
+                                        <p id="settings-notification-hint" class="text-left text-[8px] xxs:text-[9px] text-slate-500 px-2 leading-snug -mt-1 mb-1">Für die "Willkommen zurück"-Meldung, falls Musik pausiert war während du weg warst.</p>
                                         <p id="settings-version-label" class="text-left text-[9px] xxs:text-[10px] text-slate-500 px-2 py-1.5 font-mono select-all">Version —</p>
                                         
                                         <div class="h-px w-full bg-slate-700 my-1"></div>
@@ -4915,7 +5043,7 @@
                 changelog_type_feature: 'Neu', changelog_type_performance: 'Performance', changelog_type_fix: 'Fehlerbehebung',
                 tutorial_speak_aria: 'Diesen Schritt vorlesen',
                 t_whatsnew1_title: '✨ Was ist neu seit deinem letzten Besuch?',
-                t_whatsnew1_text: 'StandBy bleibt jetzt smart wach, solange Musik läuft (spart Akku in Pausen automatisch), Cover/Hintergrund wechseln mit echtem Fade statt hartem Schnitt, und du bekommst Bescheid, falls Musik pausiert war während du weg warst.',
+                t_whatsnew1_text: 'Synchrones Lyrics-Vorlesen passt die Sprechgeschwindigkeit jetzt automatisch an, wenn der Songtext sehr schnell/dicht ist - kommt nicht mehr hinterher, egal wie textreich der Song ist.',
                 t_whatsnew2_title: '✨ Noch mehr Neues',
                 t_whatsnew2_text: 'App zeigt beim Start jetzt sofort den bereits laufenden Song statt erst später. Außerdem: Plattform-Auswahl beim Cover-Tap öffnet sich nach "Abbrechen" jetzt zuverlässig beim ersten Versuch, plus etwas mehr Haptic-Feedback.',
                 t_whatsnew3_title: '✨ Unter der Haube',
@@ -4992,7 +5120,7 @@
                 kart_stat_besttime: 'Bestzeit',
                 kart_stat_sessions: 'Sessions',
                 kart_stat_since: 'Seit',
-                                settings_wakelock: 'Bildschirm an (StandBy)', settings_wakelock_hint: 'Hält den Bildschirm nur wach, solange Musik läuft - pausiert sie, darf das Handy normal einschlafen.',
+                                settings_wakelock: 'Bildschirm an (StandBy)', settings_wakelock_hint: 'Hält den Bildschirm nur wach, solange Musik läuft - pausiert sie, darf das Handy normal einschlafen.', settings_notifications: 'Benachrichtigungen', notifications_unsupported: 'nicht verfügbar', notifications_on: 'AN', notifications_blocked: 'blockiert - in Browser-Einstellungen ändern', notifications_not_set: 'nicht eingerichtet, antippen', notifications_denied_hint: 'Du hast Benachrichtigungen blockiert - das kann ich nicht per Klick zurücksetzen, nur du selbst in den Browser-/System-Einstellungen für diese Seite.', notifications_enabled_toast: '🔔 Benachrichtigungen sind jetzt aktiviert.', settings_notification_hint: 'Für die "Willkommen zurück"-Meldung, falls Musik pausiert war während du weg warst.',
                 mini_click_to_open: 'Klicken zum Öffnen', mini_click_to_close: 'Klicken zum Schließen',
                 aria_cp: 'Befehlspalette öffnen', aria_install: 'Als App installieren', aria_island: 'Song-Details öffnen, nach oben wischen zum Ausblenden'
             },
@@ -5104,7 +5232,7 @@
                 changelog_type_feature: 'New', changelog_type_performance: 'Performance', changelog_type_fix: 'Fix',
                 tutorial_speak_aria: 'Read this step aloud',
                 t_whatsnew1_title: '✨ What\'s new since your last visit?',
-                t_whatsnew1_text: "StandBy now stays smartly awake while music plays (auto-saves battery during pauses), cover/background changes now use a real fade instead of a hard cut, and you'll get notified if music was paused while you were away.",
+                t_whatsnew1_text: "Synced lyrics narration now automatically adjusts speaking speed when a song's lyrics are very fast/dense - it no longer falls behind, no matter how text-heavy the song is.",
                 t_whatsnew2_title: '✨ Even more news',
                 t_whatsnew2_text: "The app now shows the already-playing song immediately on start instead of only later. Also: the platform picker on cover tap now reliably reopens on the first try after 'Cancel', plus a bit more haptic feedback.",
                 t_whatsnew3_title: '✨ Under the hood',
@@ -5181,7 +5309,7 @@
                 kart_stat_besttime: 'Best Time',
                 kart_stat_sessions: 'Sessions',
                 kart_stat_since: 'Since',
-                                settings_wakelock: 'Keep Screen On (StandBy)', settings_wakelock_hint: 'Keeps the screen on only while music is playing - once paused, the phone can sleep normally.',
+                                settings_wakelock: 'Keep Screen On (StandBy)', settings_wakelock_hint: 'Keeps the screen on only while music is playing - once paused, the phone can sleep normally.', settings_notifications: 'Notifications', notifications_unsupported: 'not available', notifications_on: 'ON', notifications_blocked: 'blocked - change in browser settings', notifications_not_set: 'not set up, tap to enable', notifications_denied_hint: "You've blocked notifications - I can't reset that with a click, only you can in this site's browser/system settings.", notifications_enabled_toast: '🔔 Notifications are now enabled.', settings_notification_hint: "For the 'welcome back' notice if music was paused while you were away.",
                 mini_click_to_open: 'Click to open', mini_click_to_close: 'Click to close',
                 aria_cp: 'Open command palette', aria_install: 'Install as app', aria_island: 'Open song details, swipe up to dismiss'
             },
@@ -5293,7 +5421,7 @@
                 changelog_type_feature: 'Nuevo', changelog_type_performance: 'Rendimiento', changelog_type_fix: 'Corrección',
                 tutorial_speak_aria: 'Escuchar este paso',
                 t_whatsnew1_title: '✨ ¿Qué hay de nuevo desde tu última visita?',
-                t_whatsnew1_text: 'StandBy ahora se mantiene encendida de forma inteligente mientras suena música (ahorra batería en las pausas), la portada/fondo cambian con un fundido real en vez de un corte abrupto, y recibirás un aviso si la música estuvo pausada mientras no estabas.',
+                t_whatsnew1_text: 'La narración sincronizada de letras ahora ajusta automáticamente la velocidad al hablar cuando la letra es muy rápida/densa - ya no se queda atrás, sin importar cuánto texto tenga la canción.',
                 t_whatsnew2_title: '✨ Más novedades',
                 t_whatsnew2_text: 'La app ahora muestra la canción que ya está sonando inmediatamente al iniciar, en vez de más tarde. Además: el selector de plataformas al tocar la portada ahora se reabre de forma fiable al primer intento tras "Cancelar", más algo de retroalimentación háptica.',
                 t_whatsnew3_title: '✨ Bajo el capó',
@@ -5370,7 +5498,7 @@
                 kart_stat_besttime: 'Mejor Tiempo',
                 kart_stat_sessions: 'Sesiones',
                 kart_stat_since: 'Desde',
-                                settings_wakelock: 'Pantalla Encendida (StandBy)', settings_wakelock_hint: 'Mantiene la pantalla encendida solo mientras suena música - al pausar, el teléfono puede dormir normalmente.',
+                                settings_wakelock: 'Pantalla Encendida (StandBy)', settings_wakelock_hint: 'Mantiene la pantalla encendida solo mientras suena música - al pausar, el teléfono puede dormir normalmente.', settings_notifications: 'Notificaciones', notifications_unsupported: 'no disponible', notifications_on: 'ACTIVADAS', notifications_blocked: 'bloqueadas - cambiar en ajustes del navegador', notifications_not_set: 'no configuradas, toca para activar', notifications_denied_hint: 'Has bloqueado las notificaciones - no puedo restablecer eso con un clic, solo tú puedes hacerlo en los ajustes del navegador/sistema para este sitio.', notifications_enabled_toast: '🔔 Las notificaciones ya están activadas.', settings_notification_hint: 'Para el aviso de "bienvenido de nuevo" si la música estuvo pausada mientras no estabas.',
                 mini_click_to_open: 'Clic para abrir', mini_click_to_close: 'Clic para cerrar',
                 aria_cp: 'Abrir paleta de comandos', aria_install: 'Instalar como app', aria_island: 'Abrir detalles de la canción, desliza arriba para ocultar'
             },
@@ -5482,7 +5610,7 @@
                 changelog_type_feature: 'Nouveau', changelog_type_performance: 'Performance', changelog_type_fix: 'Correction',
                 tutorial_speak_aria: 'Écouter cette étape',
                 t_whatsnew1_title: '✨ Quoi de neuf depuis ta dernière visite ?',
-                t_whatsnew1_text: "StandBy reste désormais allumé intelligemment pendant que la musique joue (économise la batterie en pause), la pochette/le fond changent avec un vrai fondu au lieu d'un changement brutal, et tu seras averti si la musique était en pause pendant ton absence.",
+                t_whatsnew1_text: "La narration synchronisée des paroles ajuste désormais automatiquement le débit quand les paroles d'une chanson sont très rapides/denses - elle ne prend plus de retard, quel que soit le volume de texte.",
                 t_whatsnew2_title: '✨ Encore plus de nouveautés',
                 t_whatsnew2_text: "L'application affiche désormais immédiatement le morceau déjà en cours au démarrage, au lieu de plus tard. De plus : le sélecteur de plateformes en tapant sur la pochette se rouvre maintenant de façon fiable dès le premier essai après « Annuler », avec un peu plus de retour haptique.",
                 t_whatsnew3_title: '✨ Sous le capot',
@@ -5559,7 +5687,7 @@
                 kart_stat_besttime: 'Meilleur Temps',
                 kart_stat_sessions: 'Sessions',
                 kart_stat_since: 'Depuis',
-                                settings_wakelock: 'Écran Allumé (StandBy)', settings_wakelock_hint: "Garde l'écran allumé uniquement pendant que la musique joue - une fois en pause, le téléphone peut s'endormir normalement.",
+                                settings_wakelock: 'Écran Allumé (StandBy)', settings_wakelock_hint: "Garde l'écran allumé uniquement pendant que la musique joue - une fois en pause, le téléphone peut s'endormir normalement.", settings_notifications: 'Notifications', notifications_unsupported: 'non disponible', notifications_on: 'ACTIVÉES', notifications_blocked: 'bloquées - à changer dans les paramètres du navigateur', notifications_not_set: 'non configurées, touche pour activer', notifications_denied_hint: "Tu as bloqué les notifications - je ne peux pas réinitialiser ça par un clic, seulement toi dans les paramètres navigateur/système de ce site.", notifications_enabled_toast: '🔔 Les notifications sont maintenant activées.', settings_notification_hint: "Pour la notification « content de te revoir » si la musique était en pause pendant ton absence.",
                 mini_click_to_open: 'Cliquer pour ouvrir', mini_click_to_close: 'Cliquer pour fermer',
                 aria_cp: 'Ouvrir la palette de commandes', aria_install: 'Installer comme appli', aria_island: 'Ouvrir les détails du morceau, glisser vers le haut pour masquer'
             },
@@ -5671,7 +5799,7 @@
                 changelog_type_feature: 'Novo', changelog_type_performance: 'Performance', changelog_type_fix: 'Correção',
                 tutorial_speak_aria: 'Ouvir esta etapa',
                 t_whatsnew1_title: '✨ O que há de novo desde sua última visita?',
-                t_whatsnew1_text: 'O StandBy agora permanece ligado de forma inteligente enquanto a música toca (economiza bateria nas pausas), a capa/fundo mudam com um fade real em vez de um corte abrupto, e você será avisado se a música estava pausada enquanto estava fora.',
+                t_whatsnew1_text: 'A narração sincronizada da letra agora ajusta automaticamente a velocidade de fala quando a letra é muito rápida/densa - não fica mais para trás, não importa quanto texto a música tenha.',
                 t_whatsnew2_title: '✨ Ainda mais novidades',
                 t_whatsnew2_text: 'O app agora mostra a música que já está tocando imediatamente ao iniciar, em vez de só depois. Além disso: o seletor de plataformas ao tocar na capa agora reabre de forma confiável na primeira tentativa após "Cancelar", com um pouco mais de feedback tátil.',
                 t_whatsnew3_title: '✨ Por baixo do capô',
@@ -5748,7 +5876,7 @@
                 kart_stat_besttime: 'Melhor Tempo',
                 kart_stat_sessions: 'Sessões',
                 kart_stat_since: 'Desde',
-                                settings_wakelock: 'Tela Ligada (StandBy)', settings_wakelock_hint: 'Mantém a tela ligada apenas enquanto a música toca - ao pausar, o celular pode dormir normalmente.',
+                                settings_wakelock: 'Tela Ligada (StandBy)', settings_wakelock_hint: 'Mantém a tela ligada apenas enquanto a música toca - ao pausar, o celular pode dormir normalmente.', settings_notifications: 'Notificações', notifications_unsupported: 'indisponível', notifications_on: 'ATIVADAS', notifications_blocked: 'bloqueadas - altere nas configurações do navegador', notifications_not_set: 'não configuradas, toque para ativar', notifications_denied_hint: 'Você bloqueou as notificações - não posso redefinir isso com um clique, só você pode nas configurações de navegador/sistema deste site.', notifications_enabled_toast: '🔔 As notificações agora estão ativadas.', settings_notification_hint: 'Para o aviso de "bem-vindo de volta" caso a música estivesse pausada enquanto você estava fora.',
                 mini_click_to_open: 'Clique para abrir', mini_click_to_close: 'Clique para fechar',
                 aria_cp: 'Abrir paleta de comandos', aria_install: 'Instalar como app', aria_island: 'Abrir detalhes da música, deslize para cima para ocultar'
             },
@@ -5860,7 +5988,7 @@
                 changelog_type_feature: 'Yeni', changelog_type_performance: 'Performans', changelog_type_fix: 'Düzeltme',
                 tutorial_speak_aria: 'Bu adımı sesli oku',
                 t_whatsnew1_title: '✨ Son ziyaretinden beri neler değişti?',
-                t_whatsnew1_text: 'StandBy artık müzik çalarken akıllıca uyanık kalıyor (duraklamalarda otomatik pil tasarrufu), kapak/arka plan artık sert kesme yerine gerçek geçişle değişiyor ve sen yokken müzik duraklatılmışsa bildirim alacaksın.',
+                t_whatsnew1_text: "Senkronize söz seslendirmesi artık bir şarkının sözleri çok hızlı/yoğun olduğunda konuşma hızını otomatik ayarlıyor - şarkı ne kadar metin yoğun olursa olsun artık geride kalmıyor.",
                 t_whatsnew2_title: '✨ Daha fazla yenilik',
                 t_whatsnew2_text: 'Uygulama artık başlangıçta zaten çalmakta olan şarkıyı daha sonra değil hemen gösteriyor. Ayrıca: kapak resmine dokunarak açılan platform seçici artık "İptal"den sonra ilk denemede güvenilir şekilde yeniden açılıyor, biraz daha fazla dokunsal geri bildirimle birlikte.',
                 t_whatsnew3_title: '✨ Perde arkasında',
@@ -5937,7 +6065,7 @@
                 kart_stat_besttime: 'En İyi Süre',
                 kart_stat_sessions: 'Seanslar',
                 kart_stat_since: 'Beri',
-                                settings_wakelock: 'Ekranı Açık Tut (StandBy)', settings_wakelock_hint: 'Ekranı yalnızca müzik çalarken açık tutar - duraklatıldığında telefon normal şekilde uyuyabilir.',
+                                settings_wakelock: 'Ekranı Açık Tut (StandBy)', settings_wakelock_hint: 'Ekranı yalnızca müzik çalarken açık tutar - duraklatıldığında telefon normal şekilde uyuyabilir.', settings_notifications: 'Bildirimler', notifications_unsupported: 'kullanılamıyor', notifications_on: 'AÇIK', notifications_blocked: 'engellendi - tarayıcı ayarlarından değiştir', notifications_not_set: 'ayarlanmadı, etkinleştirmek için dokun', notifications_denied_hint: 'Bildirimleri engelledin - bunu bir tıklamayla sıfırlayamam, yalnızca sen bu sitenin tarayıcı/sistem ayarlarından yapabilirsin.', notifications_enabled_toast: '🔔 Bildirimler artık etkin.', settings_notification_hint: 'Sen yokken müzik duraklatılmışsa "tekrar hoş geldin" bildirimi için.',
                 mini_click_to_open: 'Açmak için tıkla', mini_click_to_close: 'Kapatmak için tıkla',
                 aria_cp: 'Komut paletini aç', aria_install: 'Uygulama olarak yükle', aria_island: 'Şarkı detaylarını aç, gizlemek için yukarı kaydır'
             }
@@ -6096,6 +6224,8 @@
             const wakeLockBtn = document.getElementById('btn-toggle-wakelock');
             if (wakeLockBtn) wakeLockBtn.textContent = t('settings_wakelock') + ': ' + (standbyWakeLockEnabled ? t('on_label') : t('off_label'));
             setText('settings-wakelock-hint', t('settings_wakelock_hint'));
+            setText('settings-notification-hint', t('settings_notification_hint'));
+            updateNotificationPermissionButtonLabel();
             setText('footer-created-by', t('footer_created_by'));
 
             // NEW: fallbackMessages / secretMessages Arrays in-place mit neuer Sprache befüllen
@@ -6558,6 +6688,42 @@
                 } catch (e) { /* egal, der In-App-Toast oben wurde ja schon gezeigt */ }
             }
         }
+        // NEU v24.77: Nutzer meldete - Benachrichtigungen kommen nie an. Root Cause: die
+        // automatische Notification.requestPermission()-Anfrage beim Laden (v24.75) wird von
+        // Browsern (besonders Chrome auf Android) oft komplett lautlos unterdrückt, wenn sie
+        // nicht an einen echten Nutzer-Klick gekoppelt ist ("abusive permission request"-
+        // Schutz) - kein Fehler, kein Absturz, einfach gar kein Dialog, die Erlaubnis bleibt
+        // für immer auf "default" stehen. Dieser Button hier ist direkt an onclick gekoppelt
+        // und zeigt den echten System-Dialog dadurch zuverlässig.
+        function updateNotificationPermissionButtonLabel() {
+            const btn = document.getElementById('btn-notification-permission');
+            if (!btn) return;
+            if (!('Notification' in window)) {
+                btn.textContent = t('settings_notifications') + ': ' + t('notifications_unsupported');
+                btn.disabled = true;
+                return;
+            }
+            const stateKey = Notification.permission === 'granted' ? 'notifications_on'
+                : Notification.permission === 'denied' ? 'notifications_blocked'
+                : 'notifications_not_set';
+            btn.textContent = t('settings_notifications') + ': ' + t(stateKey);
+        }
+        window.requestNotificationPermissionManually = async function() {
+            haptic(10);
+            if (!('Notification' in window)) return;
+            if (Notification.permission === 'denied') {
+                // Kann per JS nicht mehr zurückgeholt werden, sobald der Nutzer einmal aktiv
+                // blockiert hat - Browser verlangen dafür bewusst den Umweg über die
+                // Browser-/System-Einstellungen, damit Seiten das nicht selbst umgehen können.
+                if (typeof showToast === 'function') showToast(t('notifications_denied_hint'), 6000);
+                return;
+            }
+            try { await Notification.requestPermission(); } catch (e) {}
+            updateNotificationPermissionButtonLabel();
+            if (Notification.permission === 'granted' && typeof showToast === 'function') {
+                showToast(t('notifications_enabled_toast'), 3500);
+            }
+        };
         let standByInterval = null;
         let standByShiftInterval = null;
         let diHideTimeout = null;
@@ -6969,11 +7135,12 @@
             return new Promise(resolve => setTimeout(resolve, ms));
         }
 
-        function speakUtteranceAndWait(text, voice) {
+        function speakUtteranceAndWait(text, voice, rate) {
             return new Promise(resolve => {
                 const u = new SpeechSynthesisUtterance(text);
                 if (voice) u.voice = voice;
                 u.lang = TTS_LANG_BCP47[currentLang || 'de'] || 'de-DE';
+                u.rate = rate || 1; // NEU v24.78: dynamische Sprechrate, siehe speakLyricsSynced()
                 u.onend = resolve;
                 u.onerror = resolve;
                 speechSynthesis.speak(u);
@@ -7015,6 +7182,10 @@
         // Original - lange Instrumental-Pausen werden auf max. 6 Sekunden gedeckelt, damit
         // die Vorlesefunktion nicht minutenlang scheinbar hängen bleibt.
         const TTS_MAX_LINE_GAP_MS = 6000;
+        // NEU v24.78: siehe ausführliche Begründung bei speakLyricsSynced() weiter unten -
+        // Konstanten für die dynamische Sprechraten-Anpassung bei textreichen/schnellen Songs.
+        const TTS_MS_PER_WORD_AT_RATE1 = 380; // grober Erfahrungswert: Sprechdauer pro Wort bei rate=1.0
+        const TTS_MAX_SYNC_RATE = 2.2; // Obergrenze - schneller wird kaum noch verständlich
 
         // FIX v24.59: Nutzer meldete zurecht - das synchrone Vorlesen startete zwar zur
         // richtigen ZEILE, lief aber INNERHALB der Zeile mit der eigenen Geschwindigkeit der
@@ -7057,49 +7228,64 @@
             let startIndex = lines.findIndex(l => l.timeMs >= referenceMs);
             if (startIndex === -1) startIndex = 0; // Songende erreicht -> von vorn beginnen
 
-            let cursor = 0; // Zeit (ms), die seit Beginn dieser Vorlese-Sitzung real vergangen ist
-
+            // FIX v24.78: Vorher wurde verschachtelt (Zeile -> ggf. Wort-Gruppen) während der
+            // laufenden Wiedergabe geplant - das machte es unmöglich, für ein Häppchen sauber
+            // auf das NÄCHSTE vorauszuschauen, um die nötige Sprechrate zu berechnen (siehe
+            // unten). Jetzt: flache Liste aller zu sprechenden Häppchen (Zeile ODER
+            // Wort-Gruppe) mit ihrem jeweiligen Ziel-Zeitpunkt im Song vorab aufbauen, danach
+            // in einer einzigen, flachen Schleife abspielen.
+            const items = [];
             for (let i = startIndex; i < lines.length; i++) {
-                if (!ttsSyncedPlaybackActive) break; // per Stopp-Klick abgebrochen
                 const line = lines[i];
                 if (!line.tokens || line.tokens.length === 0) continue;
-
-                // Prüfen, ob diese Zeile echte Wort-Zeitstempel hat (nicht bei jedem Song
-                // vorhanden - manche Quellen liefern nur Zeilen-Zeitstempel).
                 const hasWordTiming = line.tokens.some(t => typeof t.timeMs === 'number');
-
                 if (!hasWordTiming) {
-                    // Rückfall: ganze Zeile am Stück, wie bisher.
                     const lineText = line.tokens.map(t => t.cleanText || t.text).join(' ').trim();
                     if (!lineText || lineText === '♪') continue;
-                    const rawOffset = line.timeMs - referenceMs;
-                    const scheduledOffset = Math.min(rawOffset, cursor + TTS_MAX_LINE_GAP_MS);
-                    const waitMs = Math.max(0, scheduledOffset - cursor);
-                    if (waitMs > 0) await ttsSleep(waitMs);
-                    if (!ttsSyncedPlaybackActive) break;
-                    const lineStart = performance.now();
-                    await speakUtteranceAndWait(lineText, voice);
-                    cursor = Math.max(scheduledOffset, cursor) + (performance.now() - lineStart);
-                    continue;
+                    items.push({ text: lineText, timeMs: line.timeMs });
+                } else {
+                    for (const group of groupTokensForSpeech(line.tokens)) {
+                        const groupText = group.map(t => t.cleanText || t.text).join(' ').trim();
+                        if (!groupText) continue;
+                        const firstTokenTime = group.find(t => typeof t.timeMs === 'number')?.timeMs ?? line.timeMs;
+                        items.push({ text: groupText, timeMs: firstTokenTime });
+                    }
                 }
+            }
 
-                // Wort-Zeitstempel vorhanden -> in kleinen Gruppen vorlesen, jede Gruppe
-                // zeitlich an ihrem tatsächlichen Zeitpunkt im Song ausgerichtet.
-                const groups = groupTokensForSpeech(line.tokens);
-                for (const group of groups) {
-                    if (!ttsSyncedPlaybackActive) break;
-                    const groupText = group.map(t => t.cleanText || t.text).join(' ').trim();
-                    if (!groupText) continue;
-                    const firstTokenTime = group.find(t => typeof t.timeMs === 'number')?.timeMs ?? line.timeMs;
-                    const rawOffset = firstTokenTime - referenceMs;
-                    const scheduledOffset = Math.min(rawOffset, cursor + TTS_MAX_LINE_GAP_MS);
-                    const waitMs = Math.max(0, scheduledOffset - cursor);
-                    if (waitMs > 0) await ttsSleep(waitMs);
-                    if (!ttsSyncedPlaybackActive) break;
-                    const groupStart = performance.now();
-                    await speakUtteranceAndWait(groupText, voice);
-                    cursor = Math.max(scheduledOffset, cursor) + (performance.now() - groupStart);
-                }
+            let cursor = 0; // Zeit (ms), die seit Beginn dieser Vorlese-Sitzung real vergangen ist
+
+            for (let i = 0; i < items.length; i++) {
+                if (!ttsSyncedPlaybackActive) break; // per Stopp-Klick abgebrochen
+                const item = items[i];
+                const rawOffset = item.timeMs - referenceMs;
+                const scheduledOffset = Math.min(rawOffset, cursor + TTS_MAX_LINE_GAP_MS);
+                const waitMs = Math.max(0, scheduledOffset - cursor);
+                if (waitMs > 0) await ttsSleep(waitMs);
+                if (!ttsSyncedPlaybackActive) break;
+
+                // FIX v24.78 (KRITISCH): Nutzer meldete - bei textreichen/schnellen Songs
+                // (z.B. "Turn It Up" von ILKO) kommt die Sprachausgabe nicht hinterher. Root
+                // Cause: die Sprechrate war bisher IMMER fest bei 1.0 (Browser-Standard),
+                // unabhängig davon, wie viel Text in wie wenig Zeit gesprochen werden musste -
+                // bei dichten Passagen blieb die Ausgabe dadurch zwangsläufig zurück und
+                // driftete danach dauerhaft weiter auseinander, statt je wieder aufzuholen.
+                // Fix: für jedes Häppchen die tatsächlich verfügbare Zeit bis zum NÄCHSTEN
+                // Häppchen ermitteln, grob abschätzen, wie lange der Text bei normaler Rate
+                // (1.0) brauchen würde (Erfahrungswert ~380ms/Wort), und die Sprechrate nur so
+                // weit hochsetzen, wie nötig, um rechtzeitig fertig zu werden - mit einer
+                // Obergrenze (TTS_MAX_SYNC_RATE), damit es bei extrem dichten Passagen nicht
+                // komplett unverständlich wird. Bei normalem Songtempo bleibt rate=1.0, völlig
+                // unverändertes Verhalten wie bisher.
+                const nextRawOffset = (i + 1 < items.length) ? items[i + 1].timeMs - referenceMs : scheduledOffset + TTS_MAX_LINE_GAP_MS;
+                const availableMs = Math.max(300, Math.min(nextRawOffset, scheduledOffset + TTS_MAX_LINE_GAP_MS) - scheduledOffset);
+                const wordCount = item.text.split(/\s+/).filter(Boolean).length;
+                const estimatedMs = wordCount * TTS_MS_PER_WORD_AT_RATE1;
+                const rate = Math.min(TTS_MAX_SYNC_RATE, Math.max(1, estimatedMs / availableMs));
+
+                const itemStart = performance.now();
+                await speakUtteranceAndWait(item.text, voice, rate);
+                cursor = Math.max(scheduledOffset, cursor) + (performance.now() - itemStart);
             }
 
             ttsSyncedPlaybackActive = false;
@@ -8615,14 +8801,6 @@
                 // ersetzt - hält den Bildschirm nur wach, wenn beim Öffnen von StandBy
                 // tatsächlich Musik läuft, nicht blind immer.
                 updateWakeLockForPlaybackState();
-                // NEU v24.74: Einmalige, dezente Anfrage für System-Benachrichtigungen -
-                // ermöglicht die "Willkommen zurück"-Meldung (siehe notifyPlaybackResumedWhileAway())
-                // auch als echte System-Benachrichtigung, nicht nur als In-App-Toast. Fragt nur,
-                // wenn der Nutzer noch nie gefragt wurde (Notification.permission === 'default')
-                // - lehnt er ab oder ignoriert es, wird nie wieder gefragt, Toast bleibt trotzdem.
-                if ('Notification' in window && Notification.permission === 'default') {
-                    Notification.requestPermission().catch(() => {});
-                }
                 const fsEl = document.documentElement;
                 const requestFs = fsEl.requestFullscreen || fsEl.webkitRequestFullscreen || fsEl.msRequestFullscreen;
                 if (requestFs) {
@@ -9132,6 +9310,38 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.78', date: "August 2026", type: 'feature', items: {
+                de: ["Synchrones Lyrics-Vorlesen passt die Sprechgeschwindigkeit jetzt automatisch an, wenn der Text sehr schnell/dicht ist - kommt nicht mehr hinterher"],
+                en: ["Synced lyrics narration now automatically adjusts speaking speed for very fast/dense lyrics - no longer falls behind"],
+                es: ["La narración sincronizada de letras ahora ajusta automáticamente la velocidad al hablar cuando el texto es muy rápido/denso - ya no se queda atrás"],
+                fr: ["La narration synchronisée des paroles ajuste désormais automatiquement le débit pour les textes très rapides/denses - ne prend plus de retard"],
+                pt: ["A narração sincronizada da letra agora ajusta automaticamente a velocidade de fala quando o texto é muito rápido/denso - não fica mais para trás"],
+                tr: ["Senkronize söz seslendirmesi artık çok hızlı/yoğun metinlerde konuşma hızını otomatik ayarlıyor - artık geride kalmıyor"],
+            }},
+            { version: 'v24.77', date: "August 2026", type: 'fix', items: {
+                de: ["StandBy sieht jetzt auch im Querformat gut aus (Uhr und Now-Playing-Karte nebeneinander statt gequetscht untereinander)", "Benachrichtigungs-Erlaubnis wird jetzt zuverlässig über einen Button in den Einstellungen angefragt statt lautlos vom Browser blockiert zu werden"],
+                en: ["StandBy now looks good in landscape too (clock and now-playing card side by side instead of squeezed on top of each other)", "Notification permission is now reliably requested via a settings button instead of being silently blocked by the browser"],
+                es: ["StandBy ahora también se ve bien en horizontal (reloj y tarjeta de reproducción uno al lado del otro en vez de apretados)", "El permiso de notificaciones ahora se solicita de forma fiable mediante un botón en ajustes, en vez de que el navegador lo bloquee en silencio"],
+                fr: ["StandBy a désormais fière allure en mode paysage aussi (horloge et carte de lecture côte à côte au lieu d'être compressées)", "L'autorisation de notification est désormais demandée de façon fiable via un bouton dans les paramètres, au lieu d'être bloquée silencieusement par le navigateur"],
+                pt: ["O StandBy agora também fica bom na horizontal (relógio e cartão de reprodução lado a lado em vez de espremidos)", "A permissão de notificação agora é solicitada de forma confiável por um botão nas configurações, em vez de ser bloqueada silenciosamente pelo navegador"],
+                tr: ["StandBy artık yatay modda da iyi görünüyor (saat ve şu an çalıyor kartı üst üste sıkışmak yerine yan yana)", "Bildirim izni artık tarayıcı tarafından sessizce engellenmek yerine ayarlardaki bir düğme ile güvenilir şekilde isteniyor"],
+            }},
+            { version: 'v24.76', date: "August 2026", type: 'fix', items: {
+                de: ["Cover-Art-2x-Tap-Bug im Music Dashboard jetzt wirklich behoben - zweite, tiefere Ursache gefunden (Overlay blockierte Klicks noch während des Ausblendens)"],
+                en: ["Cover-art double-tap bug in the music dashboard now really fixed - found a second, deeper cause (overlay was still blocking clicks while fading out)"],
+                es: ["El error de doble toque en la portada del panel de música ahora sí está corregido - se encontró una segunda causa más profunda (la superposición seguía bloqueando toques mientras se desvanecía)"],
+                fr: ["Le bug du double-tap sur la pochette dans le tableau de bord musical est maintenant vraiment corrigé - une seconde cause plus profonde trouvée (l'overlay bloquait encore les clics pendant son fondu)"],
+                pt: ["O bug do toque duplo na capa do painel de música agora está realmente corrigido - encontrada uma segunda causa mais profunda (a sobreposição ainda bloqueava toques enquanto desaparecia)"],
+                tr: ["Müzik panelindeki kapak resmine çift dokunma hatası artık gerçekten düzeltildi - ikinci, daha derin bir neden bulundu (kaplama kaybolurken bile dokunuşları engelliyordu)"],
+            }},
+            { version: 'v24.75', date: "August 2026", type: 'fix', items: {
+                de: ["Benachrichtigungserlaubnis wird jetzt gleich beim Laden der Seite erfragt statt erst beim ersten StandBy-Öffnen"],
+                en: ["Notification permission is now requested right when the page loads instead of only on first StandBy open"],
+                es: ["El permiso de notificaciones ahora se solicita al cargar la página, en vez de solo al abrir StandBy por primera vez"],
+                fr: ["L'autorisation de notification est désormais demandée dès le chargement de la page, plutôt qu'à la première ouverture de StandBy"],
+                pt: ["A permissão de notificação agora é solicitada assim que a página carrega, em vez de apenas na primeira abertura do StandBy"],
+                tr: ["Bildirim izni artık yalnızca ilk StandBy açılışında değil, sayfa yüklenir yüklenmez isteniyor"],
+            }},
             { version: 'v24.74', date: "August 2026", type: 'feature', items: {
                 de: ["StandBy-Bildschirm bleibt jetzt smart wach, solange Musik läuft (spart Akku in Pausen automatisch)", "Echter Fade statt hartem Wechsel bei Cover/Hintergrund im StandBy", "Neu: Meldung, falls die Musik pausiert war während du weg warst und inzwischen weiterläuft"],
                 en: ["StandBy screen now stays smartly awake while music plays (auto-saves battery during pauses)", "Real fade instead of a hard cut for cover/background changes in StandBy", "New: notice if music was paused while you were away and has since resumed"],
@@ -12152,6 +12362,16 @@
             fetchMusicData();
             syncWorldwideTime();
             setInterval(syncWorldwideTime, 600000);
+            // NEU v24.75: Nutzerwunsch - Benachrichtigungserlaubnis nicht mehr erst beim
+            // ersten StandBy-Öffnen erfragen (kam für manche Nutzer vielleicht nie so weit),
+            // sondern gleich beim Laden der Seite. Fragt nur einmalig, wenn noch nie
+            // entschieden wurde (Notification.permission === 'default') - lehnt der Nutzer ab
+            // oder ignoriert es, wird nie wieder gefragt. HINWEIS: In der installierten
+            // Android-App (TWA) greift das erst nach einem eigenen App-Rebuild + Play-Store-
+            // Upload, ein reiner Website-Deploy reicht dafür laut Projektdoku nicht.
+            if ('Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission().catch(() => {});
+            }
         })();
 
         // NEW: Sprachauswahl - beim allerersten Besuch als Setup-Assistent zeigen,
@@ -12173,6 +12393,7 @@
             const btn = document.getElementById('btn-toggle-wakelock');
             if (btn) btn.textContent = t('settings_wakelock') + ': ' + (standbyWakeLockEnabled ? t('on_label') : t('off_label'));
         })();
+        updateNotificationPermissionButtonLabel(); // NEU v24.77: initialen Zustand beim Laden setzen
         loadDiscordWidget();
         // NEW: Beim Laden nur einmalig statisch vorrendern (Menü ist ja noch geschlossen) -
         // die eigentliche Dauerschleife startet erst, wenn das Menü tatsächlich geöffnet
