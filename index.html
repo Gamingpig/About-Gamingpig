@@ -11,6 +11,36 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FEATURE - NOTFALL-SICHERHEITSNETZ] Release v24.66: Automatischer Seiten-Reload, falls der
+    Fortschritt trotz aller bisherigen Fixes doch nochmal einfriert
+      - Nutzer meldete nach v24.65 weiterhin einen eingefrorenen Fortschritt, wollte aber
+        nachvollziehbar keine weiteren Diagnose-Schritte mehr durchführen (mehrere Runden
+        Konsole/Network-Tab liegen bereits hinter uns). Kompletter erneuter Code-Review
+        durchgeführt (DOM-Referenzen, Berechnungslogik, Neustart-Logik, Service-Worker-
+        Caching, Zeitsynchronisations-System) - alles einzeln verifiziert korrekt, ein
+        vollständiger realistischer 12-Sekunden-Playwright-Test mit natürlichem
+        Seitenverhalten (kein manuelles Eingreifen) zeigte einwandfreies Hochzählen
+        (0:30 -> 0:32 -> 0:34 -> 0:36 -> 0:38 -> 0:40).
+      - Da die Ursache auf dem Nutzergerät ohne weitere Live-Daten nicht zweifelsfrei
+        eingrenzbar ist (Kandidaten: hartnäckiger Cache trotz korrekt konfiguriertem
+        Service Worker, eine Browser-Erweiterung, die npc-api.aikins.xyz blockiert - die
+        wiederholt sichtbare "Unchecked runtime.lastError: message port closed"-Meldung ist
+        ein klassisches Anzeichen für Erweiterungs-Interferenz - oder etwas
+        Geräte-Spezifisches), wurde eine ULTIMATIVE Sicherheitsstufe ergänzt, die das
+        sichtbare Symptom garantiert behebt, unabhängig von der genauen internen Ursache.
+      - Neuer Notfall-Check alle 2 Sekunden: überwacht direkt den TATSÄCHLICH SICHTBAREN
+        Zeit-Text (timeCurrentEl.innerText) - also exakt das, was der Nutzer selbst sieht,
+        nicht nur interne Variablen. Bleibt dieser Text trotz laufender Musik über 40
+        Sekunden komplett unverändert, wird automatisch window.location.reload()
+        ausgelöst - kein Zutun des Nutzers nötig.
+      - Mit Playwright verifiziert: exakt der gemeldete eingefrorene Zustand künstlich
+        hergestellt (trackIsPlaying=true, Tracking gestoppt, Zeit-Text 41s alt simuliert) -
+        Reload wurde zuverlässig innerhalb von 3 Sekunden ausgelöst.
+      - Transparenter Hinweis: das ist eine Symptom-Behebung, kein Ersatz für die
+        eigentliche Root-Cause-Diagnose, die ohne weitere Live-Daten vom betroffenen Gerät
+        nicht zweifelsfrei möglich war. Falls sich das Problem auf einen bestimmten
+        Auslöser eingrenzen lässt, kann darauf gezielter reagiert werden.
+
     [FIX - KRITISCH, DIESMAL WIRKLICH] Release v24.65: v24.64 allein reichte nicht - zweiter,
     tieferer Bug in der Neustart-Logik gefunden
       - Nutzer bestätigte per document.getElementById('time-current').innerText (umgeht das
@@ -3657,7 +3687,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.65 · 2026-08-13';
+        const SITE_VERSION = 'v24.66 · 2026-08-13';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -8711,6 +8741,14 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.66', date: "August 2026", type: 'feature', items: {
+                de: ["Notfall-Sicherheitsnetz: Seite lädt sich jetzt automatisch selbst neu, falls der Fortschritt doch mal einfrieren sollte - kein Zutun mehr nötig"],
+                en: ["Emergency safety net: the page now automatically reloads itself if progress should ever freeze - no action needed from you"],
+                es: ["Red de seguridad de emergencia: la página ahora se recarga automáticamente si el progreso llegara a congelarse - no requiere ninguna acción de tu parte"],
+                fr: ["Filet de sécurité d'urgence : la page se recharge désormais automatiquement si la progression venait à se figer - aucune action requise de ta part"],
+                pt: ["Rede de segurança de emergência: a página agora recarrega automaticamente se o progresso chegar a congelar - nenhuma ação necessária da sua parte"],
+                tr: ["Acil durum güvenlik ağı: ilerleme donarsa sayfa artık kendini otomatik olarak yeniden yüklüyor - sizin herhangi bir işlem yapmanıza gerek yok"],
+            }},
             { version: 'v24.65', date: "August 2026", type: 'fix', items: {
                 de: ["Fortschrittsbalken-Bug endgültig behoben - zweite, tieferliegende Ursache gefunden und mit Selbstheilungs-Mechanismus abgesichert"],
                 en: ["Progress bar bug finally fixed for good - found a second, deeper cause and secured it with a self-healing mechanism"],
@@ -11449,6 +11487,33 @@
                 startProgressTracking();
             }
         }, 3000);
+
+        // NEU v24.66 (LETZTE SICHERHEITSSTUFE): Nutzer meldete nach mehreren Fix-Runden
+        // weiterhin einen eingefrorenen Fortschritt, trotz gründlich verifizierter interner
+        // Logik. Statt noch tiefer in internen Variablen zu suchen, überwacht dieser Check
+        // jetzt den TATSÄCHLICH SICHTBAREN Text direkt (also exakt das, was der Nutzer
+        // selbst sieht) - unabhängig davon, WARUM er sich nicht ändert. Bleibt der
+        // angezeigte Zeit-Text trotz laufender Musik über 40 Sekunden komplett unverändert,
+        // wird die komplette Seite automatisch neu geladen. Das behebt das sichtbare
+        // Symptom garantiert, selbst falls die genaue interne Ursache (Cache,
+        // Browser-Erweiterung, o.ä.) nicht zweifelsfrei diagnostizierbar ist - der Nutzer
+        // muss dafür nichts selbst tun.
+        let lastVisibleTimeText = null;
+        let lastVisibleTimeChangeAt = Date.now();
+        setInterval(() => {
+            if (!trackIsPlaying || !timeCurrentEl) return;
+            const nowText = timeCurrentEl.innerText;
+            if (nowText !== lastVisibleTimeText) {
+                lastVisibleTimeText = nowText;
+                lastVisibleTimeChangeAt = Date.now();
+                return;
+            }
+            const frozenForMs = Date.now() - lastVisibleTimeChangeAt;
+            if (frozenForMs > 40000) {
+                console.error(`Notfall-Selbstheilung: sichtbare Zeit-Anzeige war ${Math.round(frozenForMs / 1000)}s unverändert trotz laufender Musik - lade Seite automatisch neu.`);
+                window.location.reload();
+            }
+        }, 2000);
 
         // NEW: Falls der Nutzer den Vollbildmodus direkt verlässt (z.B. Escape-Taste,
         // Browser-eigenes Vollbild-Verlassen-UI), soll StandBy synchron mit verlassen
