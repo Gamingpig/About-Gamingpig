@@ -11,6 +11,29 @@
     Neueste Einträge oben.
     ================================================================
 
+    [PERFORMANCE - KRITISCH] Release v24.72: GPU-Last im StandBy laut Nutzer nach v24.71
+    IMMER NOCH zu hoch - zweite Kostenquelle gefunden + Blur-Radius direkt an der Wurzel reduziert
+      - Nutzer-Feedback nach v24.71: keine spürbare Besserung.
+      - Zweite Kostenquelle gefunden: exakt dasselbe Muster wie bei den EQ-Balken (v24.71),
+        aber übersehen - die Marquee-Scroll-Animation für zu lange Titel/Künstlernamen
+        (.standby-marquee-active) läuft ebenfalls infinite, ebenfalls innerhalb der geblurten
+        #standby-nowplaying-Karte, ohne eigene Compositor-Ebene. Bei langen Songtiteln
+        vermutlich sogar teurer als die EQ-Balken, da eine breitere Fläche bewegt wird.
+        will-change: transform ergänzt.
+      - ZUSÄTZLICH direkt an der Wurzel angesetzt statt nur an den Kindern: backdrop-filter-
+        Radius der Karte selbst von 18px auf 9px halbiert - auf integrierten GPUs (bestätigt
+        AMD Ryzen 7 4700U) scheint backdrop-filter selbst teurer zu sein, als reine
+        Kinder-Isolation ausgleichen kann. Hintergrund-Deckkraft leicht von 0.06 auf 0.1
+        angehoben, um die Lesbarkeit bei weniger Blur auszugleichen. Zusätzlich
+        contain: paint ergänzt, damit Neuzeichnen dieser Karte nicht auf den Rest der Seite
+        ausstrahlt (und umgekehrt).
+      - EHRLICHER VORBEHALT (weiterhin): Keine Möglichkeit zur echten GPU-Live-Messung in
+        dieser Sandbox. Falls das IMMER NOCH nicht reicht, ist der nächste, deutlich radikalere
+        Schritt: backdrop-filter auf dieser Karte komplett entfernen (einmalig serverseitig/
+        clientseitig vorweichgezeichnetes Hintergrundbild statt Live-Blur) - das wäre optisch
+        spürbarer, aber die einzige Möglichkeit, die Kosten von backdrop-filter selbst
+        komplett auf null zu bringen statt nur zu reduzieren.
+
     [PERFORMANCE - KRITISCH] Release v24.71: StandBy-GPU-Dauerlast erneut zu hoch (10-15%,
     Spitzen bis 20% bei Songwechsel) - eigener Regressionsfehler aus v24.49 identifiziert
       - Nutzer maß per Task-Manager (AMD Ryzen 7 4700U Laptop-GPU) konkrete Zahlen, direkt nach
@@ -3587,12 +3610,21 @@
         /* --- Große Now-Playing Lockscreen-Karte --- */
         #standby-nowplaying {
             position: relative; z-index: 2; width: min(94vw, 520px); margin-bottom: 40px;
-            background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14);
-            /* NEU v24.49: Blur-Radius von 30px auf 18px reduziert - Compositing-Kosten
-               skalieren spürbar mit dem Blur-Radius, optisch kaum ein Unterschied auf einer
-               ohnehin schon weichgezeichneten Hintergrundfläche. */
-            backdrop-filter: blur(18px) saturate(150%); -webkit-backdrop-filter: blur(18px) saturate(150%);
+            background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.14);
+            /* NEU v24.49: Blur-Radius von 30px auf 18px reduziert.
+               FIX v24.72: Trotz will-change-Isolation der animierenden Kinder (v24.71/72) laut
+               Nutzer immer noch zu hohe GPU-Dauerlast im StandBy - backdrop-filter selbst ist
+               auf integrierten GPUs (bestätigt mit AMD Ryzen 7 4700U) offenbar teurer als die
+               reine Kinder-Isolation ausgleichen kann. Nochmal deutlich reduziert (18px -> 9px)
+               als direkte Maßnahme an der Wurzel statt nur an den Symptomen. Hintergrund-
+               Deckkraft von 0.06 auf 0.1 leicht angehoben, um die Lesbarkeit bei weniger Blur
+               auszugleichen. */
+            backdrop-filter: blur(9px) saturate(150%); -webkit-backdrop-filter: blur(9px) saturate(150%);
             border-radius: 32px; padding: 26px; box-shadow: 0 20px 60px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.15);
+            /* FIX v24.72: contain:paint gibt dem Browser explizit die Erlaubnis, das Neuzeichnen
+               dieser Karte NICHT auf den Rest der Seite ausstrahlen zu lassen (und umgekehrt) -
+               zusätzliche, günstige Absicherung on top der will-change-Isolation der Kinder. */
+            contain: paint;
         }
         #standby-track { display: flex; align-items: center; gap: 20px; }
         #standby-track-art-wrap { position: relative; width: clamp(120px, 34vw, 190px); height: clamp(120px, 34vw, 190px); flex-shrink: 0; border-radius: 28px; overflow: hidden; box-shadow: 0 14px 40px rgba(0,0,0,0.65); }
@@ -3625,11 +3657,19 @@
            Scroll-Effekt bei Texten, die eh schon passen. Ping-Pong-Bewegung (hin und zurück
            mit Pausen an den Enden) statt Dauerschleife - wirkt auf einem Lockscreen ruhiger. */
         #standby-track-title-inner, #standby-track-artist-inner { display: inline-block; }
+        /* FIX v24.72 (KRITISCH - GPU): v24.71 hat dasselbe Muster bei den EQ-Balken gefixt,
+           aber DIESE Stelle übersehen - Nutzer meldete danach immer noch zu hohe GPU-Last.
+           Marquee-Scroll läuft ebenfalls infinite und ebenfalls innerhalb der geblurten
+           #standby-nowplaying-Karte, ohne eigene Compositor-Ebene - bei langen Songtiteln
+           vermutlich sogar die größere Kostenquelle als die kleinen EQ-Balken, da eine breitere
+           Fläche kontinuierlich bewegt wird. will-change hier aus demselben Grund ergänzt. */
         .standby-marquee-active #standby-track-title-inner {
             animation: standby-marquee var(--marquee-duration-title, 6s) ease-in-out infinite;
+            will-change: transform;
         }
         .standby-marquee-active-artist #standby-track-artist-inner {
             animation: standby-marquee var(--marquee-duration-artist, 6s) ease-in-out infinite;
+            will-change: transform;
         }
         @keyframes standby-marquee {
             0%, 15% { transform: translateX(0); }
@@ -3831,7 +3871,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.71 · 2026-08-13';
+        const SITE_VERSION = 'v24.72 · 2026-08-13';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -4807,7 +4847,7 @@
                 changelog_type_feature: 'Neu', changelog_type_performance: 'Performance', changelog_type_fix: 'Fehlerbehebung',
                 tutorial_speak_aria: 'Diesen Schritt vorlesen',
                 t_whatsnew1_title: '✨ Was ist neu seit deinem letzten Besuch?',
-                t_whatsnew1_text: 'Erneuter GPU-Hitze-Fix im StandBy-Lockscreen: kleine EQ-Balken zwangen ohne eigene GPU-Ebene die ganze Now-Playing-Karte zum ständigen Neuzeichnen. Jetzt isoliert - spürbar kühler bei längerem StandBy-Gebrauch.',
+                t_whatsnew1_text: 'Noch ein GPU-Fix im StandBy-Lockscreen: die Text-Scroll-Animation bei langen Songtiteln hatte dasselbe Problem wie die EQ-Balken, plus der Weichzeichner-Radius der Karte wurde spürbar reduziert - insgesamt deutlich kühler.',
                 t_whatsnew2_title: '✨ Noch mehr Neues',
                 t_whatsnew2_text: 'StandBy-Lockscreen: Fortschrittsbalken und Sekunden-Anzeige liefen bisher gar nicht live mit, sondern sprangen nur alle 5 Sekunden - fühlte sich eingefroren an. Läuft jetzt sanft und sparsam mit.',
                 t_whatsnew3_title: '✨ Unter der Haube',
@@ -4993,7 +5033,7 @@
                 changelog_type_feature: 'New', changelog_type_performance: 'Performance', changelog_type_fix: 'Fix',
                 tutorial_speak_aria: 'Read this step aloud',
                 t_whatsnew1_title: '✨ What\'s new since your last visit?',
-                t_whatsnew1_text: "Another GPU heat fix in the StandBy lock screen: small EQ bars, without their own GPU layer, forced the whole now-playing card to constantly redraw. Now isolated - noticeably cooler during longer StandBy use.",
+                t_whatsnew1_text: "Another GPU fix in the StandBy lock screen: the text-scroll animation for long song titles had the same issue as the EQ bars, plus the card's blur radius itself was reduced - noticeably cooler overall.",
                 t_whatsnew2_title: '✨ Even more news',
                 t_whatsnew2_text: "StandBy lock screen: the progress bar and seconds display weren't updating live at all, only jumping every 5 seconds - felt frozen. Now runs smoothly and efficiently.",
                 t_whatsnew3_title: '✨ Under the hood',
@@ -5179,7 +5219,7 @@
                 changelog_type_feature: 'Nuevo', changelog_type_performance: 'Rendimiento', changelog_type_fix: 'Corrección',
                 tutorial_speak_aria: 'Escuchar este paso',
                 t_whatsnew1_title: '✨ ¿Qué hay de nuevo desde tu última visita?',
-                t_whatsnew1_text: 'Otra corrección de calentamiento de GPU en la pantalla de bloqueo StandBy: las pequeñas barras de EQ, sin su propia capa de GPU, forzaban el redibujado constante de toda la tarjeta. Ahora aisladas - notablemente más fresco durante un uso prolongado de StandBy.',
+                t_whatsnew1_text: 'Otra corrección de GPU en la pantalla de bloqueo StandBy: la animación de desplazamiento de texto tenía el mismo problema que las barras de EQ, además se redujo el radio de desenfoque de la tarjeta - notablemente más fresco en general.',
                 t_whatsnew2_title: '✨ Más novedades',
                 t_whatsnew2_text: 'Pantalla de bloqueo StandBy: la barra de progreso y el contador de segundos no se actualizaban en vivo, solo saltaban cada 5 segundos - se sentía congelado. Ahora funciona de forma suave y eficiente.',
                 t_whatsnew3_title: '✨ Bajo el capó',
@@ -5365,7 +5405,7 @@
                 changelog_type_feature: 'Nouveau', changelog_type_performance: 'Performance', changelog_type_fix: 'Correction',
                 tutorial_speak_aria: 'Écouter cette étape',
                 t_whatsnew1_title: '✨ Quoi de neuf depuis ta dernière visite ?',
-                t_whatsnew1_text: "Nouvelle correction de surchauffe GPU dans l'écran de verrouillage StandBy : les petites barres d'égaliseur, sans leur propre calque GPU, forçaient le redessin constant de toute la carte. Désormais isolées - nettement plus frais lors d'une utilisation prolongée de StandBy.",
+                t_whatsnew1_text: "Encore une correction GPU dans l'écran de verrouillage StandBy : l'animation de défilement du texte avait le même problème que les barres d'égaliseur, et le rayon de flou de la carte a été réduit - nettement plus frais dans l'ensemble.",
                 t_whatsnew2_title: '✨ Encore plus de nouveautés',
                 t_whatsnew2_text: "Écran de verrouillage StandBy : la barre de progression et l'affichage des secondes ne se mettaient pas à jour en direct, ils sautaient toutes les 5 secondes - ça paraissait figé. Fonctionne désormais en douceur et efficacement.",
                 t_whatsnew3_title: '✨ Sous le capot',
@@ -5551,7 +5591,7 @@
                 changelog_type_feature: 'Novo', changelog_type_performance: 'Performance', changelog_type_fix: 'Correção',
                 tutorial_speak_aria: 'Ouvir esta etapa',
                 t_whatsnew1_title: '✨ O que há de novo desde sua última visita?',
-                t_whatsnew1_text: 'Outra correção de aquecimento de GPU na tela de bloqueio StandBy: pequenas barras de EQ, sem sua própria camada de GPU, forçavam o redesenho constante de todo o cartão. Agora isoladas - visivelmente mais fresco em uso prolongado do StandBy.',
+                t_whatsnew1_text: 'Mais uma correção de GPU na tela de bloqueio StandBy: a animação de rolagem de texto tinha o mesmo problema das barras de EQ, além disso o raio de desfoque do cartão foi reduzido - visivelmente mais fresco no geral.',
                 t_whatsnew2_title: '✨ Ainda mais novidades',
                 t_whatsnew2_text: 'Tela de bloqueio StandBy: a barra de progresso e o contador de segundos não atualizavam ao vivo, só pulavam a cada 5 segundos - parecia congelado. Agora roda de forma suave e eficiente.',
                 t_whatsnew3_title: '✨ Por baixo do capô',
@@ -5737,7 +5777,7 @@
                 changelog_type_feature: 'Yeni', changelog_type_performance: 'Performans', changelog_type_fix: 'Düzeltme',
                 tutorial_speak_aria: 'Bu adımı sesli oku',
                 t_whatsnew1_title: '✨ Son ziyaretinden beri neler değişti?',
-                t_whatsnew1_text: 'StandBy kilit ekranında bir GPU ısınma düzeltmesi daha: küçük EQ çubukları, kendi GPU katmanları olmadan tüm kartın sürekli yeniden çizilmesine neden oluyordu. Artık izole edildi - uzun süreli StandBy kullanımında gözle görülür şekilde daha serin.',
+                t_whatsnew1_text: 'StandBy kilit ekranında bir GPU düzeltmesi daha: metin kaydırma animasyonu EQ çubuklarıyla aynı soruna sahipti, ayrıca kartın bulanıklık yarıçapı azaltıldı - genel olarak gözle görülür şekilde daha serin.',
                 t_whatsnew2_title: '✨ Daha fazla yenilik',
                 t_whatsnew2_text: 'StandBy kilit ekranı: ilerleme çubuğu ve saniye göstergesi canlı güncellenmiyordu, sadece her 5 saniyede bir atlıyordu - donmuş gibi hissettiriyordu. Artık akıcı ve verimli şekilde çalışıyor.',
                 t_whatsnew3_title: '✨ Perde arkasında',
@@ -8916,6 +8956,14 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.72', date: "August 2026", type: 'performance', items: {
+                de: ["StandBy-Lockscreen: noch ein GPU-Fix - die Text-Scroll-Animation bei langen Songtiteln hatte dasselbe Problem wie die EQ-Balken, plus der Weichzeichner-Radius der Karte selbst wurde spürbar reduziert"],
+                en: ["StandBy lock screen: another GPU fix - the text-scroll animation for long song titles had the same issue as the EQ bars, plus the card's blur radius itself was noticeably reduced"],
+                es: ["Pantalla de bloqueo StandBy: otra corrección de GPU - la animación de desplazamiento de texto para títulos largos tenía el mismo problema que las barras de EQ, además se redujo notablemente el radio de desenfoque de la tarjeta"],
+                fr: ["Écran de verrouillage StandBy : encore une correction GPU - l'animation de défilement du texte pour les titres longs avait le même problème que les barres d'égaliseur, et le rayon de flou de la carte a lui-même été nettement réduit"],
+                pt: ["Tela de bloqueio StandBy: mais uma correção de GPU - a animação de rolagem de texto para títulos longos tinha o mesmo problema das barras de EQ, além disso o raio de desfoque do cartão foi visivelmente reduzido"],
+                tr: ["StandBy kilit ekranı: bir GPU düzeltmesi daha - uzun şarkı başlıkları için metin kaydırma animasyonu EQ çubuklarıyla aynı soruna sahipti, ayrıca kartın bulanıklık yarıçapı da gözle görülür şekilde azaltıldı"],
+            }},
             { version: 'v24.71', date: "August 2026", type: 'performance', items: {
                 de: ["StandBy-Lockscreen: erneuter GPU-Hitze-Fix - die kleinen EQ-Balken zwangen ohne eigene GPU-Ebene die ganze Karte zum ständigen Neuzeichnen, jetzt isoliert und spürbar sparsamer"],
                 en: ["StandBy lock screen: another GPU heat fix - the small EQ bars, without their own GPU layer, forced the whole card to constantly redraw - now isolated and noticeably more efficient"],
