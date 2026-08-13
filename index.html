@@ -11,6 +11,58 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FIX/FEATURE - KRITISCH] Release v24.80: Cover-Flacker-Bug im StandBy behoben + StandBy-
+    Designs (Nutzerwunsch nach mehreren wählbaren visuellen Varianten)
+      - Flacker-Bug: Nutzer meldete - Cover blinkt im StandBy random immer wieder aus und ein,
+        obwohl der Song sich gar nicht ändert; explizit klargestellt, dass Cover DAUERHAFT
+        sichtbar bleiben soll, nur Timeline/Zeit/EQ dürfen sich bei Bedarf ändern.
+      - Root Cause: "isNewArt" (steuert, ob der Crossfade aus v24.74 überhaupt ausgelöst wird)
+        wurde bisher per rohem URL-String-Vergleich ermittelt (img.src !== artUrl) - Cover-URLs
+        von Musik-APIs können sich bei DEMSELBEN Song zwischen zwei Polls leicht unterscheiden
+        (Cache-Busting-Parameter, CDN-Signaturen, Größenvarianten), obwohl es optisch dasselbe
+        Bild ist. Jeder 5s-Poll hat dadurch fälschlich einen "neuen" Songwechsel erkannt und
+        einen kompletten Aus-/Einblend-Zyklus ausgelöst - das war das gemeldete Geflacker.
+      - Fix: nutzt jetzt dieselbe stabile Songwechsel-Erkennung wie der Rest der Seite
+        (isNewTrack, basiert auf Track-ID statt der volatilen Cover-URL) - blendet dadurch nur
+        noch bei ECHTEM Songwechsel, Cover bleibt sonst permanent unverändert sichtbar.
+      - StandBy-Designs (neues Feature): Einstellungsmenü bekommt eine neue Design-Auswahl mit
+        4 Varianten - "Classic" (bisheriges Layout, Standard), "Minimal" (nur Uhr + Songtext,
+        kein Cover), "Cover-Fokus" (großes zentrales Cover, Text darunter), "Nur Uhr" (reine
+        Ambient-Uhr, Now-Playing-Karte komplett ausgeblendet). Umgesetzt per CSS-Klasse auf
+        #standby-overlay statt separater Layout-Duplikate - hält den Umbau überschaubar.
+        Persistent in localStorage (standbyDesign), wird beim Laden sofort angewendet, auch
+        bevor StandBy zum ersten Mal geöffnet wird. Anti-Burn-in-Pixel-Shift und Querformat-
+        Layout (beide vom Nutzer ausdrücklich als "perfekt" bestätigt) funktionieren
+        unverändert in allen 4 Designs.
+
+    [PERFORMANCE - KRITISCH] Release v24.79: Cover-Ladezeit bei Songwechsel spürbar reduziert -
+    bis zu sechs unabhängige Bild-Lade-/Dekodier-Vorgänge für dasselbe Cover gefunden
+      - Nutzer meldete: Cover brauchen bei Songwechsel spürbar länger zum Laden als früher,
+        "mit nur der NPC API ging das schneller" (vor den ganzen StandBy/Dynamic-Island/
+        Ambient-Color-Erweiterungen der letzten Versionen).
+      - Root Cause gefunden: bei jedem Songwechsel liefen bisher BIS ZU SECHS unabhängige
+        Bild-Lade-/Dekodier-Vorgänge für praktisch dasselbe Cover-Bild GLEICHZEITIG -
+        Hauptkarte, Lyrics-Mini-Vorschau, Dynamic Island, StandBy-Cover, StandBy-Hintergrund-
+        Vorlader (Crossfade aus v24.74), UND die Ambient-Farbextraktion - alle konkurrieren im
+        selben Frame um dieselbe Dekodier-/Netzwerk-Kapazität. Jeder einzelne Fix in früheren
+        Versionen war für sich genommen korrekt, aber niemand hatte die KUMULATIVE Summe aller
+        gleichzeitigen Bild-Ladevorgänge im Blick.
+      - Fix 1: StandBy-Cover UND -Hintergrund werden jetzt nur noch geladen/dekodiert, wenn
+        StandBy tatsächlich sichtbar/geöffnet ist - vorher passierte das bei JEDEM Songwechsel
+        unconditional, komplett unabhängig davon, ob überhaupt jemand hinschaut. Text (Titel/
+        Künstler) bleibt bewusst weiter immer sofort aktuell (kostet praktisch nichts). Beim
+        Öffnen von StandBy holt applyPendingStandbyImages() eventuell verpasste Bild-Updates
+        sofort nach, damit nie ein veraltetes Cover zu sehen ist.
+      - Fix 2: Ambient-Farbextraktion (nur ein kosmetischer Hintergrund-Farbverlauf, nicht
+        sichtbarkeitskritisch) läuft jetzt bewusst leicht verzögert über requestIdleCallback
+        (Fallback: setTimeout für Browser ohne Unterstützung) - der Browser bekommt dadurch
+        zuerst Luft, um die tatsächlich sichtbaren Cover-Bilder zu laden, bevor diese reine
+        Nebenrechnung dazukommt.
+      - Bewusst NICHT angetastet: Dynamic Island und Lyrics-Mini-Vorschau laden weiterhin
+        sofort und unconditional - beide sind bereits jetzt sichtbar bzw. jederzeit sichtbar
+        werden können, ein Verzögern dort hätte den gegenteiligen Effekt (sichtbar leeres
+        Cover für einen Moment).
+
     [FEATURE - KRITISCH] Release v24.78: Dynamische Sprechrate für synchrones Lyrics-Vorlesen
     bei textreichen/schnellen Songs (z.B. "Turn It Up" von ILKO)
       - Nutzer meldete: bei Songs mit schnellem/dichtem Text kommt die Sprachausgabe nicht
@@ -3844,6 +3896,31 @@
            Scroll-Effekt bei Texten, die eh schon passen. Ping-Pong-Bewegung (hin und zurück
            mit Pausen an den Enden) statt Dauerschleife - wirkt auf einem Lockscreen ruhiger. */
         #standby-track-title-inner, #standby-track-artist-inner { display: inline-block; }
+
+        /* ========================================================= */
+        /* NEU v24.80: StandBy-Designs - Nutzerwunsch nach mehreren wählbaren visuellen
+           Varianten für den StandBy-Lockscreen, einstellbar über das Einstellungsmenü,
+           persistent in localStorage gespeichert (siehe applyStandbyDesign() im Script).
+           Wird als Klasse direkt auf #standby-overlay gesetzt, Standard (keine Zusatzklasse)
+           = bisheriges "Classic"-Layout, unverändert. */
+        /* Design "Minimal": nur Uhr + Songtext, kein großes Cover - ruhiger, textfokussiert. */
+        #standby-overlay.standby-design-minimal #standby-track-art-wrap { display: none; }
+        #standby-overlay.standby-design-minimal #standby-track { justify-content: center; gap: 0; }
+        #standby-overlay.standby-design-minimal #standby-track-text { text-align: center; flex: none; }
+        #standby-overlay.standby-design-minimal #standby-track-title,
+        #standby-overlay.standby-design-minimal #standby-track-artist { white-space: normal; text-overflow: clip; }
+        /* Design "Cover-Fokus": großes, zentrales Cover, Text darunter zentriert statt daneben. */
+        #standby-overlay.standby-design-cover-focus #standby-track { flex-direction: column; gap: 18px; }
+        #standby-overlay.standby-design-cover-focus #standby-track-art-wrap { width: clamp(180px, 56vw, 300px); height: clamp(180px, 56vw, 300px); }
+        #standby-overlay.standby-design-cover-focus #standby-track-text { text-align: center; flex: none; }
+        #standby-overlay.standby-design-cover-focus #standby-clockzone { padding-top: 24px; }
+        #standby-overlay.standby-design-cover-focus #standby-clock { font-size: clamp(1.8rem, 9vw, 3.6rem); }
+        /* Design "Nur Uhr": StandBy als reine Ambient-Uhr, Now-Playing-Karte komplett
+           ausgeblendet (Musik läuft trotzdem ganz normal weiter im Hintergrund). */
+        #standby-overlay.standby-design-clock-only #standby-nowplaying { display: none; }
+        #standby-overlay.standby-design-clock-only #standby-shift-wrapper { justify-content: center; }
+        #standby-overlay.standby-design-clock-only #standby-clock { font-size: clamp(3.2rem, 16vw, 7.5rem); }
+        /* ========================================================= */
         /* FIX v24.72 (KRITISCH - GPU): v24.71 hat dasselbe Muster bei den EQ-Balken gefixt,
            aber DIESE Stelle übersehen - Nutzer meldete danach immer noch zu hohe GPU-Last.
            Marquee-Scroll läuft ebenfalls infinite und ebenfalls innerhalb der geblurten
@@ -4058,7 +4135,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.78 · 2026-08-13';
+        const SITE_VERSION = 'v24.80 · 2026-08-13';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -4532,6 +4609,17 @@
                                         <!-- NEU v24.74: Nutzer wünschte sich bessere Aufklärung darüber, was diese
                                              Einstellung eigentlich tut, statt nur "AN/AUS" ohne Kontext. -->
                                         <p id="settings-wakelock-hint" class="text-left text-[8px] xxs:text-[9px] text-slate-500 px-2 leading-snug -mt-1 mb-1">Hält den Bildschirm nur wach, solange Musik läuft - pausiert sie, darf das Handy normal einschlafen.</p>
+                                        <!-- NEU v24.80: StandBy-Design-Auswahl - Nutzerwunsch nach mehreren
+                                             wählbaren visuellen Varianten für den Lockscreen. -->
+                                        <div class="px-2 py-1">
+                                            <label for="standby-design-select" id="label-standby-design" class="text-[9px] xxs:text-[10px] sm:text-xs font-bold text-slate-300 block mb-1">StandBy-Design</label>
+                                            <select id="standby-design-select" onchange="changeStandbyDesign(this.value)" class="w-full text-[10px] xxs:text-xs bg-slate-800 text-teal-400 border border-slate-700 rounded px-2 py-1.5 font-bold">
+                                                <option value="classic" id="opt-standby-design-classic">Classic</option>
+                                                <option value="minimal" id="opt-standby-design-minimal">Minimal</option>
+                                                <option value="cover-focus" id="opt-standby-design-cover-focus">Cover-Fokus</option>
+                                                <option value="clock-only" id="opt-standby-design-clock-only">Nur Uhr</option>
+                                            </select>
+                                        </div>
                                         <!-- NEU v24.77: Nutzer meldete - Benachrichtigungen kommen nie an. Root Cause:
                                              Browser blockieren Berechtigungsanfragen ohne echten Klick oft komplett,
                                              lautlos, ganz ohne sichtbaren Dialog. Dieser Button ist an einen echten
@@ -5043,7 +5131,7 @@
                 changelog_type_feature: 'Neu', changelog_type_performance: 'Performance', changelog_type_fix: 'Fehlerbehebung',
                 tutorial_speak_aria: 'Diesen Schritt vorlesen',
                 t_whatsnew1_title: '✨ Was ist neu seit deinem letzten Besuch?',
-                t_whatsnew1_text: 'Synchrones Lyrics-Vorlesen passt die Sprechgeschwindigkeit jetzt automatisch an, wenn der Songtext sehr schnell/dicht ist - kommt nicht mehr hinterher, egal wie textreich der Song ist.',
+                t_whatsnew1_text: 'Cover-Flacker-Bug im StandBy behoben (blieb fälschlich random aus- und eingeblendet) - und neu: 4 wählbare StandBy-Designs in den Einstellungen (Classic, Minimal, Cover-Fokus, Nur Uhr).',
                 t_whatsnew2_title: '✨ Noch mehr Neues',
                 t_whatsnew2_text: 'App zeigt beim Start jetzt sofort den bereits laufenden Song statt erst später. Außerdem: Plattform-Auswahl beim Cover-Tap öffnet sich nach "Abbrechen" jetzt zuverlässig beim ersten Versuch, plus etwas mehr Haptic-Feedback.',
                 t_whatsnew3_title: '✨ Unter der Haube',
@@ -5120,7 +5208,7 @@
                 kart_stat_besttime: 'Bestzeit',
                 kart_stat_sessions: 'Sessions',
                 kart_stat_since: 'Seit',
-                                settings_wakelock: 'Bildschirm an (StandBy)', settings_wakelock_hint: 'Hält den Bildschirm nur wach, solange Musik läuft - pausiert sie, darf das Handy normal einschlafen.', settings_notifications: 'Benachrichtigungen', notifications_unsupported: 'nicht verfügbar', notifications_on: 'AN', notifications_blocked: 'blockiert - in Browser-Einstellungen ändern', notifications_not_set: 'nicht eingerichtet, antippen', notifications_denied_hint: 'Du hast Benachrichtigungen blockiert - das kann ich nicht per Klick zurücksetzen, nur du selbst in den Browser-/System-Einstellungen für diese Seite.', notifications_enabled_toast: '🔔 Benachrichtigungen sind jetzt aktiviert.', settings_notification_hint: 'Für die "Willkommen zurück"-Meldung, falls Musik pausiert war während du weg warst.',
+                                settings_wakelock: 'Bildschirm an (StandBy)', settings_wakelock_hint: 'Hält den Bildschirm nur wach, solange Musik läuft - pausiert sie, darf das Handy normal einschlafen.', settings_notifications: 'Benachrichtigungen', notifications_unsupported: 'nicht verfügbar', notifications_on: 'AN', notifications_blocked: 'blockiert - in Browser-Einstellungen ändern', notifications_not_set: 'nicht eingerichtet, antippen', notifications_denied_hint: 'Du hast Benachrichtigungen blockiert - das kann ich nicht per Klick zurücksetzen, nur du selbst in den Browser-/System-Einstellungen für diese Seite.', notifications_enabled_toast: '🔔 Benachrichtigungen sind jetzt aktiviert.', settings_notification_hint: 'Für die "Willkommen zurück"-Meldung, falls Musik pausiert war während du weg warst.', settings_standby_design: 'StandBy-Design', standby_design_classic: 'Classic', standby_design_minimal: 'Minimal', standby_design_cover_focus: 'Cover-Fokus', standby_design_clock_only: 'Nur Uhr',
                 mini_click_to_open: 'Klicken zum Öffnen', mini_click_to_close: 'Klicken zum Schließen',
                 aria_cp: 'Befehlspalette öffnen', aria_install: 'Als App installieren', aria_island: 'Song-Details öffnen, nach oben wischen zum Ausblenden'
             },
@@ -5232,7 +5320,7 @@
                 changelog_type_feature: 'New', changelog_type_performance: 'Performance', changelog_type_fix: 'Fix',
                 tutorial_speak_aria: 'Read this step aloud',
                 t_whatsnew1_title: '✨ What\'s new since your last visit?',
-                t_whatsnew1_text: "Synced lyrics narration now automatically adjusts speaking speed when a song's lyrics are very fast/dense - it no longer falls behind, no matter how text-heavy the song is.",
+                t_whatsnew1_text: "Fixed a StandBy cover-art flicker bug (was randomly fading in/out) - and new: 4 selectable StandBy designs in settings (Classic, Minimal, Cover Focus, Clock Only).",
                 t_whatsnew2_title: '✨ Even more news',
                 t_whatsnew2_text: "The app now shows the already-playing song immediately on start instead of only later. Also: the platform picker on cover tap now reliably reopens on the first try after 'Cancel', plus a bit more haptic feedback.",
                 t_whatsnew3_title: '✨ Under the hood',
@@ -5309,7 +5397,7 @@
                 kart_stat_besttime: 'Best Time',
                 kart_stat_sessions: 'Sessions',
                 kart_stat_since: 'Since',
-                                settings_wakelock: 'Keep Screen On (StandBy)', settings_wakelock_hint: 'Keeps the screen on only while music is playing - once paused, the phone can sleep normally.', settings_notifications: 'Notifications', notifications_unsupported: 'not available', notifications_on: 'ON', notifications_blocked: 'blocked - change in browser settings', notifications_not_set: 'not set up, tap to enable', notifications_denied_hint: "You've blocked notifications - I can't reset that with a click, only you can in this site's browser/system settings.", notifications_enabled_toast: '🔔 Notifications are now enabled.', settings_notification_hint: "For the 'welcome back' notice if music was paused while you were away.",
+                                settings_wakelock: 'Keep Screen On (StandBy)', settings_wakelock_hint: 'Keeps the screen on only while music is playing - once paused, the phone can sleep normally.', settings_notifications: 'Notifications', notifications_unsupported: 'not available', notifications_on: 'ON', notifications_blocked: 'blocked - change in browser settings', notifications_not_set: 'not set up, tap to enable', notifications_denied_hint: "You've blocked notifications - I can't reset that with a click, only you can in this site's browser/system settings.", notifications_enabled_toast: '🔔 Notifications are now enabled.', settings_notification_hint: "For the 'welcome back' notice if music was paused while you were away.", settings_standby_design: 'StandBy Design', standby_design_classic: 'Classic', standby_design_minimal: 'Minimal', standby_design_cover_focus: 'Cover Focus', standby_design_clock_only: 'Clock Only',
                 mini_click_to_open: 'Click to open', mini_click_to_close: 'Click to close',
                 aria_cp: 'Open command palette', aria_install: 'Install as app', aria_island: 'Open song details, swipe up to dismiss'
             },
@@ -5421,7 +5509,7 @@
                 changelog_type_feature: 'Nuevo', changelog_type_performance: 'Rendimiento', changelog_type_fix: 'Corrección',
                 tutorial_speak_aria: 'Escuchar este paso',
                 t_whatsnew1_title: '✨ ¿Qué hay de nuevo desde tu última visita?',
-                t_whatsnew1_text: 'La narración sincronizada de letras ahora ajusta automáticamente la velocidad al hablar cuando la letra es muy rápida/densa - ya no se queda atrás, sin importar cuánto texto tenga la canción.',
+                t_whatsnew1_text: 'Corregido un error de parpadeo de la portada en StandBy (se desvanecía aleatoriamente) - y nuevo: 4 diseños de StandBy seleccionables en ajustes (Clásico, Minimalista, Portada al frente, Solo reloj).',
                 t_whatsnew2_title: '✨ Más novedades',
                 t_whatsnew2_text: 'La app ahora muestra la canción que ya está sonando inmediatamente al iniciar, en vez de más tarde. Además: el selector de plataformas al tocar la portada ahora se reabre de forma fiable al primer intento tras "Cancelar", más algo de retroalimentación háptica.',
                 t_whatsnew3_title: '✨ Bajo el capó',
@@ -5498,7 +5586,7 @@
                 kart_stat_besttime: 'Mejor Tiempo',
                 kart_stat_sessions: 'Sesiones',
                 kart_stat_since: 'Desde',
-                                settings_wakelock: 'Pantalla Encendida (StandBy)', settings_wakelock_hint: 'Mantiene la pantalla encendida solo mientras suena música - al pausar, el teléfono puede dormir normalmente.', settings_notifications: 'Notificaciones', notifications_unsupported: 'no disponible', notifications_on: 'ACTIVADAS', notifications_blocked: 'bloqueadas - cambiar en ajustes del navegador', notifications_not_set: 'no configuradas, toca para activar', notifications_denied_hint: 'Has bloqueado las notificaciones - no puedo restablecer eso con un clic, solo tú puedes hacerlo en los ajustes del navegador/sistema para este sitio.', notifications_enabled_toast: '🔔 Las notificaciones ya están activadas.', settings_notification_hint: 'Para el aviso de "bienvenido de nuevo" si la música estuvo pausada mientras no estabas.',
+                                settings_wakelock: 'Pantalla Encendida (StandBy)', settings_wakelock_hint: 'Mantiene la pantalla encendida solo mientras suena música - al pausar, el teléfono puede dormir normalmente.', settings_notifications: 'Notificaciones', notifications_unsupported: 'no disponible', notifications_on: 'ACTIVADAS', notifications_blocked: 'bloqueadas - cambiar en ajustes del navegador', notifications_not_set: 'no configuradas, toca para activar', notifications_denied_hint: 'Has bloqueado las notificaciones - no puedo restablecer eso con un clic, solo tú puedes hacerlo en los ajustes del navegador/sistema para este sitio.', notifications_enabled_toast: '🔔 Las notificaciones ya están activadas.', settings_notification_hint: 'Para el aviso de "bienvenido de nuevo" si la música estuvo pausada mientras no estabas.', settings_standby_design: 'Diseño de StandBy', standby_design_classic: 'Clásico', standby_design_minimal: 'Minimalista', standby_design_cover_focus: 'Portada al frente', standby_design_clock_only: 'Solo reloj',
                 mini_click_to_open: 'Clic para abrir', mini_click_to_close: 'Clic para cerrar',
                 aria_cp: 'Abrir paleta de comandos', aria_install: 'Instalar como app', aria_island: 'Abrir detalles de la canción, desliza arriba para ocultar'
             },
@@ -5610,7 +5698,7 @@
                 changelog_type_feature: 'Nouveau', changelog_type_performance: 'Performance', changelog_type_fix: 'Correction',
                 tutorial_speak_aria: 'Écouter cette étape',
                 t_whatsnew1_title: '✨ Quoi de neuf depuis ta dernière visite ?',
-                t_whatsnew1_text: "La narration synchronisée des paroles ajuste désormais automatiquement le débit quand les paroles d'une chanson sont très rapides/denses - elle ne prend plus de retard, quel que soit le volume de texte.",
+                t_whatsnew1_text: "Correction d'un bug de scintillement de la pochette en StandBy (apparaissait/disparaissait aléatoirement) - et nouveau : 4 designs StandBy sélectionnables dans les paramètres (Classique, Minimal, Pochette en avant, Horloge seule).",
                 t_whatsnew2_title: '✨ Encore plus de nouveautés',
                 t_whatsnew2_text: "L'application affiche désormais immédiatement le morceau déjà en cours au démarrage, au lieu de plus tard. De plus : le sélecteur de plateformes en tapant sur la pochette se rouvre maintenant de façon fiable dès le premier essai après « Annuler », avec un peu plus de retour haptique.",
                 t_whatsnew3_title: '✨ Sous le capot',
@@ -5687,7 +5775,7 @@
                 kart_stat_besttime: 'Meilleur Temps',
                 kart_stat_sessions: 'Sessions',
                 kart_stat_since: 'Depuis',
-                                settings_wakelock: 'Écran Allumé (StandBy)', settings_wakelock_hint: "Garde l'écran allumé uniquement pendant que la musique joue - une fois en pause, le téléphone peut s'endormir normalement.", settings_notifications: 'Notifications', notifications_unsupported: 'non disponible', notifications_on: 'ACTIVÉES', notifications_blocked: 'bloquées - à changer dans les paramètres du navigateur', notifications_not_set: 'non configurées, touche pour activer', notifications_denied_hint: "Tu as bloqué les notifications - je ne peux pas réinitialiser ça par un clic, seulement toi dans les paramètres navigateur/système de ce site.", notifications_enabled_toast: '🔔 Les notifications sont maintenant activées.', settings_notification_hint: "Pour la notification « content de te revoir » si la musique était en pause pendant ton absence.",
+                                settings_wakelock: 'Écran Allumé (StandBy)', settings_wakelock_hint: "Garde l'écran allumé uniquement pendant que la musique joue - une fois en pause, le téléphone peut s'endormir normalement.", settings_notifications: 'Notifications', notifications_unsupported: 'non disponible', notifications_on: 'ACTIVÉES', notifications_blocked: 'bloquées - à changer dans les paramètres du navigateur', notifications_not_set: 'non configurées, touche pour activer', notifications_denied_hint: "Tu as bloqué les notifications - je ne peux pas réinitialiser ça par un clic, seulement toi dans les paramètres navigateur/système de ce site.", notifications_enabled_toast: '🔔 Les notifications sont maintenant activées.', settings_notification_hint: "Pour la notification « content de te revoir » si la musique était en pause pendant ton absence.", settings_standby_design: 'Design StandBy', standby_design_classic: 'Classique', standby_design_minimal: 'Minimal', standby_design_cover_focus: 'Pochette en avant', standby_design_clock_only: 'Horloge seule',
                 mini_click_to_open: 'Cliquer pour ouvrir', mini_click_to_close: 'Cliquer pour fermer',
                 aria_cp: 'Ouvrir la palette de commandes', aria_install: 'Installer comme appli', aria_island: 'Ouvrir les détails du morceau, glisser vers le haut pour masquer'
             },
@@ -5799,7 +5887,7 @@
                 changelog_type_feature: 'Novo', changelog_type_performance: 'Performance', changelog_type_fix: 'Correção',
                 tutorial_speak_aria: 'Ouvir esta etapa',
                 t_whatsnew1_title: '✨ O que há de novo desde sua última visita?',
-                t_whatsnew1_text: 'A narração sincronizada da letra agora ajusta automaticamente a velocidade de fala quando a letra é muito rápida/densa - não fica mais para trás, não importa quanto texto a música tenha.',
+                t_whatsnew1_text: 'Corrigido um bug de piscar da capa no StandBy (sumia e reaparecia aleatoriamente) - e novo: 4 designs de StandBy selecionáveis nas configurações (Clássico, Minimalista, Capa em destaque, Só relógio).',
                 t_whatsnew2_title: '✨ Ainda mais novidades',
                 t_whatsnew2_text: 'O app agora mostra a música que já está tocando imediatamente ao iniciar, em vez de só depois. Além disso: o seletor de plataformas ao tocar na capa agora reabre de forma confiável na primeira tentativa após "Cancelar", com um pouco mais de feedback tátil.',
                 t_whatsnew3_title: '✨ Por baixo do capô',
@@ -5876,7 +5964,7 @@
                 kart_stat_besttime: 'Melhor Tempo',
                 kart_stat_sessions: 'Sessões',
                 kart_stat_since: 'Desde',
-                                settings_wakelock: 'Tela Ligada (StandBy)', settings_wakelock_hint: 'Mantém a tela ligada apenas enquanto a música toca - ao pausar, o celular pode dormir normalmente.', settings_notifications: 'Notificações', notifications_unsupported: 'indisponível', notifications_on: 'ATIVADAS', notifications_blocked: 'bloqueadas - altere nas configurações do navegador', notifications_not_set: 'não configuradas, toque para ativar', notifications_denied_hint: 'Você bloqueou as notificações - não posso redefinir isso com um clique, só você pode nas configurações de navegador/sistema deste site.', notifications_enabled_toast: '🔔 As notificações agora estão ativadas.', settings_notification_hint: 'Para o aviso de "bem-vindo de volta" caso a música estivesse pausada enquanto você estava fora.',
+                                settings_wakelock: 'Tela Ligada (StandBy)', settings_wakelock_hint: 'Mantém a tela ligada apenas enquanto a música toca - ao pausar, o celular pode dormir normalmente.', settings_notifications: 'Notificações', notifications_unsupported: 'indisponível', notifications_on: 'ATIVADAS', notifications_blocked: 'bloqueadas - altere nas configurações do navegador', notifications_not_set: 'não configuradas, toque para ativar', notifications_denied_hint: 'Você bloqueou as notificações - não posso redefinir isso com um clique, só você pode nas configurações de navegador/sistema deste site.', notifications_enabled_toast: '🔔 As notificações agora estão ativadas.', settings_notification_hint: 'Para o aviso de "bem-vindo de volta" caso a música estivesse pausada enquanto você estava fora.', settings_standby_design: 'Design do StandBy', standby_design_classic: 'Clássico', standby_design_minimal: 'Minimalista', standby_design_cover_focus: 'Capa em destaque', standby_design_clock_only: 'Só relógio',
                 mini_click_to_open: 'Clique para abrir', mini_click_to_close: 'Clique para fechar',
                 aria_cp: 'Abrir paleta de comandos', aria_install: 'Instalar como app', aria_island: 'Abrir detalhes da música, deslize para cima para ocultar'
             },
@@ -5988,7 +6076,7 @@
                 changelog_type_feature: 'Yeni', changelog_type_performance: 'Performans', changelog_type_fix: 'Düzeltme',
                 tutorial_speak_aria: 'Bu adımı sesli oku',
                 t_whatsnew1_title: '✨ Son ziyaretinden beri neler değişti?',
-                t_whatsnew1_text: "Senkronize söz seslendirmesi artık bir şarkının sözleri çok hızlı/yoğun olduğunda konuşma hızını otomatik ayarlıyor - şarkı ne kadar metin yoğun olursa olsun artık geride kalmıyor.",
+                t_whatsnew1_text: "StandBy'daki kapak resmi titreme hatası düzeltildi (rastgele kaybolup görünüyordu) - ve yeni: ayarlarda seçilebilir 4 StandBy tasarımı (Klasik, Minimal, Kapak Odaklı, Sadece Saat).",
                 t_whatsnew2_title: '✨ Daha fazla yenilik',
                 t_whatsnew2_text: 'Uygulama artık başlangıçta zaten çalmakta olan şarkıyı daha sonra değil hemen gösteriyor. Ayrıca: kapak resmine dokunarak açılan platform seçici artık "İptal"den sonra ilk denemede güvenilir şekilde yeniden açılıyor, biraz daha fazla dokunsal geri bildirimle birlikte.',
                 t_whatsnew3_title: '✨ Perde arkasında',
@@ -6065,7 +6153,7 @@
                 kart_stat_besttime: 'En İyi Süre',
                 kart_stat_sessions: 'Seanslar',
                 kart_stat_since: 'Beri',
-                                settings_wakelock: 'Ekranı Açık Tut (StandBy)', settings_wakelock_hint: 'Ekranı yalnızca müzik çalarken açık tutar - duraklatıldığında telefon normal şekilde uyuyabilir.', settings_notifications: 'Bildirimler', notifications_unsupported: 'kullanılamıyor', notifications_on: 'AÇIK', notifications_blocked: 'engellendi - tarayıcı ayarlarından değiştir', notifications_not_set: 'ayarlanmadı, etkinleştirmek için dokun', notifications_denied_hint: 'Bildirimleri engelledin - bunu bir tıklamayla sıfırlayamam, yalnızca sen bu sitenin tarayıcı/sistem ayarlarından yapabilirsin.', notifications_enabled_toast: '🔔 Bildirimler artık etkin.', settings_notification_hint: 'Sen yokken müzik duraklatılmışsa "tekrar hoş geldin" bildirimi için.',
+                                settings_wakelock: 'Ekranı Açık Tut (StandBy)', settings_wakelock_hint: 'Ekranı yalnızca müzik çalarken açık tutar - duraklatıldığında telefon normal şekilde uyuyabilir.', settings_notifications: 'Bildirimler', notifications_unsupported: 'kullanılamıyor', notifications_on: 'AÇIK', notifications_blocked: 'engellendi - tarayıcı ayarlarından değiştir', notifications_not_set: 'ayarlanmadı, etkinleştirmek için dokun', notifications_denied_hint: 'Bildirimleri engelledin - bunu bir tıklamayla sıfırlayamam, yalnızca sen bu sitenin tarayıcı/sistem ayarlarından yapabilirsin.', notifications_enabled_toast: '🔔 Bildirimler artık etkin.', settings_notification_hint: 'Sen yokken müzik duraklatılmışsa "tekrar hoş geldin" bildirimi için.', settings_standby_design: 'StandBy Tasarımı', standby_design_classic: 'Klasik', standby_design_minimal: 'Minimal', standby_design_cover_focus: 'Kapak Odaklı', standby_design_clock_only: 'Sadece Saat',
                 mini_click_to_open: 'Açmak için tıkla', mini_click_to_close: 'Kapatmak için tıkla',
                 aria_cp: 'Komut paletini aç', aria_install: 'Uygulama olarak yükle', aria_island: 'Şarkı detaylarını aç, gizlemek için yukarı kaydır'
             }
@@ -6226,6 +6314,11 @@
             setText('settings-wakelock-hint', t('settings_wakelock_hint'));
             setText('settings-notification-hint', t('settings_notification_hint'));
             updateNotificationPermissionButtonLabel();
+            setText('label-standby-design', t('settings_standby_design'));
+            setText('opt-standby-design-classic', t('standby_design_classic'));
+            setText('opt-standby-design-minimal', t('standby_design_minimal'));
+            setText('opt-standby-design-cover-focus', t('standby_design_cover_focus'));
+            setText('opt-standby-design-clock-only', t('standby_design_clock_only'));
             setText('footer-created-by', t('footer_created_by'));
 
             // NEW: fallbackMessages / secretMessages Arrays in-place mit neuer Sprache befüllen
@@ -6615,6 +6708,25 @@
         // günstiger als ein blindes Dauer-An, aber deckt trotzdem den Hauptnutzen ab.
         let standbyWakeLockEnabled = localStorage.getItem('standbyWakeLock') !== 'false';
         let activeWakeLockSentinel = null;
+        // NEU v24.80: StandBy-Designs - Nutzerwunsch nach mehreren wählbaren visuellen
+        // Varianten für den Lockscreen. Gültige Werte: 'classic' (Standard, keine Zusatz-
+        // klasse nötig), 'minimal', 'cover-focus', 'clock-only'. Persistent in localStorage,
+        // genau wie alle anderen StandBy-Einstellungen auf dieser Seite.
+        let standbyDesign = localStorage.getItem('standbyDesign') || 'classic';
+        function applyStandbyDesign(design) {
+            const overlay = document.getElementById('standby-overlay');
+            if (!overlay) return;
+            standbyDesign = design;
+            localStorage.setItem('standbyDesign', design);
+            overlay.classList.remove('standby-design-minimal', 'standby-design-cover-focus', 'standby-design-clock-only');
+            if (design !== 'classic') overlay.classList.add('standby-design-' + design);
+            const select = document.getElementById('standby-design-select');
+            if (select && select.value !== design) select.value = design;
+        }
+        window.changeStandbyDesign = function(design) {
+            haptic(10);
+            applyStandbyDesign(design);
+        };
         window.toggleStandbyWakeLock = function() {
             haptic(10);
             standbyWakeLockEnabled = !standbyWakeLockEnabled;
@@ -7367,6 +7479,19 @@
             // seit dem letzten Aufruf gar nicht geändert hat.
             if (imgUrl === lastAmbientArtUrl) return;
             lastAmbientArtUrl = imgUrl;
+            // FIX v24.79: Nutzer meldete - Cover brauchen bei Songwechsel spürbar länger zum
+            // Laden als früher ("mit nur der NPC API ging das schneller"). Root Cause
+            // gefunden: bei jedem Songwechsel liefen bisher BIS ZU SECHS unabhängige
+            // Bild-Lade-/Dekodier-Vorgänge für praktisch dasselbe Cover gleichzeitig
+            // (Hauptkarte, Lyrics-Mini-Vorschau, Dynamic Island, StandBy-Cover, StandBy-
+            // Hintergrund-Vorlader, UND dieser hier für die Ambient-Farbe) - alle konkurrieren
+            // um dieselbe Dekodier-/Netzwerk-Kapazität genau im selben Frame. Diese Funktion
+            // hier ist NICHT sichtbarkeitskritisch (nur ein Hintergrund-Farbverlauf), wird
+            // deshalb jetzt bewusst leicht verzögert (requestIdleCallback, mit setTimeout als
+            // Rückfall für Browser ohne Unterstützung) - der Browser bekommt dadurch zuerst
+            // Luft, um die tatsächlich sichtbaren Cover-Bilder zu laden, bevor diese rein
+            // kosmetische Nebenrechnung dazukommt.
+            const runExtraction = () => {
             try {
                 const img = new Image();
                 img.crossOrigin = 'anonymous';
@@ -7401,6 +7526,12 @@
                 };
                 img.src = imgUrl;
             } catch (e) {}
+            };
+            if (typeof requestIdleCallback === 'function') {
+                requestIdleCallback(runExtraction, { timeout: 1200 });
+            } else {
+                setTimeout(runExtraction, 200);
+            }
         }
 
         // --- NEW: SPATIAL TILT (3D PARALLAX) LOGIC ---
@@ -8761,6 +8892,7 @@
             if (slider) slider.value = pct;
             updateStandbyOpacity(pct);
         })();
+        applyStandbyDesign(standbyDesign); // NEU v24.80: gespeichertes Design gleich beim Laden anwenden
 
         window.toggleStandBy = function(force) {
             const overlay = document.getElementById('standby-overlay');
@@ -8797,6 +8929,9 @@
                 // StandBy sich wirklich wie ein echter Lockscreen anfühlt, ohne Browser-UI
                 // oder sichtbare Scrollbar drumherum.
                 document.documentElement.classList.add('standby-fullscreen-lock');
+                // NEU v24.79: Bild-Updates nachholen, die während der Schließzeit bewusst
+                // übersprungen wurden (Performance-Fix, siehe syncStandByTrackInfo()).
+                applyPendingStandbyImages();
                 // FIX v24.74: unbedingtes requestStandbyWakeLock() durch die smarte Variante
                 // ersetzt - hält den Bildschirm nur wach, wenn beim Öffnen von StandBy
                 // tatsächlich Musik läuft, nicht blind immer.
@@ -8932,7 +9067,11 @@
             });
         }
 
-        function syncStandByTrackInfo(title, artist, artUrl) {
+        // NEU v24.79: siehe ausführliche Begründung bei syncStandByTrackInfo() weiter unten -
+        // hält die zuletzt bekannten Track-Infos fest, auch wenn StandBy gerade geschlossen
+        // ist und die eigentlichen Bilder deshalb noch nicht geladen wurden.
+        let lastStandbyTrackInfo = { title: null, artist: null, artUrl: null };
+        function syncStandByTrackInfo(title, artist, artUrl, isNewTrack) {
             // FIX v24.21: Zielt jetzt auf die inneren <span>-Elemente statt auf die äußeren
             // <p>-Container, da diese seit dem Marquee-Feature ein verschachteltes <span>
             // enthalten - .textContent auf dem äußeren Element hätte dieses <span> sonst bei
@@ -8951,6 +9090,20 @@
             // ob der neue Titel/Künstler-Name gescrollt werden muss.
             if (standByActive) setupStandbyMarquee();
 
+            lastStandbyTrackInfo = { title, artist, artUrl };
+            // FIX v24.79 (KRITISCH): Nutzer meldete - Cover brauchen bei Songwechsel spürbar
+            // länger zum Laden als früher. Root Cause (siehe ausführliche Erklärung bei
+            // extractDominantColor()): bis zu sechs unabhängige Bild-Lade-/Dekodier-Vorgänge
+            // liefen bisher GLEICHZEITIG bei jedem Songwechsel für praktisch dasselbe Cover -
+            // darunter zwei allein für StandBy (Cover-Bild + Hintergrund-Vorlader für den
+            // Crossfade aus v24.74), UNABHÄNGIG davon, ob StandBy überhaupt sichtbar/geöffnet
+            // war. Das war reine Verschwendung: niemand sieht ein Bild, das gerade lädt, wenn
+            // der Bildschirm dafür gar nicht offen ist. Text bleibt bewusst weiter IMMER
+            // aktuell (kostet praktisch nichts), aber die eigentlichen Bilder werden jetzt nur
+            // noch geladen, wenn StandBy auch tatsächlich aktiv ist - beim Öffnen holt
+            // applyPendingStandbyImages() das dann sofort nach, siehe dort.
+            if (!standByActive) return;
+
             if (isIdle) {
                 if (img) { img.removeAttribute('src'); img.style.opacity = ''; }
                 if (bg) { bg.style.backgroundImage = 'none'; bg.style.opacity = ''; }
@@ -8963,7 +9116,19 @@
                 // ständig unnötig neu geblendet) - kurz ausblenden, neues Bild vorladen,
                 // wieder einblenden. Bewusst nur EINMALIG pro echtem Wechsel (kein Dauerloop),
                 // kostet also nichts im Ruhezustand.
-                const isNewArt = !!artUrl && img && img.src !== artUrl;
+                // FIX v24.80 (KRITISCH): Nutzer meldete - Cover blinkt im StandBy random
+                // immer wieder aus und ein, obwohl der Song sich gar nicht ändert. Root Cause:
+                // "isNewArt" wurde bisher per rohem URL-String-Vergleich ermittelt
+                // (img.src !== artUrl) - aber Cover-URLs von Musik-APIs (Spotify/npc-api)
+                // können bei DEMSELBEN Song zwischen zwei Polls leicht variieren (andere
+                // Cache-Busting-Parameter, CDN-Signaturen, Größenvarianten), obwohl es
+                // optisch dasselbe Bild ist. Jeder 5s-Poll hat dadurch fälschlich einen
+                // "neuen" Songwechsel erkannt und einen kompletten Aus-/Einblend-Zyklus
+                // ausgelöst - das war das gemeldete zufällige Geflacker, kein Bug in der
+                // Blend-Logik selbst. Fix: nutzt jetzt dieselbe Songwechsel-Erkennung wie der
+                // Rest der Seite (isNewTrack, basiert auf der stabilen Track-ID statt der
+                // volatilen Cover-URL) - blendet dadurch nur noch bei ECHTEM Songwechsel.
+                const isNewArt = !!artUrl && !!isNewTrack;
 
                 if (img && artUrl) {
                     img.onerror = async function() {
@@ -8997,6 +9162,15 @@
                         bg.style.backgroundImage = `url('${artUrl}')`;
                     }
                 }
+            }
+        }
+        // NEU v24.79: Wird beim ÖFFNEN von StandBy aufgerufen - holt Bild-Updates nach, die
+        // während der Schließzeit bewusst übersprungen wurden (siehe Erklärung oben in
+        // syncStandByTrackInfo()). Ohne das würde beim Öffnen kurz noch das alte Cover vom
+        // vorherigen Song zu sehen sein, bis der nächste 5s-Poll durchläuft.
+        function applyPendingStandbyImages() {
+            if (lastStandbyTrackInfo.title || lastStandbyTrackInfo.artUrl) {
+                syncStandByTrackInfo(lastStandbyTrackInfo.title, lastStandbyTrackInfo.artist, lastStandbyTrackInfo.artUrl, true);
             }
         }
 
@@ -9310,6 +9484,22 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.80', date: "August 2026", type: 'feature', items: {
+                de: ["StandBy: Cover-Flacker-Bug behoben - blieb bisher fälschlich random aus- und eingeblendet, jetzt permanent sichtbar wie gewünscht", "Neu: 4 wählbare StandBy-Designs in den Einstellungen (Classic, Minimal, Cover-Fokus, Nur Uhr)"],
+                en: ["StandBy: fixed a cover-art flicker bug - it was randomly fading in/out even without a track change, now stays permanently visible as intended", "New: 4 selectable StandBy designs in settings (Classic, Minimal, Cover Focus, Clock Only)"],
+                es: ["StandBy: corregido un error de parpadeo de la portada - se desvanecía y aparecía aleatoriamente incluso sin cambio de canción, ahora permanece siempre visible", "Nuevo: 4 diseños de StandBy seleccionables en ajustes (Clásico, Minimalista, Portada al frente, Solo reloj)"],
+                fr: ["StandBy : correction d'un bug de scintillement de la pochette - elle apparaissait/disparaissait aléatoirement même sans changement de morceau, reste désormais toujours visible", "Nouveau : 4 designs StandBy sélectionnables dans les paramètres (Classique, Minimal, Pochette en avant, Horloge seule)"],
+                pt: ["StandBy: corrigido um bug de piscar da capa - ela sumia e reaparecia aleatoriamente mesmo sem troca de música, agora fica sempre visível", "Novo: 4 designs de StandBy selecionáveis nas configurações (Clássico, Minimalista, Capa em destaque, Só relógio)"],
+                tr: ["StandBy: kapak resmi titreme hatası düzeltildi - şarkı değişmese bile rastgele kaybolup görünüyordu, artık her zaman görünür kalıyor", "Yeni: ayarlarda seçilebilir 4 StandBy tasarımı (Klasik, Minimal, Kapak Odaklı, Sadece Saat)"],
+            }},
+            { version: 'v24.79', date: "August 2026", type: 'performance', items: {
+                de: ["Cover laden bei Songwechsel spürbar schneller - bis zu 6 gleichzeitige Bild-Ladevorgänge für dasselbe Cover auf das Nötigste reduziert"],
+                en: ["Covers load noticeably faster on track change - reduced up to 6 simultaneous image loads for the same cover down to what's actually needed"],
+                es: ["Las portadas cargan notablemente más rápido al cambiar de canción - hasta 6 cargas de imagen simultáneas para la misma portada reducidas a lo estrictamente necesario"],
+                fr: ["Les pochettes se chargent nettement plus vite au changement de morceau - jusqu'à 6 chargements d'image simultanés pour la même pochette réduits au strict nécessaire"],
+                pt: ["As capas carregam visivelmente mais rápido na troca de música - até 6 carregamentos de imagem simultâneos para a mesma capa reduzidos ao essencial"],
+                tr: ["Şarkı değişiminde kapak resimleri gözle görülür şekilde daha hızlı yükleniyor - aynı kapak için eş zamanlı 6 görsel yüklemesi gerçekten gerekenle sınırlandırıldı"],
+            }},
             { version: 'v24.78', date: "August 2026", type: 'feature', items: {
                 de: ["Synchrones Lyrics-Vorlesen passt die Sprechgeschwindigkeit jetzt automatisch an, wenn der Text sehr schnell/dicht ist - kommt nicht mehr hinterher"],
                 en: ["Synced lyrics narration now automatically adjusts speaking speed for very fast/dense lyrics - no longer falls behind"],
@@ -11901,7 +12091,7 @@
                 if (mText) mText.innerText = data.provider || t('status_streaming_fallback');
 
                 // NEW: StandBy-Overlay & Ambient-Color immer mit dem aktuellen Track synchron halten
-                syncStandByTrackInfo(data.track.title, rawArtist, imgUrl);
+                syncStandByTrackInfo(data.track.title, rawArtist, imgUrl, isNewTrack);
                 extractDominantColor(imgUrl);
                 // NEW: Dynamic Island bleibt bei jedem Update aktuell (persistent, solange Musik läuft)
                 if (isPlaying) showIslandPersistent(data.track.title, rawArtist, imgUrl);
