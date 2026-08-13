@@ -11,6 +11,35 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FIX - KRITISCH] Release v24.70: StandBy-Lockscreen fühlte sich "komplett eingefroren" an
+      - Nutzer meldete: Im StandBy bewegt sich fast nichts, nur der Anti-Burn-in-Pixel-Shift
+        funktioniert, Songwechsel kommen zwar irgendwie an aber alles wirkt "sehr still".
+      - Root Cause im Code direkt gefunden (nicht geraten): startProgressTracking() brach bei
+        standByActive bisher sofort komplett ab - der Fortschrittsbalken und die
+        Sekunden-Anzeige im StandBy-Lockscreen bekamen dadurch NIE ein Live-Update. Titel/
+        Künstler/Cover aktualisierten sich zwar korrekt (unabhängiger Pfad über
+        syncStandByTrackInfo(), läuft bei jedem Musikdaten-Abruf), aber der Fortschrittsbalken
+        sprang nur alle 5 Sekunden ruckartig, wenn zufällig ein neuer Abruf ankam - das erklärt
+        das "eingefroren"-Gefühl komplett.
+      - Fix: Neuer, bewusst günstiger StandBy-Takt (STANDBY_PROGRESS_THROTTLE_MS, 1x/Sekunde
+        statt der vollen 200ms-Rate der Haupt-UI) - reicht für eine sichtbar fließende Anzeige,
+        kostet aber nur einen Bruchteil der Rechenzeit. startProgressTracking() wird jetzt auch
+        beim Öffnen von StandBy aktiv aufgerufen statt komplett übersprungen zu werden.
+      - OFFEN / NÄCHSTE RUNDE (Nutzer hat noch mehr gewünscht, bewusst noch nicht umgesetzt,
+        da das ein eigenes, größeres Feature mit echtem Interaktions-Design ist statt eines
+        schnellen Patches):
+        1) Nach ca. 5s Inaktivität im StandBy sollen sekundäre Animationen (EQ-Balken,
+           Marquee-Scroll) sanft ausgeblendet/pausiert werden, bei Antippen mit Fade wieder
+           erscheinen. Kollidiert aktuell mit der bestehenden Grundfunktion "jedes Antippen
+           von #standby-overlay verlässt StandBy sofort" - braucht ein eigenes, sauber
+           durchdachtes Zwei-Stufen-Tap-Konzept (1. Tap = aufwecken, 2. Tap/Timeout = wirklich
+           verlassen), nicht einfach draufgepatcht.
+        2) Einstellbarkeit der StandBy-Animationen (an/aus, Stil) im Einstellungsmenü.
+        3) Mehrere wählbare StandBy-"Designs".
+        4) Marquee-Scroll bei zu langem Titel/Künstler soll nicht mehr laufen, sondern
+           effizienter gelöst werden - vom Nutzer selbst als "schwierig, braucht noch
+           effizientere Lösung" eingestuft, absichtlich noch nicht angefasst.
+
     [FIX/FEATURE] Release v24.69: "Was ist neu?"-Mini-Tutorial zeigte seit v24.50 bei
     JEDEM Versionssprung unverändert dieselben, längst veralteten "Neuigkeiten"
       - Root Cause: whatsNewSeenVersion wird zwar korrekt pro SITE_VERSION zurückgesetzt (löst
@@ -3759,7 +3788,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.69 · 2026-08-13';
+        const SITE_VERSION = 'v24.70 · 2026-08-13';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -4737,7 +4766,7 @@
                 t_whatsnew1_title: '✨ Was ist neu seit deinem letzten Besuch?',
                 t_whatsnew1_text: 'Wichtiger Hitze-Fix: Im Hintergrund liefen bisher einige Timer auch bei gesperrtem oder minimiertem Handy unnötig weiter, inklusive echtem Netzwerk-Traffic alle 5 Sekunden. Das ist jetzt behoben - spürbar weniger Akku-/Wärmeverbrauch, ganz ohne StandBy-Nutzung.',
                 t_whatsnew2_title: '✨ Noch mehr Neues',
-                t_whatsnew2_text: 'Der hartnäckige "Fortschrittsbalken eingefroren"-Bug ist nach mehreren Anläufen jetzt wirklich vollständig gelöst, inklusive Selbstheilung, falls es doch nochmal klemmen sollte - und ohne dass sich StandBy dabei fälschlich mit reinmischt.',
+                t_whatsnew2_text: 'StandBy-Lockscreen: Fortschrittsbalken und Sekunden-Anzeige liefen bisher gar nicht live mit, sondern sprangen nur alle 5 Sekunden - fühlte sich eingefroren an. Läuft jetzt sanft und sparsam mit.',
                 t_whatsnew3_title: '✨ Unter der Haube',
                 t_whatsnew3_text: 'Ich hab außerdem einmal gründlich durch den gesamten Code geschaut - Timer, Animationen, Speicherverbrauch - um sicherzugehen, dass sonst nichts unnötig Akku frisst. Alle Details wie immer in den vollständigen Release-Notes hier unten im Footer.',
                 tutorial_whatsnew_badge: '✨ Bonus: Was ist neu',
@@ -4923,7 +4952,7 @@
                 t_whatsnew1_title: '✨ What\'s new since your last visit?',
                 t_whatsnew1_text: "Important heat fix: some background timers kept running even with the phone locked or minimized, including real network traffic every 5 seconds. That's now fixed - noticeably less battery drain and heat, even without using StandBy.",
                 t_whatsnew2_title: '✨ Even more news',
-                t_whatsnew2_text: 'The stubborn "frozen progress bar" bug is now genuinely fully resolved after several rounds, including a self-healing safety net in case it ever acts up again - without StandBy getting incorrectly caught up in it.',
+                t_whatsnew2_text: "StandBy lock screen: the progress bar and seconds display weren't updating live at all, only jumping every 5 seconds - felt frozen. Now runs smoothly and efficiently.",
                 t_whatsnew3_title: '✨ Under the hood',
                 t_whatsnew3_text: "I also did a thorough pass through the whole codebase - timers, animations, memory usage - to make sure nothing else is quietly draining battery. Full details as always in the release notes down in the footer.",
                 tutorial_whatsnew_badge: "✨ Bonus: What's new",
@@ -5109,7 +5138,7 @@
                 t_whatsnew1_title: '✨ ¿Qué hay de nuevo desde tu última visita?',
                 t_whatsnew1_text: 'Corrección importante de calentamiento: algunos temporizadores en segundo plano seguían funcionando incluso con el teléfono bloqueado o minimizado, incluyendo tráfico de red real cada 5 segundos. Ya está resuelto - notablemente menos consumo de batería y calor, incluso sin usar StandBy.',
                 t_whatsnew2_title: '✨ Más novedades',
-                t_whatsnew2_text: 'El persistente error de la "barra de progreso congelada" ahora está realmente resuelto por completo tras varias rondas, incluyendo una red de autorreparación por si volviera a pasar - sin que StandBy se vea afectado incorrectamente.',
+                t_whatsnew2_text: 'Pantalla de bloqueo StandBy: la barra de progreso y el contador de segundos no se actualizaban en vivo, solo saltaban cada 5 segundos - se sentía congelado. Ahora funciona de forma suave y eficiente.',
                 t_whatsnew3_title: '✨ Bajo el capó',
                 t_whatsnew3_text: 'También revisé a fondo todo el código - temporizadores, animaciones, uso de memoria - para asegurarme de que nada más consuma batería innecesariamente. Todos los detalles, como siempre, en las notas de versión completas al pie de página.',
                 tutorial_whatsnew_badge: '✨ Extra: Novedades',
@@ -5295,7 +5324,7 @@
                 t_whatsnew1_title: '✨ Quoi de neuf depuis ta dernière visite ?',
                 t_whatsnew1_text: "Correction importante de surchauffe : certains minuteurs en arrière-plan continuaient de tourner même téléphone verrouillé ou minimisé, avec du vrai trafic réseau toutes les 5 secondes. C'est désormais corrigé - nettement moins de batterie consommée et de chaleur, même sans utiliser StandBy.",
                 t_whatsnew2_title: '✨ Encore plus de nouveautés',
-                t_whatsnew2_text: "Le tenace bug de la « barre de progression figée » est maintenant vraiment résolu après plusieurs tentatives, avec un filet de sécurité auto-réparateur en cas de récidive - sans que StandBy ne soit plus pris à tort dans l'histoire.",
+                t_whatsnew2_text: "Écran de verrouillage StandBy : la barre de progression et l'affichage des secondes ne se mettaient pas à jour en direct, ils sautaient toutes les 5 secondes - ça paraissait figé. Fonctionne désormais en douceur et efficacement.",
                 t_whatsnew3_title: '✨ Sous le capot',
                 t_whatsnew3_text: "J'ai aussi fait une revue complète et approfondie du code - minuteurs, animations, utilisation mémoire - pour m'assurer que rien d'autre ne consomme discrètement de la batterie. Tous les détails, comme toujours, dans les notes de version complètes en bas de page.",
                 tutorial_whatsnew_badge: '✨ Bonus : Nouveautés',
@@ -5481,7 +5510,7 @@
                 t_whatsnew1_title: '✨ O que há de novo desde sua última visita?',
                 t_whatsnew1_text: 'Correção importante de aquecimento: alguns temporizadores em segundo plano continuavam rodando mesmo com o celular bloqueado ou minimizado, incluindo tráfego de rede real a cada 5 segundos. Isso já foi corrigido - consumo de bateria e calor visivelmente menores, mesmo sem usar o StandBy.',
                 t_whatsnew2_title: '✨ Ainda mais novidades',
-                t_whatsnew2_text: 'O teimoso bug da "barra de progresso congelada" agora está realmente resolvido de vez após várias rodadas, com uma rede de autorreparação caso volte a acontecer - sem que o StandBy seja mais afetado incorretamente.',
+                t_whatsnew2_text: 'Tela de bloqueio StandBy: a barra de progresso e o contador de segundos não atualizavam ao vivo, só pulavam a cada 5 segundos - parecia congelado. Agora roda de forma suave e eficiente.',
                 t_whatsnew3_title: '✨ Por baixo do capô',
                 t_whatsnew3_text: 'Também revisei todo o código a fundo - temporizadores, animações, uso de memória - para garantir que mais nada consuma bateria desnecessariamente. Todos os detalhes, como sempre, nas notas de versão completas no rodapé.',
                 tutorial_whatsnew_badge: '✨ Bônus: Novidades',
@@ -5667,7 +5696,7 @@
                 t_whatsnew1_title: '✨ Son ziyaretinden beri neler değişti?',
                 t_whatsnew1_text: 'Önemli ısınma düzeltmesi: bazı arka plan zamanlayıcıları telefon kilitliyken veya küçültülmüşken bile çalışmaya devam ediyor, her 5 saniyede gerçek ağ trafiği üretiyordu. Bu artık düzeltildi - StandBy kullanmasan bile gözle görülür şekilde daha az pil tüketimi ve ısınma.',
                 t_whatsnew2_title: '✨ Daha fazla yenilik',
-                t_whatsnew2_text: 'Israrcı "ilerleme çubuğu donması" hatası birkaç turdan sonra artık gerçekten tamamen çözüldü, tekrar olursa diye kendi kendini onaran bir güvenlik ağıyla birlikte - StandBy artık bu sürece yanlışlıkla karışmıyor.',
+                t_whatsnew2_text: 'StandBy kilit ekranı: ilerleme çubuğu ve saniye göstergesi canlı güncellenmiyordu, sadece her 5 saniyede bir atlıyordu - donmuş gibi hissettiriyordu. Artık akıcı ve verimli şekilde çalışıyor.',
                 t_whatsnew3_title: '✨ Perde arkasında',
                 t_whatsnew3_text: 'Ayrıca tüm kod tabanını baştan sona derinlemesine gözden geçirdim - zamanlayıcılar, animasyonlar, bellek kullanımı - başka hiçbir şeyin sessizce pil tüketmediğinden emin olmak için. Her zamanki gibi tüm ayrıntılar alt bilgideki sürüm notlarında.',
                 tutorial_whatsnew_badge: '✨ Bonus: Yenilikler',
@@ -6195,6 +6224,9 @@
         // Bewegungen statt durchgehend zu laufen. Zurück auf 200ms (5x/Sek), was in v24.5-v24.9
         // ohne Ruckel-Beschwerde lief und trotzdem deutlich weniger als die ursprünglichen 60x/Sek ist.
         const PROGRESS_UI_THROTTLE_MS = 200;
+        // NEU v24.70: Eigener, deutlich günstigerer Takt speziell für StandBy - siehe
+        // ausführlichen Kommentar bei startProgressTracking().
+        const STANDBY_PROGRESS_THROTTLE_MS = 1000;
         // PERF-FIX v24.5: syncLyricsUI() macht bei aktiver Wort-für-Wort-Synchronisation pro
         // Frame mehrere document.getElementById-Lookups + Klassen-Änderungen PRO ZEICHEN der
         // aktuellen Zeile. Bei 60x/Sek ist das bei längeren Zeilen mehrere tausend DOM-Zugriffe
@@ -8331,6 +8363,10 @@
                 updateStandByClock();
                 clearInterval(standByInterval);
                 standByInterval = setInterval(updateStandByClock, 1000 * 15);
+                // NEU v24.70: Live-Fortschritt-Tracking auch im StandBy starten (siehe
+                // ausführliche Erklärung in startProgressTracking()) - vorher blieb der
+                // Fortschrittsbalken/die Sekunden-Anzeige hier komplett eingefroren.
+                startProgressTracking();
                 // NEW: Anti-Burn-in Pixel-Shift starten (echter Positions-Zyklus, siehe unten)
                 standByShiftIndex = Math.floor(Math.random() * (AOD_SHIFT_POSITIONS.length - 1)) + 1; // nie bei Index 0 (Mitte) starten
                 shiftStandbyContent();
@@ -8833,6 +8869,14 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.70', date: "August 2026", type: 'fix', items: {
+                de: ["StandBy-Lockscreen: Fortschrittsbalken und Sekunden-Anzeige liefen bisher gar nicht mit, sondern sprangen nur alle 5s - jetzt läuft eine sanfte, sparsame Live-Anzeige mit"],
+                en: ["StandBy lock screen: the progress bar and seconds display weren't updating live at all, only jumping every 5s - now runs a smooth, low-power live update"],
+                es: ["Pantalla de bloqueo StandBy: la barra de progreso y el contador de segundos no se actualizaban en vivo, solo saltaban cada 5s - ahora hay una actualización en vivo suave y de bajo consumo"],
+                fr: ["Écran de verrouillage StandBy : la barre de progression et l'affichage des secondes ne se mettaient pas à jour en direct, ils sautaient seulement toutes les 5s - fonctionne maintenant en direct, en douceur et à faible consommation"],
+                pt: ["Tela de bloqueio StandBy: a barra de progresso e o contador de segundos não atualizavam ao vivo, só pulavam a cada 5s - agora roda uma atualização ao vivo suave e de baixo consumo"],
+                tr: ["StandBy kilit ekranı: ilerleme çubuğu ve saniye göstergesi canlı güncellenmiyordu, sadece her 5 saniyede bir atlıyordu - artık akıcı, düşük güç tüketimli canlı güncelleme çalışıyor"],
+            }},
             { version: 'v24.69', date: "August 2026", type: 'fix', items: {
                 de: ["\"Was ist neu?\"-Mini-Tutorial zeigte seit v24.50 veraltete Inhalte trotz Update bei jedem Release - jetzt aktuell und um einen dritten Schritt erweitert"],
                 en: ["The \"What's new?\" mini tutorial had been showing outdated content on every release since v24.50 - now up to date and extended with a third step"],
@@ -10877,15 +10921,28 @@
 
         function startProgressTracking() {
             stopProgressTracking(); // sauberer Neustart, keine doppelten Timer möglich
-            if (!trackIsPlaying || document.hidden || standByActive) return;
+            if (!trackIsPlaying || document.hidden) return;
 
-            const lyricsOpen = mainMusicCard && mainMusicCard.classList.contains('lyrics-open');
+            // FIX v24.70: Nutzer meldete, StandBy fühle sich "komplett eingefroren" an -
+            // Root Cause: startProgressTracking() brach bisher bei standByActive sofort
+            // komplett ab (siehe Git-Historie), Fortschrittsbalken/Uhrzeit im StandBy-
+            // Lockscreen bekamen dadurch NIE ein Live-Update, sondern sprangen nur alle 5s
+            // sprunghaft, wenn zufällig ein neuer Musikdaten-Abruf ankam - Titel/Cover
+            // aktualisierten sich zwar (über syncStandByTrackInfo, unabhängiger Pfad), aber
+            // Fortschrittsbalken/Sekunden-Anzeige wirkten dadurch komplett tot. Jetzt läuft
+            // auch im StandBy ein echtes Tracking mit, allerdings bewusst im deutlich
+            // günstigeren 1x/Sekunde-Takt (STANDBY_PROGRESS_THROTTLE_MS) statt der vollen
+            // 200ms-Rate der Haupt-UI - für eine sichtbar fließende Anzeige reicht das locker,
+            // kostet aber nur einen Bruchteil der Rechenzeit. Voller rAF-Loop (für
+            // Songtext-Wort-Sync) bleibt weiterhin exklusiv der Haupt-UI vorbehalten, da
+            // Songtext im StandBy ohnehin nicht sichtbar ist.
+            const lyricsOpen = !standByActive && mainMusicCard && mainMusicCard.classList.contains('lyrics-open');
             if (lyricsOpen) {
                 isAnimating = true;
                 lyricAnimFrame = requestAnimationFrame(animateLoop);
             } else {
                 tickProgressInterval(); // sofort einmal aktualisieren, nicht erst nach dem ersten Intervall-Tick
-                progressTickerInterval = setInterval(tickProgressInterval, PROGRESS_UI_THROTTLE_MS);
+                progressTickerInterval = setInterval(tickProgressInterval, standByActive ? STANDBY_PROGRESS_THROTTLE_MS : PROGRESS_UI_THROTTLE_MS);
             }
         }
 
