@@ -11,6 +11,33 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FIX - KRITISCH] Release v24.94: Cover verschwinden dauerhaft nach Rückkehr aus dem
+    Hintergrund (Regression aus dem eigenen Canvas-Umbau v24.87)
+      - Nutzer schickte ein Screen-Recording - hat den Bug sichtbar gemacht: Lyrics-Mini-
+        Vorschau (und teils Dynamic Island) zeigten nur noch ein winziges "M."-Fragment statt
+        Titel/Cover, nachdem die App verlassen (nicht geschlossen) und später wieder geöffnet
+        wurde - Hauptkarte selbst blieb meist korrekt.
+      - Root Cause im eigenen Canvas-Umbau (v24.87) gefunden: syncAllCoverConsumers() wird nur
+        an einzelnen, festen Auslösepunkten aufgerufen (Songwechsel-Erkennung, StandBy-
+        Öffnen). Direkt nach Rückkehr aus dem Hintergrund kann #artwork sein neues Bild noch
+        mitten im Laden haben, wenn dieser Aufruf zufällig genau in diesem Moment feuert -
+        mArtwork.decode() schlägt dann fehl, die Funktion bricht per "return" ab, OHNE dass
+        die Canvas-Elemente je (neu) gezeichnet werden - und ohne Wiederholungsversuch blieben
+        sie fortan dauerhaft leer, bis der nächste ECHTE Songwechsel zufällig alles neu
+        anstößt (kann sehr lange dauern oder in der Praxis effektiv "nie mehr" wirken).
+      - Fix: zwei zusätzliche, selbstheilende Absicherungen. Erstens ein dauerhafter "load"-
+        Listener direkt auf #artwork - sobald es IRGENDWANN erfolgreich ein Bild lädt
+        (normaler Fluss, verzögerter Nachzügler nach Hintergrund-Rückkehr, oder die iTunes-
+        Fallback-Kette), werden die Canvas-Verbraucher garantiert synchronisiert, unabhängig
+        vom exakten Timing des ursprünglichen Auslösers. Zweitens ein "visibilitychange"-
+        Listener, der beim Zurückkehren aus dem Hintergrund proaktiv nachzieht (günstig, nur
+        Zeichnen, kein Netzwerk-Request) - exakt das vom Nutzer gemeldete Szenario.
+      - Deckt vermutlich auch den zweiten gemeldeten Effekt ab ("nach Neuladen sind Cover
+        komplett weg") - dieselbe Race Condition könnte auch dort zugeschlagen haben, auch
+        wenn das konkrete Video das nicht explizit zeigte. EHRLICHER VORBEHALT: kein echtes
+        Geräte-Testing möglich, bitte nach dem Deploy genau das Szenario aus dem Video
+        nachstellen (App verlassen, warten, wieder öffnen) und gegenchecken.
+
     [FIX] Release v24.93: Größen-Regler jetzt pro Design UND Ausrichtung einzeln gespeichert +
     Haptic-Diagnose standardmäßig deaktiviert (Performance-Bedenken berechtigt)
       - Nutzer meldete: manuelle Nachjustierung soll für Querformat mit gelten UND für jedes
@@ -4659,7 +4686,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.93 · 2026-08-14';
+        const SITE_VERSION = 'v24.94 · 2026-08-14';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -7398,6 +7425,31 @@
         // gezeichnet werden, sonst bleibt die interne Auflösung auf dem alten Stand stehen
         // und das Bild wirkt verpixelt/falsch zugeschnitten.
         window.addEventListener('resize', () => { syncAllCoverConsumers(); }, { passive: true });
+        // FIX v24.94 (KRITISCH): Nutzer schickte ein Screen-Recording - Cover verschwinden
+        // dauerhaft (Lyrics-Mini-Vorschau UND teils Dynamic Island betroffen, Hauptkarte
+        // selbst blieb meist korrekt), nachdem die App verlassen (nicht geschlossen) und
+        // später wieder geöffnet wurde. Root Cause im eigenen Canvas-Umbau (v24.87) gefunden:
+        // syncAllCoverConsumers() wird nur an einzelnen, festen Auslösepunkten aufgerufen
+        // (Songwechsel-Erkennung, StandBy-Öffnen). Direkt nach dem Zurückkehren aus dem
+        // Hintergrund kann #artwork sein NEUES Bild noch mitten im Laden haben, wenn dieser
+        // Aufruf zufällig genau in diesem Moment feuert - mArtwork.decode() schlägt dann
+        // fehl, die Funktion bricht per "return" ab, OHNE dass die Canvas-Elemente je (neu)
+        // gezeichnet werden - und ohne Wiederholungsversuch blieben sie fortan dauerhaft leer,
+        // bis der nächste ECHTE Songwechsel zufällig alles neu anstößt. Fix: zusätzlich ein
+        // dauerhafter "load"-Listener direkt auf #artwork selbst - sobald es IRGENDWANN
+        // erfolgreich ein Bild lädt (normaler Fluss, verzögerter Nachzügler nach Hintergrund-
+        // Rückkehr, oder die iTunes-Fallback-Kette), werden die Canvas-Verbraucher garantiert
+        // synchronisiert, unabhängig vom exakten Timing des ursprünglichen Auslösers -
+        // selbstheilend statt auf einen einzigen perfekten Moment angewiesen.
+        if (mArtwork) mArtwork.addEventListener('load', () => syncAllCoverConsumers());
+        // FIX v24.94: zusätzliche Absicherung - beim Zurückkehren aus dem Hintergrund (App
+        // verlassen, nicht geschlossen, später wieder geöffnet - exakt das vom Nutzer
+        // gemeldete Szenario) einmal proaktiv nachziehen, unabhängig davon, ob gerade ein
+        // Songwechsel erkannt wurde oder nicht. Günstig (nur ein Zeichenvorgang, kein
+        // Netzwerk-Request), kann also ruhig bei jedem Sichtbarwerden laufen.
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) syncAllCoverConsumers();
+        });
 
         // NEU v24.61 (jetzt v24.63 global gemacht): Bevor auf das generische Platzhalterbild
         // zurückgegriffen wird - npc-api.aikins.xyz gibt manchmal 404 für den Cover-Art-Proxy
@@ -10501,6 +10553,14 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.94', date: "August 2026", type: 'fix', items: {
+                de: ["Cover blieben nach Rückkehr aus dem Hintergrund manchmal dauerhaft leer (Lyrics-Vorschau, Dynamic Island) - jetzt selbstheilend behoben"],
+                en: ["Covers sometimes stayed permanently blank after returning from the background (lyrics preview, Dynamic Island) - now fixed with self-healing logic"],
+                es: ["Las portadas a veces quedaban en blanco permanentemente al volver del segundo plano (vista previa de letras, Dynamic Island) - ahora corregido con lógica autorreparadora"],
+                fr: ["Les pochettes restaient parfois définitivement vides après un retour en arrière-plan (aperçu des paroles, Dynamic Island) - désormais corrigé avec une logique auto-réparatrice"],
+                pt: ["As capas às vezes ficavam permanentemente em branco ao voltar do segundo plano (prévia da letra, Dynamic Island) - agora corrigido com lógica autorreparadora"],
+                tr: ["Kapak resimleri arka plandan dönüldüğünde bazen kalıcı olarak boş kalıyordu (söz önizlemesi, Dynamic Island) - artık kendi kendini onaran mantıkla düzeltildi"],
+            }},
             { version: 'v24.93', date: "August 2026", type: 'fix', items: {
                 de: ["StandBy-Größen-Regler speichert jetzt für jedes Design und jede Ausrichtung (Hoch-/Querformat) einzeln statt einen globalen Wert für alle", "Haptic-Diagnose kostet keine Leistung mehr im Normalbetrieb (war standardmäßig an, jetzt aus)"],
                 en: ["StandBy size slider now saves individually per design and orientation (portrait/landscape) instead of one global value for all", "Haptic diagnostics no longer cost performance in normal use (was on by default, now off)"],
