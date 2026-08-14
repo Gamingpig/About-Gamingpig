@@ -11,6 +11,92 @@
     Neueste Einträge oben.
     ================================================================
 
+    [PERFORMANCE - KRITISCH] Release v24.90: Blur zurück - aber effizient statt live
+      - Nutzer wollte den Blur-Effekt aus v24.89 nicht komplett verlieren, nur effizienter.
+      - Lösung: eigene, unabhängige Hintergrund-Ebene (#standby-card-blur-bg) statt
+        backdrop-filter. Der entscheidende technische Unterschied: backdrop-filter muss bei
+        JEDEM Frame live abtasten, was optisch DAHINTER liegt - selbst wenn sich dort nichts
+        ändert, behandeln viele Browser/GPU-Treiber (besonders Android Chrome) das
+        konservativ als "muss neu berechnet werden", das war die Pixel-Hitzequelle. Normales
+        "filter: blur()" auf einer eigenständigen Ebene mit derselben Cover-Art blurt dagegen
+        nur den EIGENEN, bereits feststehenden Inhalt dieser einen Ebene, once-und-fertig -
+        der Browser kann das Ergebnis als einzelne, stabile Ebene cachen und wiederverwenden,
+        ganz ohne bei jedem Frame neu abzutasten, was sich dahinter befindet.
+      - Umsetzung: neue Ebene liegt als erstes Kind in #standby-nowplaying, z-index:-1 hält
+        sie zuverlässig hinter dem restlichen Karteninhalt. Negativer inset (-20px) plus
+        leichtes Hochskalieren (1.15x) verhindert einen sichtbaren Blur-Rand, dasselbe
+        bewährte Prinzip wie schon bei #standby-bg selbst. will-change: transform, opacity
+        (dieselbe Isolations-Lektion wie bei den EQ-Balken aus v24.71). Bekommt bei jedem
+        Songwechsel dieselbe Cover-URL wie #standby-bg, eigener Opacity-Crossfade.
+      - "Split", "Edge-Glow", "Transparent" und "Kontrast" haben schon immer eine
+        eigenständige, undurchsichtige Hintergrundlösung ohne Blur - die neue Ebene würde
+        dort unsichtbar unter der jeweils opaken Fläche verschwinden, aber trotzdem unnötig
+        Zeichenarbeit kosten - dort explizit deaktiviert (display:none).
+      - Optisch fast identisch zum ursprünglichen Live-Blur (dieselbe Cover-Art, nur separat
+        vorgeblurt statt live durchgereicht), technisch aber grundlegend billiger - keine
+        Live-Abtastung mehr, unabhängig von Gerät/Treiber. EHRLICHER VORBEHALT wie immer:
+        kein echtes Android-/iOS-Geräte-Testing in dieser Sandbox möglich, bitte auf beiden
+        Geräten gegenchecken.
+
+    [PERFORMANCE - KRITISCH] Release v24.89: backdrop-filter im StandBy komplett entfernt -
+    Pixel-Hitze trotz mehrfacher Blur-Reduzierung weiterhin gemeldet
+      - Nutzer meldete: Pixel wird im StandBy heiß, "selbst wenn es nicht lädt" - iPhone 11
+        vergleichsweise kaum betroffen.
+      - Die Plattform-Diskrepanz (Pixel deutlich betroffen, iPhone kaum) bestätigt einen
+        bekannten, realen Unterschied: Chrome auf Android hat historisch einen deutlich
+        teureren backdrop-filter-Compositing-Pfad als Safaris Hardware-Compositing auf iOS -
+        eine STATISCHE backdrop-filter-Fläche kann auf manchen Android-GPU-/Treiber-
+        Kombinationen bereits für sich allein laufende Kosten verursachen, unabhängig davon,
+        ob gerade etwas lädt oder sich bewegt. Erklärt auch "selbst wenn es nicht lädt".
+      - Nach zwei Radius-Reduzierungen, die beide nicht ausreichten (v24.49: 30px -> 18px,
+        v24.72: 18px -> 9px), jetzt der bereits in v24.72 angekündigte "deutlich radikalere
+        Schritt": backdrop-filter auf #standby-nowplaying komplett entfernt. Kein Live-Blur
+        mehr = keine Compositing-Kosten mehr, auf keiner Plattform, unabhängig vom
+        Gerät/Treiber. Hintergrund-Deckkraft deutlich angehoben (dunkles, fast blickdichtes
+        Karten-Design statt Frosted-Glass-Optik) für weiterhin gute Lesbarkeit.
+      - Keine Design-Konflikte: "Edge-Glow", "Transparent" und "Kontrast" hatten schon vorher
+        eigenständig backdrop-filter:none gesetzt (bewusste Designentscheidung bei deren
+        Erstellung) - bestätigt, dass eine blurfreie Optik im bestehenden Design-System
+        bereits nachweislich funktioniert, kein Neuland.
+      - EHRLICHER VORBEHALT wie immer: kein echtes Android-/iOS-Geräte-Testing in dieser
+        Sandbox möglich. Bitte nach dem Deploy auf beiden Geräten gegenchecken - falls das
+        Pixel danach immer noch spürbar wärmer wird als vorher, bräuchte ich echte Task-
+        Manager-/Konsolen-Zahlen, um sicher weiterzumachen statt weiter zu raten.
+
+    [FEATURE - KRITISCH] Release v24.88: Auto-Fit-System für StandBy-Designs (Nutzeridee -
+    generische Lösung statt Whack-a-Mole pro Design)
+      - Nutzer meldete: Polaroid-Design zu hoch, ragt über den Bildschirmrand hinaus. Cover-
+        Fokus weiterhin unschön/verzerrt auf manchen Displays, ein gezielter Fix dafür wäre
+        selbst unschön und würde das Problem nicht vollständig lösen.
+      - Nutzeridee (übernommen): statt für jedes der 20 Designs von Hand jede erdenkliche
+        Display-Größe/-Ausrichtung durchzuspielen, einen generischen Check einbauen - wenn
+        etwas über den Rand hinausgehen würde, automatisch die Größe anpassen, damit es auf
+        jedes Display passt. Werte in localStorage cachen, damit nicht immer neu gerechnet
+        werden muss. Zusätzlich manuelle Nachjustierung in den Einstellungen.
+      - Umsetzung: fitStandbyToScreen() misst die tatsächlich gerenderte Größe der Now-
+        Playing-Karte (unabhängig vom aktiven Design) und skaliert per CSS transform:scale()
+        automatisch so weit herunter, dass sie mit 6% Sicherheitsabstand auf den Bildschirm
+        passt - NIE hoch skaliert, nur bei Bedarf runter. Ergebnis wird pro Design+Bildschirm-
+        größe in localStorage gecacht (Cache-Key: standbyFitScale:<design>:<breite>x<höhe>) -
+        spätere Öffnungen mit identischen Bedingungen wenden den gecachten Wert sofort an,
+        ganz ohne Mess-Verzögerung/Flackern. Wird ausgelöst beim StandBy-Öffnen, bei Design-
+        Wechsel, bei echtem Songwechsel (neuer Titel kann die Höhe beeinflussen, z.B.
+        zweizeilig statt einzeilig) und bei Fenstergrößenänderung/Drehung.
+      - Manuelle Nachjustierung: neuer Regler in den Einstellungen (60%-130%), wird IMMER
+        zusätzlich zur automatischen Anpassung angewendet, nutzt dafür den bereits gecachten
+        Auto-Wert (keine erneute Messung nötig, Regler-Dreh dadurch sofort spürbar).
+        Persistent in localStorage (standbyManualScale).
+      - Löst dadurch gleichzeitig sowohl das gemeldete Polaroid-Überlauf-Problem als auch das
+        verbleibende Cover-Fokus-Problem, ohne für jedes einzeln eine eigene Spezial-Lösung
+        zu brauchen - genau wie vom Nutzer vorgeschlagen. Per Node-Skript gegengetestet
+        (3 verschiedene Karte-vs-Bildschirm-Kombinationen, alle skalieren korrekt auf einen
+        Wert, der garantiert innerhalb der verfügbaren Fläche liegt).
+      - Kleinerer Nebenpunkt zum StandBy-Hintergrund-Ladeproblem beim Cold-Start (Nutzer
+        meldete kurze Unzuverlässigkeit direkt nach dem Update, seitdem aber stabil): sehr
+        wahrscheinlich eine sich selbst auflösende Race Condition zwischen erstem StandBy-
+        Öffnen und dem allerersten Musikdaten-Abruf - kein Code-Fund nötig, da laut Nutzer
+        bereits zuverlässig, kein weiterer Fix in dieser Version.
+
     [FEATURE - KRITISCH] Release v24.87: Geteilte Bild-Dekodierung für alle Cover-Art-
     Verbraucher (Nutzerwunsch: "4 unabhängige Lade-Systeme, warum nicht einfach teilen?")
       - Nutzer stellte eine berechtigte architektonische Frage: Dashboard-Cover, Dynamic
@@ -4062,24 +4148,46 @@
         /* --- Große Now-Playing Lockscreen-Karte --- */
         #standby-nowplaying {
             position: relative; z-index: 2; width: min(94vw, 520px); margin-bottom: 40px;
-            background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.14);
-            /* NEU v24.49: Blur-Radius von 30px auf 18px reduziert.
-               FIX v24.72: Trotz will-change-Isolation der animierenden Kinder (v24.71/72) laut
-               Nutzer immer noch zu hohe GPU-Dauerlast im StandBy - backdrop-filter selbst ist
-               auf integrierten GPUs (bestätigt mit AMD Ryzen 7 4700U) offenbar teurer als die
-               reine Kinder-Isolation ausgleichen kann. Nochmal deutlich reduziert (18px -> 9px)
-               als direkte Maßnahme an der Wurzel statt nur an den Symptomen. Hintergrund-
-               Deckkraft von 0.06 auf 0.1 leicht angehoben, um die Lesbarkeit bei weniger Blur
-               auszugleichen. */
-            backdrop-filter: blur(9px) saturate(150%); -webkit-backdrop-filter: blur(9px) saturate(150%);
-            /* NEU v24.81: border-radius jetzt über CSS-Variable steuerbar (Design-Baukasten,
-               siehe Einstellungsmenü) - Fallback 32px = exakt das bisherige, unveränderte
-               Aussehen, falls die Variable nie gesetzt wird. */
+            /* FIX v24.90 (KRITISCH): Nutzerwunsch - Blur soll bleiben, aber effizienter
+               laufen. v24.89 hatte backdrop-filter komplett entfernt (Pixel-Hitze-Notlösung),
+               das ist aber teurer als nötig: backdrop-filter ist grundsätzlich teuer, weil
+               es bei JEDEM Frame live abtasten muss, was optisch DAHINTER liegt - selbst wenn
+               sich dort nichts ändert, behandeln viele Browser/GPU-Treiber (besonders Android
+               Chrome) das konservativ als "muss neu berechnet werden". Diese Karte hat jetzt
+               stattdessen eine EIGENE, unabhängige Hintergrund-Ebene (#standby-card-blur-bg,
+               siehe dort) mit normalem "filter: blur()" statt "backdrop-filter" - der große
+               Unterschied: normales filter() blurt nur den EIGENEN, bereits feststehenden
+               Inhalt dieser einen Ebene, once-und-fertig, der Browser kann das Ergebnis als
+               einzelne, stabile Ebene cachen und wiederverwenden, OHNE bei jedem Frame neu
+               abzutasten, was sich dahinter befindet. Optisch fast identisch zum alten
+               Live-Blur (dieselbe Cover-Art, nur separat vorgeblurt statt live durchgereicht),
+               technisch aber grundlegend billiger.
+            */
+            background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14);
             border-radius: var(--standby-radius, 32px); padding: 26px; box-shadow: 0 20px 60px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.15);
-            /* FIX v24.72: contain:paint gibt dem Browser explizit die Erlaubnis, das Neuzeichnen
-               dieser Karte NICHT auf den Rest der Seite ausstrahlen zu lassen (und umgekehrt) -
-               zusätzliche, günstige Absicherung on top der will-change-Isolation der Kinder. */
+            /* contain:paint clippt zuverlässig auch #standby-card-blur-bg (die bewusst über
+               die Kartengrenzen hinausragt, siehe dort) exakt auf die abgerundeten Ecken der
+               Karte - kein zusätzliches overflow:hidden nötig. Isoliert wie gehabt zusätzlich
+               die animierenden Kinder (EQ-Balken/Fortschrittsbalken) vom Rest der Seite. */
             contain: paint;
+        }
+        #standby-card-blur-bg {
+            /* FIX v24.90: eigene, vorgeblurte Hintergrund-Ebene statt backdrop-filter - siehe
+               ausführliche Begründung oben bei #standby-nowplaying. Negativer inset (statt 0)
+               plus leichtes Hochskalieren verhindert einen sichtbaren, unschönen Blur-Rand am
+               Kartenrand (dasselbe bewährte Prinzip wie schon bei #standby-bg selbst). z-index
+               -1 hält sie zuverlässig hinter dem restlichen Karteninhalt, unabhängig von der
+               Dokument-Reihenfolge - kein manuelles z-index-Anheben der übrigen Kinder nötig.
+               will-change: transform, da die Ebene bei jedem Songwechsel per opacity-
+               Crossfade aus- und eingeblendet wird (siehe syncStandByTrackInfo() im Script)
+               - dieselbe Isolations-Lektion wie bei den EQ-Balken (v24.71). */
+            position: absolute; inset: -20px; z-index: -1; border-radius: inherit;
+            background-size: cover; background-position: center;
+            filter: blur(9px) brightness(0.55) saturate(140%);
+            transform: scale(1.15);
+            transition: opacity 0.5s ease;
+            will-change: transform, opacity;
+            pointer-events: none;
         }
         #standby-track { display: flex; align-items: center; gap: 20px; }
         #standby-track-art-wrap { position: relative; width: clamp(120px, 34vw, 190px); height: clamp(120px, 34vw, 190px); flex-shrink: 0; border-radius: 28px; overflow: hidden; box-shadow: 0 14px 40px rgba(0,0,0,0.65); }
@@ -4207,6 +4315,14 @@
            #standby-overlay, keine neue Logik/Animation. */
         /* "Edge-Glow": kein Blur, dafür ein leuchtender Rahmen in der Akzentfarbe. */
         #standby-overlay.standby-design-edge-glow #standby-nowplaying { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(0,0,0,0.35); border: 2px solid var(--standby-accent, #fff); box-shadow: 0 0 30px 2px var(--standby-accent, rgba(255,255,255,0.4)); }
+        /* FIX v24.90: diese drei Designs haben schon immer eine eigenständige, undurchsichtige
+           Hintergrundlösung ohne Blur - die neue #standby-card-blur-bg-Ebene (siehe oben)
+           würde hier unsichtbar unter der jeweils opaken Fläche verschwinden, aber trotzdem
+           unnötig Zeichenarbeit kosten - hier explizit deaktiviert. */
+        #standby-overlay.standby-design-split #standby-card-blur-bg,
+        #standby-overlay.standby-design-edge-glow #standby-card-blur-bg,
+        #standby-overlay.standby-design-transparent #standby-card-blur-bg,
+        #standby-overlay.standby-design-contrast #standby-card-blur-bg { display: none; }
         /* "Kompakt": kleine Karte, in eine Ecke gerückt statt zentriert - viel Hintergrund sichtbar. */
         #standby-overlay.standby-design-compact #standby-shift-wrapper {
             justify-content: flex-end; align-items: flex-start;
@@ -4479,7 +4595,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.87 · 2026-08-14';
+        const SITE_VERSION = 'v24.90 · 2026-08-14';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -4547,6 +4663,12 @@
                 <div id="standby-date"></div>
             </div>
             <div id="standby-nowplaying" class="standby-idle">
+                <!-- FIX v24.90: eigene, bereits fertig geblurte Hintergrund-Ebene statt
+                     backdrop-filter - siehe ausführliche Begründung im CSS bei
+                     #standby-card-blur-bg. Muss als ERSTES Kind stehen (z-index: -1 sorgt
+                     zusätzlich dafür, dass sie garantiert hinter dem restlichen Karteninhalt
+                     bleibt, unabhängig von der Dokument-Reihenfolge). -->
+                <div id="standby-card-blur-bg" aria-hidden="true"></div>
                 <div id="standby-track">
                     <div id="standby-track-art-wrap">
                         <!-- FIX v24.87: <img> -> <canvas>, siehe ausführliche Begründung bei #di-art oben. -->
@@ -4985,6 +5107,15 @@
                                                 <option value="stacked" id="opt-standby-design-stacked">Gestapelt</option>
                                                 <option value="contrast" id="opt-standby-design-contrast">Kontrast</option>
                                             </select>
+                                        </div>
+                                        <!-- NEU v24.88: Manuelle Nachjustierung der Auto-Fit-Größe. -->
+                                        <div class="px-2 py-1.5">
+                                            <div class="flex items-center justify-between mb-1">
+                                                <label for="standby-scale-slider" id="label-standby-scale" class="text-[9px] xxs:text-[10px] sm:text-xs font-bold text-slate-300">StandBy-Größe</label>
+                                                <span id="standby-scale-label" class="text-[9px] xxs:text-[10px] text-teal-400 font-mono">100%</span>
+                                            </div>
+                                            <input type="range" id="standby-scale-slider" min="0.6" max="1.3" step="0.05" value="1" oninput="changeStandbyManualScale(this.value)" class="w-full">
+                                            <p id="settings-standby-scale-hint" class="text-left text-[8px] xxs:text-[9px] text-slate-500 leading-snug mt-1">Passt sich automatisch an deinen Bildschirm an - hier nur bei Bedarf feinjustieren.</p>
                                         </div>
                                         <!-- NEU v24.81: Design-Baukasten (Akzentfarbe + Eckenradius) + Design-Code
                                              zum Teilen mit anderen. -->
@@ -5602,7 +5733,7 @@
                 kart_stat_besttime: 'Bestzeit',
                 kart_stat_sessions: 'Sessions',
                 kart_stat_since: 'Seit',
-                                settings_wakelock: 'Bildschirm an (StandBy)', settings_wakelock_hint: 'Hält den Bildschirm nur wach, solange Musik läuft - pausiert sie, darf das Handy normal einschlafen.', settings_notifications: 'Benachrichtigungen', notifications_unsupported: 'nicht verfügbar', notifications_on: 'AN', notifications_blocked: 'blockiert - in Browser-Einstellungen ändern', notifications_not_set: 'nicht eingerichtet, antippen', notifications_denied_hint: 'Du hast Benachrichtigungen blockiert - das kann ich nicht per Klick zurücksetzen, nur du selbst in den Browser-/System-Einstellungen für diese Seite.', notifications_enabled_toast: '🔔 Benachrichtigungen sind jetzt aktiviert.', settings_notification_hint: 'Für die "Willkommen zurück"-Meldung, falls Musik pausiert war während du weg warst.', settings_standby_design: 'StandBy-Design', standby_design_classic: 'Classic', standby_design_minimal: 'Minimal', standby_design_cover_focus: 'Cover-Fokus', standby_design_clock_only: 'Nur Uhr', standby_design_vinyl: 'Vinyl', standby_design_split: 'Split', standby_design_typography: 'Typografie', standby_design_edge_glow: 'Edge-Glow', standby_design_compact: 'Kompakt', standby_design_poster: 'Poster', standby_design_frame: 'Rahmen', standby_design_neon: 'Neon', standby_design_polaroid: 'Polaroid', standby_design_bar: 'Leiste', standby_design_grid: 'Raster', standby_design_transparent: 'Transparent', standby_design_giant_clock: 'Riesen-Uhr', standby_design_zen: 'Zen', standby_design_stacked: 'Gestapelt', standby_design_contrast: 'Kontrast', label_standby_accent: 'Akzentfarbe', label_standby_radius: 'Eckenradius', label_standby_design_code: 'Design-Code teilen', design_code_placeholder: 'Code hier einfügen...', btn_design_code_copy: 'Kopieren', btn_design_code_load: 'Laden', settings_design_code_hint: 'Kopiere deinen StandBy-Look als Code und schick ihn Freunden - die laden ihn hier ein und haben genau denselben Style.', standby_design_code_copied: '📋 Code kopiert - jetzt an Freunde weitergeben!', standby_design_code_loaded: '✨ Design geladen!', standby_design_code_invalid: 'Das war kein gültiger Design-Code.',
+                                settings_wakelock: 'Bildschirm an (StandBy)', settings_wakelock_hint: 'Hält den Bildschirm nur wach, solange Musik läuft - pausiert sie, darf das Handy normal einschlafen.', settings_notifications: 'Benachrichtigungen', notifications_unsupported: 'nicht verfügbar', notifications_on: 'AN', notifications_blocked: 'blockiert - in Browser-Einstellungen ändern', notifications_not_set: 'nicht eingerichtet, antippen', notifications_denied_hint: 'Du hast Benachrichtigungen blockiert - das kann ich nicht per Klick zurücksetzen, nur du selbst in den Browser-/System-Einstellungen für diese Seite.', notifications_enabled_toast: '🔔 Benachrichtigungen sind jetzt aktiviert.', settings_notification_hint: 'Für die "Willkommen zurück"-Meldung, falls Musik pausiert war während du weg warst.', settings_standby_design: 'StandBy-Design', standby_design_classic: 'Classic', standby_design_minimal: 'Minimal', standby_design_cover_focus: 'Cover-Fokus', standby_design_clock_only: 'Nur Uhr', standby_design_vinyl: 'Vinyl', standby_design_split: 'Split', standby_design_typography: 'Typografie', standby_design_edge_glow: 'Edge-Glow', standby_design_compact: 'Kompakt', standby_design_poster: 'Poster', standby_design_frame: 'Rahmen', standby_design_neon: 'Neon', standby_design_polaroid: 'Polaroid', standby_design_bar: 'Leiste', standby_design_grid: 'Raster', standby_design_transparent: 'Transparent', standby_design_giant_clock: 'Riesen-Uhr', standby_design_zen: 'Zen', standby_design_stacked: 'Gestapelt', standby_design_contrast: 'Kontrast', label_standby_accent: 'Akzentfarbe', label_standby_radius: 'Eckenradius', label_standby_design_code: 'Design-Code teilen', design_code_placeholder: 'Code hier einfügen...', btn_design_code_copy: 'Kopieren', btn_design_code_load: 'Laden', settings_design_code_hint: 'Kopiere deinen StandBy-Look als Code und schick ihn Freunden - die laden ihn hier ein und haben genau denselben Style.', standby_design_code_copied: '📋 Code kopiert - jetzt an Freunde weitergeben!', standby_design_code_loaded: '✨ Design geladen!', standby_design_code_invalid: 'Das war kein gültiger Design-Code.', label_standby_scale: 'StandBy-Größe', settings_standby_scale_hint: 'Passt sich automatisch an deinen Bildschirm an - hier nur bei Bedarf feinjustieren.',
                 mini_click_to_open: 'Klicken zum Öffnen', mini_click_to_close: 'Klicken zum Schließen',
                 aria_cp: 'Befehlspalette öffnen', aria_install: 'Als App installieren', aria_island: 'Song-Details öffnen, nach oben wischen zum Ausblenden'
             },
@@ -5791,7 +5922,7 @@
                 kart_stat_besttime: 'Best Time',
                 kart_stat_sessions: 'Sessions',
                 kart_stat_since: 'Since',
-                                settings_wakelock: 'Keep Screen On (StandBy)', settings_wakelock_hint: 'Keeps the screen on only while music is playing - once paused, the phone can sleep normally.', settings_notifications: 'Notifications', notifications_unsupported: 'not available', notifications_on: 'ON', notifications_blocked: 'blocked - change in browser settings', notifications_not_set: 'not set up, tap to enable', notifications_denied_hint: "You've blocked notifications - I can't reset that with a click, only you can in this site's browser/system settings.", notifications_enabled_toast: '🔔 Notifications are now enabled.', settings_notification_hint: "For the 'welcome back' notice if music was paused while you were away.", settings_standby_design: 'StandBy Design', standby_design_classic: 'Classic', standby_design_minimal: 'Minimal', standby_design_cover_focus: 'Cover Focus', standby_design_clock_only: 'Clock Only', standby_design_vinyl: 'Vinyl', standby_design_split: 'Split', standby_design_typography: 'Typography', standby_design_edge_glow: 'Edge Glow', standby_design_compact: 'Compact', standby_design_poster: 'Poster', standby_design_frame: 'Frame', standby_design_neon: 'Neon', standby_design_polaroid: 'Polaroid', standby_design_bar: 'Bar', standby_design_grid: 'Grid', standby_design_transparent: 'Transparent', standby_design_giant_clock: 'Giant Clock', standby_design_zen: 'Zen', standby_design_stacked: 'Stacked', standby_design_contrast: 'Contrast', label_standby_accent: 'Accent Color', label_standby_radius: 'Corner Radius', label_standby_design_code: 'Share Design Code', design_code_placeholder: 'Paste code here...', btn_design_code_copy: 'Copy', btn_design_code_load: 'Load', settings_design_code_hint: 'Copy your StandBy look as a code and send it to friends - they paste it here and get the exact same style.', standby_design_code_copied: '📋 Code copied - now share it with friends!', standby_design_code_loaded: '✨ Design loaded!', standby_design_code_invalid: "That wasn't a valid design code.",
+                                settings_wakelock: 'Keep Screen On (StandBy)', settings_wakelock_hint: 'Keeps the screen on only while music is playing - once paused, the phone can sleep normally.', settings_notifications: 'Notifications', notifications_unsupported: 'not available', notifications_on: 'ON', notifications_blocked: 'blocked - change in browser settings', notifications_not_set: 'not set up, tap to enable', notifications_denied_hint: "You've blocked notifications - I can't reset that with a click, only you can in this site's browser/system settings.", notifications_enabled_toast: '🔔 Notifications are now enabled.', settings_notification_hint: "For the 'welcome back' notice if music was paused while you were away.", settings_standby_design: 'StandBy Design', standby_design_classic: 'Classic', standby_design_minimal: 'Minimal', standby_design_cover_focus: 'Cover Focus', standby_design_clock_only: 'Clock Only', standby_design_vinyl: 'Vinyl', standby_design_split: 'Split', standby_design_typography: 'Typography', standby_design_edge_glow: 'Edge Glow', standby_design_compact: 'Compact', standby_design_poster: 'Poster', standby_design_frame: 'Frame', standby_design_neon: 'Neon', standby_design_polaroid: 'Polaroid', standby_design_bar: 'Bar', standby_design_grid: 'Grid', standby_design_transparent: 'Transparent', standby_design_giant_clock: 'Giant Clock', standby_design_zen: 'Zen', standby_design_stacked: 'Stacked', standby_design_contrast: 'Contrast', label_standby_accent: 'Accent Color', label_standby_radius: 'Corner Radius', label_standby_design_code: 'Share Design Code', design_code_placeholder: 'Paste code here...', btn_design_code_copy: 'Copy', btn_design_code_load: 'Load', settings_design_code_hint: 'Copy your StandBy look as a code and send it to friends - they paste it here and get the exact same style.', standby_design_code_copied: '📋 Code copied - now share it with friends!', standby_design_code_loaded: '✨ Design loaded!', standby_design_code_invalid: "That wasn't a valid design code.", label_standby_scale: 'StandBy Size', settings_standby_scale_hint: 'Fits your screen automatically - only fine-tune here if needed.',
                 mini_click_to_open: 'Click to open', mini_click_to_close: 'Click to close',
                 aria_cp: 'Open command palette', aria_install: 'Install as app', aria_island: 'Open song details, swipe up to dismiss'
             },
@@ -5980,7 +6111,7 @@
                 kart_stat_besttime: 'Mejor Tiempo',
                 kart_stat_sessions: 'Sesiones',
                 kart_stat_since: 'Desde',
-                                settings_wakelock: 'Pantalla Encendida (StandBy)', settings_wakelock_hint: 'Mantiene la pantalla encendida solo mientras suena música - al pausar, el teléfono puede dormir normalmente.', settings_notifications: 'Notificaciones', notifications_unsupported: 'no disponible', notifications_on: 'ACTIVADAS', notifications_blocked: 'bloqueadas - cambiar en ajustes del navegador', notifications_not_set: 'no configuradas, toca para activar', notifications_denied_hint: 'Has bloqueado las notificaciones - no puedo restablecer eso con un clic, solo tú puedes hacerlo en los ajustes del navegador/sistema para este sitio.', notifications_enabled_toast: '🔔 Las notificaciones ya están activadas.', settings_notification_hint: 'Para el aviso de "bienvenido de nuevo" si la música estuvo pausada mientras no estabas.', settings_standby_design: 'Diseño de StandBy', standby_design_classic: 'Clásico', standby_design_minimal: 'Minimalista', standby_design_cover_focus: 'Portada al frente', standby_design_clock_only: 'Solo reloj', standby_design_vinyl: 'Vinilo', standby_design_split: 'Dividido', standby_design_typography: 'Tipografía', standby_design_edge_glow: 'Resplandor', standby_design_compact: 'Compacto', standby_design_poster: 'Póster', standby_design_frame: 'Marco', standby_design_neon: 'Neón', standby_design_polaroid: 'Polaroid', standby_design_bar: 'Barra', standby_design_grid: 'Cuadrícula', standby_design_transparent: 'Transparente', standby_design_giant_clock: 'Reloj gigante', standby_design_zen: 'Zen', standby_design_stacked: 'Apilado', standby_design_contrast: 'Contraste', label_standby_accent: 'Color de acento', label_standby_radius: 'Radio de esquina', label_standby_design_code: 'Compartir código de diseño', design_code_placeholder: 'Pega el código aquí...', btn_design_code_copy: 'Copiar', btn_design_code_load: 'Cargar', settings_design_code_hint: 'Copia tu estilo StandBy como código y envíaselo a tus amigos - ellos lo pegan aquí y tienen exactamente el mismo estilo.', standby_design_code_copied: '📋 Código copiado - ¡compártelo con tus amigos!', standby_design_code_loaded: '✨ ¡Diseño cargado!', standby_design_code_invalid: 'Ese no era un código de diseño válido.',
+                                settings_wakelock: 'Pantalla Encendida (StandBy)', settings_wakelock_hint: 'Mantiene la pantalla encendida solo mientras suena música - al pausar, el teléfono puede dormir normalmente.', settings_notifications: 'Notificaciones', notifications_unsupported: 'no disponible', notifications_on: 'ACTIVADAS', notifications_blocked: 'bloqueadas - cambiar en ajustes del navegador', notifications_not_set: 'no configuradas, toca para activar', notifications_denied_hint: 'Has bloqueado las notificaciones - no puedo restablecer eso con un clic, solo tú puedes hacerlo en los ajustes del navegador/sistema para este sitio.', notifications_enabled_toast: '🔔 Las notificaciones ya están activadas.', settings_notification_hint: 'Para el aviso de "bienvenido de nuevo" si la música estuvo pausada mientras no estabas.', settings_standby_design: 'Diseño de StandBy', standby_design_classic: 'Clásico', standby_design_minimal: 'Minimalista', standby_design_cover_focus: 'Portada al frente', standby_design_clock_only: 'Solo reloj', standby_design_vinyl: 'Vinilo', standby_design_split: 'Dividido', standby_design_typography: 'Tipografía', standby_design_edge_glow: 'Resplandor', standby_design_compact: 'Compacto', standby_design_poster: 'Póster', standby_design_frame: 'Marco', standby_design_neon: 'Neón', standby_design_polaroid: 'Polaroid', standby_design_bar: 'Barra', standby_design_grid: 'Cuadrícula', standby_design_transparent: 'Transparente', standby_design_giant_clock: 'Reloj gigante', standby_design_zen: 'Zen', standby_design_stacked: 'Apilado', standby_design_contrast: 'Contraste', label_standby_accent: 'Color de acento', label_standby_radius: 'Radio de esquina', label_standby_design_code: 'Compartir código de diseño', design_code_placeholder: 'Pega el código aquí...', btn_design_code_copy: 'Copiar', btn_design_code_load: 'Cargar', settings_design_code_hint: 'Copia tu estilo StandBy como código y envíaselo a tus amigos - ellos lo pegan aquí y tienen exactamente el mismo estilo.', standby_design_code_copied: '📋 Código copiado - ¡compártelo con tus amigos!', standby_design_code_loaded: '✨ ¡Diseño cargado!', standby_design_code_invalid: 'Ese no era un código de diseño válido.', label_standby_scale: 'Tamaño de StandBy', settings_standby_scale_hint: 'Se ajusta automáticamente a tu pantalla - ajusta aquí solo si es necesario.',
                 mini_click_to_open: 'Clic para abrir', mini_click_to_close: 'Clic para cerrar',
                 aria_cp: 'Abrir paleta de comandos', aria_install: 'Instalar como app', aria_island: 'Abrir detalles de la canción, desliza arriba para ocultar'
             },
@@ -6169,7 +6300,7 @@
                 kart_stat_besttime: 'Meilleur Temps',
                 kart_stat_sessions: 'Sessions',
                 kart_stat_since: 'Depuis',
-                                settings_wakelock: 'Écran Allumé (StandBy)', settings_wakelock_hint: "Garde l'écran allumé uniquement pendant que la musique joue - une fois en pause, le téléphone peut s'endormir normalement.", settings_notifications: 'Notifications', notifications_unsupported: 'non disponible', notifications_on: 'ACTIVÉES', notifications_blocked: 'bloquées - à changer dans les paramètres du navigateur', notifications_not_set: 'non configurées, touche pour activer', notifications_denied_hint: "Tu as bloqué les notifications - je ne peux pas réinitialiser ça par un clic, seulement toi dans les paramètres navigateur/système de ce site.", notifications_enabled_toast: '🔔 Les notifications sont maintenant activées.', settings_notification_hint: "Pour la notification « content de te revoir » si la musique était en pause pendant ton absence.", settings_standby_design: 'Design StandBy', standby_design_classic: 'Classique', standby_design_minimal: 'Minimal', standby_design_cover_focus: 'Pochette en avant', standby_design_clock_only: 'Horloge seule', standby_design_vinyl: 'Vinyle', standby_design_split: 'Partagé', standby_design_typography: 'Typographie', standby_design_edge_glow: 'Lueur', standby_design_compact: 'Compact', standby_design_poster: 'Poster', standby_design_frame: 'Cadre', standby_design_neon: 'Néon', standby_design_polaroid: 'Polaroid', standby_design_bar: 'Barre', standby_design_grid: 'Grille', standby_design_transparent: 'Transparent', standby_design_giant_clock: 'Horloge géante', standby_design_zen: 'Zen', standby_design_stacked: 'Empilé', standby_design_contrast: 'Contraste', label_standby_accent: "Couleur d'accent", label_standby_radius: 'Rayon des coins', label_standby_design_code: 'Partager le code du design', design_code_placeholder: 'Colle le code ici...', btn_design_code_copy: 'Copier', btn_design_code_load: 'Charger', settings_design_code_hint: "Copie ton look StandBy en tant que code et envoie-le à des amis - ils le collent ici et obtiennent exactement le même style.", standby_design_code_copied: '📋 Code copié - partage-le avec tes amis !', standby_design_code_loaded: '✨ Design chargé !', standby_design_code_invalid: "Ce n'était pas un code de design valide.",
+                                settings_wakelock: 'Écran Allumé (StandBy)', settings_wakelock_hint: "Garde l'écran allumé uniquement pendant que la musique joue - une fois en pause, le téléphone peut s'endormir normalement.", settings_notifications: 'Notifications', notifications_unsupported: 'non disponible', notifications_on: 'ACTIVÉES', notifications_blocked: 'bloquées - à changer dans les paramètres du navigateur', notifications_not_set: 'non configurées, touche pour activer', notifications_denied_hint: "Tu as bloqué les notifications - je ne peux pas réinitialiser ça par un clic, seulement toi dans les paramètres navigateur/système de ce site.", notifications_enabled_toast: '🔔 Les notifications sont maintenant activées.', settings_notification_hint: "Pour la notification « content de te revoir » si la musique était en pause pendant ton absence.", settings_standby_design: 'Design StandBy', standby_design_classic: 'Classique', standby_design_minimal: 'Minimal', standby_design_cover_focus: 'Pochette en avant', standby_design_clock_only: 'Horloge seule', standby_design_vinyl: 'Vinyle', standby_design_split: 'Partagé', standby_design_typography: 'Typographie', standby_design_edge_glow: 'Lueur', standby_design_compact: 'Compact', standby_design_poster: 'Poster', standby_design_frame: 'Cadre', standby_design_neon: 'Néon', standby_design_polaroid: 'Polaroid', standby_design_bar: 'Barre', standby_design_grid: 'Grille', standby_design_transparent: 'Transparent', standby_design_giant_clock: 'Horloge géante', standby_design_zen: 'Zen', standby_design_stacked: 'Empilé', standby_design_contrast: 'Contraste', label_standby_accent: "Couleur d'accent", label_standby_radius: 'Rayon des coins', label_standby_design_code: 'Partager le code du design', design_code_placeholder: 'Colle le code ici...', btn_design_code_copy: 'Copier', btn_design_code_load: 'Charger', settings_design_code_hint: "Copie ton look StandBy en tant que code et envoie-le à des amis - ils le collent ici et obtiennent exactement le même style.", standby_design_code_copied: '📋 Code copié - partage-le avec tes amis !', standby_design_code_loaded: '✨ Design chargé !', standby_design_code_invalid: "Ce n'était pas un code de design valide.", label_standby_scale: 'Taille StandBy', settings_standby_scale_hint: "S'adapte automatiquement à ton écran - ajuste ici seulement si besoin.",
                 mini_click_to_open: 'Cliquer pour ouvrir', mini_click_to_close: 'Cliquer pour fermer',
                 aria_cp: 'Ouvrir la palette de commandes', aria_install: 'Installer comme appli', aria_island: 'Ouvrir les détails du morceau, glisser vers le haut pour masquer'
             },
@@ -6358,7 +6489,7 @@
                 kart_stat_besttime: 'Melhor Tempo',
                 kart_stat_sessions: 'Sessões',
                 kart_stat_since: 'Desde',
-                                settings_wakelock: 'Tela Ligada (StandBy)', settings_wakelock_hint: 'Mantém a tela ligada apenas enquanto a música toca - ao pausar, o celular pode dormir normalmente.', settings_notifications: 'Notificações', notifications_unsupported: 'indisponível', notifications_on: 'ATIVADAS', notifications_blocked: 'bloqueadas - altere nas configurações do navegador', notifications_not_set: 'não configuradas, toque para ativar', notifications_denied_hint: 'Você bloqueou as notificações - não posso redefinir isso com um clique, só você pode nas configurações de navegador/sistema deste site.', notifications_enabled_toast: '🔔 As notificações agora estão ativadas.', settings_notification_hint: 'Para o aviso de "bem-vindo de volta" caso a música estivesse pausada enquanto você estava fora.', settings_standby_design: 'Design do StandBy', standby_design_classic: 'Clássico', standby_design_minimal: 'Minimalista', standby_design_cover_focus: 'Capa em destaque', standby_design_clock_only: 'Só relógio', standby_design_vinyl: 'Vinil', standby_design_split: 'Dividido', standby_design_typography: 'Tipografia', standby_design_edge_glow: 'Brilho', standby_design_compact: 'Compacto', standby_design_poster: 'Pôster', standby_design_frame: 'Moldura', standby_design_neon: 'Neon', standby_design_polaroid: 'Polaroid', standby_design_bar: 'Barra', standby_design_grid: 'Grade', standby_design_transparent: 'Transparente', standby_design_giant_clock: 'Relógio gigante', standby_design_zen: 'Zen', standby_design_stacked: 'Empilhado', standby_design_contrast: 'Contraste', label_standby_accent: 'Cor de destaque', label_standby_radius: 'Raio de canto', label_standby_design_code: 'Compartilhar código de design', design_code_placeholder: 'Cole o código aqui...', btn_design_code_copy: 'Copiar', btn_design_code_load: 'Carregar', settings_design_code_hint: 'Copie seu visual StandBy como um código e mande para amigos - eles colam aqui e ficam com exatamente o mesmo estilo.', standby_design_code_copied: '📋 Código copiado - compartilhe com amigos!', standby_design_code_loaded: '✨ Design carregado!', standby_design_code_invalid: 'Esse não era um código de design válido.',
+                                settings_wakelock: 'Tela Ligada (StandBy)', settings_wakelock_hint: 'Mantém a tela ligada apenas enquanto a música toca - ao pausar, o celular pode dormir normalmente.', settings_notifications: 'Notificações', notifications_unsupported: 'indisponível', notifications_on: 'ATIVADAS', notifications_blocked: 'bloqueadas - altere nas configurações do navegador', notifications_not_set: 'não configuradas, toque para ativar', notifications_denied_hint: 'Você bloqueou as notificações - não posso redefinir isso com um clique, só você pode nas configurações de navegador/sistema deste site.', notifications_enabled_toast: '🔔 As notificações agora estão ativadas.', settings_notification_hint: 'Para o aviso de "bem-vindo de volta" caso a música estivesse pausada enquanto você estava fora.', settings_standby_design: 'Design do StandBy', standby_design_classic: 'Clássico', standby_design_minimal: 'Minimalista', standby_design_cover_focus: 'Capa em destaque', standby_design_clock_only: 'Só relógio', standby_design_vinyl: 'Vinil', standby_design_split: 'Dividido', standby_design_typography: 'Tipografia', standby_design_edge_glow: 'Brilho', standby_design_compact: 'Compacto', standby_design_poster: 'Pôster', standby_design_frame: 'Moldura', standby_design_neon: 'Neon', standby_design_polaroid: 'Polaroid', standby_design_bar: 'Barra', standby_design_grid: 'Grade', standby_design_transparent: 'Transparente', standby_design_giant_clock: 'Relógio gigante', standby_design_zen: 'Zen', standby_design_stacked: 'Empilhado', standby_design_contrast: 'Contraste', label_standby_accent: 'Cor de destaque', label_standby_radius: 'Raio de canto', label_standby_design_code: 'Compartilhar código de design', design_code_placeholder: 'Cole o código aqui...', btn_design_code_copy: 'Copiar', btn_design_code_load: 'Carregar', settings_design_code_hint: 'Copie seu visual StandBy como um código e mande para amigos - eles colam aqui e ficam com exatamente o mesmo estilo.', standby_design_code_copied: '📋 Código copiado - compartilhe com amigos!', standby_design_code_loaded: '✨ Design carregado!', standby_design_code_invalid: 'Esse não era um código de design válido.', label_standby_scale: 'Tamanho do StandBy', settings_standby_scale_hint: 'Ajusta-se automaticamente à sua tela - ajuste aqui só se precisar.',
                 mini_click_to_open: 'Clique para abrir', mini_click_to_close: 'Clique para fechar',
                 aria_cp: 'Abrir paleta de comandos', aria_install: 'Instalar como app', aria_island: 'Abrir detalhes da música, deslize para cima para ocultar'
             },
@@ -6547,7 +6678,7 @@
                 kart_stat_besttime: 'En İyi Süre',
                 kart_stat_sessions: 'Seanslar',
                 kart_stat_since: 'Beri',
-                                settings_wakelock: 'Ekranı Açık Tut (StandBy)', settings_wakelock_hint: 'Ekranı yalnızca müzik çalarken açık tutar - duraklatıldığında telefon normal şekilde uyuyabilir.', settings_notifications: 'Bildirimler', notifications_unsupported: 'kullanılamıyor', notifications_on: 'AÇIK', notifications_blocked: 'engellendi - tarayıcı ayarlarından değiştir', notifications_not_set: 'ayarlanmadı, etkinleştirmek için dokun', notifications_denied_hint: 'Bildirimleri engelledin - bunu bir tıklamayla sıfırlayamam, yalnızca sen bu sitenin tarayıcı/sistem ayarlarından yapabilirsin.', notifications_enabled_toast: '🔔 Bildirimler artık etkin.', settings_notification_hint: 'Sen yokken müzik duraklatılmışsa "tekrar hoş geldin" bildirimi için.', settings_standby_design: 'StandBy Tasarımı', standby_design_classic: 'Klasik', standby_design_minimal: 'Minimal', standby_design_cover_focus: 'Kapak Odaklı', standby_design_clock_only: 'Sadece Saat', standby_design_vinyl: 'Plak', standby_design_split: 'Bölünmüş', standby_design_typography: 'Tipografi', standby_design_edge_glow: 'Kenar Işıltısı', standby_design_compact: 'Kompakt', standby_design_poster: 'Poster', standby_design_frame: 'Çerçeve', standby_design_neon: 'Neon', standby_design_polaroid: 'Polaroid', standby_design_bar: 'Şerit', standby_design_grid: 'Izgara', standby_design_transparent: 'Şeffaf', standby_design_giant_clock: 'Dev Saat', standby_design_zen: 'Zen', standby_design_stacked: 'Yığılmış', standby_design_contrast: 'Kontrast', label_standby_accent: 'Vurgu Rengi', label_standby_radius: 'Köşe Yarıçapı', label_standby_design_code: 'Tasarım Kodunu Paylaş', design_code_placeholder: 'Kodu buraya yapıştır...', btn_design_code_copy: 'Kopyala', btn_design_code_load: 'Yükle', settings_design_code_hint: 'StandBy görünümünü kod olarak kopyala ve arkadaşlarına gönder - onlar buraya yapıştırır ve tam olarak aynı stile sahip olur.', standby_design_code_copied: '📋 Kod kopyalandı - şimdi arkadaşlarınla paylaş!', standby_design_code_loaded: '✨ Tasarım yüklendi!', standby_design_code_invalid: 'Bu geçerli bir tasarım kodu değildi.',
+                                settings_wakelock: 'Ekranı Açık Tut (StandBy)', settings_wakelock_hint: 'Ekranı yalnızca müzik çalarken açık tutar - duraklatıldığında telefon normal şekilde uyuyabilir.', settings_notifications: 'Bildirimler', notifications_unsupported: 'kullanılamıyor', notifications_on: 'AÇIK', notifications_blocked: 'engellendi - tarayıcı ayarlarından değiştir', notifications_not_set: 'ayarlanmadı, etkinleştirmek için dokun', notifications_denied_hint: 'Bildirimleri engelledin - bunu bir tıklamayla sıfırlayamam, yalnızca sen bu sitenin tarayıcı/sistem ayarlarından yapabilirsin.', notifications_enabled_toast: '🔔 Bildirimler artık etkin.', settings_notification_hint: 'Sen yokken müzik duraklatılmışsa "tekrar hoş geldin" bildirimi için.', settings_standby_design: 'StandBy Tasarımı', standby_design_classic: 'Klasik', standby_design_minimal: 'Minimal', standby_design_cover_focus: 'Kapak Odaklı', standby_design_clock_only: 'Sadece Saat', standby_design_vinyl: 'Plak', standby_design_split: 'Bölünmüş', standby_design_typography: 'Tipografi', standby_design_edge_glow: 'Kenar Işıltısı', standby_design_compact: 'Kompakt', standby_design_poster: 'Poster', standby_design_frame: 'Çerçeve', standby_design_neon: 'Neon', standby_design_polaroid: 'Polaroid', standby_design_bar: 'Şerit', standby_design_grid: 'Izgara', standby_design_transparent: 'Şeffaf', standby_design_giant_clock: 'Dev Saat', standby_design_zen: 'Zen', standby_design_stacked: 'Yığılmış', standby_design_contrast: 'Kontrast', label_standby_accent: 'Vurgu Rengi', label_standby_radius: 'Köşe Yarıçapı', label_standby_design_code: 'Tasarım Kodunu Paylaş', design_code_placeholder: 'Kodu buraya yapıştır...', btn_design_code_copy: 'Kopyala', btn_design_code_load: 'Yükle', settings_design_code_hint: 'StandBy görünümünü kod olarak kopyala ve arkadaşlarına gönder - onlar buraya yapıştırır ve tam olarak aynı stile sahip olur.', standby_design_code_copied: '📋 Kod kopyalandı - şimdi arkadaşlarınla paylaş!', standby_design_code_loaded: '✨ Tasarım yüklendi!', standby_design_code_invalid: 'Bu geçerli bir tasarım kodu değildi.', label_standby_scale: 'StandBy Boyutu', settings_standby_scale_hint: 'Ekranına otomatik olarak uyum sağlar - burada yalnızca gerekirse ince ayar yap.',
                 mini_click_to_open: 'Açmak için tıkla', mini_click_to_close: 'Kapatmak için tıkla',
                 aria_cp: 'Komut paletini aç', aria_install: 'Uygulama olarak yükle', aria_island: 'Şarkı detaylarını aç, gizlemek için yukarı kaydır'
             }
@@ -6733,6 +6864,8 @@
             setText('label-standby-radius', t('label_standby_radius'));
             setText('label-standby-design-code', t('label_standby_design_code'));
             setText('settings-design-code-hint', t('settings_design_code_hint'));
+            setText('label-standby-scale', t('label_standby_scale'));
+            setText('settings-standby-scale-hint', t('settings_standby_scale_hint'));
             setText('btn-standby-design-copy', t('btn_design_code_copy'));
             setText('btn-standby-design-load', t('btn_design_code_load'));
             const codeInput = document.getElementById('standby-design-code-input');
@@ -7273,9 +7406,83 @@
             const select = document.getElementById('standby-design-select');
             if (select && select.value !== design) select.value = design;
         }
+
+        // ========================================================= 
+        // NEU v24.88: AUTO-FIT (Nutzerwunsch, nachdem Polaroid und Cover-Fokus auf
+        // bestimmten Displays/Ausrichtungen weiterhin über den Rand hinausragten bzw.
+        // verzerrt wirkten). Statt für jedes der 20 Designs von Hand jede erdenkliche
+        // Display-Größe/-Ausrichtung durchzuspielen (Whack-a-Mole, wie die letzten Runden
+        // gezeigt haben), misst diese Funktion die TATSÄCHLICH gerenderte Größe der
+        // Now-Playing-Karte und skaliert bei Bedarf automatisch so weit herunter, dass sie
+        // garantiert auf den Bildschirm passt - unabhängig vom Design. Ergebnis wird pro
+        // Design+Bildschirmgröße in localStorage gecacht (Nutzerwunsch: "damit es nicht
+        // immer neu berechnet werden muss") - spätere Öffnungen mit identischen Bedingungen
+        // wenden den gecachten Wert sofort an, ganz ohne Mess-Verzögerung/Flackern.
+        // =========================================================
+        let standbyManualScale = parseFloat(localStorage.getItem('standbyManualScale') || '1');
+
+        function applyStandbyFitScale(card, autoScale) {
+            const finalScale = Math.max(0.3, autoScale) * standbyManualScale;
+            card.style.transform = Math.abs(finalScale - 1) > 0.001 ? `scale(${finalScale})` : '';
+            card.style.transformOrigin = 'center center';
+        }
+
+        function fitStandbyToScreen(forceRemeasure) {
+            const card = document.getElementById('standby-nowplaying');
+            const overlay = document.getElementById('standby-overlay');
+            if (!card || !overlay || !standByActive) return;
+            const dims = `${overlay.clientWidth}x${overlay.clientHeight}`;
+            const cacheKey = `standbyFitScale:${standbyDesign}:${dims}`;
+            if (!forceRemeasure) {
+                const cached = localStorage.getItem(cacheKey);
+                if (cached !== null) {
+                    applyStandbyFitScale(card, parseFloat(cached));
+                    return;
+                }
+            }
+            // Skalierung kurz zurücksetzen, um die tatsächliche NATÜRLICHE Größe zu messen
+            // (sonst würde eine bereits verkleinerte Größe erneut vermessen und sich immer
+            // weiter verkleinern). Zwei rAF, damit das Layout nach dem Reset wirklich neu
+            // berechnet wurde, bevor gemessen wird.
+            card.style.transform = '';
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    const rect = card.getBoundingClientRect();
+                    // 6% Sicherheitsabstand zum Rand auf allen Seiten.
+                    const availW = overlay.clientWidth * 0.94;
+                    const availH = overlay.clientHeight * 0.94;
+                    let autoScale = Math.min(availW / rect.width, availH / rect.height, 1);
+                    if (!isFinite(autoScale) || autoScale <= 0) autoScale = 1;
+                    localStorage.setItem(cacheKey, autoScale.toString());
+                    applyStandbyFitScale(card, autoScale);
+                });
+            });
+        }
+        // Manuelle Nachjustierung (Nutzerwunsch: "in den Einstellungen nachjustieren können,
+        // falls man es kleiner oder größer haben will") - wird IMMER zusätzlich zur
+        // automatischen Anpassung angewendet, nutzt dafür den bereits gecachten Auto-Wert
+        // (keine erneute Messung nötig, reiner Regler-Dreh ist dadurch sofort spürbar).
+        window.changeStandbyManualScale = function(val) {
+            standbyManualScale = Math.min(1.3, Math.max(0.6, parseFloat(val) || 1));
+            localStorage.setItem('standbyManualScale', standbyManualScale.toString());
+            const label = document.getElementById('standby-scale-label');
+            if (label) label.textContent = Math.round(standbyManualScale * 100) + '%';
+            const card = document.getElementById('standby-nowplaying');
+            const overlay = document.getElementById('standby-overlay');
+            if (card && overlay && standByActive) {
+                const dims = `${overlay.clientWidth}x${overlay.clientHeight}`;
+                const cached = localStorage.getItem(`standbyFitScale:${standbyDesign}:${dims}`);
+                applyStandbyFitScale(card, cached !== null ? parseFloat(cached) : 1);
+            }
+        };
+        // Bei Fenstergrößenänderung/Drehung neu prüfen, ob die aktuelle Skalierung noch passt.
+        window.addEventListener('resize', () => { if (standByActive) fitStandbyToScreen(); }, { passive: true });
         window.changeStandbyDesign = function(design) {
             haptic(10);
             applyStandbyDesign(design);
+            // NEU v24.88: Nach Design-Wechsel neu prüfen, ob die neue Karten-Form noch passt
+            // (jedes Design hat eine andere natürliche Größe/Form).
+            fitStandbyToScreen();
         };
 
         // NEU v24.81: StandBy-Design-Baukasten - Nutzerwunsch nach "mehr anpassbaren
@@ -9516,6 +9723,12 @@
         })();
         applyStandbyDesign(standbyDesign); // NEU v24.80: gespeichertes Design gleich beim Laden anwenden
         applyStandbyCustomization(); // NEU v24.81: gespeicherte Akzentfarbe/Eckenradius gleich beim Laden anwenden
+        (function initStandbyScaleSlider() { // NEU v24.88
+            const slider = document.getElementById('standby-scale-slider');
+            if (slider) slider.value = standbyManualScale;
+            const label = document.getElementById('standby-scale-label');
+            if (label) label.textContent = Math.round(standbyManualScale * 100) + '%';
+        })();
 
         window.toggleStandBy = function(force) {
             const overlay = document.getElementById('standby-overlay');
@@ -9555,6 +9768,9 @@
                 // NEU v24.79: Bild-Updates nachholen, die während der Schließzeit bewusst
                 // übersprungen wurden (Performance-Fix, siehe syncStandByTrackInfo()).
                 applyPendingStandbyImages();
+                // NEU v24.88: Auto-Fit beim Öffnen anwenden - garantiert, dass die Karte auf
+                // den Bildschirm passt, egal welches der 20 Designs gerade aktiv ist.
+                fitStandbyToScreen();
                 // FIX v24.74: unbedingtes requestStandbyWakeLock() durch die smarte Variante
                 // ersetzt - hält den Bildschirm nur wach, wenn beim Öffnen von StandBy
                 // tatsächlich Musik läuft, nicht blind immer.
@@ -9703,6 +9919,7 @@
             const artistEl = document.getElementById('standby-track-artist-inner');
             const img = document.getElementById('standby-track-art');
             const bg = document.getElementById('standby-bg');
+            const cardBg = document.getElementById('standby-card-blur-bg'); // NEU v24.90
             const npCard = document.getElementById('standby-nowplaying');
             const isIdle = !title;
 
@@ -9712,6 +9929,11 @@
             // NEU v24.21: Falls StandBy gerade aktiv ist, bei jedem Songwechsel neu prüfen,
             // ob der neue Titel/Künstler-Name gescrollt werden muss.
             if (standByActive) setupStandbyMarquee();
+            // NEU v24.88: bei echtem Songwechsel neu prüfen, ob die Karte noch passt - neuer
+            // Titel/Künstler kann die natürliche Höhe beeinflussen (z.B. zweizeilig statt
+            // einzeilig), das reine Design+Bildschirmgröße-Cache deckt das nicht ab, deshalb
+            // hier gezielt mit forceRemeasure=true.
+            if (standByActive && isNewTrack) fitStandbyToScreen(true);
 
             lastStandbyTrackInfo = { title, artist, artUrl };
             // FIX v24.79 (KRITISCH): Nutzer meldete - Cover brauchen bei Songwechsel spürbar
@@ -9736,6 +9958,7 @@
                     img.style.opacity = '';
                 }
                 if (bg) { bg.style.backgroundImage = 'none'; bg.style.opacity = ''; }
+                if (cardBg) { cardBg.style.backgroundImage = 'none'; cardBg.style.opacity = ''; } // NEU v24.90
             } else {
                 // FIX v24.74: Nutzer wünschte sich eine "effiziente Fade-Animation" beim
                 // Cover/Hintergrund-Wechsel im StandBy - bisher hart/abrupt, da
@@ -9798,6 +10021,22 @@
                         preload.src = artUrl;
                     } else {
                         bg.style.backgroundImage = `url('${artUrl}')`;
+                    }
+                }
+                // NEU v24.90: dieselbe Cover-URL auch für die neue, eigenständig vorgeblurte
+                // Kartenhintergrund-Ebene (#standby-card-blur-bg) setzen - eigener,
+                // unabhängiger Crossfade (Bild ist eh bereits vom obigen "preload" oder
+                // Browser-Cache verfügbar, daher hier ohne eigenen Vorlader, das Blur selbst
+                // kaschiert einen minimal härteren Übergang ohnehin fast vollständig).
+                if (cardBg && artUrl) {
+                    if (isNewArt) {
+                        cardBg.style.opacity = '0';
+                        requestAnimationFrame(() => {
+                            cardBg.style.backgroundImage = `url('${artUrl}')`;
+                            requestAnimationFrame(() => { cardBg.style.opacity = '1'; });
+                        });
+                    } else {
+                        cardBg.style.backgroundImage = `url('${artUrl}')`;
                     }
                 }
             }
@@ -10122,6 +10361,30 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.90', date: "August 2026", type: 'performance', items: {
+                de: ["Weichzeichner-Effekt der StandBy-Karte ist zurück - jetzt aber technisch effizienter umgesetzt statt live berechnet, sollte auf Android spürbar kühler laufen"],
+                en: ["The StandBy card's blur effect is back - now implemented more efficiently instead of computed live, should run noticeably cooler on Android"],
+                es: ["El efecto de desenfoque de la tarjeta StandBy ha vuelto - ahora implementado de forma más eficiente en vez de calculado en vivo, debería ir notablemente más fresco en Android"],
+                fr: ["L'effet de flou de la carte StandBy est de retour - désormais implémenté plus efficacement au lieu d'être calculé en direct, devrait tourner nettement plus frais sur Android"],
+                pt: ["O efeito de desfoque do cartão StandBy está de volta - agora implementado de forma mais eficiente em vez de calculado ao vivo, deve rodar visivelmente mais fresco no Android"],
+                tr: ["StandBy kartının bulanıklaştırma efekti geri döndü - artık canlı hesaplanmak yerine daha verimli şekilde uygulanıyor, Android'de gözle görülür şekilde daha serin çalışmalı"],
+            }},
+            { version: 'v24.89', date: "August 2026", type: 'performance', items: {
+                de: ["StandBy: Weichzeichner-Effekt der Now-Playing-Karte komplett entfernt - auf manchen Android-Geräten deutlich spürbar kühler, dafür dunkleres, hochwertigeres Karten-Design"],
+                en: ["StandBy: completely removed the blur effect on the now-playing card - noticeably cooler on some Android devices, with a darker, more premium card look instead"],
+                es: ["StandBy: se eliminó por completo el efecto de desenfoque de la tarjeta de reproducción - notablemente más fresco en algunos dispositivos Android, con un diseño de tarjeta más oscuro y elegante"],
+                fr: ["StandBy : effet de flou de la carte de lecture entièrement supprimé - nettement plus frais sur certains appareils Android, avec un design de carte plus sombre et plus premium"],
+                pt: ["StandBy: efeito de desfoque do cartão de reprodução totalmente removido - visivelmente mais fresco em alguns dispositivos Android, com um visual de cartão mais escuro e premium"],
+                tr: ["StandBy: şu an çalıyor kartındaki bulanıklaştırma efekti tamamen kaldırıldı - bazı Android cihazlarda gözle görülür şekilde daha serin, daha koyu ve daha şık bir kart tasarımıyla"],
+            }},
+            { version: 'v24.88', date: "August 2026", type: 'feature', items: {
+                de: ["Neu: Auto-Fit für StandBy-Designs - passt die Größe automatisch an dein Display an, egal welches Layout aktiv ist (Polaroid, Cover-Fokus u.a. betroffen)", "Manuelle Nachjustierung der StandBy-Größe in den Einstellungen ergänzt"],
+                en: ["New: Auto-Fit for StandBy designs - automatically adjusts size to your display no matter which layout is active (affected Polaroid, Cover Focus, and others)", "Added manual StandBy size fine-tuning in settings"],
+                es: ["Nuevo: Auto-Fit para diseños StandBy - ajusta el tamaño automáticamente a tu pantalla sin importar qué diseño esté activo (afectaba a Vinilo, Portada al frente y otros)", "Se añadió ajuste manual del tamaño de StandBy en ajustes"],
+                fr: ["Nouveau : Auto-Fit pour les designs StandBy - ajuste automatiquement la taille à ton écran quel que soit le design actif (touchait Polaroid, Pochette en avant et d'autres)", "Ajout du réglage manuel de la taille StandBy dans les paramètres"],
+                pt: ["Novo: Auto-Fit para designs StandBy - ajusta o tamanho automaticamente à sua tela não importa qual design esteja ativo (afetava Polaroid, Capa em destaque e outros)", "Adicionado ajuste manual do tamanho do StandBy nas configurações"],
+                tr: ["Yeni: StandBy tasarımları için Otomatik Sığdırma - hangi düzen aktif olursa olsun boyutu ekranına otomatik uyarlıyor (Polaroid, Kapak Odaklı ve diğerlerini etkiliyordu)", "Ayarlara manuel StandBy boyutu ince ayarı eklendi"],
+            }},
             { version: 'v24.87', date: "August 2026", type: 'performance', items: {
                 de: ["Unter der Haube: alle 4 Cover-Art-Anzeigen (Dashboard, Dynamic Island, StandBy-Hintergrund, StandBy-Karte) teilen sich jetzt eine einzige Bild-Dekodierung statt jede für sich selbst zu laden - effizienter, besonders bei Songwechseln"],
                 en: ["Under the hood: all 4 cover art displays (dashboard, Dynamic Island, StandBy background, StandBy card) now share a single image decode instead of each loading independently - more efficient, especially on track changes"],
