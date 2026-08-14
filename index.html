@@ -11,6 +11,30 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FIX] Release v24.93: Größen-Regler jetzt pro Design UND Ausrichtung einzeln gespeichert +
+    Haptic-Diagnose standardmäßig deaktiviert (Performance-Bedenken berechtigt)
+      - Nutzer meldete: manuelle Nachjustierung soll für Querformat mit gelten UND für jedes
+        Design einzeln gespeichert werden, statt ein globaler Wert für alle 20 Designs +
+        beide Ausrichtungen gleichzeitig.
+      - Fix: nutzt jetzt denselben Schlüssel-Aufbau wie der Auto-Fit-Cache aus v24.88
+        (Design + Bildschirmgröße, was Hoch-/Querformat automatisch trennt) statt eines
+        einzelnen globalen "standbyManualScale"-Eintrags. Neue Hilfsfunktionen
+        getManualScaleKey()/getManualScale()/syncStandbyScaleSliderUI() - der Regler zeigt
+        jetzt bei jedem StandBy-Öffnen, Design-Wechsel und jeder Drehung automatisch den
+        richtigen, für DIESE Kombination gespeicherten Wert an, nicht mehr einen stehen
+        gebliebenen globalen Wert.
+      - Haptic-Diagnose: Nutzer stellte zurecht die Frage, ob die console.debug()-Aufrufe aus
+        v24.92 nicht dauerhaft Leistung kosten. Antwort: ja, ein kleiner, aber echter
+        Overhead pro Aufruf, auch bei geschlossenen DevTools - bei JEDEM Tap auf der ganzen
+        Seite, für immer, unnötig für Nutzer, die gar nicht debuggen wollen. Jetzt
+        standardmäßig AUS, nur bei Bedarf über die Konsole einschaltbar:
+        localStorage.setItem('hapticDebug','true') + Seite neu laden.
+      - Haptic-Grundproblem (Android) weiterhin ungelöst mangels Diagnose-Daten - kein
+        weiterer Blindversuch, da der komplette Code bereits durchsucht wurde und nichts
+        Falsches gefunden werden konnte. Nutzer müsste die Debug-Ausgabe (siehe oben)
+        einschalten und die [haptic]-Meldungen aus der Konsole zurückmelden, um sicher
+        weiterzumachen statt weiter zu raten.
+
     [FIX/FEATURE] Release v24.92: Haptic-Feedback-Diagnose + Ein/Aus-Schalter
       - Nutzer meldete: Haptic-Feedback fehlt auf Android (Pixel), schon seit mehreren
         Versionen; auf iOS hat es nie funktioniert.
@@ -4635,7 +4659,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.92 · 2026-08-14';
+        const SITE_VERSION = 'v24.93 · 2026-08-14';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -7462,11 +7486,31 @@
         // Design+Bildschirmgröße in localStorage gecacht (Nutzerwunsch: "damit es nicht
         // immer neu berechnet werden muss") - spätere Öffnungen mit identischen Bedingungen
         // wenden den gecachten Wert sofort an, ganz ohne Mess-Verzögerung/Flackern.
+        // FIX v24.93: Nutzer meldete - manuelle Nachjustierung soll für JEDES Design (und
+        // fürs Querformat) EINZELN gelten/gespeichert werden, statt ein einziger globaler
+        // Wert für alle 20 Designs + beide Ausrichtungen gleichzeitig. Nutzt jetzt denselben
+        // Schlüssel-Aufbau wie der Auto-Fit-Cache (Design + Bildschirmgröße) statt eines
+        // einzelnen globalen "standbyManualScale"-Eintrags.
         // =========================================================
-        let standbyManualScale = parseFloat(localStorage.getItem('standbyManualScale') || '1');
+        function getManualScaleKey() {
+            const overlay = document.getElementById('standby-overlay');
+            const dims = overlay ? `${overlay.clientWidth}x${overlay.clientHeight}` : 'default';
+            return `standbyManualScale:${standbyDesign}:${dims}`;
+        }
+        function getManualScale() {
+            const v = localStorage.getItem(getManualScaleKey());
+            return v !== null ? parseFloat(v) : 1;
+        }
+        function syncStandbyScaleSliderUI() {
+            const scale = getManualScale();
+            const slider = document.getElementById('standby-scale-slider');
+            if (slider) slider.value = scale;
+            const label = document.getElementById('standby-scale-label');
+            if (label) label.textContent = Math.round(scale * 100) + '%';
+        }
 
         function applyStandbyFitScale(card, autoScale) {
-            const finalScale = Math.max(0.3, autoScale) * standbyManualScale;
+            const finalScale = Math.max(0.3, autoScale) * getManualScale();
             card.style.transform = Math.abs(finalScale - 1) > 0.001 ? `scale(${finalScale})` : '';
             card.style.transformOrigin = 'center center';
         }
@@ -7475,6 +7519,7 @@
             const card = document.getElementById('standby-nowplaying');
             const overlay = document.getElementById('standby-overlay');
             if (!card || !overlay || !standByActive) return;
+            syncStandbyScaleSliderUI(); // NEU v24.93: Regler zeigt den Wert für DIESES Design+diese Ausrichtung
             const dims = `${overlay.clientWidth}x${overlay.clientHeight}`;
             const cacheKey = `standbyFitScale:${standbyDesign}:${dims}`;
             if (!forceRemeasure) {
@@ -7505,19 +7550,20 @@
         // Manuelle Nachjustierung (Nutzerwunsch: "in den Einstellungen nachjustieren können,
         // falls man es kleiner oder größer haben will") - wird IMMER zusätzlich zur
         // automatischen Anpassung angewendet, nutzt dafür den bereits gecachten Auto-Wert
-        // (keine erneute Messung nötig, reiner Regler-Dreh ist dadurch sofort spürbar).
+        // (keine erneute Messung nötig, reiner Regler-Dreh ist dadurch sofort spürbar). Jetzt
+        // pro Design+Bildschirmgröße einzeln gespeichert (siehe getManualScaleKey() oben).
         window.changeStandbyManualScale = function(val) {
-            standbyManualScale = Math.min(1.3, Math.max(0.6, parseFloat(val) || 1));
-            haptic(6); // NEU v24.91: fehlte bisher komplett bei diesem Regler
-            localStorage.setItem('standbyManualScale', standbyManualScale.toString());
+            const scale = Math.min(1.3, Math.max(0.6, parseFloat(val) || 1));
+            haptic(6);
+            localStorage.setItem(getManualScaleKey(), scale.toString());
             const label = document.getElementById('standby-scale-label');
-            if (label) label.textContent = Math.round(standbyManualScale * 100) + '%';
+            if (label) label.textContent = Math.round(scale * 100) + '%';
             const card = document.getElementById('standby-nowplaying');
             const overlay = document.getElementById('standby-overlay');
             if (card && overlay && standByActive) {
                 const dims = `${overlay.clientWidth}x${overlay.clientHeight}`;
-                const cached = localStorage.getItem(`standbyFitScale:${standbyDesign}:${dims}`);
-                applyStandbyFitScale(card, cached !== null ? parseFloat(cached) : 1);
+                const cachedAuto = localStorage.getItem(`standbyFitScale:${standbyDesign}:${dims}`);
+                applyStandbyFitScale(card, cachedAuto !== null ? parseFloat(cachedAuto) : 1);
             }
         };
         // NEU v24.91 (KRITISCH): Nutzer meldete - Auto-Fit passt sich beim Drehen des
@@ -8539,17 +8585,25 @@
         // await) manchmal verloren - Chrome verlangt einen noch "frischen" Nutzer-Klick.
         // Ergänzt: Ein/Aus-Schalter (Nutzerwunsch) + Konsolen-Diagnose (console.debug), damit
         // sich das beim nächsten Mal leichter eingrenzen lässt, falls es wieder auftritt.
+        // FIX v24.93: Nutzer stellte zurecht die berechtigte Frage - kostet die Konsolen-
+        // Diagnose aus v24.92 nicht dauerhaft Leistung? Antwort: ja, ein bisschen, auch bei
+        // geschlossenen DevTools ist ein console.debug()-Aufruf nicht komplett kostenlos
+        // (kleiner, aber echter Overhead pro Aufruf - anders als oft angenommen). Bei JEDEM
+        // Tap auf der ganzen Seite, für immer, summiert sich das unnötig für Nutzer, die gar
+        // nicht debuggen wollen. Jetzt standardmäßig AUS, nur bei Bedarf über die Konsole
+        // einschaltbar: localStorage.setItem('hapticDebug','true') + Seite neu laden.
         let hapticEnabled = localStorage.getItem('hapticEnabled') !== 'false';
+        const hapticDebug = localStorage.getItem('hapticDebug') === 'true';
         function haptic(pattern = 10) {
             if (!hapticEnabled) return;
             try {
                 if (navigator.vibrate) {
                     const ok = navigator.vibrate(pattern);
-                    if (!ok) console.debug('[haptic] navigator.vibrate() gab false zurück - evtl. fehlende User-Activation oder System-Einstellung blockiert es.', pattern);
-                } else {
+                    if (hapticDebug && !ok) console.debug('[haptic] navigator.vibrate() gab false zurück - evtl. fehlende User-Activation oder System-Einstellung blockiert es.', pattern);
+                } else if (hapticDebug) {
                     console.debug('[haptic] navigator.vibrate ist auf diesem Browser nicht verfügbar (z.B. iOS Safari - erwartetes Verhalten dort).');
                 }
-            } catch (e) { console.debug('[haptic] Fehler beim Aufruf:', e); }
+            } catch (e) { if (hapticDebug) console.debug('[haptic] Fehler beim Aufruf:', e); }
         }
         window.toggleHapticEnabled = function() {
             hapticEnabled = !hapticEnabled;
@@ -9809,12 +9863,12 @@
         })();
         applyStandbyDesign(standbyDesign); // NEU v24.80: gespeichertes Design gleich beim Laden anwenden
         applyStandbyCustomization(); // NEU v24.81: gespeicherte Akzentfarbe/Eckenradius gleich beim Laden anwenden
-        (function initStandbyScaleSlider() { // NEU v24.88
-            const slider = document.getElementById('standby-scale-slider');
-            if (slider) slider.value = standbyManualScale;
-            const label = document.getElementById('standby-scale-label');
-            if (label) label.textContent = Math.round(standbyManualScale * 100) + '%';
-        })();
+        // FIX v24.93: der Regler wird jetzt korrekt bei jedem fitStandbyToScreen()-Aufruf
+        // synchronisiert (StandBy-Öffnen, Design-Wechsel, Drehung) - beim Laden der Seite
+        // ist StandBy noch gar nicht offen, ein initialer Wert wäre ohnehin nur geraten
+        // (welches Design? welche Ausrichtung?). syncStandbyScaleSliderUI() zeigt sinnvoll
+        // den Wert für "Classic" im aktuellen Format, bis StandBy zum ersten Mal öffnet.
+        syncStandbyScaleSliderUI();
 
         window.toggleStandBy = function(force) {
             const overlay = document.getElementById('standby-overlay');
@@ -10447,6 +10501,14 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.93', date: "August 2026", type: 'fix', items: {
+                de: ["StandBy-Größen-Regler speichert jetzt für jedes Design und jede Ausrichtung (Hoch-/Querformat) einzeln statt einen globalen Wert für alle", "Haptic-Diagnose kostet keine Leistung mehr im Normalbetrieb (war standardmäßig an, jetzt aus)"],
+                en: ["StandBy size slider now saves individually per design and orientation (portrait/landscape) instead of one global value for all", "Haptic diagnostics no longer cost performance in normal use (was on by default, now off)"],
+                es: ["El regulador de tamaño de StandBy ahora guarda individualmente por diseño y orientación (vertical/horizontal) en vez de un valor global para todos", "El diagnóstico háptico ya no consume rendimiento en uso normal (estaba activado por defecto, ahora desactivado)"],
+                fr: ["Le curseur de taille StandBy sauvegarde désormais individuellement par design et orientation (portrait/paysage) au lieu d'une valeur globale pour tous", "Le diagnostic haptique ne coûte plus de performance en usage normal (activé par défaut auparavant, désormais désactivé)"],
+                pt: ["O controle de tamanho do StandBy agora salva individualmente por design e orientação (retrato/paisagem) em vez de um valor global para todos", "O diagnóstico háptico não consome mais desempenho no uso normal (estava ativado por padrão, agora desativado)"],
+                tr: ["StandBy boyut kaydırıcısı artık tümü için tek bir genel değer yerine her tasarım ve yönlendirme (dikey/yatay) için ayrı ayrı kaydediyor", "Dokunsal tanılama artık normal kullanımda performans harcamıyor (varsayılan olarak açıktı, şimdi kapalı)"],
+            }},
             { version: 'v24.92', date: "August 2026", type: 'fix', items: {
                 de: ["Haptic-Feedback: neuer Ein/Aus-Schalter in den Einstellungen, plus Konsolen-Diagnose zur leichteren Fehlersuche"],
                 en: ["Haptic feedback: new on/off switch in settings, plus console diagnostics for easier troubleshooting"],
