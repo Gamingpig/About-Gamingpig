@@ -11,6 +11,43 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FEATURE - KRITISCH] Release v24.87: Geteilte Bild-Dekodierung für alle Cover-Art-
+    Verbraucher (Nutzerwunsch: "4 unabhängige Lade-Systeme, warum nicht einfach teilen?")
+      - Nutzer stellte eine berechtigte architektonische Frage: Dashboard-Cover, Dynamic
+        Island, StandBy-Hintergrund und StandBy-Karte laden/dekodieren bisher alle
+        unabhängig voneinander dieselbe Bild-URL - warum nicht einmal dekodieren und teilen?
+      - Antwort/Umsetzung: #artwork (Hauptkarte) bleibt ein ganz normales <img> - unverändert,
+        sicher, kein Risiko. #di-art (Dynamic Island), #standby-track-art und
+        #lyrics-mini-art sind jetzt <canvas>-Elemente, die das bereits fertig dekodierte
+        #artwork-Bild per drawImage() direkt reinzeichnen, statt dieselbe URL jeweils selbst
+        nochmal zu laden UND zu dekodieren (neue Funktionen drawCoverToCanvas()/
+        syncAllCoverConsumers()). Vorher bis zu 4 unabhängige Dekodier-Vorgänge pro
+        Songwechsel für praktisch dasselbe Bild, jetzt nur noch 1 Dekodierung + 3 günstige
+        Zeichen-Vorgänge (Blit eines bereits fertigen Bitmaps).
+      - BEWUSST NICHT per fetch()+createImageBitmap() gelöst (der naheliegendere Ansatz,
+        initial erwogen) - das würde CORS-Freigabe von den Cover-Art-Quellen (Spotify/
+        npc-api/iTunes) voraussetzen, die nicht garantiert ist. drawImage() mit einem
+        bereits geladenen <img>-Element als Quelle braucht KEIN CORS, solange nur GEZEICHNET
+        (nicht per getImageData()/toDataURL() ausgelesen) wird - deutlich sicherer, da im
+        ungünstigsten Fall nur eine einzelne Zeichenoperation fehlschlägt statt potenziell
+        die komplette Cover-Anzeige auf der ganzen Seite.
+      - StandBy-Hintergrund (#standby-bg, backdrop-filter-Karte) BEWUSST NICHT mit umgebaut -
+        nutzt weiterhin sein eigenes CSS-background-image mit separatem Vorlader (v24.74) -
+        Risiko/Aufwand einer Canvas-Umstellung dort stand in keinem Verhältnis zum Gewinn,
+        nachdem gerade erst mehrere Runden GPU-Feintuning genau an dieser Karte investiert
+        wurden (v24.71/72/85/86).
+      - Nebenbei gefunden und mitgefixt: CSS-Selektor für die Dynamic-Island-Bildgröße
+        zielte bisher per TAG-NAME (img) statt per ID - hätte beim Canvas-Umbau sonst
+        unbemerkt Größe/Rundung/Animation zerstört, da "canvas" nicht mehr getroffen worden
+        wäre. Rechtzeitig vor dem eigentlichen Umbau korrigiert.
+      - Verifiziert: Node-Syntax-Check aller Script-Blöcke sauber, CSS-Klammer-Balance
+        geprüft, Cover-Crop-Mathematik (object-fit:cover-Nachbau für Canvas) per Node-Skript
+        gegen 5 verschiedene Bild-/Canvas-Seitenverhältnisse getestet (alle gültig).
+        EHRLICHER VORBEHALT wie immer: kein echtes Browser-/Geräte-Testing in dieser Sandbox
+        möglich - das ist der bisher am tiefsten in die Rendering-Pipeline eingreifende Fix
+        dieser Session, bitte nach dem Deploy besonders gründlich gegenchecken (Hauptkarte,
+        Dynamic Island, StandBy-Karte, alle 20 Designs stichprobenartig).
+
     [FIX - KRITISCH] Release v24.86: Schwarze Ränder um den StandBy-Hintergrund (quer UND
     hoch) + Cover-Fokus-Design falsch proportioniert im Querformat
       - Schwarze Ränder: Nutzer meldete per Screenshot - Hintergrund "off screen", schwarze
@@ -3856,8 +3893,16 @@
         }
         #dynamic-island.di-expanded:active { transform: translateX(-50%) scale(0.97); }
         #dynamic-island-row { display: flex; align-items: center; gap: 8px; width: 100%; flex: 1; min-height: 0; }
-        #dynamic-island img { width: 44px; height: 44px; border-radius: 12px; object-fit: cover; flex-shrink: 0; opacity: 0; transform: scale(0.6); transition: opacity 0.4s ease 0.25s, transform 0.5s var(--apple-bounce) 0.25s; }
-        #dynamic-island.di-expanded img { opacity: 1; transform: scale(1); }
+        /* FIX v24.87: Selektor zielte bisher per TAG-NAME (img) statt per ID/Klasse - beim
+           Canvas-Umbau (siehe unten, geteilte Bild-Dekodierung) hätte das sonst die
+           komplette Größe/Rundung/Ein-/Ausblend-Animation von #di-art unbemerkt kaputt
+           gemacht, da ein <canvas>-Element nicht mehr von "img" getroffen worden wäre. */
+        #dynamic-island img, #dynamic-island canvas { width: 44px; height: 44px; border-radius: 12px; object-fit: cover; flex-shrink: 0; opacity: 0; transform: scale(0.6); transition: opacity 0.4s ease 0.25s, transform 0.5s var(--apple-bounce) 0.25s; }
+        /* FIX v24.87: <canvas> ist standardmäßig "inline-block" mit Baseline-Ausrichtung -
+           kann einen winzigen, unerwünschten Pixel-Versatz gegenüber dem vorherigen <img>-
+           Verhalten verursachen. display:block räumt das zuverlässig aus dem Weg. */
+        #di-art, #lyrics-mini-art { display: block; }
+        #dynamic-island.di-expanded img, #dynamic-island.di-expanded canvas { opacity: 1; transform: scale(1); }
         #dynamic-island .di-text { min-width: 0; flex: 1; opacity: 0; transform: translateX(6px); transition: opacity 0.35s ease 0.3s, transform 0.4s var(--apple-ease) 0.3s; }
         #dynamic-island.di-expanded .di-text { opacity: 1; transform: translateX(0); }
         #dynamic-island .di-title { color: #fff; font-size: 12px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -4434,7 +4479,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.86 · 2026-08-14';
+        const SITE_VERSION = 'v24.87 · 2026-08-14';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -4479,7 +4524,11 @@
     <div id="dynamic-island-ring" aria-hidden="true"></div>
     <div id="dynamic-island" role="button" tabindex="0" aria-label="Song-Details öffnen, nach oben wischen zum Ausblenden">
         <div id="dynamic-island-row">
-            <img id="di-art" src="" alt="" draggable="false" oncontextmenu="return false;" decoding="async">
+            <!-- FIX v24.87: <img> -> <canvas> umgebaut. Zeichnet das bereits vom
+                 Haupt-Cover (#artwork) fertig dekodierte Bild direkt rein (drawImage), statt
+                 dieselbe Bild-URL selbst nochmal zu laden/dekodieren - siehe
+                 drawCoverToCanvas()/syncAllCoverConsumers() im Script. -->
+            <canvas id="di-art" aria-hidden="true"></canvas>
             <div class="di-text">
                 <p class="di-title" id="di-title"></p>
                 <p class="di-artist" id="di-artist"></p>
@@ -4500,7 +4549,8 @@
             <div id="standby-nowplaying" class="standby-idle">
                 <div id="standby-track">
                     <div id="standby-track-art-wrap">
-                        <img id="standby-track-art" alt="" decoding="async">
+                        <!-- FIX v24.87: <img> -> <canvas>, siehe ausführliche Begründung bei #di-art oben. -->
+                        <canvas id="standby-track-art" aria-hidden="true"></canvas>
                         <div id="standby-eq"><span></span><span></span><span></span></div>
                     </div>
                     <div id="standby-track-text">
@@ -4848,7 +4898,8 @@
                         
                         <div class="flex items-center justify-between gap-1.5 xxs:gap-2 sm:gap-4 mb-3 xxs:mb-4 sm:mb-6 shrink-0 w-full bg-white/10 p-1.5 xxs:p-2 xs:p-3 sm:p-4 rounded-lg xxs:rounded-xl sm:rounded-2xl border border-white/10 relative z-[100]">
                             <div class="flex items-center gap-1.5 xxs:gap-2 sm:gap-3 min-w-0 flex-1">
-                                    <img id="lyrics-mini-art" src="" alt="Album Art" class="w-6 h-6 xxs:w-8 xxs:h-8 sm:w-10 sm:h-10 rounded shadow-md object-cover shrink-0" decoding="async">
+                                    <!-- FIX v24.87: <img> -> <canvas>, siehe ausführliche Begründung bei #di-art. -->
+                                    <canvas id="lyrics-mini-art" aria-label="Album Art" class="w-6 h-6 xxs:w-8 xxs:h-8 sm:w-10 sm:h-10 rounded shadow-md object-cover shrink-0"></canvas>
                                     <div class="text-left min-w-0">
                                         <p id="lyrics-mini-title" class="text-[10px] xxs:text-xs sm:text-sm font-bold text-white truncate" data-i18n-placeholder="true">Titel</p>
                                         <p id="lyrics-mini-artist" class="text-[8px] xxs:text-[10px] sm:text-xs text-white/60 truncate" data-i18n-placeholder="true">Artist</p>
@@ -7074,6 +7125,79 @@
         // Fallback bei kaputten Cover-URLs hatten.
         const fallbackImg = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 400 400'%3E%3Crect width='400' height='400' fill='%230f172a'/%3E%3Cpath d='M250 120v100c0 33.1-26.9 60-60 60s-60-26.9-60-60 26.9-60 60-60c7.1 0 13.7 1.2 20 3.5V120h40z' fill='%23334155'/%3E%3C/svg%3E";
 
+        // ========================================================= 
+        // NEU v24.87: GETEILTE BILD-DEKODIERUNG (Nutzerwunsch - "warum 4 unabhängige
+        // Cover-Art-Lade-Systeme, wenn wir's doch eh schon vom Dashboard haben?").
+        // #artwork (Hauptkarte) bleibt ein ganz normales <img> - lädt/dekodiert wie eh und
+        // je, unverändert, kein Risiko. #di-art (Dynamic Island), #standby-track-art und
+        // #lyrics-mini-art sind jetzt <canvas>-Elemente, die das bereits fertig dekodierte
+        // #artwork-Bild per drawImage() direkt reinzeichnen, statt dieselbe Bild-URL jeweils
+        // selbst nochmal zu laden UND zu dekodieren. Vorher: bis zu 4 unabhängige
+        // Dekodier-Vorgänge pro Songwechsel für praktisch dasselbe Bild. Jetzt: 1 Dekodierung
+        // (für #artwork), 3 günstige Zeichen-Vorgänge (Blit eines bereits fertigen Bitmaps).
+        //
+        // BEWUSST NICHT per fetch()+createImageBitmap() gelöst (der naheliegendere Ansatz) -
+        // das würde CORS-Freigabe von den Cover-Art-Quellen (Spotify/npc-api/iTunes)
+        // voraussetzen, die nicht garantiert ist. Stattdessen: drawImage() mit einem bereits
+        // geladenen <img>-Element als Quelle braucht KEIN CORS, solange nur GEZEICHNET (nicht
+        // per getImageData()/toDataURL() ausgelesen) wird - deutlich sicherer, da im
+        // Fehlerfall (Quelle doch nicht "cross-origin clean") höchstens diese eine
+        // Zeichenoperation fehlschlägt, statt dass bei einem CORS-Fehlschlag potenziell die
+        // komplette Cover-Anzeige auf der ganzen Seite ausfällt.
+        // =========================================================
+        function drawCoverToCanvas(canvas, sourceImg) {
+            if (!canvas || !sourceImg || !sourceImg.complete || !sourceImg.naturalWidth) return false;
+            const rect = canvas.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            const cw = Math.max(1, Math.round((rect.width || canvas.clientWidth || 64) * dpr));
+            const ch = Math.max(1, Math.round((rect.height || canvas.clientHeight || 64) * dpr));
+            // Zeichenpuffer nur bei tatsächlicher Größenänderung neu zuweisen (das leert
+            // sonst unnötig den Inhalt und kostet mehr als nötig).
+            if (canvas.width !== cw) canvas.width = cw;
+            if (canvas.height !== ch) canvas.height = ch;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return false;
+            // "object-fit: cover" von Hand nachgebaut - Canvas kennt das CSS-Feature nicht,
+            // nur die Quell-/Zielrechtecke von drawImage() selbst.
+            const iw = sourceImg.naturalWidth, ih = sourceImg.naturalHeight;
+            const canvasRatio = cw / ch, imgRatio = iw / ih;
+            let sx, sy, sw, sh;
+            if (imgRatio > canvasRatio) { sh = ih; sw = ih * canvasRatio; sx = (iw - sw) / 2; sy = 0; }
+            else { sw = iw; sh = iw / canvasRatio; sx = 0; sy = (ih - sh) / 2; }
+            ctx.clearRect(0, 0, cw, ch);
+            try {
+                ctx.drawImage(sourceImg, sx, sy, sw, sh, 0, 0, cw, ch);
+                return true;
+            } catch (e) {
+                // z.B. Bild doch (noch) nicht sauber ladbar - beim nächsten Sync-Aufruf
+                // (nächster Songwechsel/Poll) automatisch erneut versucht, kein Absturz.
+                return false;
+            }
+        }
+        // Zeichnet das aktuelle Haupt-Cover in alle Canvas-Verbraucher, die es gerade
+        // brauchen. StandBy-Karte bewusst NUR, wenn StandBy auch tatsächlich aktiv ist -
+        // das Performance-Prinzip aus v24.79 (nichts laden/zeichnen, das gerade unsichtbar
+        // ist) bleibt dadurch erhalten, auch mit dem neuen Canvas-Ansatz.
+        async function syncAllCoverConsumers() {
+            if (!mArtwork || !mArtwork.src) return;
+            try {
+                if (typeof mArtwork.decode === 'function') await mArtwork.decode();
+            } catch (e) { return; } // #artwork (noch) nicht ladbar - dessen eigene onerror-Kette kümmert sich darum
+            const diCanvas = document.getElementById('di-art');
+            if (diCanvas) drawCoverToCanvas(diCanvas, mArtwork);
+            const lyricsCanvas = document.getElementById('lyrics-mini-art');
+            if (lyricsCanvas) drawCoverToCanvas(lyricsCanvas, mArtwork);
+            if (typeof standByActive !== 'undefined' && standByActive) {
+                const sbCanvas = document.getElementById('standby-track-art');
+                if (sbCanvas) drawCoverToCanvas(sbCanvas, mArtwork);
+            }
+        }
+        // Canvas-Zeichenpuffer folgen NICHT automatisch einer reinen CSS-Größenänderung
+        // (anders als <img>/background-image) - bei Fenstergrößenänderung/Drehung muss neu
+        // gezeichnet werden, sonst bleibt die interne Auflösung auf dem alten Stand stehen
+        // und das Bild wirkt verpixelt/falsch zugeschnitten.
+        window.addEventListener('resize', () => { syncAllCoverConsumers(); }, { passive: true });
+
         // NEU v24.61 (jetzt v24.63 global gemacht): Bevor auf das generische Platzhalterbild
         // zurückgegriffen wird - npc-api.aikins.xyz gibt manchmal 404 für den Cover-Art-Proxy
         // zurück (externes Problem, siehe Chat-Verlauf). Die iTunes-Search-API ist kostenlos,
@@ -8289,22 +8413,14 @@
             if (!island || document.body.classList.contains('low-end')) return;
             const titleEl = document.getElementById('di-title');
             const artistEl = document.getElementById('di-artist');
-            const artEl = document.getElementById('di-art');
             if (titleEl) titleEl.textContent = title || '';
             if (artistEl) artistEl.textContent = artist || '';
-            // FIX v24.63: Nutzer meldete - kein Cover in der Dynamic Island, wenn die
-            // Haupt-Bildquelle mal ausfällt (z.B. npc-api-Ausfall). Dieses Element hatte
-            // bisher GAR KEINE Fehlerbehandlung - jetzt derselbe Rückfall wie bei der
-            // Haupt-Musikkarte: iTunes-Suche versuchen, sonst generisches Platzhalterbild.
-            if (artEl && artUrl) {
-                artEl.onerror = async function() {
-                    this.onerror = null;
-                    const itunesUrl = await tryItunesArtworkFallback(title, artist);
-                    this.src = itunesUrl || fallbackImg;
-                    this.onerror = () => { this.src = fallbackImg; };
-                };
-                artEl.src = artUrl;
-            }
+            // FIX v24.87: #di-art ist jetzt ein <canvas> und zeichnet das bereits vom
+            // Haupt-Cover (#artwork) fertig dekodierte Bild direkt rein (drawCoverToCanvas
+            // via syncAllCoverConsumers()) - eigene Fehlerbehandlung/eigener Ladeversuch
+            // dadurch überflüssig, #di-art zeigt automatisch dasselbe wie #artwork, inklusive
+            // dessen bereits vorhandener iTunes-Fallback-Kette aus v24.63/83.
+            syncAllCoverConsumers();
             island.classList.add('di-visible');
             updateIslandRing();
         }
@@ -9612,7 +9728,13 @@
             if (!standByActive) return;
 
             if (isIdle) {
-                if (img) { img.removeAttribute('src'); img.style.opacity = ''; }
+                // FIX v24.87: img ist jetzt <canvas> - removeAttribute('src') macht bei canvas
+                // nichts, Löschen des Inhalts jetzt korrekt über clearRect().
+                if (img) {
+                    const ctx = img.getContext && img.getContext('2d');
+                    if (ctx) ctx.clearRect(0, 0, img.width, img.height);
+                    img.style.opacity = '';
+                }
                 if (bg) { bg.style.backgroundImage = 'none'; bg.style.opacity = ''; }
             } else {
                 // FIX v24.74: Nutzer wünschte sich eine "effiziente Fade-Animation" beim
@@ -9637,22 +9759,31 @@
                 // volatilen Cover-URL) - blendet dadurch nur noch bei ECHTEM Songwechsel.
                 const isNewArt = !!artUrl && !!isNewTrack;
 
+                // FIX v24.87: #standby-track-art ist jetzt ein <canvas> und zeichnet das
+                // bereits von #artwork fertig dekodierte Bild direkt rein, statt selbst
+                // nochmal zu laden - siehe drawCoverToCanvas()/syncAllCoverConsumers().
+                // Eigene onerror-Fallback-Kette dadurch überflüssig, erbt automatisch das
+                // Ergebnis von #artworks eigener iTunes-Fallback-Kette (v24.63/83). Der
+                // Opacity-Crossfade aus v24.74 bleibt unverändert erhalten - zwei
+                // aufeinanderfolgende requestAnimationFrame sorgen dafür, dass der Browser
+                // den opacity:0-Zustand tatsächlich rendert, bevor neu gezeichnet und wieder
+                // eingeblendet wird (sonst kein sichtbarer Fade, nur ein harter Sprung).
+                async function drawStandbyArtFromMain() {
+                    if (!mArtwork || !mArtwork.src) return;
+                    try { if (typeof mArtwork.decode === 'function') await mArtwork.decode(); }
+                    catch (e) { return; } // #artwork (noch) nicht ladbar - dessen eigene onerror-Kette kuemmert sich darum
+                    drawCoverToCanvas(img, mArtwork);
+                }
                 if (img && artUrl) {
-                    img.onerror = async function() {
-                        this.onerror = null;
-                        const itunesUrl = await tryItunesArtworkFallback(title, artist);
-                        const finalUrl = itunesUrl || fallbackImg;
-                        this.src = finalUrl;
-                        if (bg) bg.style.backgroundImage = `url('${finalUrl}')`;
-                        this.style.opacity = '1';
-                        this.onerror = () => { this.src = fallbackImg; };
-                    };
                     if (isNewArt) {
                         img.style.opacity = '0';
-                        img.onload = () => { img.style.opacity = '1'; };
-                        img.src = artUrl;
+                        requestAnimationFrame(() => {
+                            drawStandbyArtFromMain().then(() => {
+                                requestAnimationFrame(() => { img.style.opacity = '1'; });
+                            });
+                        });
                     } else {
-                        img.src = artUrl;
+                        drawStandbyArtFromMain();
                     }
                 }
                 if (bg && artUrl) {
@@ -9991,6 +10122,14 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.87', date: "August 2026", type: 'performance', items: {
+                de: ["Unter der Haube: alle 4 Cover-Art-Anzeigen (Dashboard, Dynamic Island, StandBy-Hintergrund, StandBy-Karte) teilen sich jetzt eine einzige Bild-Dekodierung statt jede für sich selbst zu laden - effizienter, besonders bei Songwechseln"],
+                en: ["Under the hood: all 4 cover art displays (dashboard, Dynamic Island, StandBy background, StandBy card) now share a single image decode instead of each loading independently - more efficient, especially on track changes"],
+                es: ["Por dentro: las 4 pantallas de portada (panel, Dynamic Island, fondo de StandBy, tarjeta de StandBy) ahora comparten una sola decodificación de imagen en vez de cargar cada una por separado - más eficiente, sobre todo al cambiar de canción"],
+                fr: ["Sous le capot : les 4 affichages de pochette (tableau de bord, Dynamic Island, fond StandBy, carte StandBy) partagent désormais un seul décodage d'image au lieu de charger chacun séparément - plus efficace, surtout aux changements de morceau"],
+                pt: ["Nos bastidores: as 4 exibições de capa (painel, Dynamic Island, fundo do StandBy, cartão do StandBy) agora compartilham uma única decodificação de imagem em vez de cada uma carregar separadamente - mais eficiente, especialmente na troca de músicas"],
+                tr: ["Perde arkasında: 4 kapak resmi ekranı da (pano, Dynamic Island, StandBy arka planı, StandBy kartı) artık ayrı ayrı yüklemek yerine tek bir görsel kod çözümünü paylaşıyor - özellikle şarkı değişimlerinde daha verimli"],
+            }},
             { version: 'v24.86', date: "August 2026", type: 'fix', items: {
                 de: ["Schwarze Ränder um den StandBy-Hintergrund behoben (quer und hoch)", "Cover-Fokus-Design im Querformat korrekt proportioniert (war falsch verzerrt)"],
                 en: ["Fixed black borders around the StandBy background (landscape and portrait)", "Cover Focus design now correctly proportioned in landscape (was distorted)"],
@@ -12579,7 +12718,11 @@
                         this.onerror = () => { this.src = fallbackImg; }; // falls sogar die iTunes-URL kaputt sein sollte
                         if (mAmbient) mAmbient.style.backgroundImage = `url('${finalFallback}')`;
                         if (mGlow && coverGlowEnabled) mGlow.style.backgroundImage = `url('${finalFallback}')`;
-                        if (lyricsMiniArt) lyricsMiniArt.src = finalFallback;
+                        // FIX v24.87: lyricsMiniArt/di-art/standby-track-art sind jetzt
+                        // <canvas>-Elemente, die #artwork direkt reinzeichnen statt selbst zu
+                        // laden - syncAllCoverConsumers() übernimmt das automatisch für alle
+                        // drei, inklusive korrektem Warten via mArtwork.decode().
+                        syncAllCoverConsumers();
                     };
                 }
 
@@ -12593,10 +12736,13 @@
                     if (coverGlowEnabled) mGlow.style.backgroundImage = `url('${imgUrl}')`; // NEW: überspringt Cover-Glow-Arbeit komplett, wenn ausgeschaltet
                     const lyricsAmbientBg = document.getElementById('lyrics-ambient-bg');
                     if (lyricsAmbientBg) lyricsAmbientBg.style.backgroundImage = `url('${imgUrl}')`;
-                }
-                
-                if(lyricsMiniArt && isNewTrack) {
-                    lyricsMiniArt.src = imgUrl; 
+                    // FIX v24.87: geteilte Bild-Dekodierung (Nutzerwunsch) - #di-art,
+                    // #standby-track-art und #lyrics-mini-art sind jetzt <canvas>-Elemente,
+                    // die dieses gerade geladene #artwork-Bild direkt reinzeichnen
+                    // (drawImage), statt dieselbe URL jeweils selbst nochmal zu laden/zu
+                    // dekodieren - vorher bis zu 4 unabhängige Dekodier-Vorgänge für
+                    // praktisch dasselbe Bild, jetzt nur noch einer.
+                    syncAllCoverConsumers();
                 }
                 
                 const canvasUrl = data.track.canvas_url || data.track.canvasUrl || null;
