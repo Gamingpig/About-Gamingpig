@@ -11,6 +11,27 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FIX - KRITISCH] Release v24.86: Schwarze Ränder um den StandBy-Hintergrund (quer UND
+    hoch) + Cover-Fokus-Design falsch proportioniert im Querformat
+      - Schwarze Ränder: Nutzer meldete per Screenshot - Hintergrund "off screen", schwarze
+        Ränder sichtbar, sowohl im Quer- als auch im Hochformat; "hatten wir vorher schön und
+        besser gelöst, das muss wieder her". Root Cause: #standby-bg-shift-wrapper trägt seit
+        v24.83 den Pixel-Shift (siehe dortiger Fix), stand dabei aber exakt bildschirmgroß
+        (inset: 0) mit overflow:hidden - verschiebt man ihn per transform um bis zu 13px
+        (AOD_SHIFT_POSITIONS), wandert seine eigene Clipping-Grenze mit, auf der
+        gegenüberliegenden Seite wird ein leerer Rand sichtbar. Vor v24.83 lag der Shift auf
+        #standby-bg selbst, das dank "inset: -30px" reichlich Überstand hatte - dieser Puffer
+        ging beim Umzug auf den neuen Wrapper verloren, das war die Regression. Fix: Wrapper
+        bekommt jetzt selbst einen Bild-Überstand (-20px, mehr als die maximal nötigen 13px).
+      - Cover-Fokus im Querformat: Nutzer meldete per Screenshot - falsch proportioniert/zu
+        groß. Root Cause: v24.84 hatte die Breite korrekt auf 65% relativ zur Karte gedeckelt,
+        dieselbe Regel aber auch für "height" verwendet - Prozent-HÖHE ist in CSS grundsätzlich
+        anders als Prozent-BREITE, bezieht sich auf die Höhe des Elternelements, das hier aber
+        keine feste Höhe hat (nur "auto") - eine Prozent-Höhe gegen einen "auto"-großen
+        Elternteil wird laut Spezifikation de facto ignoriert. Fix: height-Regel entfernt,
+        stattdessen aspect-ratio: 1/1 - garantiert ein echtes Quadrat rein aus der (korrekt
+        funktionierenden) Breite heraus, unabhängig von der Höhe des Elternelements.
+
     [FIX - KRITISCH] Release v24.85: Punch-Hole-Kamera-Kollision (Pixel 8 Pro, Ordner 41) +
     weitere Cover-Ladezeit-Optimierung
       - Punch-Hole-Problem: Nutzer meldete auf Pixel 8 Pro (getestet mit v24.83) - Uhr liegt
@@ -3930,7 +3951,19 @@
            Animation auf #standby-bg selbst - keine Kollision mehr, beide können unabhängig
            voneinander laufen. */
         #standby-bg-shift-wrapper {
-            position: absolute; inset: 0; overflow: hidden;
+            position: absolute;
+            /* FIX v24.86 (KRITISCH): Nutzer meldete schwarze Ränder/Hintergrund "off screen" -
+               sowohl quer als auch hoch. Root Cause: dieser Wrapper trägt seit v24.83 den
+               Pixel-Shift (siehe Kommentar oben), stand dabei aber exakt bildschirmgroß
+               (inset: 0) UND hat overflow:hidden - verschiebt man ihn per transform um bis zu
+               13px (siehe AOD_SHIFT_POSITIONS), wandert seine eigene Clipping-Grenze mit,
+               und auf der gegenüberliegenden Seite wird bis zu 13px leerer Rand sichtbar
+               (davor lag der Shift auf #standby-bg selbst, das dank "inset: -30px" reichlich
+               Überstand hatte - dieser Puffer ging beim Umzug auf den Wrapper verloren). Fix:
+               eigenen Bild-Überstand von 20px ergänzt (mehr als die maximal nötigen 13px) -
+               kann sich dadurch verschieben, ohne dass am Rand je eine Lücke sichtbar wird.
+            */
+            inset: -20px; overflow: hidden;
             transform: translate(var(--standby-shift-x, 0px), var(--standby-shift-y, 0px));
             transition: transform 2.5s ease-in-out;
         }
@@ -4058,7 +4091,20 @@
            Prozentwert relativ zur Karte selbst gedeckelt (65%) - kann dadurch nie mehr breiter
            werden als sein eigener Container, unabhängig von Bildschirmgröße/Ausrichtung.
            Obergrenze zur Sicherheit außerdem von 300px auf 280px reduziert. */
-        #standby-overlay.standby-design-cover-focus #standby-track-art-wrap { width: clamp(140px, min(56vw, 65%), 280px); height: clamp(140px, min(56vw, 65%), 280px); }
+        #standby-overlay.standby-design-cover-focus #standby-track-art-wrap {
+            /* FIX v24.86 (KRITISCH): v24.84 hatte die Breite korrekt auf 65% relativ zur
+               Karte gedeckelt, aber dieselbe Regel auch für "height" verwendet - Prozent-
+               HÖHE ist in CSS aber grundsätzlich anders als Prozent-BREITE: sie bezieht sich
+               auf die Höhe des Elternelements, das hier aber keine feste Höhe hat (nur
+               "auto") - laut Spezifikation wird eine Prozent-Höhe gegen einen "auto"-großen
+               Elternteil de facto ignoriert. Ergebnis auf dem Screenshot des Nutzers: die Höhe
+               folgte dadurch nur noch dem 56vw-Anteil, während die Breite korrekt gedeckelt
+               war - keine echte Quadrat-Form mehr, dazu im Querformat zu groß. Fix: height
+               entfernt, stattdessen aspect-ratio: 1/1 - garantiert ein echtes Quadrat rein
+               aus der (korrekt funktionierenden) Breite heraus, unabhängig von der Höhe des
+               Elternelements. */
+            width: clamp(140px, min(56vw, 65%), 280px); aspect-ratio: 1 / 1;
+        }
         #standby-overlay.standby-design-cover-focus #standby-track-text { text-align: center; flex: none; }
         #standby-overlay.standby-design-cover-focus #standby-clockzone { padding-top: max(24px, calc(env(safe-area-inset-top, 0px) + 20px)); }
         #standby-overlay.standby-design-cover-focus #standby-clock { font-size: clamp(1.8rem, 9vw, 3.6rem); }
@@ -4388,7 +4434,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.85 · 2026-08-13';
+        const SITE_VERSION = 'v24.86 · 2026-08-14';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -9945,6 +9991,14 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.86', date: "August 2026", type: 'fix', items: {
+                de: ["Schwarze Ränder um den StandBy-Hintergrund behoben (quer und hoch)", "Cover-Fokus-Design im Querformat korrekt proportioniert (war falsch verzerrt)"],
+                en: ["Fixed black borders around the StandBy background (landscape and portrait)", "Cover Focus design now correctly proportioned in landscape (was distorted)"],
+                es: ["Corregidos los bordes negros alrededor del fondo de StandBy (horizontal y vertical)", "Diseño Portada al frente ahora correctamente proporcionado en horizontal (estaba distorsionado)"],
+                fr: ["Correction des bordures noires autour du fond StandBy (paysage et portrait)", "Design Pochette en avant désormais correctement proportionné en paysage (était déformé)"],
+                pt: ["Corrigidas bordas pretas ao redor do fundo do StandBy (paisagem e retrato)", "Design Capa em destaque agora corretamente proporcionado na horizontal (estava distorcido)"],
+                tr: ["StandBy arka planı etrafındaki siyah kenarlıklar düzeltildi (yatay ve dikey)", "Kapak Odaklı tasarımı yatay modda artık doğru oranlı (bozuk görünüyordu)"],
+            }},
             { version: 'v24.85', date: "August 2026", type: 'fix', items: {
                 de: ["StandBy-Uhr weicht jetzt der Punch-Hole-Kamera aus (mehrere Layouts betroffen, z.B. auf Pixel 8 Pro)", "Cover laden nochmal etwas schneller dank optimierter Bild-Dekodierung"],
                 en: ["StandBy clock now avoids the punch-hole camera (affected several layouts, e.g. on Pixel 8 Pro)", "Covers load a bit faster thanks to optimized image decoding"],
