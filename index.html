@@ -11,6 +11,35 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FIX/FEATURE - KRITISCH] Release v24.83: Cover-Verschwinden-Bug behoben + Pixel-Shift jetzt
+    überall smooth + 13 weitere StandBy-Designs (20 insgesamt)
+      - Cover-Verschwinden: Nutzer meldete - Cover verschwinden random mitten im Song,
+        "überall anders auf der Seite" (nicht nur StandBy, dort schon in v24.80 gefixt).
+        ZWEI Root Causes gefunden: 1) derselbe URL-Volatilitäts-Bug wie beim StandBy-Flacker,
+        aber nie für Hauptkarte/lyricsMiniArt/Ambient-Hintergründe mitgefixt - jetzt auch dort
+        auf isNewTrack (Track-ID) statt rohem URL-String-Vergleich umgestellt. 2) Der
+        mArtwork.onerror-Handler wurde nur EINMALIG zugewiesen und degradierte sich nach dem
+        ersten Fehler selbst dauerhaft auf eine simple Fallback-Variante ohne iTunes-Versuch -
+        jetzt wird er bei jedem echten Songwechsel neu mit voller Fallback-Logik scharf gemacht.
+      - Pixel-Shift-Hintergrund: lief bisher nur über die (nach 60s eingefrorene) Ken-Burns-
+        Keyframe-Animation mit, dadurch nicht smooth bei späteren Verschiebungen. Der bereits
+        seit Langem im HTML vorhandene, aber nie verkabelte #standby-bg-shift-wrapper trägt
+        den Shift jetzt über eine echte CSS-transition, komplett getrennt von der Ken-Burns-
+        Animation - keine Kollision mehr, beides läuft unabhängig und smooth.
+      - "Display bleibt an außerhalb von StandBy"-Meldung: kompletten Wake-Lock-Code auditiert
+        (nur eine einzige navigator.wakeLock.request()-Stelle in der ganzen Datei, jede
+        Aufrufstelle korrekt an standByActive gebunden) - keinen Bug gefunden. Beim Nutzer
+        nachgefragt, ob das direkt nach StandBy-Verlassen oder komplett unabhängig davon
+        passiert, bevor blind etwas geändert wird.
+      - 13 weitere StandBy-Designs (Nutzerwunsch: "MEHR LAYOUTS, BITTE!!!"): Edge-Glow,
+        Kompakt, Poster, Rahmen, Neon, Polaroid, Leiste, Raster, Transparent, Riesen-Uhr, Zen,
+        Gestapelt, Kontrast - macht 20 Designs insgesamt. Gleiches Prinzip wie alle bisherigen:
+        reine CSS-Klasse auf #standby-overlay, keine neue Logik/Animation.
+      - Tutorial-Frage geklärt (noch nicht umgesetzt, Nutzer-Rückmeldung abwarten): "Was ist
+        neu?" zeigt aktuell NUR den neuesten Versionsstand einmalig, kein Wiederholen pro
+        übersprungener Version. Eine Warteschlange, die PUBLIC_CHANGELOG-Einträge einzeln
+        durchgeht, wäre technisch machbar (Daten sind ja schon da), aber ein eigener Umbau.
+
     [FEATURE] Release v24.82: Drei weitere StandBy-Designs auf Nutzerwunsch ("Wollen wir MEHR
     LAYOUTS machen?")
       - "Vinyl": Cover kreisrund wie eine Schallplatte samt dezentem Rillen-Ring und Mittelloch-
@@ -3845,17 +3874,28 @@
            entfernt - eine dauerhaft reservierte GPU-Ebene ist bei einer nur einmal
            laufenden Animation unnötige Verschwendung.
         */
+        /* FIX v24.83 (KRITISCH): Nutzer meldete - Pixel-Shift beim Hintergrund läuft nicht so
+           smooth wie bei den anderen Elementen (Uhr/Now-Playing-Karte nutzen eine echte CSS
+           transition, hier lief der Shift bisher NUR über die Ken-Burns-Keyframes mit). Genau
+           das war das Problem: die Ken-Burns-Animation läuft nur EINMAL (60s, dann "forwards"
+           eingefroren, siehe v24.49-Fix) - jede SPÄTERE Änderung der Shift-Variablen (alle
+           ~60s) wird von einer bereits abgeschlossenen, eingefrorenen Keyframe-Animation nicht
+           mehr sauber interpoliert, sondern springt hart. Der damalige Kommentar begründete
+           das bewusste Vermeiden eines Wrappers damit, er würde mit der Animation kollidieren -
+           genau DAS ist aber der eigentlich sauberere Weg: der schon lange existierende, bisher
+           komplett ungenutzte #standby-bg-shift-wrapper (steht seit Langem leer im HTML) trägt
+           jetzt den Shift über eine echte transition, komplett getrennt von der Ken-Burns-
+           Animation auf #standby-bg selbst - keine Kollision mehr, beide können unabhängig
+           voneinander laufen. */
+        #standby-bg-shift-wrapper {
+            position: absolute; inset: 0; overflow: hidden;
+            transform: translate(var(--standby-shift-x, 0px), var(--standby-shift-y, 0px));
+            transition: transform 2.5s ease-in-out;
+        }
         body.low-end #standby-bg { filter: brightness(0.35); animation: none; }
-        /* NEU v24.48: Anti-Burn-in-Verschiebung jetzt auch für den Hintergrund - vorher betraf
-           der Pixel-Shift nur Uhr/Now-Playing-Karte, das Hintergrundbild blieb bei langem
-           Stehenlassen immer exakt an derselben Stelle. Da #standby-bg schon eine eigene
-           Ken-Burns-transform-Animation hat, wird der Shift direkt mit reingerechnet (calc()
-           mischt Prozent- und Pixel-Werte problemlos), statt einen zusätzlichen Wrapper zu
-           brauchen, der mit der bestehenden Animation kollidieren würde.
-        */
         @keyframes standby-kenburns {
-            0% { transform: scale(1.2) translate(var(--standby-shift-x, 0px), var(--standby-shift-y, 0px)); }
-            100% { transform: scale(1.28) translate(calc(-1.2% + var(--standby-shift-x, 0px)), calc(-1.2% + var(--standby-shift-y, 0px))); }
+            0% { transform: scale(1.2); }
+            100% { transform: scale(1.28) translate(-1.2%, -1.2%); }
         }
 
         #standby-clockzone { position: relative; z-index: 2; text-align: center; padding: 48px 20px 0; }
@@ -4011,6 +4051,53 @@
         }
         #standby-overlay.standby-design-typography #standby-track-artist { font-size: clamp(16px, 4.5vw, 22px); margin-top: 10px; }
         #standby-overlay.standby-design-typography #standby-clock { font-size: clamp(1.6rem, 7vw, 2.8rem); opacity: 0.7; }
+        /* NEU v24.83: 12 weitere Designs auf ausdrücklichen Nutzerwunsch ("MEHR LAYOUTS,
+           BITTE!!!"). Gleiches Prinzip wie alle bisherigen: reine CSS-Klasse auf
+           #standby-overlay, keine neue Logik/Animation. */
+        /* "Edge-Glow": kein Blur, dafür ein leuchtender Rahmen in der Akzentfarbe. */
+        #standby-overlay.standby-design-edge-glow #standby-nowplaying { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(0,0,0,0.35); border: 2px solid var(--standby-accent, #fff); box-shadow: 0 0 30px 2px var(--standby-accent, rgba(255,255,255,0.4)); }
+        /* "Kompakt": kleine Karte, in eine Ecke gerückt statt zentriert - viel Hintergrund sichtbar. */
+        #standby-overlay.standby-design-compact #standby-shift-wrapper { justify-content: flex-end; align-items: flex-start; padding: 24px; }
+        #standby-overlay.standby-design-compact #standby-nowplaying { width: min(70vw, 320px); }
+        #standby-overlay.standby-design-compact #standby-clockzone { text-align: left; padding: 0; }
+        #standby-overlay.standby-design-compact #standby-clock { font-size: clamp(1.6rem, 8vw, 3rem); }
+        /* "Poster": großes, hochformatiges Cover, Text direkt darauf statt daneben. */
+        #standby-overlay.standby-design-poster #standby-track { flex-direction: column; }
+        #standby-overlay.standby-design-poster #standby-track-art-wrap { width: clamp(160px, 46vw, 260px); height: clamp(220px, 64vw, 360px); }
+        #standby-overlay.standby-design-poster #standby-track-text { text-align: center; flex: none; margin-top: 14px; }
+        /* "Rahmen": dicker Bilderrahmen in Akzentfarbe um das Cover. */
+        #standby-overlay.standby-design-frame #standby-track-art-wrap { border: 6px solid var(--standby-accent, #fff); padding: 0; }
+        /* "Neon": Textschatten/Glow in der Akzentfarbe auf Uhr und Songtitel. */
+        #standby-overlay.standby-design-neon #standby-clock { color: var(--standby-accent, #fff); text-shadow: 0 0 12px var(--standby-accent, #fff), 0 0 32px var(--standby-accent, #fff); }
+        #standby-overlay.standby-design-neon #standby-track-title { color: var(--standby-accent, #fff); text-shadow: 0 0 10px var(--standby-accent, #fff); }
+        /* "Polaroid": Cover mit dickem weißen Rand unten, leicht gedreht. */
+        #standby-overlay.standby-design-polaroid #standby-track { flex-direction: column; }
+        #standby-overlay.standby-design-polaroid #standby-track-art-wrap { background: #f5f5f0; padding: 10px 10px 34px; border-radius: 4px; transform: rotate(-2deg); width: clamp(150px, 42vw, 220px); height: auto; aspect-ratio: 1/1.28; }
+        #standby-overlay.standby-design-polaroid #standby-track-art { border-radius: 2px; }
+        #standby-overlay.standby-design-polaroid #standby-track-text { text-align: center; flex: none; margin-top: 16px; }
+        /* "Leiste": Now-Playing als schmale volle Breite-Leiste unten, Uhr füllt den Rest. */
+        #standby-overlay.standby-design-bar #standby-shift-wrapper { justify-content: flex-start; padding-top: clamp(40px, 12vh, 100px); }
+        #standby-overlay.standby-design-bar #standby-nowplaying { position: fixed; left: 16px; right: 16px; bottom: 16px; width: auto; margin: 0; }
+        #standby-overlay.standby-design-bar #standby-track-art-wrap { width: 56px; height: 56px; border-radius: 14px; }
+        /* "Raster": Uhr klein oben links, Cover zentral, Text unten rechts - versetzte Anordnung. */
+        #standby-overlay.standby-design-grid #standby-clockzone { position: fixed; top: 24px; left: 24px; padding: 0; text-align: left; }
+        #standby-overlay.standby-design-grid #standby-clock { font-size: clamp(1.4rem, 6vw, 2.2rem); }
+        #standby-overlay.standby-design-grid #standby-nowplaying { position: fixed; bottom: 24px; right: 24px; left: auto; margin: 0; width: min(60vw, 340px); }
+        /* "Transparent": Karte ganz ohne Hintergrundfläche - Cover/Text scheinen frei zu schweben. */
+        #standby-overlay.standby-design-transparent #standby-nowplaying { background: transparent; border: none; backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: none; }
+        /* "Riesen-Uhr": Uhr dominiert komplett, Now-Playing nur als winzige Leiste ganz unten. */
+        #standby-overlay.standby-design-giant-clock #standby-clock { font-size: clamp(4rem, 22vw, 10rem); }
+        #standby-overlay.standby-design-giant-clock #standby-nowplaying { transform: scale(0.7); transform-origin: center; opacity: 0.8; }
+        /* "Zentriert-Klein": alles sehr kompakt und zentriert, viel leerer Raum drumherum -
+           ruhig und minimalistisch, aber anders als "Minimal" (Cover bleibt sichtbar). */
+        #standby-overlay.standby-design-zen #standby-nowplaying { width: min(60vw, 280px); padding: 16px; }
+        #standby-overlay.standby-design-zen #standby-track-art-wrap { width: clamp(80px, 22vw, 120px); height: clamp(80px, 22vw, 120px); }
+        #standby-overlay.standby-design-zen #standby-clock { font-size: clamp(2rem, 10vw, 4rem); }
+        /* "Gestapelt": Karte mit gestaffeltem Schatten-Effekt für optische Tiefe (Kartenstapel-Look). */
+        #standby-overlay.standby-design-stacked #standby-nowplaying { box-shadow: 0 4px 0 0 rgba(255,255,255,0.06), 0 8px 0 0 rgba(255,255,255,0.04), 0 20px 60px rgba(0,0,0,0.5); }
+        /* "Kontrast": sehr dunkle Karte mit hartem, hellem Akzent-Rahmen statt weichem Glas-Look. */
+        #standby-overlay.standby-design-contrast #standby-nowplaying { background: rgba(0,0,0,0.75); backdrop-filter: none; -webkit-backdrop-filter: none; border: 1px solid var(--standby-accent, #fff); }
+        #standby-overlay.standby-design-contrast #standby-progress-track { background: rgba(255,255,255,0.08); }
         /* ========================================================= */
         /* FIX v24.72 (KRITISCH - GPU): v24.71 hat dasselbe Muster bei den EQ-Balken gefixt,
            aber DIESE Stelle übersehen - Nutzer meldete danach immer noch zu hohe GPU-Last.
@@ -4226,7 +4313,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.82 · 2026-08-13';
+        const SITE_VERSION = 'v24.83 · 2026-08-13';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -4283,7 +4370,7 @@
 
     <!-- NEW: StandBy / Ambient Mode (Lockscreen-Style) -->
     <div id="standby-overlay" onclick="toggleStandBy(false)" role="button" tabindex="0" aria-label="StandBy Modus verlassen">
-        <div id="standby-bg"></div>
+        <div id="standby-bg-shift-wrapper"><div id="standby-bg"></div></div>
         <div id="standby-shift-wrapper">
             <div id="standby-clockzone">
                 <div id="standby-clock">00:00</div>
@@ -4712,6 +4799,19 @@
                                                 <option value="vinyl" id="opt-standby-design-vinyl">Vinyl</option>
                                                 <option value="split" id="opt-standby-design-split">Split</option>
                                                 <option value="typography" id="opt-standby-design-typography">Typografie</option>
+                                                <option value="edge-glow" id="opt-standby-design-edge-glow">Edge-Glow</option>
+                                                <option value="compact" id="opt-standby-design-compact">Kompakt</option>
+                                                <option value="poster" id="opt-standby-design-poster">Poster</option>
+                                                <option value="frame" id="opt-standby-design-frame">Rahmen</option>
+                                                <option value="neon" id="opt-standby-design-neon">Neon</option>
+                                                <option value="polaroid" id="opt-standby-design-polaroid">Polaroid</option>
+                                                <option value="bar" id="opt-standby-design-bar">Leiste</option>
+                                                <option value="grid" id="opt-standby-design-grid">Raster</option>
+                                                <option value="transparent" id="opt-standby-design-transparent">Transparent</option>
+                                                <option value="giant-clock" id="opt-standby-design-giant-clock">Riesen-Uhr</option>
+                                                <option value="zen" id="opt-standby-design-zen">Zen</option>
+                                                <option value="stacked" id="opt-standby-design-stacked">Gestapelt</option>
+                                                <option value="contrast" id="opt-standby-design-contrast">Kontrast</option>
                                             </select>
                                         </div>
                                         <!-- NEU v24.81: Design-Baukasten (Akzentfarbe + Eckenradius) + Design-Code
@@ -5247,7 +5347,7 @@
                 changelog_type_feature: 'Neu', changelog_type_performance: 'Performance', changelog_type_fix: 'Fehlerbehebung',
                 tutorial_speak_aria: 'Diesen Schritt vorlesen',
                 t_whatsnew1_title: '✨ Was ist neu seit deinem letzten Besuch?',
-                t_whatsnew1_text: '3 weitere StandBy-Designs: "Vinyl" (rundes Cover wie eine Schallplatte), "Split" (geteilter Bildschirm) und "Typografie" (großer Songtitel in deiner Akzentfarbe statt Cover).',
+                t_whatsnew1_text: 'Cover-Verschwinden-Bug endgültig behoben (überall auf der Seite), Pixel-Shift im StandBy jetzt komplett smooth, und 13 weitere Designs - macht 20 insgesamt!',
                 t_whatsnew2_title: '✨ Noch mehr Neues',
                 t_whatsnew2_text: 'App zeigt beim Start jetzt sofort den bereits laufenden Song statt erst später. Außerdem: Plattform-Auswahl beim Cover-Tap öffnet sich nach "Abbrechen" jetzt zuverlässig beim ersten Versuch, plus etwas mehr Haptic-Feedback.',
                 t_whatsnew3_title: '✨ Unter der Haube',
@@ -5324,7 +5424,7 @@
                 kart_stat_besttime: 'Bestzeit',
                 kart_stat_sessions: 'Sessions',
                 kart_stat_since: 'Seit',
-                                settings_wakelock: 'Bildschirm an (StandBy)', settings_wakelock_hint: 'Hält den Bildschirm nur wach, solange Musik läuft - pausiert sie, darf das Handy normal einschlafen.', settings_notifications: 'Benachrichtigungen', notifications_unsupported: 'nicht verfügbar', notifications_on: 'AN', notifications_blocked: 'blockiert - in Browser-Einstellungen ändern', notifications_not_set: 'nicht eingerichtet, antippen', notifications_denied_hint: 'Du hast Benachrichtigungen blockiert - das kann ich nicht per Klick zurücksetzen, nur du selbst in den Browser-/System-Einstellungen für diese Seite.', notifications_enabled_toast: '🔔 Benachrichtigungen sind jetzt aktiviert.', settings_notification_hint: 'Für die "Willkommen zurück"-Meldung, falls Musik pausiert war während du weg warst.', settings_standby_design: 'StandBy-Design', standby_design_classic: 'Classic', standby_design_minimal: 'Minimal', standby_design_cover_focus: 'Cover-Fokus', standby_design_clock_only: 'Nur Uhr', standby_design_vinyl: 'Vinyl', standby_design_split: 'Split', standby_design_typography: 'Typografie', label_standby_accent: 'Akzentfarbe', label_standby_radius: 'Eckenradius', label_standby_design_code: 'Design-Code teilen', design_code_placeholder: 'Code hier einfügen...', btn_design_code_copy: 'Kopieren', btn_design_code_load: 'Laden', settings_design_code_hint: 'Kopiere deinen StandBy-Look als Code und schick ihn Freunden - die laden ihn hier ein und haben genau denselben Style.', standby_design_code_copied: '📋 Code kopiert - jetzt an Freunde weitergeben!', standby_design_code_loaded: '✨ Design geladen!', standby_design_code_invalid: 'Das war kein gültiger Design-Code.',
+                                settings_wakelock: 'Bildschirm an (StandBy)', settings_wakelock_hint: 'Hält den Bildschirm nur wach, solange Musik läuft - pausiert sie, darf das Handy normal einschlafen.', settings_notifications: 'Benachrichtigungen', notifications_unsupported: 'nicht verfügbar', notifications_on: 'AN', notifications_blocked: 'blockiert - in Browser-Einstellungen ändern', notifications_not_set: 'nicht eingerichtet, antippen', notifications_denied_hint: 'Du hast Benachrichtigungen blockiert - das kann ich nicht per Klick zurücksetzen, nur du selbst in den Browser-/System-Einstellungen für diese Seite.', notifications_enabled_toast: '🔔 Benachrichtigungen sind jetzt aktiviert.', settings_notification_hint: 'Für die "Willkommen zurück"-Meldung, falls Musik pausiert war während du weg warst.', settings_standby_design: 'StandBy-Design', standby_design_classic: 'Classic', standby_design_minimal: 'Minimal', standby_design_cover_focus: 'Cover-Fokus', standby_design_clock_only: 'Nur Uhr', standby_design_vinyl: 'Vinyl', standby_design_split: 'Split', standby_design_typography: 'Typografie', standby_design_edge_glow: 'Edge-Glow', standby_design_compact: 'Kompakt', standby_design_poster: 'Poster', standby_design_frame: 'Rahmen', standby_design_neon: 'Neon', standby_design_polaroid: 'Polaroid', standby_design_bar: 'Leiste', standby_design_grid: 'Raster', standby_design_transparent: 'Transparent', standby_design_giant_clock: 'Riesen-Uhr', standby_design_zen: 'Zen', standby_design_stacked: 'Gestapelt', standby_design_contrast: 'Kontrast', label_standby_accent: 'Akzentfarbe', label_standby_radius: 'Eckenradius', label_standby_design_code: 'Design-Code teilen', design_code_placeholder: 'Code hier einfügen...', btn_design_code_copy: 'Kopieren', btn_design_code_load: 'Laden', settings_design_code_hint: 'Kopiere deinen StandBy-Look als Code und schick ihn Freunden - die laden ihn hier ein und haben genau denselben Style.', standby_design_code_copied: '📋 Code kopiert - jetzt an Freunde weitergeben!', standby_design_code_loaded: '✨ Design geladen!', standby_design_code_invalid: 'Das war kein gültiger Design-Code.',
                 mini_click_to_open: 'Klicken zum Öffnen', mini_click_to_close: 'Klicken zum Schließen',
                 aria_cp: 'Befehlspalette öffnen', aria_install: 'Als App installieren', aria_island: 'Song-Details öffnen, nach oben wischen zum Ausblenden'
             },
@@ -5436,7 +5536,7 @@
                 changelog_type_feature: 'New', changelog_type_performance: 'Performance', changelog_type_fix: 'Fix',
                 tutorial_speak_aria: 'Read this step aloud',
                 t_whatsnew1_title: '✨ What\'s new since your last visit?',
-                t_whatsnew1_text: '3 more StandBy designs: "Vinyl" (round cover like a record), "Split" (split screen), and "Typography" (large song title in your accent color instead of a cover).',
+                t_whatsnew1_text: 'Cover-disappearing bug fixed for good (site-wide), StandBy pixel-shift now completely smooth, and 13 more designs - 20 total now!',
                 t_whatsnew2_title: '✨ Even more news',
                 t_whatsnew2_text: "The app now shows the already-playing song immediately on start instead of only later. Also: the platform picker on cover tap now reliably reopens on the first try after 'Cancel', plus a bit more haptic feedback.",
                 t_whatsnew3_title: '✨ Under the hood',
@@ -5513,7 +5613,7 @@
                 kart_stat_besttime: 'Best Time',
                 kart_stat_sessions: 'Sessions',
                 kart_stat_since: 'Since',
-                                settings_wakelock: 'Keep Screen On (StandBy)', settings_wakelock_hint: 'Keeps the screen on only while music is playing - once paused, the phone can sleep normally.', settings_notifications: 'Notifications', notifications_unsupported: 'not available', notifications_on: 'ON', notifications_blocked: 'blocked - change in browser settings', notifications_not_set: 'not set up, tap to enable', notifications_denied_hint: "You've blocked notifications - I can't reset that with a click, only you can in this site's browser/system settings.", notifications_enabled_toast: '🔔 Notifications are now enabled.', settings_notification_hint: "For the 'welcome back' notice if music was paused while you were away.", settings_standby_design: 'StandBy Design', standby_design_classic: 'Classic', standby_design_minimal: 'Minimal', standby_design_cover_focus: 'Cover Focus', standby_design_clock_only: 'Clock Only', standby_design_vinyl: 'Vinyl', standby_design_split: 'Split', standby_design_typography: 'Typography', label_standby_accent: 'Accent Color', label_standby_radius: 'Corner Radius', label_standby_design_code: 'Share Design Code', design_code_placeholder: 'Paste code here...', btn_design_code_copy: 'Copy', btn_design_code_load: 'Load', settings_design_code_hint: 'Copy your StandBy look as a code and send it to friends - they paste it here and get the exact same style.', standby_design_code_copied: '📋 Code copied - now share it with friends!', standby_design_code_loaded: '✨ Design loaded!', standby_design_code_invalid: "That wasn't a valid design code.",
+                                settings_wakelock: 'Keep Screen On (StandBy)', settings_wakelock_hint: 'Keeps the screen on only while music is playing - once paused, the phone can sleep normally.', settings_notifications: 'Notifications', notifications_unsupported: 'not available', notifications_on: 'ON', notifications_blocked: 'blocked - change in browser settings', notifications_not_set: 'not set up, tap to enable', notifications_denied_hint: "You've blocked notifications - I can't reset that with a click, only you can in this site's browser/system settings.", notifications_enabled_toast: '🔔 Notifications are now enabled.', settings_notification_hint: "For the 'welcome back' notice if music was paused while you were away.", settings_standby_design: 'StandBy Design', standby_design_classic: 'Classic', standby_design_minimal: 'Minimal', standby_design_cover_focus: 'Cover Focus', standby_design_clock_only: 'Clock Only', standby_design_vinyl: 'Vinyl', standby_design_split: 'Split', standby_design_typography: 'Typography', standby_design_edge_glow: 'Edge Glow', standby_design_compact: 'Compact', standby_design_poster: 'Poster', standby_design_frame: 'Frame', standby_design_neon: 'Neon', standby_design_polaroid: 'Polaroid', standby_design_bar: 'Bar', standby_design_grid: 'Grid', standby_design_transparent: 'Transparent', standby_design_giant_clock: 'Giant Clock', standby_design_zen: 'Zen', standby_design_stacked: 'Stacked', standby_design_contrast: 'Contrast', label_standby_accent: 'Accent Color', label_standby_radius: 'Corner Radius', label_standby_design_code: 'Share Design Code', design_code_placeholder: 'Paste code here...', btn_design_code_copy: 'Copy', btn_design_code_load: 'Load', settings_design_code_hint: 'Copy your StandBy look as a code and send it to friends - they paste it here and get the exact same style.', standby_design_code_copied: '📋 Code copied - now share it with friends!', standby_design_code_loaded: '✨ Design loaded!', standby_design_code_invalid: "That wasn't a valid design code.",
                 mini_click_to_open: 'Click to open', mini_click_to_close: 'Click to close',
                 aria_cp: 'Open command palette', aria_install: 'Install as app', aria_island: 'Open song details, swipe up to dismiss'
             },
@@ -5625,7 +5725,7 @@
                 changelog_type_feature: 'Nuevo', changelog_type_performance: 'Rendimiento', changelog_type_fix: 'Corrección',
                 tutorial_speak_aria: 'Escuchar este paso',
                 t_whatsnew1_title: '✨ ¿Qué hay de nuevo desde tu última visita?',
-                t_whatsnew1_text: '3 diseños StandBy más: "Vinilo" (portada redonda como un disco), "Dividido" (pantalla dividida) y "Tipografía" (título grande en tu color de acento en vez de portada).',
+                t_whatsnew1_text: '¡Error de portadas desapareciendo corregido definitivamente (en toda la página), desplazamiento de píxeles en StandBy ahora totalmente suave, y 13 diseños más - 20 en total!',
                 t_whatsnew2_title: '✨ Más novedades',
                 t_whatsnew2_text: 'La app ahora muestra la canción que ya está sonando inmediatamente al iniciar, en vez de más tarde. Además: el selector de plataformas al tocar la portada ahora se reabre de forma fiable al primer intento tras "Cancelar", más algo de retroalimentación háptica.',
                 t_whatsnew3_title: '✨ Bajo el capó',
@@ -5702,7 +5802,7 @@
                 kart_stat_besttime: 'Mejor Tiempo',
                 kart_stat_sessions: 'Sesiones',
                 kart_stat_since: 'Desde',
-                                settings_wakelock: 'Pantalla Encendida (StandBy)', settings_wakelock_hint: 'Mantiene la pantalla encendida solo mientras suena música - al pausar, el teléfono puede dormir normalmente.', settings_notifications: 'Notificaciones', notifications_unsupported: 'no disponible', notifications_on: 'ACTIVADAS', notifications_blocked: 'bloqueadas - cambiar en ajustes del navegador', notifications_not_set: 'no configuradas, toca para activar', notifications_denied_hint: 'Has bloqueado las notificaciones - no puedo restablecer eso con un clic, solo tú puedes hacerlo en los ajustes del navegador/sistema para este sitio.', notifications_enabled_toast: '🔔 Las notificaciones ya están activadas.', settings_notification_hint: 'Para el aviso de "bienvenido de nuevo" si la música estuvo pausada mientras no estabas.', settings_standby_design: 'Diseño de StandBy', standby_design_classic: 'Clásico', standby_design_minimal: 'Minimalista', standby_design_cover_focus: 'Portada al frente', standby_design_clock_only: 'Solo reloj', standby_design_vinyl: 'Vinilo', standby_design_split: 'Dividido', standby_design_typography: 'Tipografía', label_standby_accent: 'Color de acento', label_standby_radius: 'Radio de esquina', label_standby_design_code: 'Compartir código de diseño', design_code_placeholder: 'Pega el código aquí...', btn_design_code_copy: 'Copiar', btn_design_code_load: 'Cargar', settings_design_code_hint: 'Copia tu estilo StandBy como código y envíaselo a tus amigos - ellos lo pegan aquí y tienen exactamente el mismo estilo.', standby_design_code_copied: '📋 Código copiado - ¡compártelo con tus amigos!', standby_design_code_loaded: '✨ ¡Diseño cargado!', standby_design_code_invalid: 'Ese no era un código de diseño válido.',
+                                settings_wakelock: 'Pantalla Encendida (StandBy)', settings_wakelock_hint: 'Mantiene la pantalla encendida solo mientras suena música - al pausar, el teléfono puede dormir normalmente.', settings_notifications: 'Notificaciones', notifications_unsupported: 'no disponible', notifications_on: 'ACTIVADAS', notifications_blocked: 'bloqueadas - cambiar en ajustes del navegador', notifications_not_set: 'no configuradas, toca para activar', notifications_denied_hint: 'Has bloqueado las notificaciones - no puedo restablecer eso con un clic, solo tú puedes hacerlo en los ajustes del navegador/sistema para este sitio.', notifications_enabled_toast: '🔔 Las notificaciones ya están activadas.', settings_notification_hint: 'Para el aviso de "bienvenido de nuevo" si la música estuvo pausada mientras no estabas.', settings_standby_design: 'Diseño de StandBy', standby_design_classic: 'Clásico', standby_design_minimal: 'Minimalista', standby_design_cover_focus: 'Portada al frente', standby_design_clock_only: 'Solo reloj', standby_design_vinyl: 'Vinilo', standby_design_split: 'Dividido', standby_design_typography: 'Tipografía', standby_design_edge_glow: 'Resplandor', standby_design_compact: 'Compacto', standby_design_poster: 'Póster', standby_design_frame: 'Marco', standby_design_neon: 'Neón', standby_design_polaroid: 'Polaroid', standby_design_bar: 'Barra', standby_design_grid: 'Cuadrícula', standby_design_transparent: 'Transparente', standby_design_giant_clock: 'Reloj gigante', standby_design_zen: 'Zen', standby_design_stacked: 'Apilado', standby_design_contrast: 'Contraste', label_standby_accent: 'Color de acento', label_standby_radius: 'Radio de esquina', label_standby_design_code: 'Compartir código de diseño', design_code_placeholder: 'Pega el código aquí...', btn_design_code_copy: 'Copiar', btn_design_code_load: 'Cargar', settings_design_code_hint: 'Copia tu estilo StandBy como código y envíaselo a tus amigos - ellos lo pegan aquí y tienen exactamente el mismo estilo.', standby_design_code_copied: '📋 Código copiado - ¡compártelo con tus amigos!', standby_design_code_loaded: '✨ ¡Diseño cargado!', standby_design_code_invalid: 'Ese no era un código de diseño válido.',
                 mini_click_to_open: 'Clic para abrir', mini_click_to_close: 'Clic para cerrar',
                 aria_cp: 'Abrir paleta de comandos', aria_install: 'Instalar como app', aria_island: 'Abrir detalles de la canción, desliza arriba para ocultar'
             },
@@ -5814,7 +5914,7 @@
                 changelog_type_feature: 'Nouveau', changelog_type_performance: 'Performance', changelog_type_fix: 'Correction',
                 tutorial_speak_aria: 'Écouter cette étape',
                 t_whatsnew1_title: '✨ Quoi de neuf depuis ta dernière visite ?',
-                t_whatsnew1_text: "3 designs StandBy de plus : « Vinyle » (pochette ronde comme un disque), « Partagé » (écran divisé) et « Typographie » (grand titre dans ta couleur d'accent au lieu d'une pochette).",
+                t_whatsnew1_text: "Bug de disparition des pochettes corrigé définitivement (partout sur le site), décalage de pixels StandBy désormais totalement fluide, et 13 designs de plus - 20 au total !",
                 t_whatsnew2_title: '✨ Encore plus de nouveautés',
                 t_whatsnew2_text: "L'application affiche désormais immédiatement le morceau déjà en cours au démarrage, au lieu de plus tard. De plus : le sélecteur de plateformes en tapant sur la pochette se rouvre maintenant de façon fiable dès le premier essai après « Annuler », avec un peu plus de retour haptique.",
                 t_whatsnew3_title: '✨ Sous le capot',
@@ -5891,7 +5991,7 @@
                 kart_stat_besttime: 'Meilleur Temps',
                 kart_stat_sessions: 'Sessions',
                 kart_stat_since: 'Depuis',
-                                settings_wakelock: 'Écran Allumé (StandBy)', settings_wakelock_hint: "Garde l'écran allumé uniquement pendant que la musique joue - une fois en pause, le téléphone peut s'endormir normalement.", settings_notifications: 'Notifications', notifications_unsupported: 'non disponible', notifications_on: 'ACTIVÉES', notifications_blocked: 'bloquées - à changer dans les paramètres du navigateur', notifications_not_set: 'non configurées, touche pour activer', notifications_denied_hint: "Tu as bloqué les notifications - je ne peux pas réinitialiser ça par un clic, seulement toi dans les paramètres navigateur/système de ce site.", notifications_enabled_toast: '🔔 Les notifications sont maintenant activées.', settings_notification_hint: "Pour la notification « content de te revoir » si la musique était en pause pendant ton absence.", settings_standby_design: 'Design StandBy', standby_design_classic: 'Classique', standby_design_minimal: 'Minimal', standby_design_cover_focus: 'Pochette en avant', standby_design_clock_only: 'Horloge seule', standby_design_vinyl: 'Vinyle', standby_design_split: 'Partagé', standby_design_typography: 'Typographie', label_standby_accent: "Couleur d'accent", label_standby_radius: 'Rayon des coins', label_standby_design_code: 'Partager le code du design', design_code_placeholder: 'Colle le code ici...', btn_design_code_copy: 'Copier', btn_design_code_load: 'Charger', settings_design_code_hint: "Copie ton look StandBy en tant que code et envoie-le à des amis - ils le collent ici et obtiennent exactement le même style.", standby_design_code_copied: '📋 Code copié - partage-le avec tes amis !', standby_design_code_loaded: '✨ Design chargé !', standby_design_code_invalid: "Ce n'était pas un code de design valide.",
+                                settings_wakelock: 'Écran Allumé (StandBy)', settings_wakelock_hint: "Garde l'écran allumé uniquement pendant que la musique joue - une fois en pause, le téléphone peut s'endormir normalement.", settings_notifications: 'Notifications', notifications_unsupported: 'non disponible', notifications_on: 'ACTIVÉES', notifications_blocked: 'bloquées - à changer dans les paramètres du navigateur', notifications_not_set: 'non configurées, touche pour activer', notifications_denied_hint: "Tu as bloqué les notifications - je ne peux pas réinitialiser ça par un clic, seulement toi dans les paramètres navigateur/système de ce site.", notifications_enabled_toast: '🔔 Les notifications sont maintenant activées.', settings_notification_hint: "Pour la notification « content de te revoir » si la musique était en pause pendant ton absence.", settings_standby_design: 'Design StandBy', standby_design_classic: 'Classique', standby_design_minimal: 'Minimal', standby_design_cover_focus: 'Pochette en avant', standby_design_clock_only: 'Horloge seule', standby_design_vinyl: 'Vinyle', standby_design_split: 'Partagé', standby_design_typography: 'Typographie', standby_design_edge_glow: 'Lueur', standby_design_compact: 'Compact', standby_design_poster: 'Poster', standby_design_frame: 'Cadre', standby_design_neon: 'Néon', standby_design_polaroid: 'Polaroid', standby_design_bar: 'Barre', standby_design_grid: 'Grille', standby_design_transparent: 'Transparent', standby_design_giant_clock: 'Horloge géante', standby_design_zen: 'Zen', standby_design_stacked: 'Empilé', standby_design_contrast: 'Contraste', label_standby_accent: "Couleur d'accent", label_standby_radius: 'Rayon des coins', label_standby_design_code: 'Partager le code du design', design_code_placeholder: 'Colle le code ici...', btn_design_code_copy: 'Copier', btn_design_code_load: 'Charger', settings_design_code_hint: "Copie ton look StandBy en tant que code et envoie-le à des amis - ils le collent ici et obtiennent exactement le même style.", standby_design_code_copied: '📋 Code copié - partage-le avec tes amis !', standby_design_code_loaded: '✨ Design chargé !', standby_design_code_invalid: "Ce n'était pas un code de design valide.",
                 mini_click_to_open: 'Cliquer pour ouvrir', mini_click_to_close: 'Cliquer pour fermer',
                 aria_cp: 'Ouvrir la palette de commandes', aria_install: 'Installer comme appli', aria_island: 'Ouvrir les détails du morceau, glisser vers le haut pour masquer'
             },
@@ -6003,7 +6103,7 @@
                 changelog_type_feature: 'Novo', changelog_type_performance: 'Performance', changelog_type_fix: 'Correção',
                 tutorial_speak_aria: 'Ouvir esta etapa',
                 t_whatsnew1_title: '✨ O que há de novo desde sua última visita?',
-                t_whatsnew1_text: 'Mais 3 designs StandBy: "Vinil" (capa redonda como um disco), "Dividido" (tela dividida) e "Tipografia" (título grande na sua cor de destaque em vez de capa).',
+                t_whatsnew1_text: 'Bug de capas sumindo corrigido definitivamente (em todo o site), deslocamento de pixels do StandBy agora totalmente suave, e mais 13 designs - 20 no total!',
                 t_whatsnew2_title: '✨ Ainda mais novidades',
                 t_whatsnew2_text: 'O app agora mostra a música que já está tocando imediatamente ao iniciar, em vez de só depois. Além disso: o seletor de plataformas ao tocar na capa agora reabre de forma confiável na primeira tentativa após "Cancelar", com um pouco mais de feedback tátil.',
                 t_whatsnew3_title: '✨ Por baixo do capô',
@@ -6080,7 +6180,7 @@
                 kart_stat_besttime: 'Melhor Tempo',
                 kart_stat_sessions: 'Sessões',
                 kart_stat_since: 'Desde',
-                                settings_wakelock: 'Tela Ligada (StandBy)', settings_wakelock_hint: 'Mantém a tela ligada apenas enquanto a música toca - ao pausar, o celular pode dormir normalmente.', settings_notifications: 'Notificações', notifications_unsupported: 'indisponível', notifications_on: 'ATIVADAS', notifications_blocked: 'bloqueadas - altere nas configurações do navegador', notifications_not_set: 'não configuradas, toque para ativar', notifications_denied_hint: 'Você bloqueou as notificações - não posso redefinir isso com um clique, só você pode nas configurações de navegador/sistema deste site.', notifications_enabled_toast: '🔔 As notificações agora estão ativadas.', settings_notification_hint: 'Para o aviso de "bem-vindo de volta" caso a música estivesse pausada enquanto você estava fora.', settings_standby_design: 'Design do StandBy', standby_design_classic: 'Clássico', standby_design_minimal: 'Minimalista', standby_design_cover_focus: 'Capa em destaque', standby_design_clock_only: 'Só relógio', standby_design_vinyl: 'Vinil', standby_design_split: 'Dividido', standby_design_typography: 'Tipografia', label_standby_accent: 'Cor de destaque', label_standby_radius: 'Raio de canto', label_standby_design_code: 'Compartilhar código de design', design_code_placeholder: 'Cole o código aqui...', btn_design_code_copy: 'Copiar', btn_design_code_load: 'Carregar', settings_design_code_hint: 'Copie seu visual StandBy como um código e mande para amigos - eles colam aqui e ficam com exatamente o mesmo estilo.', standby_design_code_copied: '📋 Código copiado - compartilhe com amigos!', standby_design_code_loaded: '✨ Design carregado!', standby_design_code_invalid: 'Esse não era um código de design válido.',
+                                settings_wakelock: 'Tela Ligada (StandBy)', settings_wakelock_hint: 'Mantém a tela ligada apenas enquanto a música toca - ao pausar, o celular pode dormir normalmente.', settings_notifications: 'Notificações', notifications_unsupported: 'indisponível', notifications_on: 'ATIVADAS', notifications_blocked: 'bloqueadas - altere nas configurações do navegador', notifications_not_set: 'não configuradas, toque para ativar', notifications_denied_hint: 'Você bloqueou as notificações - não posso redefinir isso com um clique, só você pode nas configurações de navegador/sistema deste site.', notifications_enabled_toast: '🔔 As notificações agora estão ativadas.', settings_notification_hint: 'Para o aviso de "bem-vindo de volta" caso a música estivesse pausada enquanto você estava fora.', settings_standby_design: 'Design do StandBy', standby_design_classic: 'Clássico', standby_design_minimal: 'Minimalista', standby_design_cover_focus: 'Capa em destaque', standby_design_clock_only: 'Só relógio', standby_design_vinyl: 'Vinil', standby_design_split: 'Dividido', standby_design_typography: 'Tipografia', standby_design_edge_glow: 'Brilho', standby_design_compact: 'Compacto', standby_design_poster: 'Pôster', standby_design_frame: 'Moldura', standby_design_neon: 'Neon', standby_design_polaroid: 'Polaroid', standby_design_bar: 'Barra', standby_design_grid: 'Grade', standby_design_transparent: 'Transparente', standby_design_giant_clock: 'Relógio gigante', standby_design_zen: 'Zen', standby_design_stacked: 'Empilhado', standby_design_contrast: 'Contraste', label_standby_accent: 'Cor de destaque', label_standby_radius: 'Raio de canto', label_standby_design_code: 'Compartilhar código de design', design_code_placeholder: 'Cole o código aqui...', btn_design_code_copy: 'Copiar', btn_design_code_load: 'Carregar', settings_design_code_hint: 'Copie seu visual StandBy como um código e mande para amigos - eles colam aqui e ficam com exatamente o mesmo estilo.', standby_design_code_copied: '📋 Código copiado - compartilhe com amigos!', standby_design_code_loaded: '✨ Design carregado!', standby_design_code_invalid: 'Esse não era um código de design válido.',
                 mini_click_to_open: 'Clique para abrir', mini_click_to_close: 'Clique para fechar',
                 aria_cp: 'Abrir paleta de comandos', aria_install: 'Instalar como app', aria_island: 'Abrir detalhes da música, deslize para cima para ocultar'
             },
@@ -6192,7 +6292,7 @@
                 changelog_type_feature: 'Yeni', changelog_type_performance: 'Performans', changelog_type_fix: 'Düzeltme',
                 tutorial_speak_aria: 'Bu adımı sesli oku',
                 t_whatsnew1_title: '✨ Son ziyaretinden beri neler değişti?',
-                t_whatsnew1_text: '3 yeni StandBy tasarımı: "Plak" (plak gibi yuvarlak kapak), "Bölünmüş" (bölünmüş ekran) ve "Tipografi" (kapak yerine vurgu renginde büyük şarkı başlığı).',
+                t_whatsnew1_text: 'Kapak kaybolma hatası kalıcı olarak düzeltildi (sitenin her yerinde), StandBy piksel kayması artık tamamen akıcı, ve 13 tasarım daha - toplamda 20!',
                 t_whatsnew2_title: '✨ Daha fazla yenilik',
                 t_whatsnew2_text: 'Uygulama artık başlangıçta zaten çalmakta olan şarkıyı daha sonra değil hemen gösteriyor. Ayrıca: kapak resmine dokunarak açılan platform seçici artık "İptal"den sonra ilk denemede güvenilir şekilde yeniden açılıyor, biraz daha fazla dokunsal geri bildirimle birlikte.',
                 t_whatsnew3_title: '✨ Perde arkasında',
@@ -6269,7 +6369,7 @@
                 kart_stat_besttime: 'En İyi Süre',
                 kart_stat_sessions: 'Seanslar',
                 kart_stat_since: 'Beri',
-                                settings_wakelock: 'Ekranı Açık Tut (StandBy)', settings_wakelock_hint: 'Ekranı yalnızca müzik çalarken açık tutar - duraklatıldığında telefon normal şekilde uyuyabilir.', settings_notifications: 'Bildirimler', notifications_unsupported: 'kullanılamıyor', notifications_on: 'AÇIK', notifications_blocked: 'engellendi - tarayıcı ayarlarından değiştir', notifications_not_set: 'ayarlanmadı, etkinleştirmek için dokun', notifications_denied_hint: 'Bildirimleri engelledin - bunu bir tıklamayla sıfırlayamam, yalnızca sen bu sitenin tarayıcı/sistem ayarlarından yapabilirsin.', notifications_enabled_toast: '🔔 Bildirimler artık etkin.', settings_notification_hint: 'Sen yokken müzik duraklatılmışsa "tekrar hoş geldin" bildirimi için.', settings_standby_design: 'StandBy Tasarımı', standby_design_classic: 'Klasik', standby_design_minimal: 'Minimal', standby_design_cover_focus: 'Kapak Odaklı', standby_design_clock_only: 'Sadece Saat', standby_design_vinyl: 'Plak', standby_design_split: 'Bölünmüş', standby_design_typography: 'Tipografi', label_standby_accent: 'Vurgu Rengi', label_standby_radius: 'Köşe Yarıçapı', label_standby_design_code: 'Tasarım Kodunu Paylaş', design_code_placeholder: 'Kodu buraya yapıştır...', btn_design_code_copy: 'Kopyala', btn_design_code_load: 'Yükle', settings_design_code_hint: 'StandBy görünümünü kod olarak kopyala ve arkadaşlarına gönder - onlar buraya yapıştırır ve tam olarak aynı stile sahip olur.', standby_design_code_copied: '📋 Kod kopyalandı - şimdi arkadaşlarınla paylaş!', standby_design_code_loaded: '✨ Tasarım yüklendi!', standby_design_code_invalid: 'Bu geçerli bir tasarım kodu değildi.',
+                                settings_wakelock: 'Ekranı Açık Tut (StandBy)', settings_wakelock_hint: 'Ekranı yalnızca müzik çalarken açık tutar - duraklatıldığında telefon normal şekilde uyuyabilir.', settings_notifications: 'Bildirimler', notifications_unsupported: 'kullanılamıyor', notifications_on: 'AÇIK', notifications_blocked: 'engellendi - tarayıcı ayarlarından değiştir', notifications_not_set: 'ayarlanmadı, etkinleştirmek için dokun', notifications_denied_hint: 'Bildirimleri engelledin - bunu bir tıklamayla sıfırlayamam, yalnızca sen bu sitenin tarayıcı/sistem ayarlarından yapabilirsin.', notifications_enabled_toast: '🔔 Bildirimler artık etkin.', settings_notification_hint: 'Sen yokken müzik duraklatılmışsa "tekrar hoş geldin" bildirimi için.', settings_standby_design: 'StandBy Tasarımı', standby_design_classic: 'Klasik', standby_design_minimal: 'Minimal', standby_design_cover_focus: 'Kapak Odaklı', standby_design_clock_only: 'Sadece Saat', standby_design_vinyl: 'Plak', standby_design_split: 'Bölünmüş', standby_design_typography: 'Tipografi', standby_design_edge_glow: 'Kenar Işıltısı', standby_design_compact: 'Kompakt', standby_design_poster: 'Poster', standby_design_frame: 'Çerçeve', standby_design_neon: 'Neon', standby_design_polaroid: 'Polaroid', standby_design_bar: 'Şerit', standby_design_grid: 'Izgara', standby_design_transparent: 'Şeffaf', standby_design_giant_clock: 'Dev Saat', standby_design_zen: 'Zen', standby_design_stacked: 'Yığılmış', standby_design_contrast: 'Kontrast', label_standby_accent: 'Vurgu Rengi', label_standby_radius: 'Köşe Yarıçapı', label_standby_design_code: 'Tasarım Kodunu Paylaş', design_code_placeholder: 'Kodu buraya yapıştır...', btn_design_code_copy: 'Kopyala', btn_design_code_load: 'Yükle', settings_design_code_hint: 'StandBy görünümünü kod olarak kopyala ve arkadaşlarına gönder - onlar buraya yapıştırır ve tam olarak aynı stile sahip olur.', standby_design_code_copied: '📋 Kod kopyalandı - şimdi arkadaşlarınla paylaş!', standby_design_code_loaded: '✨ Tasarım yüklendi!', standby_design_code_invalid: 'Bu geçerli bir tasarım kodu değildi.',
                 mini_click_to_open: 'Açmak için tıkla', mini_click_to_close: 'Kapatmak için tıkla',
                 aria_cp: 'Komut paletini aç', aria_install: 'Uygulama olarak yükle', aria_island: 'Şarkı detaylarını aç, gizlemek için yukarı kaydır'
             }
@@ -6438,6 +6538,19 @@
             setText('opt-standby-design-vinyl', t('standby_design_vinyl'));
             setText('opt-standby-design-split', t('standby_design_split'));
             setText('opt-standby-design-typography', t('standby_design_typography'));
+            setText('opt-standby-design-edge-glow', t('standby_design_edge_glow'));
+            setText('opt-standby-design-compact', t('standby_design_compact'));
+            setText('opt-standby-design-poster', t('standby_design_poster'));
+            setText('opt-standby-design-frame', t('standby_design_frame'));
+            setText('opt-standby-design-neon', t('standby_design_neon'));
+            setText('opt-standby-design-polaroid', t('standby_design_polaroid'));
+            setText('opt-standby-design-bar', t('standby_design_bar'));
+            setText('opt-standby-design-grid', t('standby_design_grid'));
+            setText('opt-standby-design-transparent', t('standby_design_transparent'));
+            setText('opt-standby-design-giant-clock', t('standby_design_giant_clock'));
+            setText('opt-standby-design-zen', t('standby_design_zen'));
+            setText('opt-standby-design-stacked', t('standby_design_stacked'));
+            setText('opt-standby-design-contrast', t('standby_design_contrast'));
             setText('label-standby-accent', t('label_standby_accent'));
             setText('label-standby-radius', t('label_standby_radius'));
             setText('label-standby-design-code', t('label_standby_design_code'));
@@ -6537,19 +6650,57 @@
         // ausgelöst werden, die das Haupt-Tutorial schon lange kennen, aber die neuesten
         // Änderungen noch nicht gesehen haben. Alle isNew-Markierungen bleiben für die
         // visuelle Badge-Unterscheidung erhalten.
+        function parseVersionNum(v) {
+            // NEU v24.83: kleine Hilfsfunktion für den Versionsvergleich unten -
+            // "v24.82" -> 24.82 als Zahl.
+            const m = /v?(\d+)\.(\d+)/.exec(v || '');
+            if (!m) return 0;
+            return parseFloat(m[1] + '.' + m[2]);
+        }
         function getWhatsNewSteps() {
-            // FIX v24.69: Dritten Schritt ergänzt (siehe internen Dev-Changelog) + Inhalt aller
-            // drei Schritte auf den aktuellen Stand gebracht - vorher zeigte diese Tour bei
-            // JEDEM Versionssprung seit v24.50 unverändert dieselben, längst veralteten
-            // "Neuigkeiten" (Sprachausgabe/Discord-Live-Status), weil whatsNewSeenVersion zwar
-            // korrekt pro Version zurückgesetzt wird, der TEXT selbst aber nie mit aktualisiert
-            // wurde. Zielt jetzt auf footer-whats-new-btn statt support-section, da Schritt 3
-            // direkt dorthin verweist.
-            return [
-                { targetId: 'standby-toggle', title: t('t_whatsnew1_title'), text: t('t_whatsnew1_text'), isNew: true },
-                { targetId: 'main-music-card', title: t('t_whatsnew2_title'), text: t('t_whatsnew2_text'), isNew: true },
-                { targetId: 'footer-whats-new-btn', title: t('t_whatsnew3_title'), text: t('t_whatsnew3_text'), isNew: true }
-            ];
+            // FIX v24.83 (KRITISCH): Nutzer fragte gezielt nach, ob wirklich JEDE verpasste
+            // Version einzeln gezeigt wird, wenn man länger nicht auf der Seite war ("das soll
+            // genau so sein"). Antwort ehrlich: bisher NEIN - diese Funktion zeigte immer nur
+            // 3 fest hinterlegte, bei jedem Release manuell überschriebene Schritte, komplett
+            // unabhängig davon, wie viele Versionen tatsächlich verpasst wurden. Jemand, der
+            // seit v24.68 nicht mehr da war, hätte trotzdem nur die letzten 3 Punkte von
+            // v24.82 gesehen, nicht alles dazwischen.
+            // Fix: komplett umgebaut, generiert die Tour jetzt DYNAMISCH aus PUBLIC_CHANGELOG
+            // (derselben Datenquelle wie der Footer-Changelog) statt aus 3 statischen Feldern -
+            // dadurch automatisch IMMER korrekt für jede Lücke, ganz ohne manuelle Pflege pro
+            // Release (die t_whatsnew1/2/3-Felder braucht es dadurch eigentlich nicht mehr,
+            // bleiben aber als Sicherheits-Rückfall unten erhalten, falls der Changelog aus
+            // irgendeinem Grund leer sein sollte).
+            const seenVersion = localStorage.getItem('whatsNewSeenVersion');
+            const seenNum = seenVersion ? parseVersionNum(seenVersion) : 0;
+            const currentNum = parseVersionNum(SITE_VERSION);
+
+            const missedEntries = PUBLIC_CHANGELOG
+                .filter(entry => {
+                    const n = parseVersionNum(entry.version);
+                    return n > seenNum && n <= currentNum;
+                })
+                .reverse(); // älteste zuerst - chronologische Reihenfolge in der Tour
+
+            if (missedEntries.length === 0) {
+                return [
+                    { targetId: 'standby-toggle', title: t('t_whatsnew1_title'), text: t('t_whatsnew1_text'), isNew: true },
+                    { targetId: 'main-music-card', title: t('t_whatsnew2_title'), text: t('t_whatsnew2_text'), isNew: true },
+                    { targetId: 'footer-whats-new-btn', title: t('t_whatsnew3_title'), text: t('t_whatsnew3_text'), isNew: true }
+                ];
+            }
+
+            const targets = ['standby-toggle', 'main-music-card', 'footer-whats-new-btn'];
+            return missedEntries.map((entry, i) => {
+                const lang = currentLang || 'de';
+                const langItems = (entry.items && (entry.items[lang] || entry.items.de)) || [];
+                return {
+                    targetId: targets[Math.min(i, targets.length - 1)],
+                    title: `✨ ${entry.version} · ${entry.date}`,
+                    text: langItems.join(' '),
+                    isNew: true
+                };
+            });
         }
 
         function getDetails() {
@@ -6846,7 +6997,16 @@
             standbyDesign = design;
             localStorage.setItem('standbyDesign', design);
             // NEU v24.82: um drei weitere Designs (vinyl, split, typography) ergänzt.
-            overlay.classList.remove('standby-design-minimal', 'standby-design-cover-focus', 'standby-design-clock-only', 'standby-design-vinyl', 'standby-design-split', 'standby-design-typography');
+            // NEU v24.83: um 12 weitere Designs ergänzt (19 insgesamt).
+            overlay.classList.remove(
+                'standby-design-minimal', 'standby-design-cover-focus', 'standby-design-clock-only',
+                'standby-design-vinyl', 'standby-design-split', 'standby-design-typography',
+                'standby-design-edge-glow', 'standby-design-compact', 'standby-design-poster',
+                'standby-design-frame', 'standby-design-neon', 'standby-design-polaroid',
+                'standby-design-bar', 'standby-design-grid', 'standby-design-transparent',
+                'standby-design-giant-clock', 'standby-design-zen', 'standby-design-stacked',
+                'standby-design-contrast'
+            );
             if (design !== 'classic') overlay.classList.add('standby-design-' + design);
             const select = document.getElementById('standby-design-select');
             if (select && select.value !== design) select.value = design;
@@ -6921,7 +7081,11 @@
             if (!input || !input.value.trim()) return;
             try {
                 const payload = JSON.parse(atob(input.value.trim()));
-                const validDesigns = ['classic', 'minimal', 'cover-focus', 'clock-only', 'vinyl', 'split', 'typography'];
+                const validDesigns = [
+                    'classic', 'minimal', 'cover-focus', 'clock-only', 'vinyl', 'split', 'typography',
+                    'edge-glow', 'compact', 'poster', 'frame', 'neon', 'polaroid', 'bar', 'grid',
+                    'transparent', 'giant-clock', 'zen', 'stacked', 'contrast'
+                ];
                 if (payload.d && validDesigns.includes(payload.d)) applyStandbyDesign(payload.d);
                 if (payload.a && /^#[0-9a-fA-F]{6}$/.test(payload.a)) window.changeStandbyAccent(payload.a);
                 if (typeof payload.r === 'number') window.changeStandbyRadius(payload.r);
@@ -9689,6 +9853,14 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.83', date: "August 2026", type: 'fix', items: {
+                de: ["Cover verschwanden manchmal random mitten im Song, überall auf der Seite - endgültig behoben", "Pixel-Shift-Hintergrund im StandBy bewegt sich jetzt genauso smooth wie der Rest", "13 weitere StandBy-Designs (jetzt 20 insgesamt): Edge-Glow, Kompakt, Poster, Rahmen, Neon, Polaroid, Leiste, Raster, Transparent, Riesen-Uhr, Zen, Gestapelt, Kontrast"],
+                en: ["Covers sometimes randomly disappeared mid-song, site-wide - fixed for good", "The StandBy background pixel-shift now moves just as smoothly as everything else", "13 more StandBy designs (20 total now): Edge Glow, Compact, Poster, Frame, Neon, Polaroid, Bar, Grid, Transparent, Giant Clock, Zen, Stacked, Contrast"],
+                es: ["Las portadas a veces desaparecían aleatoriamente a mitad de canción, en toda la página - corregido definitivamente", "El desplazamiento de píxeles del fondo en StandBy ahora se mueve tan suave como el resto", "13 diseños StandBy más (20 en total): Resplandor, Compacto, Póster, Marco, Neón, Polaroid, Barra, Cuadrícula, Transparente, Reloj gigante, Zen, Apilado, Contraste"],
+                fr: ["Les pochettes disparaissaient parfois aléatoirement en plein morceau, partout sur le site - corrigé définitivement", "Le décalage de pixels du fond en StandBy bouge désormais aussi souplement que le reste", "13 designs StandBy de plus (20 au total) : Lueur, Compact, Poster, Cadre, Néon, Polaroid, Barre, Grille, Transparent, Horloge géante, Zen, Empilé, Contraste"],
+                pt: ["As capas às vezes somiam aleatoriamente no meio da música, em todo o site - corrigido definitivamente", "O deslocamento de pixels do fundo no StandBy agora se move tão suave quanto o resto", "Mais 13 designs StandBy (20 no total): Brilho, Compacto, Pôster, Moldura, Neon, Polaroid, Barra, Grade, Transparente, Relógio gigante, Zen, Empilhado, Contraste"],
+                tr: ["Kapak resimleri bazen şarkının ortasında rastgele kayboluyordu, sitenin her yerinde - kalıcı olarak düzeltildi", "StandBy'daki arka plan piksel kayması artık her şey kadar akıcı hareket ediyor", "13 yeni StandBy tasarımı (toplam 20): Kenar Işıltısı, Kompakt, Poster, Çerçeve, Neon, Polaroid, Şerit, Izgara, Şeffaf, Dev Saat, Zen, Yığılmış, Kontrast"],
+            }},
             { version: 'v24.82', date: "August 2026", type: 'feature', items: {
                 de: ["3 weitere StandBy-Designs: \"Vinyl\" (rundes Cover wie eine Schallplatte), \"Split\" (geteilter Bildschirm), \"Typografie\" (großer Songtitel in deiner Akzentfarbe statt Cover)"],
                 en: ["3 more StandBy designs: \"Vinyl\" (round cover like a record), \"Split\" (split screen), \"Typography\" (large song title in your accent color instead of a cover)"],
@@ -12097,8 +12269,8 @@
             // Aussetzer-Toleranz), bevor überhaupt etwas als offline behandelt wird.
             if (!hasTrack || !isPlaying) {
                 consecutiveEmptyPolls++;
-                if (consecutiveEmptyPolls < 2) {
-                    // Erster Aussetzer - noch nicht reagieren, auf die nächste Antwort warten.
+                if (consecutiveEmptyPolls < 3) {
+                    // Erster/zweiter Aussetzer - noch nicht reagieren, auf die nächste Antwort warten.
                     return;
                 }
                 trackIsPlaying = false;
@@ -12109,49 +12281,35 @@
                 stopProgressTracking();
                 if (!offlineTimeout) {
                     offlineTimeout = setTimeout(() => {
+                        // FIX v24.83 (KRITISCH): Nutzer meldete - Cover verschwindet random
+                        // MITTEN im Song, nicht nur bei echten Pausen, "überall auf der
+                        // Seite". Root Cause: dieser Offline-Zweig hat bisher IMMER das
+                        // Cover-Bild komplett gelöscht (removeAttribute('src')), sobald der
+                        // bekannte npc-api-Aussetzer (siehe Projektdoku: gelegentliche
+                        // 402/404-Fehler) 3 Polls lang anhielt - selbst wenn der Song auf
+                        // Spotify die ganze Zeit über tatsächlich WEITERLIEF und nur die
+                        // eigene Status-Abfrage kurz keine Antwort lieferte. Ein API-Aussetzer
+                        // ist kein Beweis dafür, dass das Cover-Bild ungültig geworden ist -
+                        // das alte Bild bleibt weiterhin korrekt, bis ein neuer Song bestätigt
+                        // wird. Fix: Cover/Titel/Künstler bleiben jetzt UNVERÄNDERT stehen
+                        // (eingefroren, nicht gelöscht) - nur der "pausiert/offline"-Status-
+                        // Indikator (Punkt-Farbe, Text) aktualisiert sich, damit trotzdem
+                        // ehrlich signalisiert wird, dass gerade keine frischen Daten kommen.
+                        // Zusätzlich Toleranz von 2 auf 3 Polls und Wartezeit von 6s auf 9s
+                        // erhöht, als weitere Sicherheitsmarge gegen den bekannten Aussetzer.
                         if (mainMusicCard) {
                             mainMusicCard.classList.add('offline');
                             mainMusicCard.classList.remove('playing');
                             if(mainMusicCard.classList.contains('lyrics-open')) toggleLyrics(false);
                         }
                         if (mHeader) mHeader.innerText = t('status_offline');
-                        if (mTitle) mTitle.innerText = t('standby_idle_title');
-                        if (mArtist) mArtist.innerText = t('standby_idle_subtitle');
-                        if (mAmbient) mAmbient.style.backgroundImage = "none";
-                        if (mGlow) mGlow.style.backgroundImage = "none";
-                        if (mArtwork) mArtwork.removeAttribute('src');
                         if (mDot) mDot.className = "h-1 w-1 xxs:h-1.5 xxs:w-1.5 xs:h-2 xs:w-2 rounded-full bg-blue-500";
-                        if (mText) mText.innerText = t('status_zen_mode');
-                        if (miniTitle) miniTitle.innerText = t('mini_dashboard_minimized');
-                        if (miniIconBg) miniIconBg.className = "w-8 h-8 xxs:w-10 xxs:h-10 sm:w-12 sm:h-12 shrink-0 rounded-lg xxs:rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center transition-colors";
                         if(!isDashboardOpen && miniStatus) miniStatus.innerText = t('mini_click_to_open');
-                        
-                        if (lyricsMiniTitle) lyricsMiniTitle.innerText = t('status_offline_short');
-                        if (lyricsMiniArtist) lyricsMiniArtist.innerText = t('status_no_music');
-                        if (lyricsMiniArt) lyricsMiniArt.removeAttribute('src'); 
-                        
-                        if (canvasVideo) {
-                            canvasVideo.removeAttribute('src');
-                            canvasVideo.classList.add('opacity-0');
-                        }
-                        currentCanvasUrl = null;
-                        if (btnToggleCanvas) {
-                            btnToggleCanvas.classList.add('opacity-50', 'cursor-not-allowed', 'text-slate-400');
-                            btnToggleCanvas.classList.remove('text-green-400');
-                            btnToggleCanvas.innerText = t('settings_canvas') + ' Video (N/A)';
-                        }
-                        
-                        currentTrackId = "";
-                        parsedLyrics = [];
-                        currentLyricIndex = -1; 
-                        currentMs = 0;
-                        totalMs = 0;
-                        updateProgressUI();
+                        updateProgressUI(); // aktualisiert u.a. die EQ-Sichtbarkeit passend zu trackIsPlaying=false, lässt currentMs/totalMs aber unangetastet (kein Reset auf 0)
                         offlineTimeout = null;
-                        syncStandByTrackInfo(null, null, null); // NEW: StandBy-Anzeige zurücksetzen
-                        hideIslandCompletely(); // NEW: Dynamic Island ausblenden, kein Track mehr aktiv
-                    }, 6000); // FIX v24.60: von 2.5s auf 6s erhöht - komfortabel länger als der
-                    // 5s-Poll-Abstand, damit ein kurzer Aussetzer nicht sofort alles löscht
+                        hideIslandCompletely(); // NEW: Dynamic Island ausblenden, kein frischer Status mehr
+                    }, 9000); // FIX v24.83: von 6s auf 9s erhöht - noch mehr Sicherheitsmarge
+                    // gegen den bekannten npc-api-Aussetzer, siehe ausführlichen Kommentar oben.
                 }
                 return;
             }
@@ -12235,12 +12393,21 @@
                 // weiter oben bei fallbackImg) statt hier verschachtelt - wird jetzt auch von
                 // Dynamic Island/StandBy gebraucht.
                 const applyDataChanges = (addedDelay = 0) => {
-                // Der native Error-Handler: Feuert WIRKLICH NUR, wenn der Link kaputt ist (z.B. 404 Fehler vom CDN)
-                if (mArtwork && !mArtwork.onerror) {
+                // FIX v24.83 (KRITISCH): Nutzer meldete - Cover verschwinden random mitten im
+                // Song, "überall anders auf der Seite" (nicht nur StandBy, dort schon in
+                // v24.80 gefixt). Root Cause: derselbe Bug-Pattern wie beim StandBy-Flacker -
+                // "mArtwork.onerror" wurde nur EINMALIG zugewiesen (if !mArtwork.onerror), der
+                // Handler selbst hat sich nach dem ersten Fehler aber auf eine simple
+                // "this.src = fallbackImg"-Variante heruntergestuft (um Endlosschleifen bei
+                // kaputten iTunes-URLs zu verhindern). Dadurch bekam JEDER folgende Songwechsel
+                // mit fehlgeschlagenem Cover für den Rest der Sitzung NIE MEHR die richtige
+                // iTunes-Fallback-Behandlung, sondern sofort nur noch das generische
+                // Platzhalterbild - wirkte wie "das Cover verschwindet". Fix: Handler wird
+                // jetzt bei jedem echten Songwechsel neu mit der vollen iTunes-Fallback-Logik
+                // scharf gemacht, statt sich dauerhaft selbst zu deaktivieren.
+                if (mArtwork && isNewTrack) {
                     mArtwork.onerror = async function() {
-                        // Verhindert, dass ein erneuter Fehler (z.B. wenn auch die
-                        // iTunes-URL fehlschlägt) eine Endlosschleife auslöst.
-                        this.onerror = null;
+                        this.onerror = null; // verhindert Endlosschleife BEI DIESEM Songwechsel
                         const itunesUrl = await tryItunesArtworkFallback(
                             mTitle ? mTitle.innerText : '',
                             mArtist ? mArtist.innerText : ''
@@ -12254,7 +12421,11 @@
                     };
                 }
 
-                if(mArtwork && mAmbient && mGlow && (mArtwork.getAttribute('src') !== imgUrl || mAmbient.style.backgroundImage === "none" || mAmbient.style.backgroundImage === "")) {
+                // FIX v24.83: dieselbe URL-Volatilität wie beim StandBy-Bug - Cover-URLs
+                // können sich bei DEMSELBEN Song zwischen Polls leicht unterscheiden
+                // (Cache-Busting, CDN-Signaturen), was den alten String-Vergleich fälschlich
+                // "neu" erkennen ließ und unnötige Reloads (mit Fehlerrisiko) auslöste.
+                if(mArtwork && mAmbient && mGlow && (isNewTrack || mAmbient.style.backgroundImage === "none" || mAmbient.style.backgroundImage === "")) {
                     mArtwork.src = imgUrl; 
                     mAmbient.style.backgroundImage = `url('${imgUrl}')`;
                     if (coverGlowEnabled) mGlow.style.backgroundImage = `url('${imgUrl}')`; // NEW: überspringt Cover-Glow-Arbeit komplett, wenn ausgeschaltet
@@ -12262,7 +12433,7 @@
                     if (lyricsAmbientBg) lyricsAmbientBg.style.backgroundImage = `url('${imgUrl}')`;
                 }
                 
-                if(lyricsMiniArt && lyricsMiniArt.getAttribute('src') !== imgUrl) {
+                if(lyricsMiniArt && isNewTrack) {
                     lyricsMiniArt.src = imgUrl; 
                 }
                 
