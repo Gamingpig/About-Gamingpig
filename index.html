@@ -11,6 +11,35 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FIX - KRITISCH] Release v24.97: Unerwünschter Auto-Reload wieder aufgetreten - Notfall-
+    Selbstheilung aus der alten "Fortschrittsbalken eingefroren"-Saga (v24.66/67) neu untersucht
+      - Nutzer meldete: Seite lädt sich unerwünscht von selbst neu, sowohl im StandBy als auch
+        bei normaler Nutzung.
+      - Vollständigen Code nach ALLEN automatischen window.location.reload()-Aufrufen
+        durchsucht - es gibt nur einen einzigen (der manuelle Befehlspaletten-Eintrag und der
+        einmalige Tutorial-Abschluss-Reload sind Nutzer-ausgelöst bzw. laufen nur einmal, kein
+        Kandidat). Der einzige echte automatische Kandidat: die "Notfall-Selbstheilung" aus
+        v24.66/67 (40 Sekunden unveränderter Zeit-Text trotz laufender Musik -> automatischer
+        Reload). Diese schließt StandBy explizit aus (kann während StandBy selbst also NICHT
+        auslösen, bestätigt durch Code-Lesen) - aber ein echter Robustheits-Fehler beim Audit
+        gefunden: lastVisibleTimeText wurde bisher NUR im normalen Vergleichszweig
+        aktualisiert, nicht aber beim Überspringen wegen StandBy/Hintergrund. Blieb die App
+        länger in einem dieser Zustände (z.B. StandBy über Nacht), stand dort ein Minuten bis
+        Stunden alter Text-Wert. Direkt nach dem Verlassen von StandBy/Hintergrund verglich
+        der nächste Tick dann gegen diesen veralteten Wert - passt der aktuelle Text zufällig
+        (wieder) dazu, oder braucht startProgressTracking() nach dem Verlassen einen Moment,
+        bis timeCurrentEl neu beschrieben wird, konnte das fälschlich als "eingefroren" zählen.
+        Erklärt vermutlich auch den "beim StandBy"-Eindruck des Nutzers: der Reload selbst
+        passiert erst NACH dem Verlassen, wird aber besonders bemerkt, wenn StandBy gerade
+        (z.B. über Nacht) lief.
+      - Fix: lastVisibleTimeText wird jetzt beim Überspringen konsequent auf null gesetzt
+        (statt nur den Timer zurückzusetzen) - der nächste echte Vergleich startet dadurch
+        immer mit einer frischen Basis, nie mit einem veralteten Wert von vor Minuten/Stunden.
+      - EHRLICHER VORBEHALT: ohne Konsolen-Log ("Notfall-Selbstheilung: ...") vom Nutzer nicht
+        zu 100% bestätigt, dass dies exakt der beobachtete Fall war - falls das Problem trotz
+        dieses Fixes weiterhin auftritt, wäre die Browser-Konsole direkt vor dem nächsten
+        Reload der entscheidende nächste Anhaltspunkt.
+
     [FIX - KRITISCH] Release v24.96: Cover laden nicht, wenn Dashboard geschlossen ist (z.B.
     Dynamic Island allein sichtbar) - dritte Regression aus dem eigenen Canvas-Umbau v24.87
       - Nutzer meldete: Dynamic Island lädt kein Cover, wenn das Dashboard nicht geöffnet ist -
@@ -4740,7 +4769,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.96 · 2026-08-14';
+        const SITE_VERSION = 'v24.97 · 2026-08-14';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -10620,6 +10649,14 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.97', date: "August 2026", type: 'fix', items: {
+                de: ["Unerwünschter automatischer Neuladen-Bug behoben - trat besonders nach längerem StandBy/Hintergrund auf"],
+                en: ["Fixed an unwanted auto-reload bug - especially noticeable after extended StandBy/background use"],
+                es: ["Corregido un error de recarga automática no deseada - especialmente notable tras un uso prolongado en StandBy/segundo plano"],
+                fr: ["Correction d'un bug de rechargement automatique indésirable - particulièrement visible après une utilisation prolongée en StandBy/arrière-plan"],
+                pt: ["Corrigido um bug de recarregamento automático indesejado - especialmente perceptível após uso prolongado em StandBy/segundo plano"],
+                tr: ["İstenmeyen otomatik yeniden yükleme hatası düzeltildi - özellikle uzun süreli StandBy/arka plan kullanımından sonra fark ediliyordu"],
+            }},
             { version: 'v24.96', date: "August 2026", type: 'fix', items: {
                 de: ["Cover luden nicht, wenn das Dashboard nicht geöffnet war (z.B. nur Dynamic Island sichtbar) - jetzt immer und überall zuverlässig bereit"],
                 en: ["Covers weren't loading when the dashboard was closed (e.g. only Dynamic Island visible) - now reliably ready everywhere, always"],
@@ -13689,13 +13726,33 @@
             // korrekte Verhalten, kein Bug. Genauso im Hintergrund-Tab (document.hidden), wo
             // aus denselben Effizienzgründen ebenfalls pausiert wird. Beide Zustände jetzt
             // explizit übersprungen, bevor überhaupt gemessen wird.
+            // NACHTRAG (überholt seit v24.70): StandBy tickt Fortschritt inzwischen live mit
+            // eigenem, günstigerem Takt - die obige Prämisse "während StandBy läuft nichts"
+            // stimmt nicht mehr, macht den Ausschluss hier aber nicht falsch, nur nicht mehr
+            // ganz treffend begründet. Bleibt trotzdem korrekt: dieser Check beobachtet gezielt
+            // die HAUPT-Karte, die während StandBy ohnehin unsichtbar ist.
+            // FIX v24.97 (KRITISCH): Nutzer meldete - unerwünschter Reload sowohl im StandBy
+            // als auch bei normaler Nutzung. Beim Code-Audit einen echten Robustheits-Fehler
+            // gefunden: lastVisibleTimeText wurde bisher NUR im unteren Zweig aktualisiert,
+            // nicht aber hier beim Überspringen wegen StandBy/Hintergrund - blieb die App
+            // länger in einem dieser Zustände (z.B. StandBy über Nacht), stand dort ein
+            // MINUTEN bis STUNDEN alter Text-Wert. Direkt nach dem Verlassen von StandBy/
+            // Hintergrund verglich der nächste Tick dann gegen diesen veralteten Wert - falls
+            // die aktuelle Anzeige zufällig genau diesen alten Text (wieder) zeigte (z.B. beim
+          // Übergang, bevor der erste frische Tick durchkam), oder falls startProgressTracking()
+            // nach dem Verlassen einen Moment brauchte, bis timeCurrentEl neu beschrieben wurde,
+            // konnte das fälschlich als "eingefroren" zählen. Jetzt wird lastVisibleTimeText
+            // beim Überspringen ebenfalls konsequent auf null gesetzt (statt nur den Timer),
+            // damit der nächste echte Vergleich immer mit einer frischen Basis startet, nie
+            // mit einem Wert von vor Minuten/Stunden.
             if (standByActive || document.hidden) {
-                lastVisibleTimeChangeAt = Date.now(); // Zähler zurücksetzen statt einfach zu pausieren, damit direkt nach dem Verlassen von StandBy nicht sofort ein "40s alt" fälschlich gilt
+                lastVisibleTimeChangeAt = Date.now();
+                lastVisibleTimeText = null; // NEU v24.97: frische Basis erzwingen, kein veralteter Vergleichswert
                 return;
             }
             if (!trackIsPlaying || !timeCurrentEl) return;
             const nowText = timeCurrentEl.innerText;
-            if (nowText !== lastVisibleTimeText) {
+            if (nowText !== lastVisibleTimeText || lastVisibleTimeText === null) {
                 lastVisibleTimeText = nowText;
                 lastVisibleTimeChangeAt = Date.now();
                 return;
