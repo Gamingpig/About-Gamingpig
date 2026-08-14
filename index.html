@@ -11,6 +11,28 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FIX - KRITISCH] Release v24.95: Lyrics-Ansicht falsch zentriert/positioniert (Nutzer per
+    Screen-Recording bestätigt)
+      - Nutzer schickte ein zweites Screen-Recording und stellte klar: der eigentliche Bug
+        zeigt sich beim ÖFFNEN der Lyrics-Ansicht selbst - Positionierung und Größe der Karte
+        "komplett kaputt", bei JEDEM Lyrics-Style. Gestern nur auf iPhone aufgetreten, heute
+        auf beiden Plattformen (Android und iOS).
+      - Per Pixel-Vermessung im direkten Seitenvergleich (Dashboard vs. Lyrics-Ansicht,
+        identische Bildhöhe) bestätigt: im Dashboard-Zustand ist die Karte fast symmetrisch
+        zentriert (linker Rand ~30px, rechter Rand ~28px). Im geöffneten Lyrics-Zustand bleibt
+        der linke Rand ähnlich (~30px), der rechte Rand schrumpft aber auf fast nichts (~6px) -
+        keine symmetrische Zentrierung mehr, obwohl die Tailwind-Klasse "mx-auto"
+        (margin-left/right: auto) unverändert auf dem Element sitzt.
+      - Konnte die exakte Ursache der Kollision ohne Live-DevTools-Zugriff nicht abschließend
+        auf eine einzelne Zeile zurückführen - stattdessen defensiv und robust gelöst: Breite
+        UND Zentrierung im lyrics-open-Zustand jetzt direkt mit !important erzwungen
+        (margin-left/right: auto, plus width: 100% zusätzlich zu max-width: 100% im mobilen
+        Breakpoint), unabhängig davon, was genau die Tailwind-Klasse zuvor überschrieben oder
+        ignoriert hat.
+      - EHRLICHER VORBEHALT: kein echtes Geräte-Testing möglich. Bitte nach dem Deploy genau
+        wie im Video - Dashboard öffnen, dann Lyrics öffnen - gegenchecken, auf beiden
+        Plattformen und mit mehreren Lyrics-Styles.
+
     [FIX - KRITISCH] Release v24.94: Cover verschwinden dauerhaft nach Rückkehr aus dem
     Hintergrund (Regression aus dem eigenen Canvas-Umbau v24.87)
       - Nutzer schickte ein Screen-Recording - hat den Bug sichtbar gemacht: Lyrics-Mini-
@@ -3331,11 +3353,21 @@
             /* FIX: Butterweiche Animationen für Dimensionen hinzufügen! */
             transition: max-width 0.8s var(--apple-spring), min-height 0.8s var(--apple-spring), box-shadow 0.4s ease, border-radius 0.6s var(--apple-spring), transform 0.6s var(--apple-spring) !important;
         }
-        #main-music-card.lyrics-open { max-width: 800px !important; min-height: 80vh !important; }
+        /* FIX v24.95 (KRITISCH): Nutzer schickte Screen-Recording - Positionierung/Größe der
+           Karte beim Öffnen der Lyrics-Ansicht komplett kaputt (Pixel-Vermessung im
+           Seitenvergleich bestätigt: linker Rand bleibt fast wie im Dashboard, rechter Rand
+           schrumpft dagegen auf fast nichts - keine symmetrische Zentrierung mehr). Betraf
+           laut Nutzer gestern nur iOS, heute beide Plattformen, bei jedem Lyrics-Style.
+           #main-music-card zentriert sich normalerweise über die Tailwind-Klasse "mx-auto"
+           (margin-left/right: auto) - warum genau das speziell im lyrics-open-Zustand nicht
+           mehr zuverlässig greift, ließ sich ohne Live-DevTools nicht abschließend klären.
+           Defensive, robuste Lösung: Zentrierung hier direkt und explizit mit !important
+           erzwungen, unabhängig davon, was die Ursache der Kollision war. */
+        #main-music-card.lyrics-open { max-width: 800px !important; min-height: 80vh !important; margin-left: auto !important; margin-right: auto !important; }
         /* Sicherung: auf kleinen Bildschirmen darf die Karte nie breiter als der verfügbare
            Platz werden - der 800px-Wert oben ist nur für größere Bildschirme gedacht. */
         @media (max-width: 640px) {
-            #main-music-card.lyrics-open { max-width: 100% !important; }
+            #main-music-card.lyrics-open { max-width: 100% !important; width: 100% !important; margin-left: auto !important; margin-right: auto !important; }
         }
         #main-music-card #track-title { color: #ffffff !important; }
         #main-music-card #track-artist { color: rgba(255, 255, 255, 0.7) !important; }
@@ -4686,7 +4718,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.94 · 2026-08-14';
+        const SITE_VERSION = 'v24.95 · 2026-08-14';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -10553,6 +10585,14 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.95', date: "August 2026", type: 'fix', items: {
+                de: ["Lyrics-Ansicht war beim Öffnen falsch zentriert (Karte rechts fast randlos statt symmetrisch) - jetzt bei jedem Style korrekt"],
+                en: ["The lyrics view was incorrectly centered when opening (card nearly edge-to-edge on the right instead of symmetric) - now correct with every style"],
+                es: ["La vista de letras estaba mal centrada al abrirse (tarjeta casi sin margen a la derecha en vez de simétrica) - ahora correcta con cada estilo"],
+                fr: ["La vue des paroles était mal centrée à l'ouverture (carte presque sans marge à droite au lieu d'être symétrique) - désormais correcte avec chaque style"],
+                pt: ["A visualização da letra ficava mal centralizada ao abrir (cartão quase sem margem à direita em vez de simétrico) - agora correta em todos os estilos"],
+                tr: ["Söz görünümü açılırken yanlış ortalanıyordu (kart sağda simetrik yerine neredeyse kenara yapışık) - artık her stilde doğru"],
+            }},
             { version: 'v24.94', date: "August 2026", type: 'fix', items: {
                 de: ["Cover blieben nach Rückkehr aus dem Hintergrund manchmal dauerhaft leer (Lyrics-Vorschau, Dynamic Island) - jetzt selbstheilend behoben"],
                 en: ["Covers sometimes stayed permanently blank after returning from the background (lyrics preview, Dynamic Island) - now fixed with self-healing logic"],
