@@ -11,6 +11,28 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FIX - KRITISCH] Release v24.96: Cover laden nicht, wenn Dashboard geschlossen ist (z.B.
+    Dynamic Island allein sichtbar) - dritte Regression aus dem eigenen Canvas-Umbau v24.87
+      - Nutzer meldete: Dynamic Island lädt kein Cover, wenn das Dashboard nicht geöffnet ist -
+        Cover müssen unabhängig von Sichtbarkeit IMMER überall bereit sein, sobald die Seite
+        besucht wird, ein Songwechsel passiert, oder Wiedergabe startet.
+      - Root Cause im eigenen v24.87-Umbau gefunden: mArtwork.decode() kann bei einem
+        unsichtbaren/0px-hohen Element scheitern (Dashboard eingeklappt -> grid-template-
+        rows:0fr, siehe #music-card-layout-wrapper) - manche Browser lehnen decode() für
+        Elemente ohne gerenderte Größe ab, OBWOHL das Bild selbst längst fertig geladen ist.
+        syncAllCoverConsumers() brach bei einem fehlgeschlagenen decode() bisher per "return"
+        KOMPLETT ab - und riss dabei auch #di-art/#lyrics-mini-art/#standby-track-art mit in
+        den Abbruch, obwohl drawCoverToCanvas() ohnehin ihre eigene, von decode() unabhängige
+        Bereitschaftsprüfung hat (complete + naturalWidth) und drawImage() selbst notfalls
+        synchron nachdekodiert.
+      - Fix: ein fehlgeschlagenes decode() ist jetzt NICHT mehr fatal für den Rest der
+        Funktion - decode() bleibt als reiner Performance-Vorteil bestehen (vermeidet Jank,
+        wenn's klappt), läuft bei einem Fehlschlag aber einfach normal weiter statt
+        abzubrechen. Damit die insgesamt dritte gefundene Regression aus dem Canvas-Umbau
+        (nach dem Bild-Verschwinden-Bug in v24.94 und diesem hier) - alle drei haben
+        gemeinsam, dass der neue Ansatz an Rand-/Timing-Fällen fragiler war als das alte,
+        unabhängige <img>-Laden je Element.
+
     [FIX - KRITISCH] Release v24.95: Lyrics-Ansicht falsch zentriert/positioniert (Nutzer per
     Screen-Recording bestätigt)
       - Nutzer schickte ein zweites Screen-Recording und stellte klar: der eigentliche Bug
@@ -4718,7 +4740,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.95 · 2026-08-14';
+        const SITE_VERSION = 'v24.96 · 2026-08-14';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -7440,9 +7462,22 @@
         // ist) bleibt dadurch erhalten, auch mit dem neuen Canvas-Ansatz.
         async function syncAllCoverConsumers() {
             if (!mArtwork || !mArtwork.src) return;
+            // FIX v24.96 (KRITISCH): Nutzer meldete - Cover laden nicht, wenn das Dashboard
+            // gar nicht geöffnet ist (z.B. Dynamic Island allein sichtbar). Root Cause im
+            // eigenen v24.87-Umbau: mArtwork.decode() kann bei einem unsichtbaren/0px-hohen
+            // Element scheitern (Dashboard eingeklappt -> grid-template-rows:0fr, siehe
+            // #music-card-layout-wrapper) - manche Browser lehnen decode() für Elemente ohne
+            // gerenderte Größe ab, OBWOHL das Bild selbst längst fertig geladen ist. Der
+            // bisherige Code brach bei einem fehlgeschlagenen decode() per "return" KOMPLETT
+            // ab - und riss dabei auch #di-art/#lyrics-mini-art/#standby-track-art mit in den
+            // Abbruch, obwohl die dafür zuständige drawCoverToCanvas() ohnehin ihre eigene,
+            // von decode() unabhängige Bereitschaftsprüfung hat (komplett + naturalWidth) und
+            // drawImage() selbst notfalls synchron nachdekodiert. decode() bleibt als reiner
+            // Performance-Vorteil bestehen (vermeidet Jank, wenn's klappt), ein Fehlschlag ist
+            // aber jetzt NICHT mehr fatal für den Rest der Funktion - läuft danach normal weiter.
             try {
                 if (typeof mArtwork.decode === 'function') await mArtwork.decode();
-            } catch (e) { return; } // #artwork (noch) nicht ladbar - dessen eigene onerror-Kette kümmert sich darum
+            } catch (e) { /* kein Abbruch mehr - siehe Begründung oben, drawCoverToCanvas prüft selbst */ }
             const diCanvas = document.getElementById('di-art');
             if (diCanvas) drawCoverToCanvas(diCanvas, mArtwork);
             const lyricsCanvas = document.getElementById('lyrics-mini-art');
@@ -10585,6 +10620,14 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.96', date: "August 2026", type: 'fix', items: {
+                de: ["Cover luden nicht, wenn das Dashboard nicht geöffnet war (z.B. nur Dynamic Island sichtbar) - jetzt immer und überall zuverlässig bereit"],
+                en: ["Covers weren't loading when the dashboard was closed (e.g. only Dynamic Island visible) - now reliably ready everywhere, always"],
+                es: ["Las portadas no cargaban cuando el panel estaba cerrado (p. ej. solo Dynamic Island visible) - ahora siempre listas y fiables en todas partes"],
+                fr: ["Les pochettes ne se chargeaient pas quand le tableau de bord était fermé (ex. seule Dynamic Island visible) - désormais toujours prêtes partout de façon fiable"],
+                pt: ["As capas não carregavam quando o painel estava fechado (ex. só Dynamic Island visível) - agora sempre prontas e confiáveis em todo lugar"],
+                tr: ["Pano kapalıyken kapaklar yüklenmiyordu (ör. yalnızca Dynamic Island görünürken) - artık her yerde her zaman güvenilir şekilde hazır"],
+            }},
             { version: 'v24.95', date: "August 2026", type: 'fix', items: {
                 de: ["Lyrics-Ansicht war beim Öffnen falsch zentriert (Karte rechts fast randlos statt symmetrisch) - jetzt bei jedem Style korrekt"],
                 en: ["The lyrics view was incorrectly centered when opening (card nearly edge-to-edge on the right instead of symmetric) - now correct with every style"],
