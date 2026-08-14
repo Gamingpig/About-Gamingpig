@@ -11,6 +11,48 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FIX - KRITISCH] Release v24.85: Punch-Hole-Kamera-Kollision (Pixel 8 Pro, Ordner 41) +
+    weitere Cover-Ladezeit-Optimierung
+      - Punch-Hole-Problem: Nutzer meldete auf Pixel 8 Pro (getestet mit v24.83) - Uhr liegt
+        bei mehreren StandBy-Layouts hinter/unter der Frontkamera. Root Cause: fester
+        Top-Abstand (48px bzw. teils sogar nur 24px oder 0px bei einzelnen Designs), komplett
+        ohne Rücksicht auf safe-area-inset-top - das Muster wird an anderen Stellen der Seite
+        längst genutzt (Dynamic Island, #ui-controls), hier bei den neueren StandBy-Designs
+        aber übersehen. Fix: #standby-clockzone (Basis, wirkt für Classic/Vinyl/Typografie/
+        Giant-Clock/Zen/Clock-Only), "Cover-Fokus", "Kompakt" und "Raster" nutzen jetzt
+        max(fester Wert, env(safe-area-inset-top) + Puffer) - weicht automatisch der Kamera
+        aus, auf jedem Gerät mit Punch-Hole/Notch, nicht nur dem Pixel 8 Pro.
+      - Cover-Ladezeit: nach der großen Aufräumaktion in v24.79 (bis zu 6 gleichzeitige
+        Bild-Ladevorgänge auf das Nötigste reduziert) jetzt zusätzlich decoding="async" auf
+        allen vier Cover-<img>-Elementen (Hauptkarte, StandBy, Dynamic Island, Lyrics-Mini) -
+        Bild-Dekodierung blockiert dadurch nicht mehr den Haupt-Thread. Zusätzlich
+        fetchpriority="high" auf dem Hauptkarten-Cover (mit Abstand wichtigstes, immer
+        sichtbares Bild) - beides Standard-HTML-Attribute, von allen modernen Browsern
+        unterstützt, kein Risiko bei fehlender Unterstützung.
+
+    [FIX - KRITISCH] Release v24.84: Cover-Fokus zu breit auf bestimmten Displays/Ausrichtungen
+    + vorbeugender Fix für die neue Versionsvergleichs-Logik aus v24.83
+      - Cover-Fokus: Nutzer meldete - Cover zu breit auf bestimmten Displays/Ausrichtungen.
+        Root Cause: Breite war rein an "vw" (gesamte Bildschirmbreite) gekoppelt (56vw), im
+        Querformat ist die Now-Playing-Karte selbst aber separat auf 46vw gedeckelt (Landscape-
+        Regel aus v24.77) - das Cover konnte dadurch breiter werden als sein eigener Container,
+        weil vw sich immer auf den GANZEN Bildschirm bezieht, nicht auf die tatsächlich
+        verfügbare Breite der Karte. Fix: zusätzlich mit 65% relativ zur Karte selbst gedeckelt
+        (min(56vw, 65%)) - kann jetzt nie mehr breiter werden als sein eigener Container,
+        unabhängig von Bildschirmgröße/Ausrichtung. Obergrenze zur Sicherheit von 300px auf
+        280px reduziert. Andere Designs mit vw-basierten Cover-Größen (Poster, Polaroid, Zen)
+        geprüft - dort ist die Größenordnung proportional zur jeweiligen Karten-Breite
+        konsistent, kein gleiches Overflow-Risiko gefunden.
+      - Vorbeugender Fix: beim Prüfen der neuen "Was ist neu"-Warteschlange (v24.83) einen
+        latenten Zukunfts-Bug in parseVersionNum() gefunden - Versionen wurden per
+        parseFloat(major + '.' + minor) verglichen, was bei unterschiedlich langen Minor-
+        Versionen grundsätzlich falsch sortiert (z.B. "24.10" als 24.1 interpretiert, damit
+        fälschlich VOR "24.9" einsortiert). Tritt aktuell noch nicht auf (alle bisherigen
+        Minor-Versionen zweistellig), wäre aber spätestens beim Sprung von v24.99 auf v24.100
+        garantiert aufgetreten - bei dem Tempo dieser Session nur eine Frage der Zeit. Fix:
+        Major/Minor jetzt als getrennte Ganzzahlen behandelt statt als Dezimalbruch verkettet,
+        per Node-Skript gegengetestet (u.a. 24.9 vs 24.10, 24.99 vs 24.100 - beide jetzt korrekt).
+
     [FIX/FEATURE - KRITISCH] Release v24.83: Cover-Verschwinden-Bug behoben + Pixel-Shift jetzt
     überall smooth + 13 weitere StandBy-Designs (20 insgesamt)
       - Cover-Verschwinden: Nutzer meldete - Cover verschwinden random mitten im Song,
@@ -3898,7 +3940,16 @@
             100% { transform: scale(1.28) translate(-1.2%, -1.2%); }
         }
 
-        #standby-clockzone { position: relative; z-index: 2; text-align: center; padding: 48px 20px 0; }
+        #standby-clockzone {
+            position: relative; z-index: 2; text-align: center;
+            /* FIX v24.85 (KRITISCH): Nutzer meldete auf Pixel 8 Pro - Uhr liegt bei mehreren
+               Layouts hinter/unter der Punch-Hole-Frontkamera. Root Cause: fester 48px-Top-
+               Abstand, komplett ohne Rücksicht auf safe-area-inset-top (die genau für sowas
+               da ist, wird an anderen Stellen der Seite schon längst genutzt - Dynamic
+               Island, #ui-controls - hier aber übersehen). max() sorgt dafür, dass IMMER
+               mindestens der größere der beiden Werte greift, je nach Gerät. */
+            padding: max(48px, calc(env(safe-area-inset-top, 0px) + 32px)) 20px 0;
+        }
         #standby-clock { font-family: 'JetBrains Mono', monospace; font-weight: 800; color: #fff; font-size: clamp(2.6rem, 13vw, 6rem); line-height: 1; letter-spacing: -2px; text-shadow: 0 0 60px rgba(255,255,255,0.25); }
         #standby-date { color: rgba(255,255,255,0.6); font-size: clamp(0.75rem, 2.8vw, 1rem); font-weight: 600; margin-top: 6px; text-transform: capitalize; }
 
@@ -3998,9 +4049,18 @@
         #standby-overlay.standby-design-minimal #standby-track-artist { white-space: normal; text-overflow: clip; }
         /* Design "Cover-Fokus": großes, zentrales Cover, Text darunter zentriert statt daneben. */
         #standby-overlay.standby-design-cover-focus #standby-track { flex-direction: column; gap: 18px; }
-        #standby-overlay.standby-design-cover-focus #standby-track-art-wrap { width: clamp(180px, 56vw, 300px); height: clamp(180px, 56vw, 300px); }
+        /* FIX v24.84: Nutzer meldete - Cover-Fokus ist auf bestimmten Displays/Ausrichtungen
+           zu breit. Root Cause: die Breite war rein an "vw" (gesamte Bildschirmbreite)
+           gekoppelt - im Querformat ist die Now-Playing-Karte selbst aber separat auf 46vw
+           gedeckelt (siehe Landscape-Regel), das Cover konnte dadurch leicht BREITER werden
+           als sein eigener Container, weil vw sich immer auf den ganzen Bildschirm bezieht,
+           nicht auf die tatsächlich verfügbare Breite der Karte. Fix: zusätzlich mit einem
+           Prozentwert relativ zur Karte selbst gedeckelt (65%) - kann dadurch nie mehr breiter
+           werden als sein eigener Container, unabhängig von Bildschirmgröße/Ausrichtung.
+           Obergrenze zur Sicherheit außerdem von 300px auf 280px reduziert. */
+        #standby-overlay.standby-design-cover-focus #standby-track-art-wrap { width: clamp(140px, min(56vw, 65%), 280px); height: clamp(140px, min(56vw, 65%), 280px); }
         #standby-overlay.standby-design-cover-focus #standby-track-text { text-align: center; flex: none; }
-        #standby-overlay.standby-design-cover-focus #standby-clockzone { padding-top: 24px; }
+        #standby-overlay.standby-design-cover-focus #standby-clockzone { padding-top: max(24px, calc(env(safe-area-inset-top, 0px) + 20px)); }
         #standby-overlay.standby-design-cover-focus #standby-clock { font-size: clamp(1.8rem, 9vw, 3.6rem); }
         /* Design "Nur Uhr": StandBy als reine Ambient-Uhr, Now-Playing-Karte komplett
            ausgeblendet (Musik läuft trotzdem ganz normal weiter im Hintergrund). */
@@ -4057,7 +4117,13 @@
         /* "Edge-Glow": kein Blur, dafür ein leuchtender Rahmen in der Akzentfarbe. */
         #standby-overlay.standby-design-edge-glow #standby-nowplaying { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(0,0,0,0.35); border: 2px solid var(--standby-accent, #fff); box-shadow: 0 0 30px 2px var(--standby-accent, rgba(255,255,255,0.4)); }
         /* "Kompakt": kleine Karte, in eine Ecke gerückt statt zentriert - viel Hintergrund sichtbar. */
-        #standby-overlay.standby-design-compact #standby-shift-wrapper { justify-content: flex-end; align-items: flex-start; padding: 24px; }
+        #standby-overlay.standby-design-compact #standby-shift-wrapper {
+            justify-content: flex-end; align-items: flex-start;
+            /* FIX v24.85: siehe ausführlichen Kommentar bei #standby-clockzone - dieselbe
+               Punch-Hole-Kamera-Problematik, hier speziell weil "Kompakt" bewusst oben
+               positioniert (align-items: flex-start). */
+            padding: max(24px, calc(env(safe-area-inset-top, 0px) + 20px)) 24px 24px;
+        }
         #standby-overlay.standby-design-compact #standby-nowplaying { width: min(70vw, 320px); }
         #standby-overlay.standby-design-compact #standby-clockzone { text-align: left; padding: 0; }
         #standby-overlay.standby-design-compact #standby-clock { font-size: clamp(1.6rem, 8vw, 3rem); }
@@ -4080,7 +4146,16 @@
         #standby-overlay.standby-design-bar #standby-nowplaying { position: fixed; left: 16px; right: 16px; bottom: 16px; width: auto; margin: 0; }
         #standby-overlay.standby-design-bar #standby-track-art-wrap { width: 56px; height: 56px; border-radius: 14px; }
         /* "Raster": Uhr klein oben links, Cover zentral, Text unten rechts - versetzte Anordnung. */
-        #standby-overlay.standby-design-grid #standby-clockzone { position: fixed; top: 24px; left: 24px; padding: 0; text-align: left; }
+        #standby-overlay.standby-design-grid #standby-clockzone {
+            position: fixed;
+            /* FIX v24.85: siehe ausführlichen Kommentar bei #standby-clockzone - "Raster"
+               positioniert die Uhr fest oben links, exakt dort wo bei den meisten Punch-Hole-
+               Kameras (Pixel 8 Pro u.a. mittig, andere Geräte links) die Kollisionsgefahr am
+               größten ist. */
+            top: max(24px, calc(env(safe-area-inset-top, 0px) + 16px));
+            left: max(24px, env(safe-area-inset-left, 0px));
+            padding: 0; text-align: left;
+        }
         #standby-overlay.standby-design-grid #standby-clock { font-size: clamp(1.4rem, 6vw, 2.2rem); }
         #standby-overlay.standby-design-grid #standby-nowplaying { position: fixed; bottom: 24px; right: 24px; left: auto; margin: 0; width: min(60vw, 340px); }
         /* "Transparent": Karte ganz ohne Hintergrundfläche - Cover/Text scheinen frei zu schweben. */
@@ -4313,7 +4388,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.83 · 2026-08-13';
+        const SITE_VERSION = 'v24.85 · 2026-08-13';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -4358,7 +4433,7 @@
     <div id="dynamic-island-ring" aria-hidden="true"></div>
     <div id="dynamic-island" role="button" tabindex="0" aria-label="Song-Details öffnen, nach oben wischen zum Ausblenden">
         <div id="dynamic-island-row">
-            <img id="di-art" src="" alt="" draggable="false" oncontextmenu="return false;">
+            <img id="di-art" src="" alt="" draggable="false" oncontextmenu="return false;" decoding="async">
             <div class="di-text">
                 <p class="di-title" id="di-title"></p>
                 <p class="di-artist" id="di-artist"></p>
@@ -4379,7 +4454,7 @@
             <div id="standby-nowplaying" class="standby-idle">
                 <div id="standby-track">
                     <div id="standby-track-art-wrap">
-                        <img id="standby-track-art" alt="">
+                        <img id="standby-track-art" alt="" decoding="async">
                         <div id="standby-eq"><span></span><span></span><span></span></div>
                     </div>
                     <div id="standby-track-text">
@@ -4727,7 +4802,7 @@
                         
                         <div class="flex items-center justify-between gap-1.5 xxs:gap-2 sm:gap-4 mb-3 xxs:mb-4 sm:mb-6 shrink-0 w-full bg-white/10 p-1.5 xxs:p-2 xs:p-3 sm:p-4 rounded-lg xxs:rounded-xl sm:rounded-2xl border border-white/10 relative z-[100]">
                             <div class="flex items-center gap-1.5 xxs:gap-2 sm:gap-3 min-w-0 flex-1">
-                                    <img id="lyrics-mini-art" src="" alt="Album Art" class="w-6 h-6 xxs:w-8 xxs:h-8 sm:w-10 sm:h-10 rounded shadow-md object-cover shrink-0">
+                                    <img id="lyrics-mini-art" src="" alt="Album Art" class="w-6 h-6 xxs:w-8 xxs:h-8 sm:w-10 sm:h-10 rounded shadow-md object-cover shrink-0" decoding="async">
                                     <div class="text-left min-w-0">
                                         <p id="lyrics-mini-title" class="text-[10px] xxs:text-xs sm:text-sm font-bold text-white truncate" data-i18n-placeholder="true">Titel</p>
                                         <p id="lyrics-mini-artist" class="text-[8px] xxs:text-[10px] sm:text-xs text-white/60 truncate" data-i18n-placeholder="true">Artist</p>
@@ -4895,7 +4970,13 @@
                         </div>
 
                         <div id="media-container" onclick="toggleMusicPicker(true)" role="button" tabindex="0" class="relative z-10 w-full max-w-[100px] xxs:max-w-[140px] xs:max-w-[180px] sm:max-w-[240px] md:max-w-[280px] aspect-square shrink-0 rounded-xl xxs:rounded-2xl mx-auto mb-2 xxs:mb-3 sm:mb-4 md:mb-6 overflow-hidden flex items-center justify-center bg-[#121212] shadow-[0_10px_30px_rgba(0,0,0,0.8)] sm:shadow-[0_20px_40px_rgba(0,0,0,0.8)] cursor-pointer hover:ring-2 hover:ring-white/20 transition-all">
-                            <img id="artwork" src="" alt="Album Artwork" class="w-full h-full object-cover">
+                            <!-- FIX v24.85: decoding="async" ergänzt (Bild-Dekodierung blockiert dadurch nicht
+                 den Haupt-Thread/das Rendering) + fetchpriority="high" auf dem Haupt-Cover
+                 (das mit Abstand wichtigste, immer sichtbare Bild) - Nutzerwunsch nach noch
+                 schnellerem Laden, nachdem in v24.79 bereits die Anzahl gleichzeitiger
+                 Bild-Ladevorgänge reduziert wurde. Beides Standard-HTML-Attribute, von allen
+                 modernen Browsern unterstützt, ohne Risiko bei fehlender Unterstützung. -->
+            <img id="artwork" src="" alt="Album Artwork" class="w-full h-full object-cover" decoding="async" fetchpriority="high">
                             <div id="offline-icon" class="absolute text-2xl xxs:text-4xl sm:text-6xl" aria-hidden="true">🌙</div>
                         </div>
 
@@ -6653,9 +6734,20 @@
         function parseVersionNum(v) {
             // NEU v24.83: kleine Hilfsfunktion für den Versionsvergleich unten -
             // "v24.82" -> 24.82 als Zahl.
+            // FIX v24.84 (KRITISCH, vorbeugend): Die ursprüngliche parseFloat(major + '.' +
+            // minor)-Methode ist bei Versionsnummern grundsätzlich fehleranfällig, sobald die
+            // Minor-Version unterschiedlich viele Stellen hat - z.B. würde "24.9" als 24.9
+            // interpretiert, "24.10" aber als 24.1 (!), also fälschlich VOR "24.9" einsortiert,
+            // obwohl 10 chronologisch nach 9 kommt. Aktuell tritt das noch nicht auf (alle
+            // Minor-Versionen bisher zweistellig, .15 bis .83), aber bei stetig steigenden
+            // Versionsnummern (gerade in dieser Session ging es zügig voran) ist ein Sprung
+            // von z.B. v24.99 auf v24.100 nur eine Frage der Zeit - "24.100" würde dann als
+            // 24.1 interpretiert, fälschlich VOR "24.99" einsortiert. Fix: Major und Minor
+            // jetzt als getrennte Ganzzahlen behandelt statt als Dezimalbruch verkettet -
+            // bleibt korrekt, egal wie viele Stellen die Minor-Version später mal hat.
             const m = /v?(\d+)\.(\d+)/.exec(v || '');
             if (!m) return 0;
-            return parseFloat(m[1] + '.' + m[2]);
+            return parseInt(m[1], 10) * 100000 + parseInt(m[2], 10);
         }
         function getWhatsNewSteps() {
             // FIX v24.83 (KRITISCH): Nutzer fragte gezielt nach, ob wirklich JEDE verpasste
@@ -9853,6 +9945,22 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.85', date: "August 2026", type: 'fix', items: {
+                de: ["StandBy-Uhr weicht jetzt der Punch-Hole-Kamera aus (mehrere Layouts betroffen, z.B. auf Pixel 8 Pro)", "Cover laden nochmal etwas schneller dank optimierter Bild-Dekodierung"],
+                en: ["StandBy clock now avoids the punch-hole camera (affected several layouts, e.g. on Pixel 8 Pro)", "Covers load a bit faster thanks to optimized image decoding"],
+                es: ["El reloj de StandBy ahora evita la cámara punch-hole (afectaba a varios diseños, p. ej. en Pixel 8 Pro)", "Las portadas cargan un poco más rápido gracias a una decodificación de imagen optimizada"],
+                fr: ["L'horloge StandBy évite désormais la caméra perforée (affectait plusieurs designs, ex. sur Pixel 8 Pro)", "Les pochettes se chargent un peu plus vite grâce à un décodage d'image optimisé"],
+                pt: ["O relógio do StandBy agora evita a câmera punch-hole (afetava vários designs, ex. no Pixel 8 Pro)", "As capas carregam um pouco mais rápido graças à decodificação de imagem otimizada"],
+                tr: ["StandBy saati artık delik kameradan kaçınıyor (birden çok tasarımı etkiliyordu, ör. Pixel 8 Pro'da)", "Optimize edilmiş görsel kod çözme sayesinde kapaklar biraz daha hızlı yükleniyor"],
+            }},
+            { version: 'v24.84', date: "August 2026", type: 'fix', items: {
+                de: ["StandBy \"Cover-Fokus\"-Design: Cover war auf bestimmten Displays/Ausrichtungen zu breit für seine eigene Karte - jetzt korrekt begrenzt"],
+                en: ["StandBy \"Cover Focus\" design: the cover was too wide for its own card on certain displays/orientations - now correctly constrained"],
+                es: ["Diseño StandBy \"Portada al frente\": la portada era demasiado ancha para su propia tarjeta en ciertas pantallas/orientaciones - ahora correctamente limitada"],
+                fr: ["Design StandBy « Pochette en avant » : la pochette était trop large pour sa propre carte sur certains écrans/orientations - désormais correctement limitée"],
+                pt: ["Design StandBy \"Capa em destaque\": a capa ficava larga demais para seu próprio cartão em certas telas/orientações - agora corretamente limitada"],
+                tr: ["StandBy \"Kapak Odaklı\" tasarımı: kapak bazı ekranlarda/yönlerde kendi kartı için fazla genişti - artık doğru şekilde sınırlandırıldı"],
+            }},
             { version: 'v24.83', date: "August 2026", type: 'fix', items: {
                 de: ["Cover verschwanden manchmal random mitten im Song, überall auf der Seite - endgültig behoben", "Pixel-Shift-Hintergrund im StandBy bewegt sich jetzt genauso smooth wie der Rest", "13 weitere StandBy-Designs (jetzt 20 insgesamt): Edge-Glow, Kompakt, Poster, Rahmen, Neon, Polaroid, Leiste, Raster, Transparent, Riesen-Uhr, Zen, Gestapelt, Kontrast"],
                 en: ["Covers sometimes randomly disappeared mid-song, site-wide - fixed for good", "The StandBy background pixel-shift now moves just as smoothly as everything else", "13 more StandBy designs (20 total now): Edge Glow, Compact, Poster, Frame, Neon, Polaroid, Bar, Grid, Transparent, Giant Clock, Zen, Stacked, Contrast"],
