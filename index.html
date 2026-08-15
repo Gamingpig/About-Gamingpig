@@ -11,6 +11,32 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FIX - KRITISCH] Release v24.100.3: StandBy-Hintergrund/Karten-Hintergrund von <canvas>
+    zurück auf <div background-image> - Canvas-Umbau war ein Fehlschlag
+      - Nutzer bestätigte per direktem Vergleich: v24.98/99 (dort noch <div>) lief auf dem
+        Pixel messbar kühler als v24.100/v24.100.1/.2 (nach dem Canvas-Umbau aus v24.101).
+        Zusätzlich weiterhin gemeldet: der Hintergrund zeigte im StandBy immer noch kein
+        Cover.
+      - Erkenntnis: die Annahme aus v24.101 ("Canvas-Zeichnen aus bereits geladenem Material
+        ist immer billiger als ein eigener Ladevorgang") galt nicht für #standby-bg und
+        #standby-card-blur-bg - beide tragen einen SCHWEREN CSS-Filter (Blur/Brightness/
+        Saturate) PLUS Transform PLUS (bei #standby-bg) eine Kenburns-Animation. Diese Effekte
+        auf eine eigene Canvas-GPU-Bitmap-Ebene zu legen war offenbar teurer als auf ein
+        simples <div> mit "background-image" - genau umgekehrt zur Annahme. #standby-track-art
+        (kleines, quadratisches Cover ohne Filter/Animation) ist von diesem Effekt NICHT
+        betroffen und bleibt bewusst weiterhin <canvas>.
+      - Fix: #standby-bg und #standby-card-blur-bg zurück auf <div background-image>. Die
+        Robustheits-Verbesserung (Retry über den gemeinsamen retryImageLoad()-Helfer aus
+        v24.100, geteiltes Laden zwischen bg und cardBg - EIN Netzwerk-Request statt zwei)
+        bleibt dabei vollständig erhalten, nur mit echtem Bild-Vorlader statt Canvas-Zeichnen.
+        Behebt damit vermutlich auch das weiterhin gemeldete "Hintergrund zeigt kein Cover"-
+        Problem, falls die Canvas-Größenberechnung (getBoundingClientRect auf einem stark
+        transformierten/negativ-inset-behafteten Element) daran mitschuldig war.
+      - Lektion für künftige Performance-Entscheidungen: "Canvas spart eine Netzwerk-Anfrage"
+        ist kein Freifahrtschein - bei Elementen mit bereits schwerem CSS-Filter/Transform/
+        Animation kann die zusätzliche Canvas-Compositing-Ebene den eingesparten Netzwerk-
+        Vorteil klar übersteigen. Erst messen, dann strukturell umbauen, nicht umgekehrt.
+
     [FIX - KRITISCH] Release v24.100.2: Erzwungener Notfall-Reload komplett entfernt (Nutzer
     meldete den Bug nach dem v24.97-Fix erneut) + Klarstellung zur Pixel-Hitze
       - Nutzer meldete: der unerwünschte Random-Reload ist wieder da, trotz des v24.97-Fixes -
@@ -4351,17 +4377,19 @@
             transition: transform 2.5s ease-in-out;
         }
         #standby-bg {
-            /* FIX v24.101 (KRITISCH): Nutzerwunsch - "das Bild ist doch schon längst da,
-               warum lädt der Hintergrund nicht einfach dasselbe statt nochmal unabhängig zu
-               laden?". Von <div background-image> auf <canvas> umgebaut - zeichnet jetzt
-               direkt aus dem bereits geladenen #artwork (drawCoverToCanvas/mArtwork), statt
-               über ein eigenes new Image() unabhängig (und potenziell separat fehlschlagend)
-               zu laden. Erbt dadurch automatisch #artworks Robustheit (Retry aus v24.99) statt
-               eine eigene, parallele Fehlerquelle zu sein. background-size/background-position
-               sind für <canvas> bedeutungslos (das "cover"-Zuschneiden übernimmt jetzt
-               drawCoverToCanvas() selbst) - entfernt. filter/transform/animation bleiben
-               unverändert, funktionieren auf <canvas> genau wie auf jedem anderen Element. */
-            position: absolute; inset: -30px;
+            /* FIX v24.103 (KRITISCH): Nutzer bestätigte per direktem Vergleich - v24.98/99
+               (dieses Element noch als <div background-image>) lief auf dem Pixel messbar
+               kühler als v24.100.1 (nach dem Umbau auf <canvas>, siehe v24.101-Kommentar
+               unten). Rückbau auf <div> - offenbar macht das Kombinieren von Canvas
+               (eigene GPU-Bitmap-Ebene) MIT schwerem CSS-Filter+Transform+Animation obendrauf
+               die Sache teurer statt billiger, genau umgekehrt zur ursprünglichen Annahme in
+               v24.101. Die Roboustheits-Verbesserung (Retry, geteiltes Laden mit
+               #standby-card-blur-bg) bleibt vollständig erhalten - nur wieder als <div> mit
+               eigenem, robustem Vorlader statt als Canvas-Zeichenziel.
+               (Historie, nicht mehr aktuell: FIX v24.101 hatte hier kurzzeitig auf <canvas>
+               umgestellt, um eine unabhängige Netzwerk-Anfrage zu sparen - das hat sich als
+               Fehlentscheidung herausgestellt, siehe oben.) */
+            position: absolute; inset: -30px; background-size: cover; background-position: center;
             filter: blur(var(--standby-bg-blur, 36px)) brightness(0.4) saturate(160%); transform: scale(1.28);
             transition: opacity 0.5s ease, filter 0.3s ease;
             animation: standby-kenburns 60s ease-in-out 1 forwards;
@@ -4495,11 +4523,13 @@
                will-change: transform, da die Ebene bei jedem Songwechsel per opacity-
                Crossfade aus- und eingeblendet wird (siehe syncStandByTrackInfo() im Script)
                - dieselbe Isolations-Lektion wie bei den EQ-Balken (v24.71).
-               FIX v24.101: von <div background-image> auf <canvas> umgebaut, aus demselben
-               Grund wie #standby-bg (siehe dort) - zeichnet direkt aus dem bereits geladenen
-               #artwork statt unabhängig zu laden. background-size/background-position für
-               canvas bedeutungslos, entfernt. */
+               FIX v24.103: zurück auf <div background-image> - siehe ausführliche Begründung
+               bei #standby-bg. (Historie: v24.101 hatte kurzzeitig auf <canvas> umgestellt,
+               das hat sich für Elemente mit schwerem CSS-Filter/Transform als teurer statt
+               billiger herausgestellt - Nutzer bestätigte per direktem Vergleich messbar
+               höhere Pixel-Temperatur seit der Canvas-Umstellung.) */
             position: absolute; inset: -20px; z-index: -1; border-radius: inherit;
+            background-size: cover; background-position: center;
             filter: blur(9px) brightness(0.55) saturate(140%);
             transform: scale(1.15);
             transition: opacity 0.5s ease;
@@ -4912,7 +4942,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.100.2 · 2026-08-15';
+        const SITE_VERSION = 'v24.100.3 · 2026-08-15';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -4973,7 +5003,7 @@
 
     <!-- NEW: StandBy / Ambient Mode (Lockscreen-Style) -->
     <div id="standby-overlay" onclick="toggleStandBy(false)" role="button" tabindex="0" aria-label="StandBy Modus verlassen">
-        <div id="standby-bg-shift-wrapper"><canvas id="standby-bg"></canvas></div>
+        <div id="standby-bg-shift-wrapper"><div id="standby-bg"></div></div>
         <div id="standby-shift-wrapper">
             <div id="standby-clockzone">
                 <div id="standby-clock">00:00</div>
@@ -4985,7 +5015,7 @@
                      #standby-card-blur-bg. Muss als ERSTES Kind stehen (z-index: -1 sorgt
                      zusätzlich dafür, dass sie garantiert hinter dem restlichen Karteninhalt
                      bleibt, unabhängig von der Dokument-Reihenfolge). -->
-                <canvas id="standby-card-blur-bg" aria-hidden="true"></canvas>
+                <div id="standby-card-blur-bg" aria-hidden="true"></div>
                 <div id="standby-track">
                     <div id="standby-track-art-wrap">
                         <!-- FIX v24.87: <img> -> <canvas>, siehe ausführliche Begründung bei #di-art oben. -->
@@ -10421,15 +10451,16 @@
             if (!standByActive) return;
 
             if (isIdle) {
-                // FIX v24.87/v24.101: img/bg/cardBg sind jetzt alle <canvas> -
-                // removeAttribute('src')/backgroundImage='none' machen bei canvas nichts,
-                // Löschen des Inhalts jetzt korrekt über clearRect() für alle drei.
-                [img, bg, cardBg].forEach((canvas) => {
-                    if (!canvas) return;
-                    const ctx = canvas.getContext && canvas.getContext('2d');
-                    if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    canvas.style.opacity = '';
-                });
+                // FIX v24.87: img ist <canvas> - clearRect() zum Leeren.
+                if (img) {
+                    const ctx = img.getContext && img.getContext('2d');
+                    if (ctx) ctx.clearRect(0, 0, img.width, img.height);
+                    img.style.opacity = '';
+                }
+                // FIX v24.103: bg/cardBg sind wieder <div background-image> - siehe
+                // ausführliche Begründung bei #standby-bg im CSS.
+                if (bg) { bg.style.backgroundImage = 'none'; bg.style.opacity = ''; }
+                if (cardBg) { cardBg.style.backgroundImage = 'none'; cardBg.style.opacity = ''; }
             } else {
                 // FIX v24.74: Nutzer wünschte sich eine "effiziente Fade-Animation" beim
                 // Cover/Hintergrund-Wechsel im StandBy - bisher hart/abrupt, da
@@ -10453,41 +10484,64 @@
                 // volatilen Cover-URL) - blendet dadurch nur noch bei ECHTEM Songwechsel.
                 const isNewArt = !!artUrl && !!isNewTrack;
 
-                // FIX v24.87/v24.101: #standby-track-art, #standby-bg und
-                // #standby-card-blur-bg sind jetzt ALLE <canvas>-Elemente, die das bereits
-                // von #artwork fertig dekodierte Bild direkt reinzeichnen, statt jeweils
-                // selbst (unabhängig und potenziell separat fehlschlagend) zu laden - siehe
-                // drawCoverToCanvas()/syncAllCoverConsumers(). Eigene Fehlerbehandlung/eigene
-                // Ladeversuche dadurch komplett überflüssig, alle drei erben automatisch
-                // #artworks eigene, mehrfach gehärtete Robustheit (Retry aus v24.99, iTunes-
-                // Fallback aus v24.63/83) - EIN zuverlässiger Ladeweg statt drei unabhängige.
-                // Der Opacity-Crossfade aus v24.74/90 bleibt für alle drei erhalten: zwei
-                // aufeinanderfolgende requestAnimationFrame sorgen dafür, dass der Browser den
-                // opacity:0-Zustand tatsächlich rendert, bevor neu gezeichnet und wieder
-                // eingeblendet wird (sonst kein sichtbarer Fade, nur ein harter Sprung).
+                // FIX v24.87: #standby-track-art ist <canvas> - zeichnet aus dem bereits
+                // geladenen #artwork, erbt automatisch dessen Robustheit (Retry aus v24.99).
                 async function drawFromMainArtwork(canvas) {
                     if (!canvas || !mArtwork || !mArtwork.src) return;
                     try { if (typeof mArtwork.decode === 'function') await mArtwork.decode(); }
                     catch (e) { return; } // #artwork (noch) nicht ladbar - dessen eigene onerror-Kette (inkl. Retry) kuemmert sich darum
                     drawCoverToCanvas(canvas, mArtwork);
                 }
-                [img, bg, cardBg].forEach((canvas) => {
-                    if (!canvas || !artUrl) return;
+                if (img && artUrl) {
                     if (isNewArt) {
-                        canvas.style.opacity = '0';
+                        img.style.opacity = '0';
                         requestAnimationFrame(() => {
-                            drawFromMainArtwork(canvas).then(() => {
-                                requestAnimationFrame(() => { canvas.style.opacity = '1'; });
+                            drawFromMainArtwork(img).then(() => {
+                                requestAnimationFrame(() => { img.style.opacity = '1'; });
                             });
                         });
                     } else {
-                        drawFromMainArtwork(canvas);
+                        drawFromMainArtwork(img);
                     }
-                });
-                // NEU v24.90, umgebaut v24.100: #standby-card-blur-bg teilt sich jetzt das
-                // Ergebnis des #standby-bg-Ladevorgangs oben, statt selbst unabhängig (und
-                // potenziell ebenso fehlschlagend) zu laden - siehe ausführliche Begründung
-                // dort.
+                }
+
+                // FIX v24.103 (KRITISCH): #standby-bg und #standby-card-blur-bg zurück auf
+                // <div background-image> - Nutzer bestätigte per direktem Vergleich, dass die
+                // Canvas-Variante (v24.101/v24.100.1) das Pixel spürbar wärmer werden ließ als
+                // v24.98/99 (damals noch <div>). Kombination aus Canvas (eigene GPU-Bitmap-
+                // Ebene) MIT schwerem CSS-Filter+Transform+Animation obendrauf war offenbar
+                // teurer statt billiger - genau umgekehrt zur Annahme in v24.101. Die
+                // Robustheits-Verbesserung (Retry über den gemeinsamen retryImageLoad()-
+                // Helfer aus v24.100, geteiltes Laden zwischen bg und cardBg) bleibt
+                // vollständig erhalten - nur wieder mit echtem Vorlader statt Canvas-Zeichnen.
+                if (bg && artUrl) {
+                    if (isNewArt) {
+                        bg.style.opacity = '0';
+                        if (cardBg) cardBg.style.opacity = '0';
+                        const preload = new Image();
+                        preload.onload = () => {
+                            bg.style.backgroundImage = `url('${artUrl}')`;
+                            if (cardBg) cardBg.style.backgroundImage = `url('${artUrl}')`;
+                            requestAnimationFrame(() => {
+                                bg.style.opacity = '1';
+                                if (cardBg) cardBg.style.opacity = '1';
+                            });
+                        };
+                        preload.onerror = async () => {
+                            const retrySucceeded = await retryImageLoad(artUrl);
+                            if (retrySucceeded) {
+                                bg.style.backgroundImage = `url('${artUrl}')`;
+                                if (cardBg) cardBg.style.backgroundImage = `url('${artUrl}')`;
+                            }
+                            bg.style.opacity = '1'; // in jedem Fall sichtbar bleiben, auch wenn der Retry scheitert
+                            if (cardBg) cardBg.style.opacity = '1';
+                        };
+                        preload.src = artUrl;
+                    } else {
+                        bg.style.backgroundImage = `url('${artUrl}')`;
+                        if (cardBg) cardBg.style.backgroundImage = `url('${artUrl}')`;
+                    }
+                }
             }
         }
         // NEU v24.79: Wird beim ÖFFNEN von StandBy aufgerufen - holt Bild-Updates nach, die
@@ -10810,6 +10864,14 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.100.3', date: "August 2026", type: 'performance', items: {
+                de: ["StandBy-Hintergrund lief seit dem letzten Umbau wärmer statt kühler - zurückgebaut, jetzt wieder so effizient wie in v24.99, aber weiterhin mit robustem Ladeverhalten"],
+                en: ["The StandBy background was running warmer instead of cooler since the last rework - reverted, now as efficient as v24.99 again while keeping the robust loading behavior"],
+                es: ["El fondo de StandBy funcionaba más caliente en vez de más fresco desde el último cambio - revertido, ahora tan eficiente como en v24.99 pero manteniendo la carga robusta"],
+                fr: ["Le fond StandBy chauffait plus au lieu de moins depuis la dernière refonte - annulé, désormais aussi efficace qu'en v24.99 tout en gardant le chargement robuste"],
+                pt: ["O fundo do StandBy estava esquentando mais em vez de menos desde a última mudança - revertido, agora tão eficiente quanto na v24.99, mantendo o carregamento robusto"],
+                tr: ["StandBy arka planı son değişiklikten beri daha serin yerine daha sıcak çalışıyordu - geri alındı, artık sağlam yükleme davranışını korurken v24.99 kadar verimli"],
+            }},
             { version: 'v24.100.2', date: "August 2026", type: 'fix', items: {
                 de: ["Erzwungener automatischer Neuladen-Mechanismus komplett entfernt - zeigt bei Bedarf jetzt nur noch einen Hinweis statt selbst neu zu laden"],
                 en: ["Removed the forced automatic reload mechanism entirely - now just shows a hint when needed instead of reloading on its own"],
