@@ -11,6 +11,39 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FIX - KRITISCH] Release v24.100: Cover bleibt manchmal auf altem Song hängen (StandBy-
+    Hintergrund) - fünfte Regression aus dem Canvas-Umbau v24.87 + Style-Panel-Wackler beim Scrollen
+      - Nutzer schickte ein weiteres Screen-Recording - manchmal bleibt der StandBy-HINTERGRUND
+        dauerhaft auf dem Cover des VORHERIGEN Songs hängen, obwohl Titel/Karte längst den
+        neuen Song zeigen. Interessante Beobachtung im Video: diesmal genau umgekehrt zum
+        bisher bekannten Muster - die Karte (über #artwork) hat sich dank des v24.99-Retries
+        nach kurzer Zeit selbst korrigiert, der Hintergrund aber nie.
+      - Root Cause: #standby-bg lädt komplett unabhängig über sein eigenes new Image()
+        (v24.74) - preload.onerror hat bisher NUR die Sichtbarkeit repariert
+        (bg.style.opacity = '1'), aber NIE versucht, das eigentliche Bild nachzuladen.
+        backgroundImage blieb dadurch für immer auf der letzten erfolgreichen URL stehen, bis
+        der nächste ECHTE Songwechsel eine neue Chance gab. #standby-card-blur-bg (v24.90)
+        hatte dasselbe Problem in noch schlimmerer Form - GAR KEINE Fehlerbehandlung, direkte
+        Zuweisung ohne jeden Vorlader.
+      - Fix: gemeinsamer retryImageLoad()-Helfer extrahiert (auch von #artworks eigenem Retry
+        aus v24.99 genutzt, kein doppelter Code mehr). #standby-bg bekommt jetzt denselben
+        Retry-Mechanismus wie #artwork - einmaliger Versuch mit Cache-Buster, bevor endgültig
+        aufgegeben wird. #standby-card-blur-bg teilt sich jetzt einfach das Ergebnis von
+        #standby-bgs Ladevorgang, statt selbst nochmal unabhängig (und potenziell ebenso
+        fehlschlagend) zu laden - nebenbei auch ein Netzwerk-Request pro Songwechsel gespart.
+      - Damit die insgesamt FÜNFTE gefundene Regression aus dem Canvas-Umbau. Weiterhin im
+        Hinterkopf: falls sich das häuft, könnte ein Rückbau auf unabhängiges Laden pro
+        Element trotz höherer Dekodier-Kosten die robustere Wahl sein.
+      - Kleinerer Zweitfund im selben Video: das Lyrics-Style-Auswahlmenü wirkte beim
+        schnellen Scrollen kurz sichtbar zerrissen/verschoben (Elemente scheinbar an falscher
+        Position), korrigierte sich aber von selbst, sobald das Scrollen endete. Wahrschein-
+        liche Ursache: zwei unabhängige, gleichzeitig aktive Scroll-Bereiche (die Seite selbst
+        + das Panel mit eigenem overflow-y-auto) - ein bekanntes, meist harmloses Rendering-
+        Verhalten bei verschachtelten Scroll-Kontexten, besonders auf iOS Safari. Vorsichtshalber
+        overscroll-behavior: contain ergänzt, um die beiden Scroll-Bereiche sauberer
+        voneinander zu isolieren - kein Garant, aber ein risikoarmer Verbesserungsversuch für
+        einen Effekt, der sich ohnehin von selbst korrigiert.
+
     [FIX - KRITISCH] Release v24.99: Cover lädt manchmal NUR im StandBy-Hintergrund, nirgendwo
     sonst - vierte Regression aus dem Canvas-Umbau v24.87
       - Nutzer meldete: manchmal lädt ausschließlich der StandBy-Hintergrund (#standby-bg) das
@@ -4815,7 +4848,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.99 · 2026-08-14';
+        const SITE_VERSION = 'v24.100 · 2026-08-15';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -5261,7 +5294,7 @@
                                     </button>
                                     
                                     <!-- Das Settings Menü Fenster -->
-                                    <div id="lyrics-settings-menu" class="absolute top-full right-0 mt-2 xxs:mt-3 sm:mt-4 bg-slate-900 border border-slate-700 rounded-xl p-1.5 xxs:p-2 sm:p-3 shadow-2xl hidden flex-col gap-1.5 min-w-[140px] xxs:min-w-[160px] sm:min-w-[180px] z-[9999] origin-top-right max-h-[350px] overflow-y-auto">
+                                    <div id="lyrics-settings-menu" class="absolute top-full right-0 mt-2 xxs:mt-3 sm:mt-4 bg-slate-900 border border-slate-700 rounded-xl p-1.5 xxs:p-2 sm:p-3 shadow-2xl hidden flex-col gap-1.5 min-w-[140px] xxs:min-w-[160px] sm:min-w-[180px] z-[9999] origin-top-right max-h-[350px] overflow-y-auto" style="overscroll-behavior: contain;">
                                         <p id="label-animation-style" class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1 px-1 sticky top-0 bg-slate-900 py-1 z-10">Animation Style</p>
                                         <!-- NEW: Kompaktes Dropdown statt 61 einzelner Buttons - hält die
                                              Einstellungen übersichtlich, egal wie viele Stile es gibt. Wird
@@ -5878,7 +5911,7 @@
                 changelog_type_feature: 'Neu', changelog_type_performance: 'Performance', changelog_type_fix: 'Fehlerbehebung',
                 tutorial_speak_aria: 'Diesen Schritt vorlesen',
                 t_whatsnew1_title: '✨ Was ist neu seit deinem letzten Besuch?',
-                t_whatsnew1_text: 'Cover-Verschwinden-Bug endgültig behoben (überall auf der Seite), Pixel-Shift im StandBy jetzt komplett smooth, und 13 weitere Designs - macht 20 insgesamt!',
+                t_whatsnew1_text: 'StandBy-Hintergrund blieb manchmal auf dem alten Cover hängen - jetzt mit automatischem Wiederholungsversuch behoben, genau wie das Hauptcover.',
                 t_whatsnew2_title: '✨ Noch mehr Neues',
                 t_whatsnew2_text: 'App zeigt beim Start jetzt sofort den bereits laufenden Song statt erst später. Außerdem: Plattform-Auswahl beim Cover-Tap öffnet sich nach "Abbrechen" jetzt zuverlässig beim ersten Versuch, plus etwas mehr Haptic-Feedback.',
                 t_whatsnew3_title: '✨ Unter der Haube',
@@ -6067,7 +6100,7 @@
                 changelog_type_feature: 'New', changelog_type_performance: 'Performance', changelog_type_fix: 'Fix',
                 tutorial_speak_aria: 'Read this step aloud',
                 t_whatsnew1_title: '✨ What\'s new since your last visit?',
-                t_whatsnew1_text: 'Cover-disappearing bug fixed for good (site-wide), StandBy pixel-shift now completely smooth, and 13 more designs - 20 total now!',
+                t_whatsnew1_text: 'The StandBy background sometimes stayed stuck on the old cover - now fixed with an automatic retry, just like the main cover.',
                 t_whatsnew2_title: '✨ Even more news',
                 t_whatsnew2_text: "The app now shows the already-playing song immediately on start instead of only later. Also: the platform picker on cover tap now reliably reopens on the first try after 'Cancel', plus a bit more haptic feedback.",
                 t_whatsnew3_title: '✨ Under the hood',
@@ -6256,7 +6289,7 @@
                 changelog_type_feature: 'Nuevo', changelog_type_performance: 'Rendimiento', changelog_type_fix: 'Corrección',
                 tutorial_speak_aria: 'Escuchar este paso',
                 t_whatsnew1_title: '✨ ¿Qué hay de nuevo desde tu última visita?',
-                t_whatsnew1_text: '¡Error de portadas desapareciendo corregido definitivamente (en toda la página), desplazamiento de píxeles en StandBy ahora totalmente suave, y 13 diseños más - 20 en total!',
+                t_whatsnew1_text: 'El fondo de StandBy a veces se quedaba atascado en la portada antigua - ahora corregido con un reintento automático, igual que la portada principal.',
                 t_whatsnew2_title: '✨ Más novedades',
                 t_whatsnew2_text: 'La app ahora muestra la canción que ya está sonando inmediatamente al iniciar, en vez de más tarde. Además: el selector de plataformas al tocar la portada ahora se reabre de forma fiable al primer intento tras "Cancelar", más algo de retroalimentación háptica.',
                 t_whatsnew3_title: '✨ Bajo el capó',
@@ -6445,7 +6478,7 @@
                 changelog_type_feature: 'Nouveau', changelog_type_performance: 'Performance', changelog_type_fix: 'Correction',
                 tutorial_speak_aria: 'Écouter cette étape',
                 t_whatsnew1_title: '✨ Quoi de neuf depuis ta dernière visite ?',
-                t_whatsnew1_text: "Bug de disparition des pochettes corrigé définitivement (partout sur le site), décalage de pixels StandBy désormais totalement fluide, et 13 designs de plus - 20 au total !",
+                t_whatsnew1_text: "Le fond StandBy restait parfois bloqué sur l'ancienne pochette - désormais corrigé avec une nouvelle tentative automatique, comme la pochette principale.",
                 t_whatsnew2_title: '✨ Encore plus de nouveautés',
                 t_whatsnew2_text: "L'application affiche désormais immédiatement le morceau déjà en cours au démarrage, au lieu de plus tard. De plus : le sélecteur de plateformes en tapant sur la pochette se rouvre maintenant de façon fiable dès le premier essai après « Annuler », avec un peu plus de retour haptique.",
                 t_whatsnew3_title: '✨ Sous le capot',
@@ -6634,7 +6667,7 @@
                 changelog_type_feature: 'Novo', changelog_type_performance: 'Performance', changelog_type_fix: 'Correção',
                 tutorial_speak_aria: 'Ouvir esta etapa',
                 t_whatsnew1_title: '✨ O que há de novo desde sua última visita?',
-                t_whatsnew1_text: 'Bug de capas sumindo corrigido definitivamente (em todo o site), deslocamento de pixels do StandBy agora totalmente suave, e mais 13 designs - 20 no total!',
+                t_whatsnew1_text: 'O fundo do StandBy às vezes ficava preso na capa antiga - agora corrigido com uma nova tentativa automática, assim como a capa principal.',
                 t_whatsnew2_title: '✨ Ainda mais novidades',
                 t_whatsnew2_text: 'O app agora mostra a música que já está tocando imediatamente ao iniciar, em vez de só depois. Além disso: o seletor de plataformas ao tocar na capa agora reabre de forma confiável na primeira tentativa após "Cancelar", com um pouco mais de feedback tátil.',
                 t_whatsnew3_title: '✨ Por baixo do capô',
@@ -6823,7 +6856,7 @@
                 changelog_type_feature: 'Yeni', changelog_type_performance: 'Performans', changelog_type_fix: 'Düzeltme',
                 tutorial_speak_aria: 'Bu adımı sesli oku',
                 t_whatsnew1_title: '✨ Son ziyaretinden beri neler değişti?',
-                t_whatsnew1_text: 'Kapak kaybolma hatası kalıcı olarak düzeltildi (sitenin her yerinde), StandBy piksel kayması artık tamamen akıcı, ve 13 tasarım daha - toplamda 20!',
+                t_whatsnew1_text: 'StandBy arka planı bazen eski kapakta takılı kalıyordu - artık ana kapakla aynı şekilde otomatik yeniden deneme ile düzeltildi.',
                 t_whatsnew2_title: '✨ Daha fazla yenilik',
                 t_whatsnew2_text: 'Uygulama artık başlangıçta zaten çalmakta olan şarkıyı daha sonra değil hemen gösteriyor. Ayrıca: kapak resmine dokunarak açılan platform seçici artık "İptal"den sonra ilk denemede güvenilir şekilde yeniden açılıyor, biraz daha fazla dokunsal geri bildirimle birlikte.',
                 t_whatsnew3_title: '✨ Perde arkasında',
@@ -7622,6 +7655,19 @@
         // bevor wirklich nur noch das generische Musiknoten-Icon übrig bleibt. Jetzt global,
         // damit auch Dynamic Island und StandBy-Lockscreen sie nutzen können, nicht nur die
         // Haupt-Musikkarte.
+        // NEU v24.100: gemeinsamer Retry-Helfer, ausgelagert aus dem mArtwork-spezifischen
+        // Retry aus v24.99 - wird jetzt auch für #standby-bg gebraucht (siehe dort), das
+        // bisher als "der zuverlässige Pfad" galt, aber laut Nutzer-Video genau umgekehrt
+        // stecken bleiben kann: die Karte (via #artwork) erholte sich dank des v24.99-Retries,
+        // der Hintergrund aber nicht, weil er ihn schlicht nie hatte.
+        function retryImageLoad(url) {
+            return new Promise((resolve) => {
+                const probe = new Image();
+                probe.onload = () => resolve(true);
+                probe.onerror = () => resolve(false);
+                probe.src = url + (url.includes('?') ? '&' : '?') + '_retry=' + Date.now();
+            });
+        }
         async function tryItunesArtworkFallback(title, artist) {
             try {
                 const query = encodeURIComponent(`${artist} ${title}`.trim());
@@ -10368,33 +10414,51 @@
                 if (bg && artUrl) {
                     if (isNewArt) {
                         bg.style.opacity = '0';
+                        if (cardBg) cardBg.style.opacity = '0'; // NEU v24.100: gemeinsam mit bg ein-/ausgeblendet, siehe unten
                         const preload = new Image();
                         preload.onload = () => {
                             bg.style.backgroundImage = `url('${artUrl}')`;
-                            requestAnimationFrame(() => { bg.style.opacity = '1'; });
+                            if (cardBg) cardBg.style.backgroundImage = `url('${artUrl}')`; // NEU v24.100: teilt sich das bereits erfolgreich getestete Bild statt selbst nochmal unabhängig zu laden
+                            requestAnimationFrame(() => {
+                                bg.style.opacity = '1';
+                                if (cardBg) cardBg.style.opacity = '1';
+                            });
                         };
-                        preload.onerror = () => { bg.style.opacity = '1'; }; // Fallback: nicht dauerhaft unsichtbar bleiben
+                        // FIX v24.100 (KRITISCH): Nutzer schickte ein Screen-Recording -
+                        // manchmal bleibt der StandBy-HINTERGRUND dauerhaft auf dem Cover des
+                        // VORHERIGEN Songs hängen, obwohl Titel/Karte längst den neuen Song
+                        // zeigen (im Video sogar umgekehrt zum bisher bekannten Muster: die
+                        // Karte hat sich dank des v24.99-Retries erholt, der Hintergrund aber
+                        // nie, weil er schlicht KEINE Fehlerbehandlung hatte). preload.onerror
+                        // hat bisher nur die Sichtbarkeit repariert (bg.style.opacity = '1'),
+                        // aber NIE versucht, das eigentliche Bild nachzuladen - backgroundImage
+                        // blieb für immer auf der letzten erfolgreichen URL stehen, bis der
+                        // nächste ECHTE Songwechsel eine neue Chance gab. Fix: derselbe
+                        // Retry-Mechanismus wie bei #artwork (v24.99) - einmaliger Versuch mit
+                        // Cache-Buster, bevor endgültig aufgegeben wird. #standby-card-blur-bg
+                        // (v24.90) bekam bisher GAR KEINE Fehlerbehandlung (direkte Zuweisung
+                        // ohne Vorlader) - teilt sich jetzt einfach das Ergebnis dieses einen
+                        // Ladeversuchs hier, statt selbst nochmal unabhängig (und potenziell
+                        // ebenso fehlschlagend) zu laden.
+                        preload.onerror = async () => {
+                            const retrySucceeded = await retryImageLoad(artUrl);
+                            if (retrySucceeded) {
+                                bg.style.backgroundImage = `url('${artUrl}')`;
+                                if (cardBg) cardBg.style.backgroundImage = `url('${artUrl}')`;
+                            }
+                            bg.style.opacity = '1'; // in jedem Fall sichtbar bleiben, auch wenn der Retry scheitert
+                            if (cardBg) cardBg.style.opacity = '1';
+                        };
                         preload.src = artUrl;
                     } else {
                         bg.style.backgroundImage = `url('${artUrl}')`;
+                        if (cardBg) cardBg.style.backgroundImage = `url('${artUrl}')`;
                     }
                 }
-                // NEU v24.90: dieselbe Cover-URL auch für die neue, eigenständig vorgeblurte
-                // Kartenhintergrund-Ebene (#standby-card-blur-bg) setzen - eigener,
-                // unabhängiger Crossfade (Bild ist eh bereits vom obigen "preload" oder
-                // Browser-Cache verfügbar, daher hier ohne eigenen Vorlader, das Blur selbst
-                // kaschiert einen minimal härteren Übergang ohnehin fast vollständig).
-                if (cardBg && artUrl) {
-                    if (isNewArt) {
-                        cardBg.style.opacity = '0';
-                        requestAnimationFrame(() => {
-                            cardBg.style.backgroundImage = `url('${artUrl}')`;
-                            requestAnimationFrame(() => { cardBg.style.opacity = '1'; });
-                        });
-                    } else {
-                        cardBg.style.backgroundImage = `url('${artUrl}')`;
-                    }
-                }
+                // NEU v24.90, umgebaut v24.100: #standby-card-blur-bg teilt sich jetzt das
+                // Ergebnis des #standby-bg-Ladevorgangs oben, statt selbst unabhängig (und
+                // potenziell ebenso fehlschlagend) zu laden - siehe ausführliche Begründung
+                // dort.
             }
         }
         // NEU v24.79: Wird beim ÖFFNEN von StandBy aufgerufen - holt Bild-Updates nach, die
@@ -10717,6 +10781,14 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.100', date: "August 2026", type: 'fix', items: {
+                de: ["StandBy-Hintergrund blieb manchmal auf dem Cover des vorherigen Songs hängen - jetzt mit demselben automatischen Wiederholungsversuch wie das Hauptcover", "Kleine Verbesserung gegen kurzes Wackeln im Style-Auswahlmenü beim schnellen Scrollen"],
+                en: ["The StandBy background sometimes stayed stuck on the previous song's cover - now with the same automatic retry as the main cover", "Small improvement against brief jitter in the style picker menu during fast scrolling"],
+                es: ["El fondo de StandBy a veces se quedaba atascado en la portada de la canción anterior - ahora con el mismo reintento automático que la portada principal", "Pequeña mejora contra el breve parpadeo en el menú de selección de estilo al desplazarse rápido"],
+                fr: ["Le fond StandBy restait parfois bloqué sur la pochette du morceau précédent - désormais avec la même nouvelle tentative automatique que la pochette principale", "Petite amélioration contre un bref tremblement du menu de sélection de style lors d'un défilement rapide"],
+                pt: ["O fundo do StandBy às vezes ficava preso na capa da música anterior - agora com a mesma nova tentativa automática da capa principal", "Pequena melhoria contra uma breve tremulação no menu de seleção de estilo durante rolagem rápida"],
+                tr: ["StandBy arka planı bazen önceki şarkının kapağında takılı kalıyordu - artık ana kapakla aynı otomatik yeniden deneme ile", "Hızlı kaydırma sırasında stil seçim menüsündeki kısa titremeye karşı küçük bir iyileştirme"],
+            }},
             { version: 'v24.99', date: "August 2026", type: 'fix', items: {
                 de: ["Cover lud manchmal nur im StandBy-Hintergrund, nirgendwo sonst - jetzt mit automatischem Wiederholungsversuch bei kurzen Netzwerk-Aussetzern"],
                 en: ["Covers sometimes only loaded in the StandBy background, nowhere else - now with an automatic retry for brief network hiccups"],
@@ -13417,12 +13489,7 @@
                         // wirklich ein frischer Versuch gemacht wird, kein gecachter Fehler),
                         // BEVOR auf die (langsamere, nicht immer treffsichere) iTunes-Suche
                         // zurückgegriffen wird.
-                        const retrySucceeded = await new Promise((resolve) => {
-                            const probe = new Image();
-                            probe.onload = () => resolve(true);
-                            probe.onerror = () => resolve(false);
-                            probe.src = originalUrl + (originalUrl.includes('?') ? '&' : '?') + '_retry=' + Date.now();
-                        });
+                        const retrySucceeded = await retryImageLoad(originalUrl);
                         if (retrySucceeded) {
                             this.onerror = () => { this.src = fallbackImg; };
                             this.src = originalUrl;
