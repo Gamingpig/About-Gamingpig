@@ -11,6 +11,31 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FIX - KRITISCH] Release v24.99: Cover lädt manchmal NUR im StandBy-Hintergrund, nirgendwo
+    sonst - vierte Regression aus dem Canvas-Umbau v24.87
+      - Nutzer meldete: manchmal lädt ausschließlich der StandBy-Hintergrund (#standby-bg) das
+        Cover, aber nirgendwo sonst (nicht Dashboard, nicht Dynamic Island, nicht die StandBy-
+        Karte selbst).
+      - Root Cause: #standby-bg lädt komplett unabhängig über sein eigenes new Image() (siehe
+        syncStandByTrackInfo aus v24.74), OHNE jede Fehlerbehandlung. #artwork ist dagegen die
+        EINZIGE Quelle, von der Dashboard/Dynamic Island/Lyrics-Mini/StandBy-Karte per Canvas
+        alle abgeleitet werden (v24.87) - fällt NUR #artworks eigener Netzwerk-Request kurz aus
+        (transienter Aussetzer, während der parallele, unabhängige Hintergrund-Request zufällig
+        durchkommt), sprang der bisherige Code SOFORT zur iTunes-Suche statt es einfach nochmal
+        zu versuchen - und alles, was von #artwork abhängt, blieb hängen, obwohl die
+        ursprüngliche URL eigentlich gültig war (der Hintergrund bewies das ja gerade).
+      - Fix: einmaliger Retry derselben Original-URL (mit Cache-Buster für einen wirklich
+        frischen Versuch, kein gecachter Fehler) BEVOR auf die langsamere, nicht immer
+        treffsichere iTunes-Suche zurückgegriffen wird.
+      - Damit die insgesamt VIERTE gefundene Regression aus dem Canvas-Umbau (nach dem
+        Verschwinden-Bug in v24.94, dem Dashboard-geschlossen-Bug in v24.96, jetzt dieser hier).
+        Weiterhin im Hinterkopf: falls sich das häuft, könnte ein Rückbau auf unabhängiges
+        Laden pro Element trotz höherer Dekodier-Kosten die robustere Wahl sein.
+      - Haptic-Feedback (Android) weiterhin ungelöst mangels Diagnose-Daten - kompletten Code
+        nochmal gegengeprüft (hapticEnabled/haptic() unverändert seit v24.93, kein neuer Bug
+        gefunden). Ohne die [haptic]-Konsolenausgabe (localStorage.setItem('hapticDebug',
+        'true') + Reload) bleibt das ein Rätsel, kein weiterer Blindversuch in dieser Version.
+
     [FEATURE] Release v24.98: "Was ist neu?"-Tour zeigt bei sehr vielen verpassten Versionen
     (>10) einen kompakten Gesamt-Überblick statt einer langen Schritt-für-Schritt-Tour
       - Nutzer fragte nach der Gesamtzahl der Schritte, stellte fest: für jemanden, der die
@@ -4790,7 +4815,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.98 · 2026-08-14';
+        const SITE_VERSION = 'v24.99 · 2026-08-14';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -10692,6 +10717,14 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.99', date: "August 2026", type: 'fix', items: {
+                de: ["Cover lud manchmal nur im StandBy-Hintergrund, nirgendwo sonst - jetzt mit automatischem Wiederholungsversuch bei kurzen Netzwerk-Aussetzern"],
+                en: ["Covers sometimes only loaded in the StandBy background, nowhere else - now with an automatic retry for brief network hiccups"],
+                es: ["Las portadas a veces solo cargaban en el fondo de StandBy, en ningún otro sitio - ahora con reintento automático ante fallos breves de red"],
+                fr: ["Les pochettes ne se chargeaient parfois que dans le fond StandBy, nulle part ailleurs - désormais avec une nouvelle tentative automatique en cas de bref problème réseau"],
+                pt: ["As capas às vezes só carregavam no fundo do StandBy, em nenhum outro lugar - agora com nova tentativa automática para falhas breves de rede"],
+                tr: ["Kapaklar bazen yalnızca StandBy arka planında yükleniyordu, başka hiçbir yerde - artık kısa ağ kesintileri için otomatik yeniden deneme ile"],
+            }},
             { version: 'v24.98', date: "August 2026", type: 'feature', items: {
                 de: ["\"Was ist neu?\"-Tour zeigt bei sehr vielen verpassten Versionen jetzt einen kompakten Gesamt-Überblick statt vieler einzelner Schritte"],
                 en: ["The \"What's new?\" tour now shows a compact overview instead of many individual steps when a lot of versions were missed"],
@@ -13365,8 +13398,39 @@
                 // jetzt bei jedem echten Songwechsel neu mit der vollen iTunes-Fallback-Logik
                 // scharf gemacht, statt sich dauerhaft selbst zu deaktivieren.
                 if (mArtwork && isNewTrack) {
+                    const originalUrl = imgUrl; // für den Retry unten in der Closure festhalten
                     mArtwork.onerror = async function() {
                         this.onerror = null; // verhindert Endlosschleife BEI DIESEM Songwechsel
+                        // FIX v24.99 (KRITISCH): Nutzer meldete - manchmal lädt NUR der
+                        // StandBy-Hintergrund (#standby-bg) das Cover, aber nirgendwo sonst
+                        // (nicht Dashboard, nicht Dynamic Island, nicht StandBy-Karte selbst).
+                        // Root Cause: #standby-bg lädt komplett unabhängig über sein eigenes
+                        // new Image() (siehe syncStandByTrackInfo), OHNE jede Fehlerbehandlung.
+                        // #artwork ist dagegen die einzige Quelle, von der Dashboard/Dynamic
+                        // Island/Lyrics-Mini/StandBy-Karte per Canvas alle abgeleitet werden
+                        // (v24.87) - fällt NUR #artworks eigener Request kurz aus (transienter
+                        // Netzwerk-Aussetzer, während der parallele Hintergrund-Request zufällig
+                        // durchkommt), sprang der Code bisher SOFORT zur iTunes-Suche statt es
+                        // einfach nochmal zu versuchen - und alles, was von #artwork abhängt,
+                        // blieb hängen, obwohl die ursprüngliche URL eigentlich gültig war.
+                        // Fix: einmaliger Retry derselben Original-URL (mit Cache-Buster, damit
+                        // wirklich ein frischer Versuch gemacht wird, kein gecachter Fehler),
+                        // BEVOR auf die (langsamere, nicht immer treffsichere) iTunes-Suche
+                        // zurückgegriffen wird.
+                        const retrySucceeded = await new Promise((resolve) => {
+                            const probe = new Image();
+                            probe.onload = () => resolve(true);
+                            probe.onerror = () => resolve(false);
+                            probe.src = originalUrl + (originalUrl.includes('?') ? '&' : '?') + '_retry=' + Date.now();
+                        });
+                        if (retrySucceeded) {
+                            this.onerror = () => { this.src = fallbackImg; };
+                            this.src = originalUrl;
+                            if (mAmbient) mAmbient.style.backgroundImage = `url('${originalUrl}')`;
+                            if (mGlow && coverGlowEnabled) mGlow.style.backgroundImage = `url('${originalUrl}')`;
+                            syncAllCoverConsumers();
+                            return;
+                        }
                         const itunesUrl = await tryItunesArtworkFallback(
                             mTitle ? mTitle.innerText : '',
                             mArtist ? mArtist.innerText : ''
