@@ -11,6 +11,34 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FIX - KRITISCH] Release v24.106: Konkreter Speicher-Aufräum-Fix als echter Versuch gegen
+    den Nacht-Absturz - v24.105-Sicherheitsnetz bleibt zusätzlich bestehen
+      - Nutzer wollte zu Recht nicht nur ein Sicherheitsnetz (periodischer Auto-Neustart aus
+        v24.105), sondern eine echte Lösung: "früher hat es doch ohne Reloads funktioniert".
+      - Konkreter, plausibler Kandidat gefunden: bei jedem Songwechsel werden neue Image()-
+        Objekte für Vorlade-/Retry-Zwecke erzeugt (StandBy-Hintergrund, Ambient-Farbextraktion,
+        Retry-Mechanismus) - über eine ganze Nacht bei durchschnittlich alle paar Minuten
+        wechselnden Songs kommen da leicht 100+ Bilder zusammen. Keine dieser Stellen hat ihre
+        Handler/Bildquelle nach Gebrauch je explizit geleert. Der JavaScript-Garbage-Collector
+        räumt das zwar grundsätzlich auf, aber auf Mobilgeräten kann der bereits dekodierte
+        Bild-Speicher (unkomprimierte Bitmap-Daten, pro Bild potenziell mehrere MB) deutlich
+        länger im Speicher hängen bleiben als das reine JS-Objekt - über hunderte Bilder in
+        einer Nacht baut sich das zu echtem Speicherdruck auf, passend zum beobachteten
+        Absturz/der Hitze.
+      - Fix: an allen drei Stellen (StandBy-Hintergrund-Vorlader, Retry-Helfer, Ambient-Farb-
+        extraktion) werden Handler + Bildquelle nach Gebrauch jetzt explizit geleert
+        (onload/onerror = null, src = '') - signalisiert dem Browser dadurch so früh wie
+        möglich, dass der dekodierte Bild-Speicher wieder freigegeben werden darf, statt auf
+        die (auf Mobilgeräten oft trägere) automatische Garbage Collection zu warten. Die
+        beiden seltenen, nur nutzerausgelösten Share-Card-Image()-Stellen bewusst unangetastet
+        gelassen - kein wiederkehrendes Muster über Stunden, geringes Risiko/Nutzen-Verhältnis
+        für eine Änderung an funktionierendem Code.
+      - EHRLICHER VORBEHALT: keine Möglichkeit, eine 8-Stunden-Session hier live zu
+        diagnostizieren - dies ist der plausibelste, gut begründete Kandidat, keine bestätigte
+        Diagnose. Das Sicherheitsnetz aus v24.105 (automatischer sanfter Neustart nach 3h)
+        bleibt deshalb bewusst zusätzlich bestehen, als Absicherung falls doch noch etwas
+        anderes zum Speicherdruck beiträgt.
+
     [FIX - KRITISCH] Release v24.105: StandBy-Absturz nach mehrstündiger Nacht-Laufzeit ("nur
     noch blauer Bildschirm") + extreme Hitze - automatischer, sanfter Neustart als Sicherheitsnetz
       - Nutzer ließ sein Pixel über Nacht (mehrere Stunden am Stück, durchgehend Musik) im
@@ -5008,7 +5036,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.105 · 2026-08-15';
+        const SITE_VERSION = 'v24.106 · 2026-08-16';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -7828,8 +7856,10 @@
         function retryImageLoad(url) {
             return new Promise((resolve) => {
                 const probe = new Image();
-                probe.onload = () => resolve(true);
-                probe.onerror = () => resolve(false);
+                // FIX v24.106: explizite Aufräumarbeit, siehe ausführliche Begründung beim
+                // #standby-bg-Vorlader.
+                probe.onload = () => { resolve(true); probe.onload = null; probe.onerror = null; probe.src = ''; };
+                probe.onerror = () => { resolve(false); probe.onload = null; probe.onerror = null; probe.src = ''; };
                 probe.src = url + (url.includes('?') ? '&' : '?') + '_retry=' + Date.now();
             });
         }
@@ -8894,6 +8924,10 @@
                         root.setProperty('--ambient-g2', Math.round(g2 / n2));
                         root.setProperty('--ambient-b2', Math.round(b2 / n2));
                     } catch (e) { /* Canvas getainted (CORS) - stille Ignorierung */ }
+                    // FIX v24.106: explizite Aufräumarbeit, siehe ausführliche Begründung beim
+                    // #standby-bg-Vorlader - läuft bei jedem Songwechsel, summiert sich über
+                    // Stunden genauso wie dort.
+                    img.onload = null; img.src = '';
                 };
                 img.src = imgUrl;
             } catch (e) {}
@@ -10652,12 +10686,33 @@
                             requestAnimationFrame(() => {}); // Browser rendert opacity:0, bevor unten neu geladen wird
                         }
                         const preload = new Image();
-                        preload.onload = applyLoaded;
+                        // FIX v24.106 (KRITISCH): Nutzer meldete - StandBy nach mehrstündiger
+                        // Nacht-Laufzeit abgestürzt ("nur noch blauer Bildschirm"), extreme
+                        // Hitze. v24.105 hat dafür nur ein Sicherheitsnetz (periodischer Auto-
+                        // Neustart) gebaut, aber Nutzer wünscht sich zu Recht eine ECHTE
+                        // Lösung statt nur Symptom-Behandlung. Konkreter, plausibler Kandidat
+                        // gefunden: über Stunden werden bei jedem Songwechsel neue Image()-
+                        // Objekte für den Vorlader erzeugt (~100+ Stück über eine ganze Nacht
+                        // bei durchschnittlich alle paar Minuten wechselnden Songs), OHNE ihre
+                        // Handler/Quelle je explizit zu leeren. Der JavaScript-Garbage-
+                        // Collector RÄUMT das zwar irgendwann auf, aber auf Mobilgeräten kann
+                        // der bereits dekodierte Bild-Speicher (unkomprimierte Bitmap-Daten,
+                        // pro Bild potenziell mehrere MB) deutlich länger im Speicher
+                        // hängen bleiben als das reine JS-Objekt - über hunderte Bilder in
+                        // einer Nacht baut sich das zu einem echten Speicherdruck auf, der zum
+                        // beobachteten Absturz/der Hitze passt. Fix: Handler + Quelle nach
+                        // Gebrauch explizit leeren (onload/onerror = null, src = ''),
+                        // signalisiert dem Browser dadurch so früh wie möglich, dass der
+                        // dekodierte Bild-Speicher wieder freigegeben werden darf, statt auf
+                        // die normale (auf Mobilgeräten oft trägere) Garbage Collection zu warten.
+                        const cleanupPreload = () => { preload.onload = null; preload.onerror = null; preload.src = ''; };
+                        preload.onload = () => { applyLoaded(); cleanupPreload(); };
                         preload.onerror = async () => {
                             const retrySucceeded = await retryImageLoad(artUrl);
-                            if (retrySucceeded) { applyLoaded(); return; }
+                            if (retrySucceeded) { applyLoaded(); cleanupPreload(); return; }
                             bg.style.opacity = '1'; // in jedem Fall sichtbar bleiben, auch wenn der Retry scheitert
                             if (cardBg) cardBg.style.opacity = '1';
+                            cleanupPreload();
                         };
                         preload.src = artUrl;
                     }
@@ -10984,6 +11039,14 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.106', date: "August 2026", type: 'fix', items: {
+                de: ["Möglichen Speicheraufbau über mehrstündige StandBy-Sitzungen behoben (jeder Songwechsel ließ zuvor ungenutzten Bildspeicher liegen) - echter Fix zusätzlich zum Sicherheitsnetz aus dem letzten Update"],
+                en: ["Fixed possible memory buildup during multi-hour StandBy sessions (every track change previously left unused image memory behind) - a real fix in addition to last update's safety net"],
+                es: ["Corregida una posible acumulación de memoria en sesiones de StandBy de varias horas (cada cambio de canción dejaba antes memoria de imagen sin usar) - una corrección real además de la red de seguridad de la última actualización"],
+                fr: ["Correction d'une possible accumulation de mémoire lors de sessions StandBy de plusieurs heures (chaque changement de morceau laissait auparavant de la mémoire image inutilisée) - un vrai correctif en plus du filet de sécurité de la dernière mise à jour"],
+                pt: ["Corrigido um possível acúmulo de memória em sessões de StandBy de várias horas (cada troca de música deixava antes memória de imagem não utilizada) - uma correção real além da rede de segurança da última atualização"],
+                tr: ["Çok saatlik StandBy oturumlarında olası bellek birikimi düzeltildi (her şarkı değişiminde daha önce kullanılmayan görsel belleği kalıyordu) - son güncellemedeki güvenlik ağına ek olarak gerçek bir düzeltme"],
+            }},
             { version: 'v24.105', date: "August 2026", type: 'fix', items: {
                 de: ["StandBy startet sich nach mehreren Stunden ununterbrochener Laufzeit automatisch sanft neu (behebt möglichen Speicher-/Rendering-Fehler bei sehr langer Nacht-Nutzung, macht danach von selbst weiter)"],
                 en: ["StandBy now automatically and gently restarts itself after several hours of continuous runtime (fixes a possible memory/rendering issue during very long overnight use, then continues on its own)"],
