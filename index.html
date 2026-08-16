@@ -11,6 +11,37 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FIX - KRITISCH] Release v24.105: StandBy-Absturz nach mehrstündiger Nacht-Laufzeit ("nur
+    noch blauer Bildschirm") + extreme Hitze - automatischer, sanfter Neustart als Sicherheitsnetz
+      - Nutzer ließ sein Pixel über Nacht (mehrere Stunden am Stück, durchgehend Musik) im
+        StandBy - Ergebnis: Bildschirm zeigte danach nur noch Blau, Gerät war extrem heiß
+        ("konnte es nicht mit der Hand anfassen"). Nutzer selbst räumte ein, dass ein
+        möglicherweise über Nacht abgedecktes Kissen mitverantwortlich sein könnte - reine
+        Wärme-Isolation, dagegen hilft kein Software-Fix, ein zugedecktes Handy wird immer
+        warm, egal wie effizient der Code ist.
+      - Für den Software-Teil: diese Seite wurde nie für mehrstündigen ununterbrochenen
+        Dauerbetrieb am Stück getestet - ein Speicher-/Rendering-Zustand ist offenbar über
+        eine derart lange Laufzeit hinweg kaputtgegangen (genaue Ursache ohne Live-Diagnose
+        über eine ganze Nacht praktisch nicht einzugrenzen). Statt weiter zu raten, WAS genau
+        kaputtgeht: eine bewusste, harte Obergrenze für ununterbrochene StandBy-Laufzeit
+        (3 Stunden) als generelles Sicherheitsnetz, unabhängig von der genauen Fehlerursache.
+      - WICHTIG: kein einfacher Stopp - der Nutzer will StandBy ausdrücklich die ganze Nacht
+        durchlaufen lassen. Stattdessen ein sanfter, automatischer Neustart der ganzen Seite:
+        setzt einen Merker in sessionStorage, lädt die Seite komplett neu (behebt dabei
+        automatisch jeden eventuell über die lange Laufzeit aufgebauten Speicher-/Rendering-
+        Fehler - "frischer Zustand" statt Flicken eines unbekannten Problems) und öffnet
+        StandBy direkt danach wieder von selbst. Für den Nutzer im besten Fall nur ein kurzes
+        Aufflackern des Bildschirms, StandBy läuft danach normal weiter - über eine 8-Stunden-
+        Nacht wären das etwa 2-3 solcher stillen Neustarts.
+      - Begrenzt als Nebeneffekt gleichzeitig, wie lange der Wake Lock den Bildschirm am Stück
+        wachhalten kann, bevor ein Neustart-Zyklus ihn ohnehin kurz freigibt - sollte auch der
+        reinen Wärme durch Dauerbetrieb (unabhängig vom Kissen-Faktor) etwas entgegenwirken.
+      - EHRLICHER VORBEHALT: dies ist ein Sicherheitsnetz gegen ein Symptom, nicht ein
+        bestätigter Fix der zugrunde liegenden Ursache - ohne Möglichkeit, eine ganze Nacht
+        Laufzeit live zu diagnostizieren, war das der verantwortbarste Weg, das Risiko zu
+        begrenzen. Bitte nach mehreren Nächten zurückmelden, ob das Problem dadurch
+        verschwindet oder ob doch noch weitere Diagnose nötig ist.
+
     [FIX - KRITISCH] Release v24.100.4: StandBy-Hintergrund lud fast NIE ein Cover (echter
     Root-Cause-Fund, sechste Runde) + StandBy zeigt jetzt korrekt "Aktuell ist es ruhig" bei Pause
       - Nutzer grenzte präzise ein: StandBy-Hintergrund zeigt so gut wie nie ein Cover, die
@@ -4977,7 +5008,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.100.4 · 2026-08-15';
+        const SITE_VERSION = 'v24.105 · 2026-08-15';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -5963,7 +5994,7 @@
                 toast_sharecard_creating: 'Share Card wird erstellt...',
                 toast_sharecard_saved: 'Share Card gespeichert! 🎴',
                 toast_sharecard_cors: 'Konnte kein Bild vom Cover laden (CORS) – Card ohne Artwork erzeugt.',
-                toast_link_copied: '📋 Link kopiert! Kannst ihn jetzt teilen.', toast_stale_reload_hint: '🔄 Die Anzeige wirkt seit einer Weile eingefroren - ein Neuladen der Seite könnte helfen.',
+                toast_link_copied: '📋 Link kopiert! Kannst ihn jetzt teilen.', toast_stale_reload_hint: '🔄 Die Anzeige wirkt seit einer Weile eingefroren - ein Neuladen der Seite könnte helfen.', standby_max_session_hint: '😴 StandBy läuft schon sehr lange am Stück und verlässt sich jetzt selbst, damit dein Handy durchatmen kann - einfach erneut öffnen, wenn du magst.',
                 toast_copy_failed: '⚠️ Kopieren hat nicht geklappt. Link: ',
                 toast_copy_unsupported: '⚠️ Dein Browser unterstützt das nicht. Link: ',
                 toast_konami: '🎉 Konami-Code erkannt! Hyperfokus aktiviert!',
@@ -6154,7 +6185,7 @@
                 toast_sharecard_creating: 'Creating share card...',
                 toast_sharecard_saved: 'Share card saved! 🎴',
                 toast_sharecard_cors: "Couldn't load the cover image (CORS) – card created without artwork.",
-                toast_link_copied: '📋 Link copied! You can share it now.', toast_stale_reload_hint: '🔄 The display seems stuck for a while - reloading the page might help.',
+                toast_link_copied: '📋 Link copied! You can share it now.', toast_stale_reload_hint: '🔄 The display seems stuck for a while - reloading the page might help.', standby_max_session_hint: "😴 StandBy has been running for quite a while and is exiting on its own so your phone can cool down - just reopen it if you'd like.",
                 toast_copy_failed: "⚠️ Couldn't copy. Link: ",
                 toast_copy_unsupported: "⚠️ Your browser doesn't support that. Link: ",
                 toast_konami: '🎉 Konami code detected! Hyperfocus activated!',
@@ -6343,7 +6374,7 @@
                 toast_sharecard_creating: 'Creando tarjeta para compartir...',
                 toast_sharecard_saved: '¡Tarjeta guardada! 🎴',
                 toast_sharecard_cors: 'No se pudo cargar la portada (CORS) – tarjeta creada sin imagen.',
-                toast_link_copied: '📋 ¡Enlace copiado! Ya puedes compartirlo.', toast_stale_reload_hint: '🔄 La pantalla parece congelada desde hace un rato - recargar la página podría ayudar.',
+                toast_link_copied: '📋 ¡Enlace copiado! Ya puedes compartirlo.', toast_stale_reload_hint: '🔄 La pantalla parece congelada desde hace un rato - recargar la página podría ayudar.', standby_max_session_hint: '😴 StandBy lleva ya bastante tiempo activo y se cerrará solo para que tu teléfono pueda descansar - vuelve a abrirlo si quieres.',
                 toast_copy_failed: '⚠️ No se pudo copiar. Enlace: ',
                 toast_copy_unsupported: '⚠️ Tu navegador no soporta esto. Enlace: ',
                 toast_konami: '🎉 ¡Código Konami detectado! ¡Hiperfoco activado!',
@@ -6532,7 +6563,7 @@
                 toast_sharecard_creating: 'Création de la carte à partager...',
                 toast_sharecard_saved: 'Carte enregistrée ! 🎴',
                 toast_sharecard_cors: "Impossible de charger la pochette (CORS) – carte créée sans image.",
-                toast_link_copied: '📋 Lien copié ! Tu peux le partager maintenant.', toast_stale_reload_hint: "🔄 L'affichage semble figé depuis un moment - recharger la page pourrait aider.",
+                toast_link_copied: '📋 Lien copié ! Tu peux le partager maintenant.', toast_stale_reload_hint: "🔄 L'affichage semble figé depuis un moment - recharger la page pourrait aider.", standby_max_session_hint: "😴 StandBy tourne depuis un bon moment et se ferme de lui-même pour laisser ton téléphone respirer - rouvre-le si tu veux.",
                 toast_copy_failed: '⚠️ Impossible de copier. Lien : ',
                 toast_copy_unsupported: '⚠️ Ton navigateur ne supporte pas ça. Lien : ',
                 toast_konami: '🎉 Code Konami détecté ! Hyperfocus activé !',
@@ -6721,7 +6752,7 @@
                 toast_sharecard_creating: 'Criando cartão para compartilhar...',
                 toast_sharecard_saved: 'Cartão salvo! 🎴',
                 toast_sharecard_cors: 'Não foi possível carregar a capa (CORS) – cartão criado sem imagem.',
-                toast_link_copied: '📋 Link copiado! Já pode compartilhar.', toast_stale_reload_hint: '🔄 A tela parece travada há um tempo - recarregar a página pode ajudar.',
+                toast_link_copied: '📋 Link copiado! Já pode compartilhar.', toast_stale_reload_hint: '🔄 A tela parece travada há um tempo - recarregar a página pode ajudar.', standby_max_session_hint: '😴 O StandBy já está rodando há bastante tempo e vai se fechar sozinho para o celular descansar - basta abrir de novo se quiser.',
                 toast_copy_failed: '⚠️ Não foi possível copiar. Link: ',
                 toast_copy_unsupported: '⚠️ Seu navegador não suporta isso. Link: ',
                 toast_konami: '🎉 Código Konami detectado! Hiperfoco ativado!',
@@ -6910,7 +6941,7 @@
                 toast_sharecard_creating: 'Paylaşım kartı oluşturuluyor...',
                 toast_sharecard_saved: 'Paylaşım kartı kaydedildi! 🎴',
                 toast_sharecard_cors: 'Kapak resmi yüklenemedi (CORS) – kart resimsiz oluşturuldu.',
-                toast_link_copied: '📋 Bağlantı kopyalandı! Şimdi paylaşabilirsin.', toast_stale_reload_hint: '🔄 Ekran bir süredir donmuş görünüyor - sayfayı yenilemek yardımcı olabilir.',
+                toast_link_copied: '📋 Bağlantı kopyalandı! Şimdi paylaşabilirsin.', toast_stale_reload_hint: '🔄 Ekran bir süredir donmuş görünüyor - sayfayı yenilemek yardımcı olabilir.', standby_max_session_hint: '😴 StandBy uzun süredir çalışıyor ve telefonun soluklanması için kendiliğinden kapanıyor - istersen tekrar açabilirsin.',
                 toast_copy_failed: '⚠️ Kopyalanamadı. Bağlantı: ',
                 toast_copy_unsupported: '⚠️ Tarayıcın bunu desteklemiyor. Bağlantı: ',
                 toast_konami: '🎉 Konami kodu algılandı! Hiperodak etkinleştirildi!',
@@ -10294,6 +10325,7 @@
                 if (island) island.classList.add('di-hidden-by-standby');
                 updateIslandRing();
                 scheduleStandbyDeepDim(); // NEW: Tiefen-Dimmung nach 30min ununterbrochenem StandBy planen
+                scheduleStandbyMaxSession(); // NEU v24.105: harte Obergrenze für ununterbrochene Laufzeit
                 // NEU v24.21: Scroll-Effekt für zu lange Titel/Künstlernamen nur beim tatsächlichen
                 // Öffnen aktivieren - läuft NIE im Hintergrund während StandBy geschlossen ist.
                 setupStandbyMarquee();
@@ -10328,6 +10360,7 @@
                 clearInterval(standByInterval);
                 clearInterval(standByShiftInterval);
                 clearTimeout(standByDeepDimTimeout);
+                clearTimeout(standByMaxSessionTimeout); // NEU v24.105
                 overlay.classList.remove('standby-deep-dim');
                 // NEU v24.21: Scroll-Animation beim Schließen sauber stoppen, damit sie nicht
                 // unsichtbar im Hintergrund weiterläuft (visibility:hidden allein pausiert
@@ -10377,6 +10410,20 @@
         // an denselben Pixelpositionen das größte Einbrenn-Risiko darstellt.
         const AOD_SHIFT_INTERVAL_MS = 1 * 60 * 1000; // v24.21: von 3min auf 1min verschärft - entspricht dem branchenüblichen Intervall (Apple StandBy, die meisten Always-On-Displays), 3min war für dauerhaftes OLED-Stehenlassen zu lang
         const AOD_DEEP_DIM_AFTER_MS = 20 * 60 * 1000; // NEW: von 30min auf 20min verschärft - dunkelt früher zusätzlich ab
+        // NEU v24.105 (KRITISCH): Nutzer ließ sein Pixel über Nacht (mehrere Stunden am
+        // Stück, durchgehend Musik) im StandBy - Ergebnis: Bildschirm zeigte danach nur noch
+        // Blau (irgendein Rendering-/Speicherzustand ist offenbar über eine derart lange
+        // ununterbrochene Laufzeit hinweg kaputtgegangen - wurde nie für mehrstündigen
+        // Dauerbetrieb am Stück getestet), UND das Gerät war extrem heiß, teils laut Nutzer
+        // vermutlich zusätzlich durch ein Kissen abgedeckt (reine Wärme-Isolation, dagegen
+        // hilft kein Software-Fix - ein Handy, das man stundenlang zudeckt, wird immer warm,
+        // egal wie effizient der Code ist). Für den Software-Teil: bewusste, harte
+        // Obergrenze - StandBy verlässt sich nach einer sehr langen ununterbrochenen Laufzeit
+        // automatisch selbst, gibt den Wake Lock frei und lässt das Handy danach ganz normal
+        // in den echten Tiefschlaf gehen, statt unbegrenzt weiterzulaufen. Begrenzt dadurch
+        // gleichzeitig, wie lange sich ein eventuelles Speicher-/Rendering-Problem überhaupt
+        // aufbauen kann, UND verhindert stundenlanges erzwungenes Wachhalten des Bildschirms.
+        const AOD_MAX_SESSION_MS = 3 * 60 * 60 * 1000; // 3 Stunden
         const AOD_SHIFT_POSITIONS = [
             { x: 0, y: 0 },
             { x: 12, y: 8 }, { x: -12, y: -8 },
@@ -10392,6 +10439,7 @@
         ];
         let standByShiftIndex = 0;
         let standByDeepDimTimeout = null;
+        let standByMaxSessionTimeout = null; // NEU v24.105
         function shiftStandbyContent() {
             standByShiftIndex = (standByShiftIndex + 1) % AOD_SHIFT_POSITIONS.length;
             const pos = AOD_SHIFT_POSITIONS[standByShiftIndex];
@@ -10405,6 +10453,23 @@
             standByDeepDimTimeout = setTimeout(() => {
                 if (overlay && standByActive) overlay.classList.add('standby-deep-dim');
             }, AOD_DEEP_DIM_AFTER_MS);
+        }
+        // NEU v24.105: siehe ausführliche Begründung bei AOD_MAX_SESSION_MS oben - harte
+        // Obergrenze für ununterbrochene StandBy-Laufzeit. WICHTIG: kein einfacher Stopp -
+        // der Nutzer will StandBy ausdrücklich die ganze Nacht durchlaufen lassen. Stattdessen
+        // ein sanfter, automatischer Neustart der ganzen Seite: setzt einen Merker in
+        // sessionStorage, lädt die Seite neu (behebt dabei automatisch jeden eventuell über
+        // die lange Laufzeit aufgebauten Speicher-/Rendering-Fehler - "frischer Zustand" statt
+        // Flicken eines unbekannten Problems), und öffnet StandBy direkt danach wieder von
+        // selbst (siehe restoreStandbyAfterReload() beim Laden). Für den Nutzer im besten Fall
+        // nur ein kurzes Aufflackern des Bildschirms, StandBy läuft danach normal weiter.
+        function scheduleStandbyMaxSession() {
+            clearTimeout(standByMaxSessionTimeout);
+            standByMaxSessionTimeout = setTimeout(() => {
+                if (!standByActive) return;
+                try { sessionStorage.setItem('standbyResumeAfterReload', '1'); } catch (e) {}
+                window.location.reload();
+            }, AOD_MAX_SESSION_MS);
         }
 
         // NEU v24.21: Prüft, ob Titel/Künstler im StandBy-Lockscreen zu breit für den
@@ -10919,6 +10984,14 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.105', date: "August 2026", type: 'fix', items: {
+                de: ["StandBy startet sich nach mehreren Stunden ununterbrochener Laufzeit automatisch sanft neu (behebt möglichen Speicher-/Rendering-Fehler bei sehr langer Nacht-Nutzung, macht danach von selbst weiter)"],
+                en: ["StandBy now automatically and gently restarts itself after several hours of continuous runtime (fixes a possible memory/rendering issue during very long overnight use, then continues on its own)"],
+                es: ["StandBy ahora se reinicia automática y suavemente tras varias horas de funcionamiento continuo (corrige un posible problema de memoria/renderizado en usos nocturnos muy largos y luego continúa solo)"],
+                fr: ["StandBy se redémarre désormais automatiquement et en douceur après plusieurs heures de fonctionnement continu (corrige un possible problème de mémoire/rendu lors d'une utilisation nocturne très longue, puis reprend de lui-même)"],
+                pt: ["O StandBy agora reinicia automática e suavemente após várias horas de uso contínuo (corrige um possível problema de memória/renderização em uso noturno muito longo, depois continua sozinho)"],
+                tr: ["StandBy artık birkaç saatlik kesintisiz çalışmadan sonra kendini otomatik ve yumuşak bir şekilde yeniden başlatıyor (çok uzun gece kullanımında olası bir bellek/render sorununu düzeltir, ardından kendiliğinden devam eder)"],
+            }},
             { version: 'v24.100.4', date: "August 2026", type: 'fix', items: {
                 de: ["StandBy-Hintergrund zeigte fast nie ein Cover - echter Grund gefunden und behoben", "StandBy zeigt jetzt korrekt \"Aktuell ist es ruhig\", wenn die Musik pausiert ist"],
                 en: ["StandBy background almost never showed a cover - found and fixed the real cause", "StandBy now correctly shows \"It's quiet right now\" when music is paused"],
@@ -14254,6 +14327,17 @@
             if ('Notification' in window && Notification.permission === 'default') {
                 Notification.requestPermission().catch(() => {});
             }
+            // NEU v24.105: StandBy nach einem automatischen Max-Session-Neustart (siehe
+            // scheduleStandbyMaxSession()) von selbst wieder öffnen - der Nutzer merkt vom
+            // ganzen Vorgang im besten Fall nur ein kurzes Bildschirm-Flackern, StandBy läuft
+            // danach normal weiter. Kurze Verzögerung, damit erst die initialen Musikdaten da
+            // sind, bevor StandBy mit eventuell noch leeren Angaben aufpoppt.
+            try {
+                if (sessionStorage.getItem('standbyResumeAfterReload') === '1') {
+                    sessionStorage.removeItem('standbyResumeAfterReload');
+                    setTimeout(() => { if (typeof toggleStandBy === 'function') toggleStandBy(true); }, 1200);
+                }
+            } catch (e) {}
         })();
 
         // NEW: Sprachauswahl - beim allerersten Besuch als Setup-Assistent zeigen,
