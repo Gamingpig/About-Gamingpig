@@ -13959,6 +13959,7 @@
             // Proaktive Cover-Auflösung: sofort für jeden neuen Track oder gebrochene Proxy-URL starten.
             // IMMER für neue Songs (damit auch ohne Spotify-Link Apple/Deezer greift), nicht nur bei Proxy-Fehlern.
             if (!currentResolvedArtUrl && (isBrokenNpcProxy || !rawArtwork || isNewTrack)) {
+                const capturedTrackKey = trackKey; // verhindert Race Condition bei schnellem Songwechsel
                 findBestArtworkFallback(
                     trackTitle,
                     cleanArtist,
@@ -13966,9 +13967,10 @@
                     data.track ? data.track.album : null,
                     resolvedPlatformLinks
                 ).then(resolved => {
-                    if (resolved && resolved !== fallbackImg) {
+                    // Nur anwenden wenn wir noch beim selben Track sind!
+                    if (resolved && resolved !== fallbackImg && capturedTrackKey === lastResolvedTrackKey) {
                         currentResolvedArtUrl = resolved;
-                        setCachedCover(trackKey, resolved);
+                        setCachedCover(capturedTrackKey, resolved);
                         // Sofort alle visuellen Elemente aktualisieren
                         const sbBg = document.getElementById('standby-bg');
                         const sbCardBg = document.getElementById('standby-card-blur-bg');
