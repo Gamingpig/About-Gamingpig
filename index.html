@@ -7934,7 +7934,7 @@
         let lastResolvedTrackKey = '';
         let lastKnownMusicData = null;
 
-        async function findBestArtworkFallback(title, artist, spotifyUrl = null, album = null) {
+        async function findBestArtworkFallback(title, artist, spotifyUrl = null, album = null, platformLinks = null) {
             const cacheKey = getTrackCacheKey(title, artist);
 
             if (trackCoverMemoryCache.has(cacheKey)) {
@@ -7945,6 +7945,24 @@
             const cleanA = cleanArtistName(artist || '');
             const candidates = [];
 
+            // 0. Apple Music / iTunes ID Lookup (Präzise 100% Trefferquote)
+            if (platformLinks) {
+                const appleUrl = typeof platformLinks === 'string' ? platformLinks : (platformLinks.appleMusic || platformLinks.apple || platformLinks.track_url || '');
+                if (appleUrl && typeof appleUrl === 'string') {
+                    const match = appleUrl.match(/[?&]i=(\d+)/) || appleUrl.match(/\/album\/[^\/]+\/(\d+)/) || appleUrl.match(/\/id(\d+)/);
+                    if (match && match[1]) {
+                        candidates.push(
+                            fetch(`https://itunes.apple.com/lookup?id=${match[1]}`)
+                                .then(r => r.ok ? r.json() : Promise.reject())
+                                .then(d => (d && d.results && d.results[0] && d.results[0].artworkUrl100)
+                                    ? d.results[0].artworkUrl100.replace('100x100bb', '600x600bb')
+                                    : Promise.reject()
+                                )
+                        );
+                    }
+                }
+            }
+
             // 1. Spotify oEmbed (offizielles, authentisches Spotify CDN Cover)
             if (spotifyUrl && typeof spotifyUrl === 'string' && spotifyUrl.includes('spotify.com')) {
                 candidates.push(
@@ -7954,15 +7972,7 @@
                 );
             }
 
-            // 2. Deezer JSONP (1000x1000 Ultra-HD Cover ohne Browser-CORS-Blocker)
-            if (cleanT || cleanA) {
-                candidates.push(
-                    fetchDeezerCoverJsonp(cleanT, cleanA)
-                        .then(url => url ? url : Promise.reject())
-                );
-            }
-
-            // 3. iTunes Search API (Artist + Title)
+            // 2. iTunes Search API (Artist + Title) - extrem schnell & verlässlich
             if (cleanA && cleanT) {
                 const q1 = encodeURIComponent(`${cleanA} ${cleanT}`);
                 candidates.push(
@@ -7972,6 +7982,14 @@
                             ? d.results[0].artworkUrl100.replace('100x100bb', '600x600bb')
                             : Promise.reject()
                         )
+                );
+            }
+
+            // 3. Deezer JSONP (1000x1000 Ultra-HD Cover)
+            if (cleanT || cleanA) {
+                candidates.push(
+                    fetchDeezerCoverJsonp(cleanT, cleanA)
+                        .then(url => url ? url : Promise.reject())
                 );
             }
 
@@ -8002,8 +8020,8 @@
             return null;
         }
 
-        async function tryItunesArtworkFallback(title, artist, spotifyUrl = null, album = null) {
-            return findBestArtworkFallback(title, artist, spotifyUrl, album);
+        async function tryItunesArtworkFallback(title, artist, spotifyUrl = null, album = null, platformLinks = null) {
+            return findBestArtworkFallback(title, artist, spotifyUrl, album, platformLinks);
         }
 
         function renderMusicServicePicker(data) {
@@ -13891,9 +13909,29 @@
                 currentResolvedArtUrl = trackCoverMemoryCache.get(trackKey);
             }
 
-            let imgUrl = currentResolvedArtUrl || (data.track && data.track.artwork_url) || fallbackImg;
+            let rawArtwork = (data.track && data.track.artwork_url) || '';
+            let isBrokenNpcProxy = rawArtwork.includes('npc-api.aikins.xyz/v1/artwork/');
+
+            let imgUrl = currentResolvedArtUrl || (!isBrokenNpcProxy && rawArtwork ? rawArtwork : fallbackImg);
             if (!imgUrl || imgUrl.trim() === "") {
                 imgUrl = fallbackImg;
+            }
+
+            // Proaktiver Fallback-Start: Sobald wir keinen sauberen CDN-Link haben, sofort im Hintergrund auflösen
+            if (!currentResolvedArtUrl && (isBrokenNpcProxy || !rawArtwork || imgUrl === fallbackImg)) {
+                findBestArtworkFallback(
+                    trackTitle || (mTitle ? mTitle.innerText : ''),
+                    cleanArtist || (mArtist ? mArtist.innerText : ''),
+                    mainSpotifyUrl,
+                    data.track ? data.track.album : null,
+                    data.track ? (data.track.platform_links || data.track.track_url) : null
+                ).then(resolved => {
+                    if (resolved && resolved !== fallbackImg) {
+                        currentResolvedArtUrl = resolved;
+                        trackCoverMemoryCache.set(trackKey, resolved);
+                        updateAllCoverVisuals(resolved);
+                    }
+                });
             }
 
             let currentApiProgress = data.progress_ms !== undefined ? data.progress_ms : (data.track && data.track.progress_ms) || 0;
@@ -13971,7 +14009,8 @@
                             trackTitle || (mTitle ? mTitle.innerText : ''),
                             cleanArtist || (mArtist ? mArtist.innerText : ''),
                             mainSpotifyUrl,
-                            data.track ? data.track.album : null
+                            data.track ? data.track.album : null,
+                            data.track ? (data.track.platform_links || data.track.track_url) : null
                         );
                         const finalFallback = fallbackUrl || fallbackImg;
                         currentResolvedArtUrl = finalFallback;
