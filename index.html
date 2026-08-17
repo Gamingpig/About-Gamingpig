@@ -4537,7 +4537,6 @@
             position: absolute; inset: -30px; background-size: cover; background-position: center;
             filter: blur(var(--standby-bg-blur, 36px)) brightness(0.4) saturate(160%); transform: scale(1.28);
             transition: opacity 0.5s ease, filter 0.3s ease;
-            animation: standby-kenburns 60s ease-in-out 1 forwards;
         }
         /* KRITISCHER FIX v24.49: Nutzer maß per Task-Manager 14-16% DAUERHAFTE GPU-Last im
            StandBy auf einem Laptop (AMD Ryzen 7 4700U) - für einen fast statischen Screen
@@ -13459,6 +13458,12 @@
                 return;
             }
 
+            // NEU: In StandBy rAF-Loop komplett pausieren - verhindert 120Hz Dauerlast & Erhitzung auf OLED-Displays
+            if (typeof standByActive !== 'undefined' && standByActive) {
+                isAnimating = false;
+                return;
+            }
+
             const elapsed = performance.now() - localStartTime;
             currentMs = serverBaseProgress + elapsed;
 
@@ -13556,6 +13561,20 @@
         }
 
         function startProgressTracking() {
+            if (typeof standByActive !== 'undefined' && standByActive) {
+                if (lyricAnimFrame) {
+                    cancelAnimationFrame(lyricAnimFrame);
+                    lyricAnimFrame = null;
+                }
+                isAnimating = false;
+                if (progressTickerInterval) clearInterval(progressTickerInterval);
+                progressTickerInterval = setInterval(() => {
+                    if (!trackIsPlaying) return;
+                    tickProgressInterval();
+                }, 1000);
+                return;
+            }
+
             if (isAnimating) return;
             isAnimating = true;
             if (lyricAnimFrame) cancelAnimationFrame(lyricAnimFrame);
@@ -13565,7 +13584,7 @@
             progressTickerInterval = setInterval(() => {
                 if (!trackIsPlaying) return;
                 tickProgressInterval();
-            }, 200);
+            }, 250);
         }
 
         function stopProgressTracking() {
