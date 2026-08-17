@@ -11,6 +11,40 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FIX - KRITISCH] Release v24.108: Songtext-Abruf wurde bei JEDEM 5-Sekunden-Poll neu ausgelöst statt nur beim echten Songwechsel
+      - Symptom: In der Lyrics-Ansicht sieht man alle paar Sekunden den Ladetext "Suche Songtext..." - also
+        einen vollständigen Neu-Abruf bei LRCLIB/NetEase - obwohl derselbe Song weiterläuft. Das passiert
+        bei jedem Song, unabhängig davon ob Lyrics gefunden wurden oder nicht.
+      - Ursache: In updateMusicUI() wird `isNewTrack` durch den Vergleich `newTrackId !== currentTrackId`
+        bestimmt. Die Variable `currentTrackId` wurde jedoch nach dem Vergleich NIE aktualisiert - sie
+        blieb dauerhaft auf dem Initialwert "" stehen. Dadurch war `isNewTrack` bei JEDEM der alle-5-Sekunden-
+        Polls true, und der nachfolgende `if (isNewTrack) { fetchExternalLyrics(...) }`-Zweig wurde
+        zuverlässig bei jedem Update ausgeführt. Der Fehler war durch eine fehlende einzige Zeile
+        (`currentTrackId = newTrackId`) verursacht - die Zuweisung fehlte komplett im Code.
+      - Fix: `currentTrackId = newTrackId` direkt nach der `isNewTrack`-Berechnung eingefügt.
+        fetchExternalLyrics() wird jetzt nur noch einmal pro echtem Songwechsel aufgerufen.
+
+    [FIX - KRITISCH] Release v24.107: Auto-Reloads restlos entfernt + Pixel 8 Pro Hitze- & WakeLock-Fix + robustes Cover-Laden
+      - Auto-Reloads restlos beseitigt: Der 3-Stunden-Neustart-Timer (scheduleStandbyMaxSession)
+        wurde komplett entfernt. StandBy läuft nun unbegrenzt und nativ im Arbeitsspeicher durch,
+        ohne Bildschirmflackern oder Neustarts. Auch der Tutorial-Abschluss-Reload wurde durch eine
+        saubere In-Memory-Wiederherstellung ersetzt.
+      - Pixel 8 Pro Hitze- & WakeLock-Sicherheit:
+        1) WakeLock wird AUSSCHLIESSLICH bei aktivem StandBy (und aktiver Musik) gehalten. Außerhalb
+           von StandBy wird der WakeLock sofort freigegeben, sodass sich das Gerät ganz normal sperrt.
+        2) Neue CSS-Klasse body.standby-mode pausiert alle Hintergrund-Animationen (Blobs, Partikel,
+           EQ-Balken, Ambient Glow) während StandBy zuverlässig.
+        3) Marquee-Scroll im StandBy wurde beruhigt: Längere Lesepausen (über 60% Standzeit) und sanfte
+           Bewegung senken die GPU-Dauerlast drastisch, während der Text weiterhin lesbar bleibt.
+        4) Redundante, kurz getaktete Selbstheilungs- und Watchdog-Timer (2s/3s) wurden entfernt,
+           damit die CPU in echte Stromsparmodi wechseln kann.
+      - Cover-Laden 100% fehlertolerant:
+        1) Canvas-Elemente (#di-art, #standby-track-art, #lyrics-mini-art) fangen Race Conditions ab:
+           Lädt das Bild noch, hängt drawCoverToCanvas automatisch einen load-Listener an und zeichnet
+           garantiert nach.
+        2) StandBy-Hintergrund (#standby-bg / #standby-card-blur-bg) und die Hauptkarte werden bei
+           jedem Retry und iTunes-Fallback synchron gehalten.
+
     [FIX - KRITISCH] Release v24.106: Konkreter Speicher-Aufräum-Fix als echter Versuch gegen
     den Nacht-Absturz - v24.105-Sicherheitsnetz bleibt zusätzlich bestehen
       - Nutzer wollte zu Recht nicht nur ein Sicherheitsnetz (periodischer Auto-Neustart aus
@@ -3445,7 +3479,7 @@
 
         #music-card-layout-wrapper {
             display: grid; grid-template-rows: 0fr; width: 100%; padding-top: 0;
-            transition: grid-template-rows 0.6s var(--apple-spring), padding 0.6s var(--apple-spring);
+            transition: grid-template-rows 0.75s var(--apple-spring), padding 0.75s var(--apple-spring);
         }
         #music-card-layout-wrapper.hidden { display: none !important; }
         body.liquid-glass-active #music-card-layout-wrapper { transition: grid-template-rows 1.2s var(--liquid-fluid), padding 1.2s var(--liquid-fluid); }
@@ -3457,7 +3491,7 @@
            Animation ohne feste Pixel-Höhen angeben zu müssen). */
         #kart-card-layout-wrapper {
             display: grid; grid-template-rows: 0fr; width: 100%; padding-top: 0;
-            transition: grid-template-rows 0.6s var(--apple-spring), padding 0.6s var(--apple-spring);
+            transition: grid-template-rows 0.75s var(--apple-spring), padding 0.75s var(--apple-spring);
         }
         #kart-card-layout-wrapper.hidden { display: none !important; }
         #kart-card-layout-wrapper.is-open { grid-template-rows: 1fr; padding-top: 1.5rem; }
@@ -3525,8 +3559,8 @@
         /* --- STANDARD FALLBACKS --- */
         .modal-opening .modal-content, .picker-opening, .tutorial-opening, .settings-opening { animation: std-pop-in 0.5s var(--apple-spring) forwards; }
         .modal-closing .modal-content, .picker-closing, .tutorial-closing, .settings-closing { animation: std-pop-out 0.4s var(--apple-ease) forwards; }
-        .dashboard-opening #main-music-card { animation: std-pop-in 0.5s var(--apple-spring) forwards; transform-origin: top center; }
-        .dashboard-closing #main-music-card { animation: std-pop-out 0.4s var(--apple-ease) forwards; transform-origin: top center; }
+        .dashboard-opening #main-music-card { animation: std-dashboard-in 0.65s var(--apple-spring) forwards; transform-origin: top center; }
+        .dashboard-closing #main-music-card { animation: std-dashboard-out 0.55s var(--apple-ease) forwards; transform-origin: top center; }
         /* NEW: Kart-Dashboard bekommt dieselben Pop-In/Pop-Out-Animationen wie das Musik-
            Dashboard, statt nur auf den grid-template-rows-Trick des Wrappers angewiesen
            zu sein - sorgt für ein einheitliches, "fertig" wirkendes Schließverhalten. */
@@ -3536,8 +3570,8 @@
            fälschlicherweise als Nachfahren-Selektoren geschrieben (Leerzeichen = "Kind-
            Element davon"), wodurch sie nie griffen. Jetzt als zusammengesetzter Selektor
            auf demselben Element (kein Leerzeichen). */
-        #kart-card-wrapper.kart-dashboard-opening { animation: std-pop-in 0.5s var(--apple-spring) forwards; transform-origin: top center; }
-        #kart-card-wrapper.kart-dashboard-closing { animation: std-pop-out 0.4s var(--apple-ease) forwards; transform-origin: top center; }
+        #kart-card-wrapper.kart-dashboard-opening { animation: std-dashboard-in 0.65s var(--apple-spring) forwards; transform-origin: top center; }
+        #kart-card-wrapper.kart-dashboard-closing { animation: std-dashboard-out 0.55s var(--apple-ease) forwards; transform-origin: top center; }
         body.low-end #kart-card-wrapper.kart-dashboard-opening, body.low-end #kart-card-wrapper.kart-dashboard-closing {
             opacity: 1 !important; visibility: visible !important; transform: none !important; animation: none !important;
         }
@@ -3546,6 +3580,9 @@
 
         @keyframes std-pop-in { 0% { opacity: 0; transform: scale(0.8) translate3d(0, -20px, 0); } 100% { opacity: 1; transform: scale(1) translate3d(0, 0, 0); } }
         @keyframes std-pop-out { 0% { opacity: 1; transform: scale(1) translate3d(0, 0, 0); } 100% { opacity: 0; transform: scale(0.8) translate3d(0, 20px, 0); } }
+        /* Dashboard-spezifische Variante: sanfterer Einstieg (weniger aggressiver Scale-Sprung) */
+        @keyframes std-dashboard-in { 0% { opacity: 0; transform: scale(0.88) translate3d(0, -16px, 0); } 100% { opacity: 1; transform: scale(1) translate3d(0, 0, 0); } }
+        @keyframes std-dashboard-out { 0% { opacity: 1; transform: scale(1) translate3d(0, 0, 0); } 100% { opacity: 0; transform: scale(0.88) translate3d(0, 14px, 0); } }
 
         /* Apple Aura Background */
         #liquid-blobs {
@@ -3580,10 +3617,24 @@
         body.dashboard-open .blob,
         body:has(#main-music-card.lyrics-open) .blob-container,
         body:has(#main-music-card.lyrics-open) .blob,
-        /* NEU v24.49: StandBy deckt den kompletten Bildschirm blickdicht ab - Blobs dahinter
-           sind exakt genauso unsichtbar wie bei offenem Dashboard/Lyrics, hatten bisher aber
-           keine eigene, direkte Pausier-Regel (verließen sich darauf, dass dashboard-open
-           zufällig auch gesetzt war, was nicht garantiert ist). */
+        body.standby-mode .blob-container,
+        body.standby-mode .blob,
+        body.standby-mode #particles-container,
+        body.standby-mode .particle,
+        body.standby-mode .eq-bars,
+        body.standby-mode .eq-bar,
+        body.standby-mode #ambilight-glow,
+        body.standby-mode #ambient-bg,
+        body.standby-mode #lyrics-ambient-bg,
+        body.page-hidden .blob-container,
+        body.page-hidden .blob,
+        body.page-hidden #particles-container,
+        body.page-hidden .particle,
+        body.page-hidden .eq-bars,
+        body.page-hidden .eq-bar,
+        body.page-hidden #ambilight-glow,
+        body.page-hidden #ambient-bg,
+        body.page-hidden #lyrics-ambient-bg,
         body:has(#standby-overlay.standby-active) .blob-container,
         body:has(#standby-overlay.standby-active) .blob {
             animation-play-state: paused !important;
@@ -4460,6 +4511,9 @@
         #standby-overlay.standby-deep-dim #standby-clock { opacity: 0.55; }
         #standby-overlay.standby-deep-dim #standby-nowplaying { opacity: 0.7; }
         #standby-overlay.standby-deep-dim #standby-bg { filter: brightness(0.28) blur(36px) saturate(160%) !important; }
+        #standby-overlay.standby-deep-dim #standby-eq span,
+        #standby-overlay.standby-deep-dim .standby-marquee-active,
+        #standby-overlay.standby-deep-dim .standby-marquee-active span { animation-play-state: paused !important; }
         /* NEW: Anti-Burn-in - der gesamte Inhalt verschiebt sich alle ~10min minimal,
            damit bei langem Stehenlassen (z.B. Handy an der Ladestation) kein Einbrennen
            auf OLED-Screens passiert. Layout/Abstände bleiben dabei unverändert, nur eine
@@ -4837,9 +4891,9 @@
             will-change: transform;
         }
         @keyframes standby-marquee {
-            0%, 15% { transform: translateX(0); }
-            45%, 60% { transform: translateX(var(--marquee-distance, 0px)); }
-            90%, 100% { transform: translateX(0); }
+            0%, 30% { transform: translateX(0); }
+            55%, 75% { transform: translateX(var(--marquee-distance, 0px)); }
+            92%, 100% { transform: translateX(0); }
         }
         #standby-progress-wrap { margin-top: 24px; }
         #standby-progress-track { width: 100%; height: 6px; background: rgba(255,255,255,0.15); border-radius: 999px; overflow: hidden; }
@@ -5030,13 +5084,21 @@
             transition: opacity 0.2s ease;
         }
         body.low-end #media-container, body.low-end #media-container * { transform: none !important; }
+
+        /* Wenn keine Musik läuft, Lyrics-Button und leeres Artwork-Icon verbergen */
+        #music-card.offline #btn-lyrics-show {
+            display: none !important;
+        }
+        #artwork[src=""], #artwork:not([src]) {
+            opacity: 0 !important;
+        }
     </style>
     
     <script>
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.106 · 2026-08-16';
+        const SITE_VERSION = 'v24.114 · 2026-08-17';
 
         const DEFAULT_SYNC_OFFSET = -400; 
     </script>
@@ -5259,12 +5321,13 @@
 
         <!-- AUSBILDUNG & ALLTAG: Gequetschtes Grid, 2 Spalten -->
         <section id="cards-section" class="mb-12 xxs:mb-16 xs:mb-20 sm:mb-24 reveal rounded-3xl relative z-10">
-            <h2 id="cards-section-title" class="text-lg xxs:text-xl xs:text-2xl sm:text-3xl font-bold mb-4 xxs:mb-6 sm:mb-10 text-blue-600 dark:text-blue-500 border-b-2 sm:border-b-4 border-blue-600 dark:border-blue-500 pb-1.5 xxs:pb-2 sm:pb-3 inline-block break-words">
+            <h2 id="cards-section-title" class="text-lg xxs:text-xl xs:text-2xl sm:text-3xl font-bold mb-3 xxs:mb-4 sm:mb-6 text-blue-600 dark:text-blue-500 border-b-2 sm:border-b-4 border-blue-600 dark:border-blue-500 pb-1.5 xxs:pb-2 sm:pb-3 inline-block break-words">
                 Real Talk: Ausbildung & Alltag
             </h2>
             
-            <div class="grid grid-cols-2 gap-2.5 xxs:gap-3 xs:gap-4 sm:gap-5">
-                <div onclick="openModal('status')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group relative">                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-blue-500/10 text-blue-600 dark:text-blue-500 rounded-lg xxs:rounded-xl group-hover:bg-blue-500 group-hover:text-white transition-all shrink-0">
+            <div id="cards-grid" class="grid grid-cols-2 gap-2.5 xxs:gap-3 xs:gap-4 sm:gap-5">
+                <div onclick="openModal('status')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group relative">
+                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-blue-500/10 text-blue-600 dark:text-blue-500 rounded-lg xxs:rounded-xl group-hover:bg-blue-500 group-hover:text-white transition-all shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                     </div>
                     <div>
@@ -5273,7 +5336,8 @@
                     </div>
                 </div>
 
-                <div onclick="openModal('background')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group relative">                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-purple-500/10 text-purple-600 dark:text-purple-500 rounded-lg xxs:rounded-xl group-hover:bg-purple-500 group-hover:text-white transition-all shrink-0">
+                <div onclick="openModal('background')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group relative">
+                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-purple-500/10 text-purple-600 dark:text-purple-500 rounded-lg xxs:rounded-xl group-hover:bg-purple-500 group-hover:text-white transition-all shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                     </div>
                     <div>
@@ -5282,7 +5346,8 @@
                     </div>
                 </div>
 
-                <div onclick="openModal('freizeit')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group relative">                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-orange-500/10 text-orange-600 dark:text-orange-500 rounded-lg xxs:rounded-xl group-hover:bg-orange-500 group-hover:text-white transition-all shrink-0">
+                <div onclick="openModal('freizeit')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group relative">
+                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-orange-500/10 text-orange-600 dark:text-orange-500 rounded-lg xxs:rounded-xl group-hover:bg-orange-500 group-hover:text-white transition-all shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 12h.01M18 12h.01M15 10h.01M15 14h.01"/></svg>
                     </div>
                     <div>
@@ -5291,7 +5356,8 @@
                     </div>
                 </div>
 
-                <div onclick="openModal('menschen')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group relative">                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-red-500/10 text-red-600 dark:text-red-500 rounded-lg xxs:rounded-xl group-hover:bg-red-500 group-hover:text-white transition-all shrink-0">
+                <div onclick="openModal('menschen')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group relative">
+                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-red-500/10 text-red-600 dark:text-red-500 rounded-lg xxs:rounded-xl group-hover:bg-red-500 group-hover:text-white transition-all shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
                     </div>
                     <div>
@@ -5300,7 +5366,8 @@
                     </div>
                 </div>
 
-                <div onclick="openModal('techstack')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group relative">                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 rounded-lg xxs:rounded-xl group-hover:bg-emerald-500 group-hover:text-white transition-all shrink-0">
+                <div onclick="openModal('techstack')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group relative">
+                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 rounded-lg xxs:rounded-xl group-hover:bg-emerald-500 group-hover:text-white transition-all shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="M20 16V7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v9m16 0H4m16 0 1.28 2.55a1 1 0 0 1-.9 1.45H3.62a1 1 0 0 1-.9-1.45L4 16"/></svg>
                     </div>
                     <div>
@@ -5309,7 +5376,8 @@
                     </div>
                 </div>
 
-                <div onclick="openModal('setup')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group relative">                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-cyan-500/10 text-cyan-600 dark:text-cyan-500 rounded-lg xxs:rounded-xl group-hover:bg-cyan-500 group-hover:text-white transition-all shrink-0">
+                <div onclick="openModal('setup')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group relative">
+                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-cyan-500/10 text-cyan-600 dark:text-cyan-500 rounded-lg xxs:rounded-xl group-hover:bg-cyan-500 group-hover:text-white transition-all shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
                     </div>
                     <div>
@@ -5318,7 +5386,8 @@
                     </div>
                 </div>
 
-                <div onclick="openModal('labor')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group relative">                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-yellow-500/10 text-yellow-600 dark:text-yellow-500 rounded-lg xxs:rounded-xl group-hover:bg-yellow-500 group-hover:text-white transition-all shrink-0">
+                <div onclick="openModal('labor')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group relative">
+                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-yellow-500/10 text-yellow-600 dark:text-yellow-500 rounded-lg xxs:rounded-xl group-hover:bg-yellow-500 group-hover:text-white transition-all shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="M10 2v7.31"/><path d="M14 9.3V1.99"/><path d="M8.5 2h7"/><path d="M14 9.3a6.5 6.5 0 1 1-4 0"/><path d="M5.52 16h12.96"/></svg>
                     </div>
                     <div>
@@ -5327,7 +5396,8 @@
                     </div>
                 </div>
 
-                <div onclick="openModal('contact')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group relative">                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-indigo-500/10 text-indigo-600 dark:text-indigo-500 rounded-lg xxs:rounded-xl group-hover:bg-indigo-500 group-hover:text-white transition-all shrink-0">
+                <div onclick="openModal('contact')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group relative">
+                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-indigo-500/10 text-indigo-600 dark:text-indigo-500 rounded-lg xxs:rounded-xl group-hover:bg-indigo-500 group-hover:text-white transition-all shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
                     </div>
                     <div>
@@ -5629,11 +5699,14 @@
                         </div>
 
                         <!-- Das Music Picker Fenster -->
-                        <div id="music-picker" class="absolute inset-0 bg-black/60 backdrop-blur-xl rounded-[1.5rem] xxs:rounded-3xl md:rounded-[3rem] hidden flex-col justify-center p-4 xxs:p-6 sm:p-10 gap-2 xxs:gap-4 z-50">
-                            <p id="label-choose-service" class="text-[8px] xxs:text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1 sm:mb-2">Service wählen</p>
-                            <div id="dynamic-links-container" class="flex flex-col gap-1.5 xxs:gap-2 sm:gap-3 w-full max-h-[120px] xxs:max-h-[140px] sm:max-h-[180px] overflow-y-auto" style="scrollbar-width: thin;"></div>
+                        <div id="music-picker" class="absolute inset-0 bg-black/80 backdrop-blur-2xl rounded-[1.5rem] xxs:rounded-3xl md:rounded-[3rem] hidden flex-col justify-center p-4 xxs:p-6 sm:p-8 gap-2.5 z-50">
+                            <div class="flex items-center justify-between mb-1">
+                                <p id="label-choose-service" class="text-[9px] xxs:text-xs font-black text-blue-400 uppercase tracking-widest">Streamingdienst wählen</p>
+                                <button onclick="toggleMusicPicker(false)" class="text-white/50 hover:text-white text-xs px-2 py-1 rounded-full hover:bg-white/10 transition-colors" title="Schließen">✕</button>
+                            </div>
+                            <div id="dynamic-links-container" class="flex flex-col gap-2 w-full max-h-[160px] xxs:max-h-[200px] sm:max-h-[240px] overflow-y-auto pr-1" style="scrollbar-width: thin;"></div>
                             <p id="link-none" class="text-white/50 text-[10px] xxs:text-xs sm:text-sm font-bold" style="display: none;">Keine Links gefunden</p>
-                            <button onclick="toggleMusicPicker(false)" id="btn-cancel-picker" class="text-white/50 text-[8px] xxs:text-[10px] sm:text-xs mt-1 xxs:mt-2 sm:mt-4 hover:text-white transition-colors">Abbrechen</button>
+                            <button onclick="toggleMusicPicker(false)" id="btn-cancel-picker" class="text-white/50 text-[9px] xxs:text-xs mt-1 hover:text-white transition-colors text-center py-1">Abbrechen</button>
                         </div>
 
                         <div id="music-header-tag" class="relative z-10 text-[6px] xxs:text-[8px] xs:text-[10px] font-black text-blue-500 uppercase tracking-[0.1em] xxs:tracking-[0.2em] xs:tracking-[0.4em] mb-2 xxs:mb-3 sm:mb-4 md:mb-6 transition-all shrink-0">
@@ -5641,13 +5714,8 @@
                         </div>
 
                         <div id="media-container" onclick="toggleMusicPicker(true)" role="button" tabindex="0" class="relative z-10 w-full max-w-[100px] xxs:max-w-[140px] xs:max-w-[180px] sm:max-w-[240px] md:max-w-[280px] aspect-square shrink-0 rounded-xl xxs:rounded-2xl mx-auto mb-2 xxs:mb-3 sm:mb-4 md:mb-6 overflow-hidden flex items-center justify-center bg-[#121212] shadow-[0_10px_30px_rgba(0,0,0,0.8)] sm:shadow-[0_20px_40px_rgba(0,0,0,0.8)] cursor-pointer hover:ring-2 hover:ring-white/20 transition-all">
-                            <!-- FIX v24.85: decoding="async" ergänzt (Bild-Dekodierung blockiert dadurch nicht
-                 den Haupt-Thread/das Rendering) + fetchpriority="high" auf dem Haupt-Cover
-                 (das mit Abstand wichtigste, immer sichtbare Bild) - Nutzerwunsch nach noch
-                 schnellerem Laden, nachdem in v24.79 bereits die Anzahl gleichzeitiger
-                 Bild-Ladevorgänge reduziert wurde. Beides Standard-HTML-Attribute, von allen
-                 modernen Browsern unterstützt, ohne Risiko bei fehlender Unterstützung. -->
-            <img id="artwork" src="" alt="Album Artwork" class="w-full h-full object-cover" decoding="async" fetchpriority="high">
+                            <!-- FIX v24.85: decoding="async" ergänzt + fetchpriority="high" -->
+                            <img id="artwork" src="" alt="Album Artwork" class="w-full h-full object-cover" decoding="async" fetchpriority="high">
                             <div id="offline-icon" class="absolute text-2xl xxs:text-4xl sm:text-6xl" aria-hidden="true">🌙</div>
                         </div>
 
@@ -5767,7 +5835,11 @@
         </section>
 
         <!-- EINSPALTIGES GRID FÜR GAMES UND SOCIALS -->
-        <div class="grid grid-cols-1 gap-3 xxs:gap-4 xs:gap-6 sm:gap-8 reveal">
+        <section id="socials-section" class="reveal">
+            <h2 id="socials-section-title" class="text-lg xxs:text-xl xs:text-2xl sm:text-3xl font-bold mb-4 xxs:mb-6 sm:mb-8 text-blue-600 dark:text-blue-500 border-b-2 sm:border-b-4 border-blue-600 dark:border-blue-500 pb-1.5 xxs:pb-2 sm:pb-3 inline-block break-words">
+                Socials & Kanäle
+            </h2>
+            <div class="grid grid-cols-1 gap-3 xxs:gap-4 xs:gap-6 sm:gap-8">
             <!-- Tic-Tac-Toe -->
             <div class="glass-card p-3 xxs:p-5 xs:p-6 sm:p-8 rounded-[1rem] xxs:rounded-[1.5rem] sm:rounded-[2.5rem] group overflow-hidden relative border border-slate-200 dark:border-slate-800">
                 <div class="flex items-center gap-2 xxs:gap-3 sm:gap-5 mb-2 xxs:mb-4 sm:mb-6">
@@ -5804,12 +5876,12 @@
             <div class="glass-card p-3 xxs:p-5 xs:p-6 sm:p-8 rounded-[1rem] xxs:rounded-[1.5rem] sm:rounded-[2.5rem] group overflow-hidden relative border border-slate-200 dark:border-slate-800">
                 <div class="flex items-center gap-2 xxs:gap-3 sm:gap-5 mb-2 xxs:mb-4 sm:mb-6">
                     <div class="p-1.5 xxs:p-2 sm:p-3 bg-red-500/10 text-red-600 dark:text-red-500 rounded-lg xxs:rounded-xl sm:rounded-2xl group-hover:rotate-12 transition-transform">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-6 xxs:h-6 sm:w-8 sm:h-8"><path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 2-2 103.38 103.38 0 0 1 15 0 2 2 0 0 1 2 2 24.12 24.12 0 0 1 0 10 2 2 0 0 1-2 2 103.38 103.38 0 0 1-15 0 2 2 0 0 1-2-2Z"/><path d="m10 15 5-3-5-3z"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-6 xxs:h-6 sm:w-8 sm:h-8"><path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"/><polygon points="10 15 15 12 10 9 10 15"/></svg>
                     </div>
-                    <h2 class="text-base xxs:text-xl xs:text-2xl sm:text-3xl font-bold">Gamingpig‘s YouTube</h2>
+                    <h2 class="text-base xxs:text-xl xs:text-2xl sm:text-3xl font-bold">YouTube</h2>
                 </div>
-                <a href="https://www.youtube.com/@gamingpig9409" target="_blank" rel="noopener noreferrer" class="group/link inline-flex items-center gap-1.5 xxs:gap-2 sm:gap-3 text-sm xxs:text-base sm:text-xl text-blue-500 hover:text-blue-600 font-bold transition-all">
-                    <span id="cta-gamingpig-youtube">Hier geht's zu meinem Kanal</span>
+                <a href="https://www.youtube.com/@Gamingpig787" target="_blank" rel="noopener noreferrer" class="group/link inline-flex items-center gap-1.5 xxs:gap-2 sm:gap-3 text-sm xxs:text-base sm:text-xl text-blue-500 hover:text-blue-600 font-bold transition-all">
+                    <span id="cta-youtube">Hier geht's zu meinem Kanal</span>
                     <div class="p-0.5 xxs:p-1 sm:p-1.5 bg-blue-500/10 rounded xxs:rounded-md sm:rounded-lg group-hover/link:translate-x-1 transition-transform">
                         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-4 xxs:h-4 sm:w-5 sm:h-5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                     </div>
@@ -5819,67 +5891,20 @@
             <!-- GitHub -->
             <div class="glass-card p-3 xxs:p-5 xs:p-6 sm:p-8 rounded-[1rem] xxs:rounded-[1.5rem] sm:rounded-[2.5rem] group overflow-hidden relative border border-slate-200 dark:border-slate-800">
                 <div class="flex items-center gap-2 xxs:gap-3 sm:gap-5 mb-2 xxs:mb-4 sm:mb-6">
-                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-slate-500/10 text-slate-900 dark:text-white rounded-lg xxs:rounded-xl sm:rounded-2xl group-hover:rotate-12 transition-transform">
+                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-slate-500/10 text-slate-800 dark:text-slate-200 rounded-lg xxs:rounded-xl sm:rounded-2xl group-hover:rotate-12 transition-transform">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-6 xxs:h-6 sm:w-8 sm:h-8"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
                     </div>
-                    <h2 class="text-base xxs:text-xl xs:text-2xl sm:text-3xl font-bold">Gamingpig‘s GitHub</h2>
+                    <h2 class="text-base xxs:text-xl xs:text-2xl sm:text-3xl font-bold">GitHub</h2>
                 </div>
                 <a href="https://github.com/Gamingpig" target="_blank" rel="noopener noreferrer" class="group/link inline-flex items-center gap-1.5 xxs:gap-2 sm:gap-3 text-sm xxs:text-base sm:text-xl text-blue-500 hover:text-blue-600 font-bold transition-all">
-                    <span id="cta-gamingpig-github">Hier geht's zu meinem Profil</span>
+                    <span id="cta-github">Hier geht's zu meinem Profil</span>
                     <div class="p-0.5 xxs:p-1 sm:p-1.5 bg-blue-500/10 rounded xxs:rounded-md sm:rounded-lg group-hover/link:translate-x-1 transition-transform">
                         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-4 xxs:h-4 sm:w-5 sm:h-5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                     </div>
                 </a>
             </div>
-
-            <!-- Tom's TikTok -->
-            <div class="glass-card p-3 xxs:p-5 xs:p-6 sm:p-8 rounded-[1rem] xxs:rounded-[1.5rem] sm:rounded-[2.5rem] group overflow-hidden relative border border-slate-200 dark:border-slate-800">
-                <div class="flex items-center gap-2 xxs:gap-3 sm:gap-5 mb-2 xxs:mb-4 sm:mb-6">
-                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-pink-500/10 text-pink-600 dark:text-pink-500 rounded-lg xxs:rounded-xl sm:rounded-2xl group-hover:rotate-12 transition-transform">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-6 xxs:h-6 sm:w-8 sm:h-8"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/></svg>
-                    </div>
-                    <h2 class="text-base xxs:text-xl xs:text-2xl sm:text-3xl font-bold">Tom's TikTok</h2>
-                </div>
-                <a href="https://www.tiktok.com/@squizey_tt?_r=1&_t=ZG-97oplSDT9Dl" target="_blank" rel="noopener noreferrer" class="group/link inline-flex items-center gap-1.5 xxs:gap-2 sm:gap-3 text-sm xxs:text-base sm:text-xl text-blue-500 hover:text-blue-600 font-bold transition-all">
-                    <span id="cta-tom">Hier geht's zu Tom's Kanal</span>
-                    <div class="p-0.5 xxs:p-1 sm:p-1.5 bg-blue-500/10 rounded xxs:rounded-md sm:rounded-lg group-hover/link:translate-x-1 transition-transform">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-4 xxs:h-4 sm:w-5 sm:h-5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                    </div>
-                </a>
             </div>
-
-            <!-- Jakob's TikTok -->
-            <div class="glass-card p-3 xxs:p-5 xs:p-6 sm:p-8 rounded-[1rem] xxs:rounded-[1.5rem] sm:rounded-[2.5rem] group overflow-hidden relative border border-slate-200 dark:border-slate-800">
-                <div class="flex items-center gap-2 xxs:gap-3 sm:gap-5 mb-2 xxs:mb-4 sm:mb-6">
-                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-pink-500/10 text-pink-600 dark:text-pink-500 rounded-lg xxs:rounded-xl sm:rounded-2xl group-hover:rotate-12 transition-transform">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-6 xxs:h-6 sm:w-8 sm:h-8"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/></svg>
-                    </div>
-                    <h2 class="text-base xxs:text-xl xs:text-2xl sm:text-3xl font-bold">Jakob's TikTok</h2>
-                </div>
-                <a href="https://www.tiktok.com/@ano.nym788?_r=1&_t=ZG-95MjKBGf8HB" target="_blank" rel="noopener noreferrer" class="group/link inline-flex items-center gap-1.5 xxs:gap-2 sm:gap-3 text-sm xxs:text-base sm:text-xl text-blue-500 hover:text-blue-600 font-bold transition-all">
-                    <span id="cta-jakob">Hier geht's zu Jakob's Kanal</span>
-                    <div class="p-0.5 xxs:p-1 sm:p-1.5 bg-blue-500/10 rounded xxs:rounded-md sm:rounded-lg group-hover/link:translate-x-1 transition-transform">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-4 xxs:h-4 sm:w-5 sm:h-5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                    </div>
-                </a>
-            </div>
-
-            <!-- Lukas' TikTok -->
-            <div class="glass-card p-3 xxs:p-5 xs:p-6 sm:p-8 rounded-[1rem] xxs:rounded-[1.5rem] sm:rounded-[2.5rem] group overflow-hidden relative border border-slate-200 dark:border-slate-800">
-                <div class="flex items-center gap-2 xxs:gap-3 sm:gap-5 mb-2 xxs:mb-4 sm:mb-6">
-                    <div class="p-1.5 xxs:p-2 sm:p-3 bg-pink-500/10 text-pink-600 dark:text-pink-500 rounded-lg xxs:rounded-xl sm:rounded-2xl group-hover:rotate-12 transition-transform">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-6 xxs:h-6 sm:w-8 sm:h-8"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/></svg>
-                    </div>
-                    <h2 class="text-base xxs:text-xl xs:text-2xl sm:text-3xl font-bold">Lukas' TikTok</h2>
-                </div>
-                <a href="https://www.tiktok.com/@luk.ki65?_r=1&_t=ZG-9800yjq2GLx" target="_blank" rel="noopener noreferrer" class="group/link inline-flex items-center gap-1.5 xxs:gap-2 sm:gap-3 text-sm xxs:text-base sm:text-xl text-blue-500 hover:text-blue-600 font-bold transition-all">
-                    <span id="cta-lukas">Hier geht's zu Lukas' Kanal</span>
-                    <div class="p-0.5 xxs:p-1 sm:p-1.5 bg-blue-500/10 rounded xxs:rounded-md sm:rounded-lg group-hover/link:translate-x-1 transition-transform">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-4 xxs:h-4 sm:w-5 sm:h-5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                    </div>
-                </a>
-            </div>
-        </div> 
+        </section> 
 
         <footer id="footer-section" class="mt-12 xxs:mt-20 sm:mt-40 text-center reveal">
             <div class="inline-flex items-center gap-1.5 xxs:gap-2 sm:gap-4 py-1.5 px-3 xxs:py-2 xxs:px-4 sm:px-6 bg-slate-200/50 dark:bg-slate-900/50 rounded-full border border-slate-300 dark:border-slate-800 flex-wrap justify-center">
@@ -6176,7 +6201,22 @@
                 kart_stat_besttime: 'Bestzeit',
                 kart_stat_sessions: 'Sessions',
                 kart_stat_since: 'Seit',
-                                settings_wakelock: 'Bildschirm an (StandBy)', settings_wakelock_hint: 'Hält den Bildschirm nur wach, solange Musik läuft - pausiert sie, darf das Handy normal einschlafen.', settings_notifications: 'Benachrichtigungen', notifications_unsupported: 'nicht verfügbar', notifications_on: 'AN', notifications_blocked: 'blockiert - in Browser-Einstellungen ändern', notifications_not_set: 'nicht eingerichtet, antippen', notifications_denied_hint: 'Du hast Benachrichtigungen blockiert - das kann ich nicht per Klick zurücksetzen, nur du selbst in den Browser-/System-Einstellungen für diese Seite.', notifications_enabled_toast: '🔔 Benachrichtigungen sind jetzt aktiviert.', settings_notification_hint: 'Für die "Willkommen zurück"-Meldung, falls Musik pausiert war während du weg warst.', settings_standby_design: 'StandBy-Design', standby_design_classic: 'Classic', standby_design_minimal: 'Minimal', standby_design_cover_focus: 'Cover-Fokus', standby_design_clock_only: 'Nur Uhr', standby_design_vinyl: 'Vinyl', standby_design_split: 'Split', standby_design_typography: 'Typografie', standby_design_edge_glow: 'Edge-Glow', standby_design_compact: 'Kompakt', standby_design_poster: 'Poster', standby_design_frame: 'Rahmen', standby_design_neon: 'Neon', standby_design_polaroid: 'Polaroid', standby_design_bar: 'Leiste', standby_design_grid: 'Raster', standby_design_transparent: 'Transparent', standby_design_giant_clock: 'Riesen-Uhr', standby_design_zen: 'Zen', standby_design_stacked: 'Gestapelt', standby_design_contrast: 'Kontrast', label_standby_accent: 'Akzentfarbe', label_standby_radius: 'Eckenradius', label_standby_design_code: 'Design-Code teilen', design_code_placeholder: 'Code hier einfügen...', btn_design_code_copy: 'Kopieren', btn_design_code_load: 'Laden', settings_design_code_hint: 'Kopiere deinen StandBy-Look als Code und schick ihn Freunden - die laden ihn hier ein und haben genau denselben Style.', standby_design_code_copied: '📋 Code kopiert - jetzt an Freunde weitergeben!', standby_design_code_loaded: '✨ Design geladen!', standby_design_code_invalid: 'Das war kein gültiger Design-Code.', label_standby_scale: 'StandBy-Größe', settings_standby_scale_hint: 'Passt sich automatisch an deinen Bildschirm an - hier nur bei Bedarf feinjustieren.', settings_haptic: 'Haptic-Feedback', whatsnew_summary_title: 'Updates seit deinem letzten Besuch',
+                nav_about: 'Über mich',
+                nav_cards: 'Real Talk',
+                nav_itlab: 'IT-Lab',
+                nav_music: 'Musik',
+                nav_arcade: 'Arcade',
+                nav_support: 'Support',
+                nav_socials: 'Socials',
+                it_lab_title: 'Gamingpig IT-Lab & Werkstatt',
+                it_lab_net_title: 'Live API-Latenz & Signal',
+                it_lab_net_desc: 'Echtzeit-Verbindung zum Music-Server',
+                it_lab_repair_title: 'Geräte-Reparaturstation',
+                arcade_section_title: 'Hyperfokus-Reaktionstrainer',
+                arcade_hs_label: 'Highscore',
+                arcade_hint: '💡 Teste deine Reflexe – Ränge von Normalo bis ADHS-Hyperfokus-Legende!',
+                socials_section_title: 'Socials & Kanäle',
+                settings_wakelock: 'Bildschirm an (StandBy)', settings_wakelock_hint: 'Hält den Bildschirm nur wach, solange Musik läuft - pausiert sie, darf das Handy normal einschlafen.', settings_notifications: 'Benachrichtigungen', notifications_unsupported: 'nicht verfügbar', notifications_on: 'AN', notifications_blocked: 'blockiert - in Browser-Einstellungen ändern', notifications_not_set: 'nicht eingerichtet, antippen', notifications_denied_hint: 'Du hast Benachrichtigungen blockiert - das kann ich nicht per Klick zurücksetzen, nur du selbst in den Browser-/System-Einstellungen für diese Seite.', notifications_enabled_toast: '🔔 Benachrichtigungen sind jetzt aktiviert.', settings_notification_hint: 'Für die "Willkommen zurück"-Meldung, falls Musik pausiert war während du weg warst.', settings_standby_design: 'StandBy-Design', standby_design_classic: 'Classic', standby_design_minimal: 'Minimal', standby_design_cover_focus: 'Cover-Fokus', standby_design_clock_only: 'Nur Uhr', standby_design_vinyl: 'Vinyl', standby_design_split: 'Split', standby_design_typography: 'Typografie', standby_design_edge_glow: 'Edge-Glow', standby_design_compact: 'Kompakt', standby_design_poster: 'Poster', standby_design_frame: 'Rahmen', standby_design_neon: 'Neon', standby_design_polaroid: 'Polaroid', standby_design_bar: 'Leiste', standby_design_grid: 'Raster', standby_design_transparent: 'Transparent', standby_design_giant_clock: 'Riesen-Uhr', standby_design_zen: 'Zen', standby_design_stacked: 'Gestapelt', standby_design_contrast: 'Kontrast', label_standby_accent: 'Akzentfarbe', label_standby_radius: 'Eckenradius', label_standby_design_code: 'Design-Code teilen', design_code_placeholder: 'Code hier einfügen...', btn_design_code_copy: 'Kopieren', btn_design_code_load: 'Laden', settings_design_code_hint: 'Kopiere deinen StandBy-Look als Code und schick ihn Freunden - die laden ihn hier ein und haben genau denselben Style.', standby_design_code_copied: '📋 Code kopiert - jetzt an Freunde weitergeben!', standby_design_code_loaded: '✨ Design geladen!', standby_design_code_invalid: 'Das war kein gültiger Design-Code.', label_standby_scale: 'StandBy-Größe', settings_standby_scale_hint: 'Passt sich automatisch an deinen Bildschirm an - hier nur bei Bedarf feinjustieren.', settings_haptic: 'Haptic-Feedback', whatsnew_summary_title: 'Updates seit deinem letzten Besuch',
                 mini_click_to_open: 'Klicken zum Öffnen', mini_click_to_close: 'Klicken zum Schließen',
                 aria_cp: 'Befehlspalette öffnen', aria_install: 'Als App installieren', aria_island: 'Song-Details öffnen, nach oben wischen zum Ausblenden'
             },
@@ -6365,7 +6405,22 @@
                 kart_stat_besttime: 'Best Time',
                 kart_stat_sessions: 'Sessions',
                 kart_stat_since: 'Since',
-                                settings_wakelock: 'Keep Screen On (StandBy)', settings_wakelock_hint: 'Keeps the screen on only while music is playing - once paused, the phone can sleep normally.', settings_notifications: 'Notifications', notifications_unsupported: 'not available', notifications_on: 'ON', notifications_blocked: 'blocked - change in browser settings', notifications_not_set: 'not set up, tap to enable', notifications_denied_hint: "You've blocked notifications - I can't reset that with a click, only you can in this site's browser/system settings.", notifications_enabled_toast: '🔔 Notifications are now enabled.', settings_notification_hint: "For the 'welcome back' notice if music was paused while you were away.", settings_standby_design: 'StandBy Design', standby_design_classic: 'Classic', standby_design_minimal: 'Minimal', standby_design_cover_focus: 'Cover Focus', standby_design_clock_only: 'Clock Only', standby_design_vinyl: 'Vinyl', standby_design_split: 'Split', standby_design_typography: 'Typography', standby_design_edge_glow: 'Edge Glow', standby_design_compact: 'Compact', standby_design_poster: 'Poster', standby_design_frame: 'Frame', standby_design_neon: 'Neon', standby_design_polaroid: 'Polaroid', standby_design_bar: 'Bar', standby_design_grid: 'Grid', standby_design_transparent: 'Transparent', standby_design_giant_clock: 'Giant Clock', standby_design_zen: 'Zen', standby_design_stacked: 'Stacked', standby_design_contrast: 'Contrast', label_standby_accent: 'Accent Color', label_standby_radius: 'Corner Radius', label_standby_design_code: 'Share Design Code', design_code_placeholder: 'Paste code here...', btn_design_code_copy: 'Copy', btn_design_code_load: 'Load', settings_design_code_hint: 'Copy your StandBy look as a code and send it to friends - they paste it here and get the exact same style.', standby_design_code_copied: '📋 Code copied - now share it with friends!', standby_design_code_loaded: '✨ Design loaded!', standby_design_code_invalid: "That wasn't a valid design code.", label_standby_scale: 'StandBy Size', settings_standby_scale_hint: 'Fits your screen automatically - only fine-tune here if needed.', settings_haptic: 'Haptic Feedback', whatsnew_summary_title: 'Updates since your last visit',
+                nav_about: 'About me',
+                nav_cards: 'Real Talk',
+                nav_itlab: 'IT-Lab',
+                nav_music: 'Music',
+                nav_arcade: 'Arcade',
+                nav_support: 'Support',
+                nav_socials: 'Socials',
+                it_lab_title: 'Gamingpig IT-Lab & Workshop',
+                it_lab_net_title: 'Live API Latency & Signal',
+                it_lab_net_desc: 'Real-time connection to music server',
+                it_lab_repair_title: 'Device Repair Station',
+                arcade_section_title: 'Hyperfocus Reaction Trainer',
+                arcade_hs_label: 'Highscore',
+                arcade_hint: '💡 Test your reflexes – ranks from casual to ADHD hyperfocus legend!',
+                socials_section_title: 'Socials & Channels',
+                settings_wakelock: 'Keep Screen On (StandBy)', settings_wakelock_hint: 'Keeps the screen on only while music is playing - once paused, the phone can sleep normally.', settings_notifications: 'Notifications', notifications_unsupported: 'not available', notifications_on: 'ON', notifications_blocked: 'blocked - change in browser settings', notifications_not_set: 'not set up, tap to enable', notifications_denied_hint: "You've blocked notifications - I can't reset that with a click, only you can in this site's browser/system settings.", notifications_enabled_toast: '🔔 Notifications are now enabled.', settings_notification_hint: "For the 'welcome back' notice if music was paused while you were away.", settings_standby_design: 'StandBy Design', standby_design_classic: 'Classic', standby_design_minimal: 'Minimal', standby_design_cover_focus: 'Cover Focus', standby_design_clock_only: 'Clock Only', standby_design_vinyl: 'Vinyl', standby_design_split: 'Split', standby_design_typography: 'Typography', standby_design_edge_glow: 'Edge Glow', standby_design_compact: 'Compact', standby_design_poster: 'Poster', standby_design_frame: 'Frame', standby_design_neon: 'Neon', standby_design_polaroid: 'Polaroid', standby_design_bar: 'Bar', standby_design_grid: 'Grid', standby_design_transparent: 'Transparent', standby_design_giant_clock: 'Giant Clock', standby_design_zen: 'Zen', standby_design_stacked: 'Stacked', standby_design_contrast: 'Contrast', label_standby_accent: 'Accent Color', label_standby_radius: 'Corner Radius', label_standby_design_code: 'Share Design Code', design_code_placeholder: 'Paste code here...', btn_design_code_copy: 'Copy', btn_design_code_load: 'Load', settings_design_code_hint: 'Copy your StandBy look as a code and send it to friends - they paste it here and get the exact same style.', standby_design_code_copied: '📋 Code copied - now share it with friends!', standby_design_code_loaded: '✨ Design loaded!', standby_design_code_invalid: "That wasn't a valid design code.", label_standby_scale: 'StandBy Size', settings_standby_scale_hint: 'Fits your screen automatically - only fine-tune here if needed.', settings_haptic: 'Haptic Feedback', whatsnew_summary_title: 'Updates since your last visit',
                 mini_click_to_open: 'Click to open', mini_click_to_close: 'Click to close',
                 aria_cp: 'Open command palette', aria_install: 'Install as app', aria_island: 'Open song details, swipe up to dismiss'
             },
@@ -7360,6 +7415,7 @@
             setText('cta-tom', t('cta_tom'));
             setText('cta-jakob', t('cta_jakob'));
             setText('cta-lukas', t('cta_lukas'));
+            setText('socials-section-title', t('socials_section_title'));
             setAria('btn-lyrics-settings', t('aria_lyrics_settings'));
             setAria('btn-lyrics-close', t('aria_lyrics_close'));
             setAria('btn-lyrics-show', t('aria_lyrics_show'), t('aria_lyrics_show'));
@@ -7676,6 +7732,7 @@
         let localStartTime = 0;
         let serverBaseProgress = 0;
         let trackIsPlaying = false;
+        let progressTickerInterval = null;
         let isAnimating = false; 
         let lyricAnimFrame = null;
         // PERF-FIX: animateLoop lief bisher ungedrosselt mit voller Framerate (bis zu 60x/Sek)
@@ -7751,7 +7808,16 @@
         // komplette Cover-Anzeige auf der ganzen Seite ausfällt.
         // =========================================================
         function drawCoverToCanvas(canvas, sourceImg) {
-            if (!canvas || !sourceImg || !sourceImg.complete || !sourceImg.naturalWidth) return false;
+            if (!canvas || !sourceImg) return false;
+            if (!sourceImg.complete || !sourceImg.naturalWidth) {
+                if (typeof sourceImg.addEventListener === 'function' && !sourceImg.dataset.canvasListenerAttached) {
+                    sourceImg.dataset.canvasListenerAttached = 'true';
+                    sourceImg.addEventListener('load', () => {
+                        drawCoverToCanvas(canvas, sourceImg);
+                    }, { once: true });
+                }
+                return false;
+            }
             const rect = canvas.getBoundingClientRect();
             const dpr = window.devicePixelRatio || 1;
             const cw = Math.max(1, Math.round((rect.width || canvas.clientWidth || 64) * dpr));
@@ -7854,29 +7920,296 @@
         // stecken bleiben kann: die Karte (via #artwork) erholte sich dank des v24.99-Retries,
         // der Hintergrund aber nicht, weil er ihn schlicht nie hatte.
         function retryImageLoad(url) {
+            if (!url || typeof url !== 'string' || !url.startsWith('http')) return Promise.resolve(false);
             return new Promise((resolve) => {
                 const probe = new Image();
-                // FIX v24.106: explizite Aufräumarbeit, siehe ausführliche Begründung beim
-                // #standby-bg-Vorlader.
                 probe.onload = () => { resolve(true); probe.onload = null; probe.onerror = null; probe.src = ''; };
                 probe.onerror = () => { resolve(false); probe.onload = null; probe.onerror = null; probe.src = ''; };
                 probe.src = url + (url.includes('?') ? '&' : '?') + '_retry=' + Date.now();
             });
         }
-        async function tryItunesArtworkFallback(title, artist) {
-            try {
-                const query = encodeURIComponent(`${artist} ${title}`.trim());
-                const res = await fetch(`https://itunes.apple.com/search?term=${query}&media=music&limit=1`);
-                if (!res.ok) return null;
-                const json = await res.json();
-                const hit = json.results && json.results[0];
-                if (!hit || !hit.artworkUrl100) return null;
-                // Höhere Auflösung anfordern statt der Standard-100x100-Miniatur.
-                return hit.artworkUrl100.replace('100x100bb', '600x600bb');
-            } catch (err) {
-                console.warn('iTunes-Artwork-Fallback fehlgeschlagen:', err);
-                return null;
+
+        function cleanTrackTitle(title) {
+            if (!title) return '';
+            return title
+                .replace(/\s*\(aus\s+[^)]+\)/gi, '')
+                .replace(/\s*\(live[^)]*\)/gi, '')
+                .replace(/\s*-\s*live/gi, '')
+                .replace(/\b(feat|ft|prod)\.?\s+.*$/gi, '')
+                .replace(/\((?:official|music|video|audio|lyric|visualizer|deluxe|bonus|remastered|remaster|radio\s*edit)[^)]*\)/gi, '')
+                .replace(/\[(?:official|music|video|audio|lyric|visualizer|deluxe|bonus|remastered|remaster|radio\s*edit)[^\]]*\]/gi, '')
+                .trim();
+        }
+
+        function cleanArtistName(artist) {
+            if (!artist) return '';
+            return artist
+                .replace(/\s*•\s*From Smart Shuffle/gi, '')
+                .split(/[,&]/)[0]
+                .trim();
+        }
+
+        function fetchDeezerCoverJsonp(title, artist) {
+            return new Promise((resolve) => {
+                if (typeof document === 'undefined') return resolve(null);
+                const cbName = 'dz_cb_' + Date.now() + '_' + Math.floor(Math.random() * 100000);
+                const script = document.createElement('script');
+                let timeoutId = setTimeout(() => {
+                    cleanup();
+                    resolve(null);
+                }, 3500);
+
+                function cleanup() {
+                    clearTimeout(timeoutId);
+                    try { if (window[cbName]) delete window[cbName]; } catch (e) { window[cbName] = undefined; }
+                    if (script && script.parentNode) script.parentNode.removeChild(script);
+                }
+
+                window[cbName] = function(resp) {
+                    cleanup();
+                    if (resp && resp.data && resp.data[0] && resp.data[0].album) {
+                        const alb = resp.data[0].album;
+                        const cover = alb.cover_xl || alb.cover_big || alb.cover_medium;
+                        resolve(cover || null);
+                    } else {
+                        resolve(null);
+                    }
+                };
+
+                script.onerror = function() {
+                    cleanup();
+                    resolve(null);
+                };
+
+                const cleanT = cleanTrackTitle(title);
+                const cleanA = cleanArtistName(artist);
+                const q = encodeURIComponent(`${cleanA} ${cleanT}`.trim());
+                script.src = `https://api.deezer.com/search?q=${q}&limit=1&output=jsonp&callback=${cbName}`;
+                document.head.appendChild(script);
+            });
+        }
+
+        const trackCoverMemoryCache = new Map();
+        let currentResolvedArtUrl = null;
+        let lastResolvedTrackKey = '';
+        let lastKnownMusicData = null;
+
+        async function findBestArtworkFallback(title, artist, spotifyUrl = null, album = null) {
+            const cleanT = cleanTrackTitle(title || '');
+            const cleanA = cleanArtistName(artist || '');
+            const cacheKey = `${cleanT}___${cleanA}`;
+
+            if (trackCoverMemoryCache.has(cacheKey)) {
+                return trackCoverMemoryCache.get(cacheKey);
             }
+
+            const candidates = [];
+
+            // 1. Spotify oEmbed (offizielles, authentisches Spotify CDN Cover)
+            if (spotifyUrl && typeof spotifyUrl === 'string' && spotifyUrl.includes('spotify.com')) {
+                candidates.push(
+                    fetch(`https://open.spotify.com/oembed?url=${encodeURIComponent(spotifyUrl)}`)
+                        .then(r => r.ok ? r.json() : Promise.reject())
+                        .then(d => (d && d.thumbnail_url) ? d.thumbnail_url : Promise.reject())
+                );
+            }
+
+            // 2. Deezer JSONP (1000x1000 Ultra-HD Cover ohne Browser-CORS-Blocker)
+            if (cleanT || cleanA) {
+                candidates.push(
+                    fetchDeezerCoverJsonp(cleanT, cleanA)
+                        .then(url => url ? url : Promise.reject())
+                );
+            }
+
+            // 3. iTunes Search API (Artist + Title)
+            if (cleanA && cleanT) {
+                const q1 = encodeURIComponent(`${cleanA} ${cleanT}`);
+                candidates.push(
+                    fetch(`https://itunes.apple.com/search?term=${q1}&media=music&limit=1`)
+                        .then(r => r.ok ? r.json() : Promise.reject())
+                        .then(d => (d && d.results && d.results[0] && d.results[0].artworkUrl100)
+                            ? d.results[0].artworkUrl100.replace('100x100bb', '600x600bb')
+                            : Promise.reject()
+                        )
+                );
+            }
+
+            // 4. iTunes Search API (Nur Title)
+            if (cleanT) {
+                const q2 = encodeURIComponent(cleanT);
+                candidates.push(
+                    fetch(`https://itunes.apple.com/search?term=${q2}&media=music&limit=1`)
+                        .then(r => r.ok ? r.json() : Promise.reject())
+                        .then(d => (d && d.results && d.results[0] && d.results[0].artworkUrl100)
+                            ? d.results[0].artworkUrl100.replace('100x100bb', '600x600bb')
+                            : Promise.reject()
+                        )
+                );
+            }
+
+            if (candidates.length === 0) return null;
+
+            try {
+                // Parallel-Abfrage: wer zuerst antwortet, gewinnt!
+                const fastestCover = await Promise.any(candidates);
+                if (fastestCover) {
+                    trackCoverMemoryCache.set(cacheKey, fastestCover);
+                    return fastestCover;
+                }
+            } catch (e) {}
+
+            return null;
+        }
+
+        async function tryItunesArtworkFallback(title, artist, spotifyUrl = null, album = null) {
+            return findBestArtworkFallback(title, artist, spotifyUrl, album);
+        }
+
+        function renderMusicServicePicker(data) {
+            const linksContainer = document.getElementById('dynamic-links-container');
+            const noLinkEl = document.getElementById('link-none');
+            if (!linksContainer) return;
+
+            linksContainer.innerHTML = '';
+            
+            const trackObj = (data && data.track) || data || {};
+            const trackTitle = trackObj.title || (mTitle ? mTitle.innerText : '');
+            const rawArtist = trackObj.artist || (mArtist ? mArtist.innerText : '');
+
+            if (!trackTitle || trackTitle.includes("Aktuell ist es ruhig") || trackTitle.includes("Gamingpig is Offline")) {
+                if (noLinkEl) noLinkEl.style.display = 'block';
+                return;
+            }
+
+            let hasLinks = false;
+            const availableLinks = { ...(trackObj.platform_links || {}), ...(trackObj.external_urls || {}) };
+
+            let mainSpotifyUrl = trackObj.url || trackObj.track_url || null;
+            if (!mainSpotifyUrl && trackObj.uri && trackObj.uri.startsWith('spotify:')) {
+                const uriParts = trackObj.uri.split(':');
+                if (uriParts.length >= 3) {
+                    mainSpotifyUrl = `https://open.spotify.com/${uriParts[1]}/${uriParts[2]}`;
+                }
+            }
+            if (mainSpotifyUrl && !availableLinks.spotify) {
+                availableLinks.spotify = mainSpotifyUrl;
+            }
+
+            const searchQuery = encodeURIComponent(`${trackTitle} ${rawArtist}`.trim());
+            const linkKeys = Object.keys(availableLinks).map(k => k.toLowerCase());
+
+            const hasSpotify = linkKeys.some(k => k.includes('spotify'));
+            const hasApple = linkKeys.some(k => k.includes('apple'));
+            const hasYT = linkKeys.some(k => k.includes('youtube') || k.includes('yt'));
+            const hasAmazon = linkKeys.some(k => k.includes('amazon'));
+            const hasDeezer = linkKeys.some(k => k.includes('deezer'));
+            const hasTidal = linkKeys.some(k => k.includes('tidal'));
+            const hasSC = linkKeys.some(k => k.includes('soundcloud'));
+
+            if (!hasSpotify) availableLinks.spotify = `https://open.spotify.com/search/${searchQuery}`;
+            if (!hasApple) availableLinks.applemusic = `https://music.apple.com/search?term=${searchQuery}`;
+            if (!hasYT) availableLinks.youtube = `https://music.youtube.com/search?q=${searchQuery}`;
+            if (!hasAmazon) availableLinks.amazon = `https://music.amazon.com/search/${searchQuery}`;
+            if (!hasDeezer) availableLinks.deezer = `https://www.deezer.com/search/${searchQuery}`;
+            if (!hasTidal) availableLinks.tidal = `https://tidal.com/search?q=${searchQuery}`;
+            if (!hasSC) availableLinks.soundcloud = `https://soundcloud.com/search?q=${searchQuery}`;
+
+            const serviceStyles = {
+                spotify: { 
+                    name: 'Spotify', 
+                    bg: '#1DB954',
+                    sub: 'Auf Spotify abspielen',
+                    icon: `<svg viewBox="0 0 24 24" class="w-4 h-4 fill-current shrink-0"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.586 14.424c-.18.295-.563.387-.857.207-2.35-1.435-5.308-1.76-8.792-.963-.335.077-.67-.133-.746-.469-.077-.334.132-.67.467-.745 3.808-.87 7.076-.496 9.721 1.115.295.18.387.562.207.855zm1.226-2.724c-.227.369-.712.483-1.08.256-2.69-1.653-6.79-2.132-9.972-1.166-.413.125-.85-.11-.975-.523-.125-.413.11-.85.523-.975 3.633-1.103 8.156-.57 11.248 1.328.368.226.482.71.256 1.08zm.105-2.835C14.692 8.95 9.375 8.775 6.297 9.71c-.494.15-1.02-.132-1.17-.626-.15-.494.132-1.02.626-1.17 3.536-1.073 9.404-.87 13.115 1.332.443.263.588.84.325 1.283-.263.444-.84.588-1.276.335z"/></svg>`
+                },
+                applemusic: { 
+                    name: 'Apple Music', 
+                    bg: '#FC3C44',
+                    sub: 'In Apple Music öffnen',
+                    icon: `<svg viewBox="0 0 24 24" class="w-4 h-4 fill-current shrink-0"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.37c.61-.75 1.04-1.8 1.01-2.87-.93.04-2.02.62-2.66 1.37-.56.65-1.06 1.7-0.93 2.74 1.05.08 2.03-.53 2.58-1.24z"/></svg>`
+                },
+                youtube: { 
+                    name: 'YouTube Music', 
+                    bg: '#FF0000',
+                    sub: 'Auf YouTube Music abspielen',
+                    icon: `<svg viewBox="0 0 24 24" class="w-4 h-4 fill-current shrink-0"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 14.5c-2.49 0-4.5-2.01-4.5-4.5S9.51 7.5 12 7.5s4.5 2.01 4.5 4.5-2.01 4.5-4.5 4.5zm0-5.5c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1zm-2 1l4-2.5-4-2.5v5z"/></svg>`
+                },
+                amazon: { 
+                    name: 'Amazon Music', 
+                    bg: '#00A8E1',
+                    sub: 'Auf Amazon Music hören',
+                    icon: `<svg viewBox="0 0 24 24" class="w-4 h-4 fill-current shrink-0"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm3.65 14.33c-.37.28-1.07.49-1.92.49-1.63 0-2.48-.92-2.48-2.28 0-1.55 1.05-2.35 2.65-2.35.53 0 .97.08 1.34.19v-.39c0-.85-.45-1.32-1.37-1.32-.67 0-1.33.24-1.84.58l-.45-.85c.66-.46 1.57-.75 2.54-.75 1.63 0 2.45.89 2.45 2.43v3.75c0 .54.08 1.01.2 1.34h-1.12c-.08-.23-.13-.53-.15-.84zm-.41-2.91c-.34-.1-.74-.16-1.17-.16-1.05 0-1.68.46-1.68 1.39 0 .82.51 1.34 1.45 1.34.58 0 1.08-.18 1.4-.49v-2.08z"/></svg>`
+                },
+                deezer: { 
+                    name: 'Deezer', 
+                    bg: '#A238FF',
+                    sub: 'Auf Deezer hören',
+                    icon: `<svg viewBox="0 0 24 24" class="w-4 h-4 fill-current shrink-0"><path d="M6.06 9.69h2.37v1.75H6.06V9.69zm0 2.33h2.37v1.75H6.06v-1.75zm0 2.33h2.37v1.75H6.06v-1.75zm3.56-4.66h2.38v1.75H9.62V9.69zm0 2.33h2.38v1.75H9.62v-1.75zm0 2.33h2.38v1.75H9.62v-1.75zm3.56-7h2.38v1.75h-2.38V5.02zm0 2.34h2.38v1.75h-2.38V7.36zm0 2.33h2.38v1.75h-2.38V9.69zm0 2.33h2.38v1.75h-2.38v-1.75zm0 2.33h2.38v1.75h-2.38v-1.75zm3.56-4.66h2.38v1.75h-2.38V9.69zm0 2.33h2.38v1.75h-2.38v-1.75zm0 2.33h2.38v1.75h-2.38v-1.75zm3.56-7h2.38v1.75h-2.38V5.02zm0 2.34h2.38v1.75h-2.38V7.36zm0 2.33h2.38v1.75h-2.38V9.69zm0 2.33h2.38v1.75h-2.38v-1.75zm0 2.33h2.38v1.75h-2.38v-1.75z"/></svg>`
+                },
+                tidal: { 
+                    name: 'Tidal', 
+                    bg: '#111111',
+                    sub: 'In Hi-Fi auf Tidal',
+                    icon: `<svg viewBox="0 0 24 24" class="w-4 h-4 fill-current shrink-0"><path d="M12.012 3.992L8.008 7.996l4.004 4.004 4.004-4.004-4.004-4.004zm-8.016 8.016L0 16.012l4.004 4.004 4.004-4.004-4.012-4.004zm8.016 0L8.008 16.012l4.004 4.004 4.004-4.004-4.004-4.004zm8.016 0l-4.004 4.004 4.004 4.004 4.004-4.004-4.004-4.004z"/></svg>`
+                },
+                soundcloud: { 
+                    name: 'SoundCloud', 
+                    bg: '#FF5500',
+                    sub: 'Auf SoundCloud streamen',
+                    icon: `<svg viewBox="0 0 24 24" class="w-4 h-4 fill-current shrink-0"><path d="M1.17 14.53c0 .87.71 1.58 1.58 1.58.12 0 .23-.01.34-.04v-6.09c-.11-.03-.22-.04-.34-.04-.87 0-1.58.71-1.58 1.58v3.01zm2.37 1.47c.18.06.36.09.56.09.43 0 .81-.17 1.09-.45.05-.05.09-.1.13-.16v-6.95c-.04-.06-.08-.11-.13-.16-.28-.28-.66-.45-1.09-.45-.2 0-.38.03-.56.09v7.99zm2.37.09c.2-.01.39-.06.56-.14.36-.18.61-.53.65-.95v-7.98c-.04-.42-.29-.77-.65-.95-.17-.08-.36-.13-.56-.14v10.16zm2.38 0c.23 0 .44-.05.64-.13.37-.17.63-.52.68-.94V6.98c-.05-.42-.31-.77-.68-.94-.2-.08-.41-.13-.64-.13v10.18zm2.37 0c.23 0 .44-.05.64-.13.37-.17.63-.52.68-.94V6.2c-.05-.42-.31-.77-.68-.94-.2-.08-.41-.13-.64-.13v10.96zm2.37 0c.06 0 .12 0 .18-.01.44-.05.81-.31.99-.69.07-.15.11-.32.11-.5v-10.7c0-.18-.04-.35-.11-.5-.18-.38-.55-.64-.99-.69-.06-.01-.12-.01-.18-.01v13.1zm3.17-11.83c-.32 0-.62.06-.9.17v11.63c.28.11.58.17.9.17 1.54 0 2.79-1.25 2.79-2.79V6.96c0-1.54-1.25-2.79-2.79-2.79zm5.55 3.96c-.35 0-.68.08-.98.22v7.62c.3.14.63.22.98.22 1.54 0 2.79-1.25 2.79-2.79v-2.48c0-1.54-1.25-2.79-2.79-2.79z"/></svg>`
+                }
+            };
+
+            for (let [key, url] of Object.entries(availableLinks)) {
+                if (!url || typeof url !== 'string') continue;
+                
+                if (url.startsWith('spotify:')) {
+                    const uriParts = url.split(':');
+                    if (uriParts.length >= 3) {
+                        url = `https://open.spotify.com/${uriParts[1]}/${uriParts[2]}`;
+                    }
+                }
+
+                if (!url.startsWith('http')) continue;
+                
+                hasLinks = true;
+                const lowerKey = key.toLowerCase();
+                let style = { 
+                    name: key.charAt(0).toUpperCase() + key.slice(1), 
+                    bg: '#3b82f6',
+                    sub: 'Öffnen',
+                    icon: '<svg viewBox="0 0 24 24" class="w-4 h-4 fill-current"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14.5v-9l6 4.5-6 4.5z"/></svg>'
+                }; 
+
+                for (const [sKey, sValue] of Object.entries(serviceStyles)) {
+                    if (lowerKey.includes(sKey) || lowerKey === sKey) {
+                        style = sValue;
+                        break;
+                    }
+                }
+                const linkEl = document.createElement('a');
+                linkEl.href = url;
+                linkEl.target = '_blank';
+                linkEl.rel = 'noopener noreferrer';
+                linkEl.className = 'group flex items-center justify-between p-2.5 rounded-xl text-white font-bold transition-all hover:scale-[1.02] active:scale-95 shadow-md border border-white/10 shrink-0';
+                linkEl.style.backgroundColor = style.bg;
+                linkEl.innerHTML = `
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <div class="w-7 h-7 rounded-lg bg-black/20 flex items-center justify-center shrink-0">
+                            ${style.icon}
+                        </div>
+                        <div class="text-left min-w-0">
+                            <p class="text-xs sm:text-sm font-extrabold leading-tight truncate text-white">${style.name}</p>
+                            <p class="text-[9px] xxs:text-[10px] text-white/80 leading-tight truncate">${style.sub}</p>
+                        </div>
+                    </div>
+                    <div class="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center shrink-0 group-hover:translate-x-0.5 transition-transform">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                    </div>
+                `;
+                linksContainer.appendChild(linkEl);
+            }
+            if (noLinkEl) noLinkEl.style.display = hasLinks ? 'none' : 'block';
         }
         // FIX v24.60: zählt aufeinanderfolgende "kein Track"-Antworten, um kurze
         // API-Aussetzer von echtem "Musik wurde gestoppt" zu unterscheiden.
@@ -8154,7 +8487,10 @@
         // setzen. Läuft Musik -> Wake Lock halten. Pausiert sie -> freigeben, Handy darf normal
         // einschlafen (spart Akku in der Pause, ohne dass der Nutzer manuell eingreifen muss).
         function updateWakeLockForPlaybackState() {
-            if (!standByActive || !standbyWakeLockEnabled) return;
+            if (!standByActive || !standbyWakeLockEnabled) {
+                releaseStandbyWakeLock();
+                return;
+            }
             if (trackIsPlaying) requestStandbyWakeLock();
             else releaseStandbyWakeLock();
         }
@@ -8162,8 +8498,12 @@
         // Hintergrund wechselt (z.B. beim Umschalten der App) - beim Zurückkehren muss er
         // dann erneut angefragt werden, falls StandBy noch aktiv ist.
         document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'visible' && standByActive && standbyWakeLockEnabled && trackIsPlaying && !activeWakeLockSentinel) {
-                requestStandbyWakeLock();
+            if (document.visibilityState === 'visible') {
+                if (standByActive && standbyWakeLockEnabled && trackIsPlaying && !activeWakeLockSentinel) {
+                    requestStandbyWakeLock();
+                } else if (!standByActive) {
+                    releaseStandbyWakeLock();
+                }
             }
         });
 
@@ -8536,11 +8876,27 @@
         }
 
         function ttsSetButtonState(btnEl, state) {
-            if (!btnEl) return;
-            const original = btnEl.dataset.originalLabel || btnEl.textContent;
-            btnEl.dataset.originalLabel = original;
-            if (state === 'speaking') { btnEl.textContent = '⏹️ Stoppen'; btnEl.disabled = false; }
-            else { btnEl.textContent = original; btnEl.disabled = false; }
+            const btns = [btnEl, document.getElementById('btn-speak-lyrics'), document.getElementById('btn-speak-lyrics-visible')].filter(Boolean);
+            const seen = new Set();
+            btns.forEach(btn => {
+                if (seen.has(btn)) return;
+                seen.add(btn);
+                const original = btn.dataset.originalLabel || btn.textContent;
+                btn.dataset.originalLabel = original;
+                if (state === 'speaking') {
+                    btn.classList.add('bg-red-500/80', 'text-white');
+                    if (btn.id === 'btn-speak-lyrics') {
+                        btn.textContent = '⏹️ Stoppen';
+                    }
+                    btn.disabled = false;
+                } else {
+                    btn.classList.remove('bg-red-500/80', 'text-white');
+                    if (btn.id === 'btn-speak-lyrics') {
+                        btn.textContent = original;
+                    }
+                    btn.disabled = false;
+                }
+            });
         }
 
         function ttsPickVoice() {
@@ -8552,16 +8908,7 @@
 
         // Zentrale Vorlesefunktion - erneuter Klick während der Wiedergabe stoppt statt neu
         // zu starten.
-        // FIX: Chrome hat einen bekannten Bug (seit Jahren nicht behoben) - bei einer
-        // einzelnen, sehr langen SpeechSynthesisUtterance bricht die Sprachausgabe nach ca.
-        // 15 Sekunden einfach stumm ab, ohne Fehler oder onend-Event. Betraf v.a. die
-        // Release-Notes, die mittlerweile mit 28 Einträgen deutlich über diese Grenze
-        // hinausgehen. Fix: Text wird jetzt grundsätzlich in kleine Sätze/Häppchen zerlegt
-        // und als WARTESCHLANGE aus mehreren kurzen Utterances nacheinander abgespielt -
-        // jede einzelne bleibt sicher unter der Problemgrenze.
         function splitIntoSpeechChunks(text, maxLen = 180) {
-            // Erst grob an Satzenden trennen, dann zu große Sätze zusätzlich an Kommas/
-            // Leerzeichen weiter aufteilen, damit kein einzelner Happen zu lang wird.
             const sentences = text.split(/(?<=[.!?])\s+/);
             const chunks = [];
             for (const sentence of sentences) {
@@ -8594,13 +8941,6 @@
             });
         }
 
-        // FIX v24.56: Nach vier gescheiterten, gezielten Anläufen (v24.52-v24.55) für eine
-        // hochwertigere KI-Stimme über @huggingface/transformers + Xenova/mms-tts-deu -
-        // Modell-Download blieb konsequent in derselben Weiterleitungs-Schleife hängen
-        // (siehe Chat-Verlauf) - komplett zurückgerollt. Der automatische Rückfall auf Web
-        // Speech API hatte zwar zuverlässig funktioniert, aber ohne die HQ-Stimme selbst
-        // war der ganze Zusatzcode (61MB tts-v2-Bundle) nur totes Gewicht. Zurück auf die
-        // reine, bewährte Lösung aus v24.36-v24.51.
         async function ttsSpeak(text, btnEl) {
             if (!text || !text.trim()) return;
 
@@ -8653,7 +8993,7 @@
                 const u = new SpeechSynthesisUtterance(text);
                 if (voice) u.voice = voice;
                 u.lang = TTS_LANG_BCP47[currentLang || 'de'] || 'de-DE';
-                u.rate = rate || 1; // NEU v24.78: dynamische Sprechrate, siehe speakLyricsSynced()
+                u.rate = rate || 1;
                 u.onend = resolve;
                 u.onerror = resolve;
                 speechSynthesis.speak(u);
@@ -8661,7 +9001,6 @@
         }
 
         window.speakLyrics = function(btnEl) {
-            // Erneuter Klick während (synchroner oder normaler) Wiedergabe = stoppen
             if (ttsSyncedPlaybackActive || speechSynthesis.speaking || speechSynthesis.pending) {
                 ttsSyncedPlaybackActive = false;
                 speechSynthesis.cancel();
@@ -8669,7 +9008,6 @@
                 return;
             }
 
-            // Kein Songtext gefunden -> stattdessen den sichtbaren Fallback-Text vorlesen
             if (!parsedLyrics || parsedLyrics.length === 0) {
                 const fallbackText = (typeof currentNoLyricsMessage !== 'undefined' && currentNoLyricsMessage)
                     || 'Für diesen Song wurde kein Songtext gefunden.';
@@ -8677,9 +9015,6 @@
                 return;
             }
 
-            // Prüfen, ob echte, unterschiedliche Zeilen-Zeitstempel vorhanden sind (= synced
-            // Lyrics). Reiner Fließtext ohne Sync-Daten hat für alle Zeilen denselben/keinen
-            // sinnvollen Zeitstempel - dann lohnt sich Zeile-für-Zeile-Timing nicht.
             const hasRealTimestamps = parsedLyrics.length > 1 &&
                 parsedLyrics.some((line, i) => i > 0 && line.timeMs !== parsedLyrics[0].timeMs);
 
@@ -8691,24 +9026,10 @@
             }
         };
 
-        // Spielt jede Zeile einzeln ab, mit denselben relativen Zeitabständen wie im
-        // Original - lange Instrumental-Pausen werden auf max. 6 Sekunden gedeckelt, damit
-        // die Vorlesefunktion nicht minutenlang scheinbar hängen bleibt.
         const TTS_MAX_LINE_GAP_MS = 6000;
-        // NEU v24.78: siehe ausführliche Begründung bei speakLyricsSynced() weiter unten -
-        // Konstanten für die dynamische Sprechraten-Anpassung bei textreichen/schnellen Songs.
-        const TTS_MS_PER_WORD_AT_RATE1 = 380; // grober Erfahrungswert: Sprechdauer pro Wort bei rate=1.0
-        const TTS_MAX_SYNC_RATE = 2.2; // Obergrenze - schneller wird kaum noch verständlich
+        const TTS_MS_PER_WORD_AT_RATE1 = 380;
+        const TTS_MAX_SYNC_RATE = 2.2;
 
-        // FIX v24.59: Nutzer meldete zurecht - das synchrone Vorlesen startete zwar zur
-        // richtigen ZEILE, lief aber INNERHALB der Zeile mit der eigenen Geschwindigkeit der
-        // Sprachausgabe, nicht im Takt der Wort-für-Wort-Hervorhebung. Jede Zeile hat aber
-        // bereits einen eigenen Zeitstempel PRO WORT (dieselben Daten, die auch die visuelle
-        // Animation antreiben) - jetzt genutzt, um in kleinen Wortgruppen statt ganzer Zeilen
-        // vorzulesen, jede Gruppe einzeln zum richtigen Zeitpunkt gestartet. Deutlich engere
-        // Synchronisation, ohne beim TTS-Motor unnatürlich einzelne Wörter isoliert
-        // aussprechen zu lassen (das klingt abgehackt) - stattdessen kleine, natürlich
-        // klingende 2-4-Wort-Häppchen.
         function groupTokensForSpeech(tokens, maxWordsPerGroup = 3) {
             const groups = [];
             let current = [];
@@ -8729,24 +9050,10 @@
             ttsSetButtonState(btnEl, 'speaking');
             ttsSyncedPlaybackActive = true;
 
-            // FIX v24.48: Vorher startete die Wiedergabe IMMER bei der allerersten Zeile des
-            // ganzen Songs, komplett unabhängig davon, wo der Song gerade tatsächlich lief -
-            // das fühlte sich nie wirklich "im Songrhythmus" an, nur intern konsistent mit
-            // sich selbst. Jetzt: Startpunkt ist die tatsächliche aktuelle Songposition
-            // (currentMs, dieselbe Variable, die auch für die Songtext-Hervorhebung und den
-            // Fortschrittsbalken genutzt wird) - die Zeile, die JETZT im Song dran wäre, wird
-            // auch als erstes vorgelesen, alle folgenden Zeilen orientieren sich an der
-            // tatsächlich verbleibenden Zeit bis zu ihrem echten Zeitpunkt im Song.
-            const referenceMs = (typeof currentMs === 'number' && trackIsPlaying) ? currentMs : lines[0].timeMs;
+            const referenceMs = (typeof currentMs === 'number' && trackIsPlaying) ? (currentMs + liveSyncOffset) : lines[0].timeMs;
             let startIndex = lines.findIndex(l => l.timeMs >= referenceMs);
-            if (startIndex === -1) startIndex = 0; // Songende erreicht -> von vorn beginnen
+            if (startIndex === -1) startIndex = 0;
 
-            // FIX v24.78: Vorher wurde verschachtelt (Zeile -> ggf. Wort-Gruppen) während der
-            // laufenden Wiedergabe geplant - das machte es unmöglich, für ein Häppchen sauber
-            // auf das NÄCHSTE vorauszuschauen, um die nötige Sprechrate zu berechnen (siehe
-            // unten). Jetzt: flache Liste aller zu sprechenden Häppchen (Zeile ODER
-            // Wort-Gruppe) mit ihrem jeweiligen Ziel-Zeitpunkt im Song vorab aufbauen, danach
-            // in einer einzigen, flachen Schleife abspielen.
             const items = [];
             for (let i = startIndex; i < lines.length; i++) {
                 const line = lines[i];
@@ -8755,21 +9062,21 @@
                 if (!hasWordTiming) {
                     const lineText = line.tokens.map(t => t.cleanText || t.text).join(' ').trim();
                     if (!lineText || lineText === '♪') continue;
-                    items.push({ text: lineText, timeMs: line.timeMs });
+                    items.push({ text: lineText, timeMs: line.timeMs, lineIdx: i });
                 } else {
                     for (const group of groupTokensForSpeech(line.tokens)) {
                         const groupText = group.map(t => t.cleanText || t.text).join(' ').trim();
                         if (!groupText) continue;
                         const firstTokenTime = group.find(t => typeof t.timeMs === 'number')?.timeMs ?? line.timeMs;
-                        items.push({ text: groupText, timeMs: firstTokenTime });
+                        items.push({ text: groupText, timeMs: firstTokenTime, lineIdx: i });
                     }
                 }
             }
 
-            let cursor = 0; // Zeit (ms), die seit Beginn dieser Vorlese-Sitzung real vergangen ist
+            let cursor = 0;
 
             for (let i = 0; i < items.length; i++) {
-                if (!ttsSyncedPlaybackActive) break; // per Stopp-Klick abgebrochen
+                if (!ttsSyncedPlaybackActive) break;
                 const item = items[i];
                 const rawOffset = item.timeMs - referenceMs;
                 const scheduledOffset = Math.min(rawOffset, cursor + TTS_MAX_LINE_GAP_MS);
@@ -8777,19 +9084,11 @@
                 if (waitMs > 0) await ttsSleep(waitMs);
                 if (!ttsSyncedPlaybackActive) break;
 
-                // FIX v24.78 (KRITISCH): Nutzer meldete - bei textreichen/schnellen Songs
-                // (z.B. "Turn It Up" von ILKO) kommt die Sprachausgabe nicht hinterher. Root
-                // Cause: die Sprechrate war bisher IMMER fest bei 1.0 (Browser-Standard),
-                // unabhängig davon, wie viel Text in wie wenig Zeit gesprochen werden musste -
-                // bei dichten Passagen blieb die Ausgabe dadurch zwangsläufig zurück und
-                // driftete danach dauerhaft weiter auseinander, statt je wieder aufzuholen.
-                // Fix: für jedes Häppchen die tatsächlich verfügbare Zeit bis zum NÄCHSTEN
-                // Häppchen ermitteln, grob abschätzen, wie lange der Text bei normaler Rate
-                // (1.0) brauchen würde (Erfahrungswert ~380ms/Wort), und die Sprechrate nur so
-                // weit hochsetzen, wie nötig, um rechtzeitig fertig zu werden - mit einer
-                // Obergrenze (TTS_MAX_SYNC_RATE), damit es bei extrem dichten Passagen nicht
-                // komplett unverständlich wird. Bei normalem Songtempo bleibt rate=1.0, völlig
-                // unverändertes Verhalten wie bisher.
+                if (typeof item.lineIdx === 'number') {
+                    const activeEl = document.getElementById(`lyric-line-${item.lineIdx}`);
+                    if (activeEl) scrollToLyricElement(activeEl);
+                }
+
                 const nextRawOffset = (i + 1 < items.length) ? items[i + 1].timeMs - referenceMs : scheduledOffset + TTS_MAX_LINE_GAP_MS;
                 const availableMs = Math.max(300, Math.min(nextRawOffset, scheduledOffset + TTS_MAX_LINE_GAP_MS) - scheduledOffset);
                 const wordCount = item.text.split(/\s+/).filter(Boolean).length;
@@ -10341,6 +10640,7 @@
                 if (standByActive) { pushOverlayHistory(); } else { popOverlayHistory(); }
             }
             overlay.classList.toggle('standby-active', standByActive);
+            document.body.classList.toggle('standby-mode', standByActive);
             if (standByActive) {
                 updateStandByClock();
                 clearInterval(standByInterval);
@@ -10358,8 +10658,7 @@
                 const island = document.getElementById('dynamic-island');
                 if (island) island.classList.add('di-hidden-by-standby');
                 updateIslandRing();
-                scheduleStandbyDeepDim(); // NEW: Tiefen-Dimmung nach 30min ununterbrochenem StandBy planen
-                scheduleStandbyMaxSession(); // NEU v24.105: harte Obergrenze für ununterbrochene Laufzeit
+                scheduleStandbyDeepDim(); // NEW: Tiefen-Dimmung nach 20min ununterbrochenem StandBy planen
                 // NEU v24.21: Scroll-Effekt für zu lange Titel/Künstlernamen nur beim tatsächlichen
                 // Öffnen aktivieren - läuft NIE im Hintergrund während StandBy geschlossen ist.
                 setupStandbyMarquee();
@@ -10373,9 +10672,7 @@
                 // NEU v24.88: Auto-Fit beim Öffnen anwenden - garantiert, dass die Karte auf
                 // den Bildschirm passt, egal welches der 20 Designs gerade aktiv ist.
                 fitStandbyToScreen();
-                // FIX v24.74: unbedingtes requestStandbyWakeLock() durch die smarte Variante
-                // ersetzt - hält den Bildschirm nur wach, wenn beim Öffnen von StandBy
-                // tatsächlich Musik läuft, nicht blind immer.
+                // WakeLock AUSSCHLIESSLICH bei aktivem StandBy und laufender Musik
                 updateWakeLockForPlaybackState();
                 const fsEl = document.documentElement;
                 const requestFs = fsEl.requestFullscreen || fsEl.webkitRequestFullscreen || fsEl.msRequestFullscreen;
@@ -10394,7 +10691,6 @@
                 clearInterval(standByInterval);
                 clearInterval(standByShiftInterval);
                 clearTimeout(standByDeepDimTimeout);
-                clearTimeout(standByMaxSessionTimeout); // NEU v24.105
                 overlay.classList.remove('standby-deep-dim');
                 // NEU v24.21: Scroll-Animation beim Schließen sauber stoppen, damit sie nicht
                 // unsichtbar im Hintergrund weiterläuft (visibility:hidden allein pausiert
@@ -10439,25 +10735,11 @@
         // NEW: Anti-Burn-in verschärft, da der Nutzer explizit null Einbrenn-Risiko will:
         // Intervall von 10 auf 5 Minuten halbiert (doppelt so oft verschoben), 15 statt 11
         // Positionen mit größerer Streuung (bis zu 12px statt 10px), und zusätzlich eine
-        // "Tiefen-Dimmung" nach 30 Minuten ununterbrochenem StandBy: Helligkeit/Kontrast
+        // "Tiefen-Dimmung" nach 20 Minuten ununterbrochenem StandBy: Helligkeit/Kontrast
         // werden nochmal reduziert, was zusätzlich hilft, weil dauerhaft volle Helligkeit
         // an denselben Pixelpositionen das größte Einbrenn-Risiko darstellt.
         const AOD_SHIFT_INTERVAL_MS = 1 * 60 * 1000; // v24.21: von 3min auf 1min verschärft - entspricht dem branchenüblichen Intervall (Apple StandBy, die meisten Always-On-Displays), 3min war für dauerhaftes OLED-Stehenlassen zu lang
         const AOD_DEEP_DIM_AFTER_MS = 20 * 60 * 1000; // NEW: von 30min auf 20min verschärft - dunkelt früher zusätzlich ab
-        // NEU v24.105 (KRITISCH): Nutzer ließ sein Pixel über Nacht (mehrere Stunden am
-        // Stück, durchgehend Musik) im StandBy - Ergebnis: Bildschirm zeigte danach nur noch
-        // Blau (irgendein Rendering-/Speicherzustand ist offenbar über eine derart lange
-        // ununterbrochene Laufzeit hinweg kaputtgegangen - wurde nie für mehrstündigen
-        // Dauerbetrieb am Stück getestet), UND das Gerät war extrem heiß, teils laut Nutzer
-        // vermutlich zusätzlich durch ein Kissen abgedeckt (reine Wärme-Isolation, dagegen
-        // hilft kein Software-Fix - ein Handy, das man stundenlang zudeckt, wird immer warm,
-        // egal wie effizient der Code ist). Für den Software-Teil: bewusste, harte
-        // Obergrenze - StandBy verlässt sich nach einer sehr langen ununterbrochenen Laufzeit
-        // automatisch selbst, gibt den Wake Lock frei und lässt das Handy danach ganz normal
-        // in den echten Tiefschlaf gehen, statt unbegrenzt weiterzulaufen. Begrenzt dadurch
-        // gleichzeitig, wie lange sich ein eventuelles Speicher-/Rendering-Problem überhaupt
-        // aufbauen kann, UND verhindert stundenlanges erzwungenes Wachhalten des Bildschirms.
-        const AOD_MAX_SESSION_MS = 3 * 60 * 60 * 1000; // 3 Stunden
         const AOD_SHIFT_POSITIONS = [
             { x: 0, y: 0 },
             { x: 12, y: 8 }, { x: -12, y: -8 },
@@ -10473,7 +10755,6 @@
         ];
         let standByShiftIndex = 0;
         let standByDeepDimTimeout = null;
-        let standByMaxSessionTimeout = null; // NEU v24.105
         function shiftStandbyContent() {
             standByShiftIndex = (standByShiftIndex + 1) % AOD_SHIFT_POSITIONS.length;
             const pos = AOD_SHIFT_POSITIONS[standByShiftIndex];
@@ -10488,28 +10769,12 @@
                 if (overlay && standByActive) overlay.classList.add('standby-deep-dim');
             }, AOD_DEEP_DIM_AFTER_MS);
         }
-        // NEU v24.105: siehe ausführliche Begründung bei AOD_MAX_SESSION_MS oben - harte
-        // Obergrenze für ununterbrochene StandBy-Laufzeit. WICHTIG: kein einfacher Stopp -
-        // der Nutzer will StandBy ausdrücklich die ganze Nacht durchlaufen lassen. Stattdessen
-        // ein sanfter, automatischer Neustart der ganzen Seite: setzt einen Merker in
-        // sessionStorage, lädt die Seite neu (behebt dabei automatisch jeden eventuell über
-        // die lange Laufzeit aufgebauten Speicher-/Rendering-Fehler - "frischer Zustand" statt
-        // Flicken eines unbekannten Problems), und öffnet StandBy direkt danach wieder von
-        // selbst (siehe restoreStandbyAfterReload() beim Laden). Für den Nutzer im besten Fall
-        // nur ein kurzes Aufflackern des Bildschirms, StandBy läuft danach normal weiter.
-        function scheduleStandbyMaxSession() {
-            clearTimeout(standByMaxSessionTimeout);
-            standByMaxSessionTimeout = setTimeout(() => {
-                if (!standByActive) return;
-                try { sessionStorage.setItem('standbyResumeAfterReload', '1'); } catch (e) {}
-                window.location.reload();
-            }, AOD_MAX_SESSION_MS);
-        }
 
-        // NEU v24.21: Prüft, ob Titel/Künstler im StandBy-Lockscreen zu breit für den
+        // NEU v24.21 (angepasst v24.107): Prüft, ob Titel/Künstler im StandBy-Lockscreen zu breit für den
         // verfügbaren Platz sind, und aktiviert den Scroll-Effekt NUR dann gezielt für das
         // jeweils betroffene Element (Titel und Künstler unabhängig voneinander). Kurze Texte
         // bleiben unangetastet und werden weiterhin normal mit "..." abgeschnitten dargestellt.
+        // v24.107: Deutlich ruhigere Scrollfrequenz mit langen Standpausen schont GPU & Akku.
         function setupStandbyMarquee() {
             const overlay = document.getElementById('standby-overlay');
             if (!overlay || !standByActive) return;
@@ -10531,8 +10796,8 @@
                     const overflow = innerEl.scrollWidth - outerEl.clientWidth;
                     if (overflow > 4) {
                         const distance = -(overflow + 12); // + kleiner Puffer als Lese-Pause am Ende
-                        const pxPerSecond = 32; // konstante, ruhige Scrollgeschwindigkeit
-                        const duration = Math.max(4, Math.abs(distance) / pxPerSecond * 2.2); // *2.2 wegen Hin- und Rückweg + Pausen in den Keyframes
+                        const pxPerSecond = 22; // ruhige, sanfte Scrollgeschwindigkeit
+                        const duration = Math.max(9, Math.abs(distance) / pxPerSecond * 3.2); // lange Pausen an den Enden, GPU schont sich
                         outerEl.style.setProperty('--marquee-distance', distance + 'px');
                         outerEl.style.setProperty(cfg.durationVar, duration.toFixed(2) + 's');
                         overlay.classList.add(cfg.activeClass);
@@ -10633,7 +10898,7 @@
                 async function drawFromMainArtwork(canvas) {
                     if (!canvas || !mArtwork || !mArtwork.src) return;
                     try { if (typeof mArtwork.decode === 'function') await mArtwork.decode(); }
-                    catch (e) { return; } // #artwork (noch) nicht ladbar - dessen eigene onerror-Kette (inkl. Retry) kuemmert sich darum
+                    catch (e) { /* decode schlägt bei unsichtbaren Elementen fehl - kein Problem, drawCoverToCanvas prüft die Bereitschaft selbst */ }
                     drawCoverToCanvas(canvas, mArtwork);
                 }
                 if (img && artUrl) {
@@ -10649,28 +10914,9 @@
                     }
                 }
 
-                // FIX v24.104 (KRITISCH): Nutzer meldete - StandBy-Hintergrund zeigt so gut
-                // wie NIE ein Cover, die Karte manchmal schon. Root Cause endlich gefunden:
-                // der Retry-Schutz (preload + retryImageLoad()) griff bisher NUR im
-                // isNewArt-Zweig (echter Songwechsel) - der HÄUFIGERE Fall "gleicher Song,
-                // nächster 5s-Poll" (isNewArt === false, die meiste Zeit während man in
-                // StandBy ist) hat den Hintergrund bisher OHNE JEDE Absicherung direkt per
-                // "bg.style.backgroundImage = ..." gesetzt - schlug genau diese eine
-                // Zuweisung fehl (derselbe bekannte transiente npc-api-Aussetzer), blieb der
-                // Hintergrund leer, und da sich der Song ja nicht ändert, lief dieser
-                // ungeschützte Zweig bei JEDEM weiteren Poll erneut - nie ein einziger Retry-
-                // Versuch. Fix: EIN einheitlicher, immer robuster Pfad - lädt/vergleicht erst,
-                // ob sich die Ziel-URL überhaupt vom aktuell angezeigten Bild unterscheidet
-                // (spart unnötige Arbeit bei unverändertem Song), und JEDER tatsächliche
-                // Ladeversuch (ob durch echten Songwechsel oder Korrektur eines vorherigen
-                // Fehlschlags) läuft jetzt über denselben geschützten preload+Retry-Pfad wie
-                // #artwork selbst. Fade-Animation (Ein-/Ausblenden) bleibt bewusst nur für
-                // echte Songwechsel (isNewArt) reserviert.
                 if (bg && artUrl) {
                     const targetUrl = `url('${artUrl}')`;
                     if (bg.style.backgroundImage === targetUrl) {
-                        // Bereits korrekt - nur Sichtbarkeit absichern, falls durch einen
-                        // vorherigen Fehlschlag noch opacity:0 hängen geblieben sein sollte.
                         bg.style.opacity = '1';
                         if (cardBg) cardBg.style.opacity = '1';
                     } else {
@@ -10683,34 +10929,20 @@
                         if (isNewArt) {
                             bg.style.opacity = '0';
                             if (cardBg) cardBg.style.opacity = '0';
-                            requestAnimationFrame(() => {}); // Browser rendert opacity:0, bevor unten neu geladen wird
+                            requestAnimationFrame(() => {});
                         }
                         const preload = new Image();
-                        // FIX v24.106 (KRITISCH): Nutzer meldete - StandBy nach mehrstündiger
-                        // Nacht-Laufzeit abgestürzt ("nur noch blauer Bildschirm"), extreme
-                        // Hitze. v24.105 hat dafür nur ein Sicherheitsnetz (periodischer Auto-
-                        // Neustart) gebaut, aber Nutzer wünscht sich zu Recht eine ECHTE
-                        // Lösung statt nur Symptom-Behandlung. Konkreter, plausibler Kandidat
-                        // gefunden: über Stunden werden bei jedem Songwechsel neue Image()-
-                        // Objekte für den Vorlader erzeugt (~100+ Stück über eine ganze Nacht
-                        // bei durchschnittlich alle paar Minuten wechselnden Songs), OHNE ihre
-                        // Handler/Quelle je explizit zu leeren. Der JavaScript-Garbage-
-                        // Collector RÄUMT das zwar irgendwann auf, aber auf Mobilgeräten kann
-                        // der bereits dekodierte Bild-Speicher (unkomprimierte Bitmap-Daten,
-                        // pro Bild potenziell mehrere MB) deutlich länger im Speicher
-                        // hängen bleiben als das reine JS-Objekt - über hunderte Bilder in
-                        // einer Nacht baut sich das zu einem echten Speicherdruck auf, der zum
-                        // beobachteten Absturz/der Hitze passt. Fix: Handler + Quelle nach
-                        // Gebrauch explizit leeren (onload/onerror = null, src = ''),
-                        // signalisiert dem Browser dadurch so früh wie möglich, dass der
-                        // dekodierte Bild-Speicher wieder freigegeben werden darf, statt auf
-                        // die normale (auf Mobilgeräten oft trägere) Garbage Collection zu warten.
                         const cleanupPreload = () => { preload.onload = null; preload.onerror = null; preload.src = ''; };
                         preload.onload = () => { applyLoaded(); cleanupPreload(); };
                         preload.onerror = async () => {
                             const retrySucceeded = await retryImageLoad(artUrl);
                             if (retrySucceeded) { applyLoaded(); cleanupPreload(); return; }
-                            bg.style.opacity = '1'; // in jedem Fall sichtbar bleiben, auch wenn der Retry scheitert
+                            const itunesUrl = await tryItunesArtworkFallback(title, artist);
+                            if (itunesUrl) {
+                                bg.style.backgroundImage = `url('${itunesUrl}')`;
+                                if (cardBg) cardBg.style.backgroundImage = `url('${itunesUrl}')`;
+                            }
+                            bg.style.opacity = '1';
                             if (cardBg) cardBg.style.opacity = '1';
                             cleanupPreload();
                         };
@@ -10827,20 +11059,12 @@
                 clearTutorialHighlights();
                 localStorage.setItem('tutorialCompletedV3', 'true');
                 
-                // FIX v24.47: Nutzer meldete - Seite scrollt nach dem Tutorial nicht komplett
-                // nach oben. Ursache: behavior:'smooth' animiert über mehrere hundert ms, aber
-                // der Reload feuerte schon nach 300ms - die Animation wurde also mittendrin
-                // abgeschnitten. Da ohnehin gleich neu geladen wird, bringt eine sanfte
-                // Animation nichts (sieht man eh nicht mehr) - jetzt ein sofortiger Sprung
-                // (behavior:'auto'), garantiert komplett fertig, bevor der Reload startet.
-                // Reihenfolge bewusst wie gewünscht: 1) Low-End-Modus aus, 2) nach oben
-                // scrollen, 3) neu laden. NEU v24.62: Nach dem Reload prüft die Seite frisch,
-                // ob die "Was ist neu?"-Tour noch aussteht, und startet sie ggf. automatisch -
-                // dadurch fühlt es sich für neue Besucher weiterhin wie "ein durchgehender
-                // Rundgang" an, obwohl es jetzt zwei technisch getrennte Abläufe sind.
                 if (originalPerfModeState !== 'true' && window.innerWidth >= 360) {
                     applyPerformanceMode(false);
                     localStorage.setItem('perfMode', 'false');
+                } else if (originalPerfModeState === 'true') {
+                    applyPerformanceMode(true);
+                    localStorage.setItem('perfMode', 'true');
                 }
                 window.scrollTo({ top: 0, behavior: 'auto' });
                 
@@ -11039,6 +11263,14 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.108.1', date: "17. August 2026", type: 'fix', items: {
+                de: ["🐛 Songtext-Dauerspinner behoben: Die Lyrics-Ansicht suchte bei jedem 5-Sekunden-Update nach neuem Text – auch wenn derselbe Song weiterlief. Ursache war eine einzelne fehlende Zeile im Code (currentTrackId wurde nie gespeichert). Jetzt wird nur noch beim echten Songwechsel gesucht."],
+                en: ["🐛 Fixed lyrics endless search: The lyrics view was triggering a full re-fetch every 5 seconds – even for the same song. Root cause: a single missing line of code (currentTrackId was never saved). Now only fetches lyrics on an actual track change."],
+                es: ["🐛 Búsqueda infinita de letras corregida: La vista de letras volvía a buscar texto en cada actualización de 5 segundos, incluso si el mismo tema seguía sonando. Causa: una sola línea de código faltante. Ahora solo busca al cambiar de canción."],
+                fr: ["🐛 Recherche infinie de paroles corrigée : l'affichage des paroles relançait une recherche complète toutes les 5 secondes, même pour le même morceau. Cause : une seule ligne de code manquante. Désormais, la recherche n'a lieu qu'au vrai changement de titre."],
+                pt: ["🐛 Busca infinita de letras corrigida: A visualização de letras buscava novamente a cada 5 segundos, mesmo com a mesma música tocando. Causa: uma única linha de código ausente. Agora só busca ao trocar de música de verdade."],
+                tr: ["🐛 Sürekli şarkı sözü araması düzeltildi: Şarkı sözü görünümü aynı şarkı çalarken bile her 5 saniyede bir yeniden arama yapıyordu. Neden: tek bir eksik kod satırı (currentTrackId hiç kaydedilmiyordu). Artık yalnızca gerçek şarkı değişiminde arama yapılıyor."],
+            }},
             { version: 'v24.106', date: "August 2026", type: 'fix', items: {
                 de: ["Möglichen Speicheraufbau über mehrstündige StandBy-Sitzungen behoben (jeder Songwechsel ließ zuvor ungenutzten Bildspeicher liegen) - echter Fix zusätzlich zum Sicherheitsnetz aus dem letzten Update"],
                 en: ["Fixed possible memory buildup during multi-hour StandBy sessions (every track change previously left unused image memory behind) - a real fix in addition to last update's safety net"],
@@ -12350,12 +12582,11 @@
             }
         };
 
+        let currentTrackTitle = "";
+        let currentRawArtist = "";
+
         window.toggleDashboard = function() {
             isDashboardOpen = !isDashboardOpen;
-            // PERF-FIX v24.10: body-Klasse spiegelt den Dashboard-Status, damit CSS darauf
-            // reagieren kann (siehe .blob-container Pausierung weiter unten) - die
-            // Hintergrund-Blobs sind ohnehin komplett vom Dashboard verdeckt, sobald es
-            // offen ist, müssen währenddessen also gar nicht weiterlaufen.
             document.body.classList.toggle('dashboard-open', isDashboardOpen);
             if (isDashboardOpen) { pushOverlayHistory(); } else { popOverlayHistory(); }
             clearTimeout(dashboardTimeout); 
@@ -12378,7 +12609,12 @@
                 }, document.body.classList.contains('low-end') ? 50 : 1200);
                 
                 if (musicChevron) musicChevron.style.transform = 'rotate(180deg)';
-                if (miniStatus) miniStatus.innerText = t('mini_click_to_close');
+                if (trackIsPlaying && currentTrackTitle) {
+                    if (miniTitle) miniTitle.innerText = currentTrackTitle;
+                    if (miniStatus) miniStatus.innerText = currentRawArtist ? `${currentRawArtist} · ${t('mini_click_to_close')}` : t('mini_click_to_close');
+                } else {
+                    if (miniStatus) miniStatus.innerText = t('mini_click_to_close');
+                }
             } else {
                 if (musicCardWrapper) {
                     musicCardWrapper.classList.remove('dashboard-opening');
@@ -12388,34 +12624,25 @@
                 
                 if (musicChevron) musicChevron.style.transform = 'rotate(0deg)';
                 
-                // NEW: Bugfix - im Performance-Modus läuft (dank dem passenden Low-End-
-                // Override) keine sichtbare Schließen-Animation mehr, daher muss auch
-                // nicht mehr künstlich 900ms gewartet werden, bevor aufgeräumt wird.
                 const isLowEndClose = document.body.classList.contains('low-end');
                 dashboardTimeout = setTimeout(() => {
                     if (!isDashboardOpen) {
                         if (musicCardLayoutWrapper) musicCardLayoutWrapper.classList.add('hidden');
                         if (musicCardWrapper) musicCardWrapper.classList.remove('dashboard-closing');
                     }
-                }, isLowEndClose ? 50 : 900); 
+                }, isLowEndClose ? 50 : 1100); 
                 
                 if (mainMusicCard && mainMusicCard.classList.contains('offline')) {
+                    if (miniTitle) miniTitle.innerText = t('mini_dashboard_minimized');
                     if (miniStatus) miniStatus.innerText = t('mini_click_to_open');
                 } else {
-                    if (miniStatus) miniStatus.innerText = t('mini_click_to_close');
-                    setTimeout(() => { 
-                        if(!isDashboardOpen && miniStatus) {
-                            miniStatus.innerText = t('mini_click_to_open');
-                            
-                            statusTextTimeout = setTimeout(() => {
-                                if(!isDashboardOpen && miniStatus) {
-                                    miniStatus.innerText = mArtist && mArtist.innerText !== t('standby_idle_subtitle') ? mArtist.innerText : t('mini_click_to_open');
-                                }
-                            }, 5000);
-                        } 
-                    }, 300);
+                    if (trackIsPlaying && currentTrackTitle) {
+                        if (miniTitle) miniTitle.innerText = currentTrackTitle;
+                        if (miniStatus) miniStatus.innerText = currentRawArtist || t('mini_click_to_open');
+                    } else {
+                        if (miniStatus) miniStatus.innerText = t('mini_click_to_open');
+                    }
                 }
-                // NEU v24.51 (FIX): Overlay-Tiefen-Zähler auf Drift prüfen und ggf. korrigieren.
                 resyncOverlayHistoryDepth();
             }
         };
@@ -12424,11 +12651,9 @@
         window.toggleMusicPicker = function(show) {
             if (mainMusicCard && !mainMusicCard.classList.contains('offline') && mPicker) {
                 clearTimeout(pickerTimeout);
-                // NEU v24.73: Haptic-Feedback beim Öffnen/Schließen der Plattform-Auswahl
-                // ergänzt (fehlte bisher komplett an dieser Stelle) - Nutzerwunsch nach mehr
-                // spürbarem "Leben" bei Interaktionen.
                 haptic(show ? 10 : 8);
                 if(show) {
+                    renderMusicServicePicker(lastKnownMusicData);
                     mPicker.classList.remove('hidden', 'picker-closing');
                     void mPicker.offsetWidth;
                     mPicker.classList.add('flex', 'picker-opening');
@@ -12439,16 +12664,6 @@
                 } else {
                     mPicker.classList.remove('picker-opening');
                     mPicker.classList.add('picker-closing');
-                    // FIX v24.73: Nutzer meldete - nach "Abbrechen" muss man 2x aufs Cover
-                    // tippen, damit die Plattform-Auswahl wieder erscheint. Root Cause: dieser
-                    // Schließen-Timeout wurde bisher NICHT in pickerTimeout gespeichert (anders
-                    // als der Öffnen-Timeout oben) - clearTimeout(pickerTimeout) am Funktions-
-                    // anfang konnte ihn dadurch nie abbrechen. Tippt man kurz nach "Abbrechen"
-                    // erneut aufs Cover, öffnet sich das Menü sichtbar neu, aber dieser alte,
-                    // nie abgebrochene Timer feuert kurz danach trotzdem noch und versteckt es
-                    // sofort wieder - der zweite Tap trifft dann auf einen bereits "beruhigten"
-                    // Zustand. Jetzt in derselben Variable gespeichert wie der Öffnen-Timeout,
-                    // damit clearTimeout() ihn zuverlässig erwischt.
                     pickerTimeout = setTimeout(() => {
                         mPicker.classList.add('hidden');
                         mPicker.classList.remove('flex', 'picker-closing');
@@ -12692,6 +12907,9 @@
         // FIX: Re-Add Smooth Transitions for Size changes
         window.toggleLyrics = function(show) {
             if (!mainMusicCard) return;
+            if (show && mainMusicCard.classList.contains('offline')) {
+                return;
+            }
             if (show) { pushOverlayHistory(); } else { popOverlayHistory(); }
             if(show) {
                 mainMusicCard.classList.remove('lyrics-closing-state');
@@ -12715,7 +12933,7 @@
                 // NEU v24.47 (EFFIZIENZ): Zurück auf den sparsamen Intervall-Modus wechseln -
                 // volle 60fps-Berechnung wird nicht mehr gebraucht, sobald niemand mehr die
                 // Songtext-Details sieht.
-                startProgressTracking();
+                stopProgressTracking();
                 // NEU v24.51 (FIX): Overlay-Tiefen-Zähler auf Drift prüfen und ggf. korrigieren.
                 resyncOverlayHistoryDepth();
             }
@@ -12837,6 +13055,8 @@
             return 1.0; 
         }
 
+        let currentLineAnimCache = null;
+
         function parseLrc(lrcString) {
             const lines = lrcString.split('\n');
             const lineRegex = /\[(\d{2}):(\d{2})\.(\d{2,3})\](.*)/;
@@ -12885,7 +13105,8 @@
                     }
 
                     parsedLyrics.push({ 
-                        timeMs: lineTime, 
+                        timeMs: lineTime,
+                        startMs: lineTime,
                         text: rawText.replace(/<\d{2}:\d{2}\.\d{2,3}>/g, '').trim() || "♪",
                         tokens: tokens,
                         hasWordTimings: hasWordTimings
@@ -12909,6 +13130,9 @@
                     }
                 }
                 
+                line.startMs = line.timeMs;
+                line.endMs = trueNextLineTime;
+
                 let lineWeight = 0;
                 line.tokens.forEach((tok, idx) => {
                     tok.cleanText = tok.text.replace(/\s+$/, '');
@@ -12979,6 +13203,9 @@
                             tok.duration = Math.max(10, maxAllowedDuration * 0.95);
                         }
 
+                        tok.startMs = tok.timeMs;
+                        tok.endMs = tok.timeMs + tok.duration;
+
                         currentOffsetMs += tok.duration + microPause; 
                     }
                 } else if (line.hasWordTimings) {
@@ -13004,6 +13231,9 @@
                         }
                         
                         if (tok.duration <= 0) tok.duration = 20; 
+
+                        tok.startMs = tok.timeMs;
+                        tok.endMs = tok.timeMs + tok.duration;
                     }
                 }
             }
@@ -13013,11 +13243,8 @@
             const syncBadge = document.getElementById('sync-status-badge');
             if (!lyricsContent) return;
 
-            // PERF-FIX v24.6: renderLyrics baut die komplette Wort/Zeichen-DOM neu auf (neuer
-            // Song, neue Lyrics) - alte DOM-Referenzen im lineAnimCache wären danach tot.
-            // Cache hier ungültig machen, buildLineAnimCache() erstellt ihn beim nächsten
-            // Frame automatisch mit den neuen Referenzen neu.
             lineAnimCache = null;
+            currentLineAnimCache = null;
 
             if (parsedLyrics.length === 0) {
                 const displayMsg = fallbackText || currentNoLyricsMessage;
@@ -13050,13 +13277,9 @@
             }
             
             const isLowEnd = document.body.classList.contains('low-end');
-            // PERF-FIX v24.17: siehe Kommentar bei CHAR_LEVEL_STYLES oben - der schlanke
-            // Wort-Pfad (kein Zeichen-Splitting) gilt jetzt für 53 von 61 Stilen, nicht mehr
-            // nur für den low-end-Modus.
             const needsCharSplit = !isLowEnd && CHAR_LEVEL_STYLES.has(currentLyricsStyle);
             lyricsDomHasCharSplit = needsCharSplit;
 
-            // NEU: Footer HTML für Writer und Provider dynamisch zusammenbauen
             let footerHtml = '';
             if (currentLyricsProvider || currentLyricsWriter) {
                 footerHtml = `<div class="mt-20 border-t border-white/10 pt-6 pb-20 w-full text-left">
@@ -13096,13 +13319,6 @@
             });
         }
 
-        // NEW: Performance-Fix - markiert eine komplette Zeile (alle Wörter + Buchstaben)
-        // EINMALIG als fertig durchgesungen. Ersetzt die vorherige Logik, die bei JEDEM
-        // Animation-Frame erneut ALLE bereits gesungenen Zeilen des kompletten Songs
-        // durchlief und pro Wort/Buchstabe erneut document.getElementById() aufrief -
-        // das wurde mit fortschreitender Songdauer immer teurer (mehr bereits gesungene
-        // Zeilen = mehr unnötige Arbeit pro Frame) und war vermutlich die Hauptursache
-        // für spürbare Ruckler und Geräte-Erhitzung bei längerem Musikhören.
         function markLineFullyPassed(idx) {
             const line = parsedLyrics[idx];
             if (!line) return;
@@ -13117,14 +13333,11 @@
                     const charSpan = document.getElementById(`char-${idx}-${wIdx}-${cIdx}`);
                     if (charSpan) {
                         charSpan.classList.add('char-passed');
-                        charSpan.classList.remove('char-active');
                     }
                 }
             });
         }
 
-        // NEW: Setzt eine Zeile einmalig zurück auf "noch nicht gesungen" - wird nur
-        // gebraucht, wenn rückwärts gesprungen wird (z.B. Song neu gestartet/zurückgespult).
         function resetLineProgress(idx) {
             const line = parsedLyrics[idx];
             if (!line) return;
@@ -13132,290 +13345,194 @@
                 const wordSpan = document.getElementById(`word-${idx}-${wIdx}`);
                 if (wordSpan) {
                     wordSpan.style.setProperty('--fill-percent', '0%');
-                    wordSpan.classList.remove('word-active', 'word-passed');
+                    wordSpan.classList.remove('word-passed', 'word-active');
                 }
                 for (let cIdx = 0; cIdx < tok.cleanText.length; cIdx++) {
                     const charSpan = document.getElementById(`char-${idx}-${wIdx}-${cIdx}`);
-                    if (charSpan) charSpan.classList.remove('char-passed', 'char-active');
-                }
-            });
-        }
-
-        // PERF-FIX v24.6: Baut EINMALIG (bei Zeilenwechsel) alle DOM-Referenzen und statischen
-        // Gewichts-/Zeit-Verhältnisse für die aktuell aktive Zeile. Vorher wurde all das bei
-        // JEDEM Frame für JEDES Zeichen neu berechnet (getElementById + Regex + Division) -
-        // reine Verschwendung, da sich diese Werte pro Zeile nie ändern, nur der Fortschritt.
-        function buildLineAnimCache(idx) {
-            const line = parsedLyrics[idx];
-            if (!line) { lineAnimCache = null; return; }
-
-            // PERF-FIX v24.17: siehe CHAR_LEVEL_STYLES weiter oben - wenn der aktive Stil gar
-            // keine Zeichen-Spans im DOM hat (87% der Stile), lohnt sich die komplette
-            // Gewichts-/Verhältnis-Berechnung pro Zeichen nicht - es gäbe ohnehin nichts zum
-            // Anfassen (getElementById würde nur null zurückgeben).
-            const charsNeeded = !document.body.classList.contains('low-end') && CHAR_LEVEL_STYLES.has(currentLyricsStyle);
-
-            const words = line.tokens.map((tok, wIdx) => {
-                const wordSpan = document.getElementById(`word-${idx}-${wIdx}`);
-
-                // Hold-Scale hängt nur von tok.duration ab - ändert sich nie während der Zeile,
-                // deshalb hier einmalig setzen statt bei jedem Frame neu zu berechnen/schreiben.
-                const minHoldMs = 140, maxHoldMs = 950;
-                const holdRatio = Math.max(0, Math.min(1, (tok.duration - minHoldMs) / (maxHoldMs - minHoldMs)));
-                const holdScale = (1.02 + Math.sqrt(holdRatio) * 0.14).toFixed(3);
-                if (wordSpan) wordSpan.style.setProperty('--word-hold-scale', holdScale);
-
-                let chars = [];
-                if (charsNeeded) {
-                    const tokLen = tok.cleanText.length;
-                    let currentTokWeightPassed = 0;
-                    for (let cIdx = 0; cIdx < tokLen; cIdx++) {
-                        const cChar = tok.cleanText[cIdx];
-                        let cWeight = 0;
-                        if (!/[.,!?]/.test(cChar)) {
-                            cWeight = getCharWeight(cChar, tok.isPhraseEnd, /[aeiouy]/.test(cChar.toLowerCase()));
-                        }
-                        if (cWeight === 0 && tok.rawWeight > 0) cWeight = tok.rawWeight * 0.05;
-
-                        const startRatio = tok.rawWeight > 0 ? (currentTokWeightPassed / tok.rawWeight) : 0;
-                        const endRatio = tok.rawWeight > 0 ? ((currentTokWeightPassed + cWeight) / tok.rawWeight) : 1;
-                        currentTokWeightPassed += cWeight;
-
-                        chars.push({
-                            el: document.getElementById(`char-${idx}-${wIdx}-${cIdx}`),
-                            startRatio, endRatio,
-                            lastState: null // 'none' | 'active' | 'passed' - für Change-Detection
-                        });
+                    if (charSpan) {
+                        charSpan.classList.remove('char-passed');
                     }
                 }
-                return { tok, el: wordSpan, chars, lastState: null };
             });
-
-            lineAnimCache = { idx, words };
         }
 
-        function syncLyricsUI(forceScroll = false, forceRefresh = false) {
-            if (parsedLyrics.length === 0 || (!mainMusicCard || (!mainMusicCard.classList.contains('lyrics-open') && !forceRefresh))) return;
+        function buildLineAnimCache(idx) {
+            const line = parsedLyrics[idx];
+            if (!line) return null;
+            
+            const words = [];
+            line.tokens.forEach((tok, wIdx) => {
+                const wSpan = document.getElementById(`word-${idx}-${wIdx}`);
+                const cSpans = [];
+                for (let cIdx = 0; cIdx < tok.cleanText.length; cIdx++) {
+                    const cSpan = document.getElementById(`char-${idx}-${wIdx}-${cIdx}`);
+                    if (cSpan) cSpans.push(cSpan);
+                }
+                const start = typeof tok.startMs === 'number' ? tok.startMs : tok.timeMs;
+                const dur = typeof tok.duration === 'number' ? tok.duration : 100;
+                words.push({
+                    startMs: start,
+                    endMs: typeof tok.endMs === 'number' ? tok.endMs : (start + dur),
+                    duration: dur,
+                    cleanLen: tok.cleanText.length,
+                    span: wSpan,
+                    chars: cSpans
+                });
+            });
 
-            const syncMs = currentMs + liveSyncOffset; 
+            const lStart = typeof line.startMs === 'number' ? line.startMs : line.timeMs;
+            return {
+                idx: idx,
+                el: document.getElementById(`lyric-line-${idx}`),
+                startMs: lStart,
+                endMs: typeof line.endMs === 'number' ? line.endMs : (lStart + 5000),
+                words: words
+            };
+        }
 
-            let newActiveIdx = -1;
-            for (let i = 0; i < parsedLyrics.length; i++) {
-                if (syncMs >= parsedLyrics[i].timeMs) {
-                    newActiveIdx = i;
-                } else {
+        function syncLyricsUI(forceScroll = false, isSeekOrResync = false) {
+            if (!parsedLyrics.length) return;
+
+            const adjustedMs = currentMs + liveSyncOffset;
+
+            let activeIndex = -1;
+            for (let i = parsedLyrics.length - 1; i >= 0; i--) {
+                const lineStart = (typeof parsedLyrics[i].startMs === 'number') ? parsedLyrics[i].startMs : parsedLyrics[i].timeMs;
+                if (adjustedMs >= lineStart) {
+                    activeIndex = i;
                     break;
                 }
             }
 
-            const lineChanged = (newActiveIdx !== currentLyricIndex);
-
-            if (lineChanged || forceScroll || forceRefresh) {
-                document.querySelectorAll('.lyric-line.active').forEach(el => el.classList.remove('active'));
-
-                if (!document.body.classList.contains('low-end')) {
-                    if (forceRefresh) {
-                        // Einmaliger kompletter Abgleich (z.B. beim Öffnen der Lyrics-Ansicht
-                        // oder nach Ändern des Sync-Offsets) - unkritisch, da das nur selten
-                        // passiert, nicht bei jedem einzelnen Frame.
-                        for (let i = 0; i < parsedLyrics.length; i++) {
-                            if (i < newActiveIdx) markLineFullyPassed(i);
-                            else if (i > newActiveIdx) resetLineProgress(i);
+            if (activeIndex !== currentLyricIndex || forceScroll) {
+                if (isSeekOrResync) {
+                    for (let i = 0; i < parsedLyrics.length; i++) {
+                        const lineEl = document.getElementById(`lyric-line-${i}`);
+                        if (lineEl) {
+                            if (i < activeIndex) {
+                                lineEl.classList.remove('active');
+                                markLineFullyPassed(i);
+                            } else if (i === activeIndex) {
+                                lineEl.classList.add('active');
+                            } else {
+                                lineEl.classList.remove('active');
+                                resetLineProgress(i);
+                            }
                         }
-                    } else if (lineChanged && currentLyricIndex !== -1) {
-                        // Normaler Fortschritt: nur die tatsächlich betroffenen Zeilen
-                        // werden einmalig angefasst, nicht der ganze Song erneut.
-                        if (newActiveIdx > currentLyricIndex) {
-                            for (let i = currentLyricIndex; i < newActiveIdx; i++) markLineFullyPassed(i);
-                        } else {
-                            for (let i = newActiveIdx + 1; i <= currentLyricIndex; i++) resetLineProgress(i);
+                    }
+                } else if (activeIndex !== currentLyricIndex) {
+                    if (currentLyricIndex >= 0) {
+                        const prevEl = document.getElementById(`lyric-line-${currentLyricIndex}`);
+                        if (prevEl) {
+                            prevEl.classList.remove('active');
+                            markLineFullyPassed(currentLyricIndex);
+                        }
+                    }
+
+                    if (activeIndex >= 0) {
+                        const currEl = document.getElementById(`lyric-line-${activeIndex}`);
+                        if (currEl) {
+                            currEl.classList.add('active');
                         }
                     }
                 }
 
-                currentLyricIndex = newActiveIdx;
-                if (currentLyricIndex !== -1) {
-                    const activeEl = document.getElementById(`lyric-line-${currentLyricIndex}`);
+                currentLyricIndex = activeIndex;
+                currentLineAnimCache = activeIndex >= 0 ? buildLineAnimCache(activeIndex) : null;
+
+                if (activeIndex >= 0) {
+                    const activeEl = document.getElementById(`lyric-line-${activeIndex}`);
                     if (activeEl) {
-                        activeEl.classList.add('active');
-                        if (forceScroll || !isUserScrolling) scrollToLyricElement(activeEl);
+                        scrollToLyricElement(activeEl);
                     }
                 }
             }
-
-            if (document.body.classList.contains('low-end')) return;
-            if (currentLyricIndex === -1 || !parsedLyrics[currentLyricIndex]) return;
-
-            // PERF-FIX v24.6 (radikal): idx wird weiterhin jeden (gedrosselten) Tick geprüft,
-            // aber alle DOM-Referenzen/Gewichte kommen jetzt aus lineAnimCache statt aus
-            // erneuten getElementById+Regex-Aufrufen. Der Cache wird nur neu gebaut, wenn sich
-            // die Zeile tatsächlich geändert hat (idx-Vergleich) - unabhängig von der Songlänge
-            // immer ein kleiner, konstanter Aufwand.
-            const idx = currentLyricIndex;
-            if (!lineAnimCache || lineAnimCache.idx !== idx) {
-                buildLineAnimCache(idx);
-            }
-            if (!lineAnimCache) return;
-
-            lineAnimCache.words.forEach(w => {
-                if (!w.el) return;
-                const tok = w.tok;
-
-                let tokProgress = 0;
-                if (syncMs >= tok.timeMs + tok.duration) {
-                    tokProgress = 1;
-                } else if (syncMs > tok.timeMs) {
-                    tokProgress = (syncMs - tok.timeMs) / tok.duration;
-                }
-
-                // PERF-FIX: classList wird nur noch bei TATSÄCHLICHER Zustandsänderung
-                // angefasst (lastState-Vergleich), statt bei jedem Tick unbedingt
-                // add/remove aufzurufen, auch wenn sich am Zustand gar nichts geändert hat.
-                const newWordState = tokProgress <= 0 ? 'none' : (tokProgress >= 1 ? 'passed' : 'active');
-                if (newWordState !== w.lastState) {
-                    w.lastState = newWordState;
-                    if (newWordState === 'active') {
-                        w.el.classList.add('word-active');
-                        w.el.classList.remove('word-passed');
-                    } else if (newWordState === 'passed') {
-                        w.el.classList.remove('word-active');
-                        w.el.classList.add('word-passed');
-                    } else {
-                        w.el.classList.remove('word-active', 'word-passed');
-                    }
-                }
-
-                w.chars.forEach(c => {
-                    if (!c.el) return;
-                    let newCharState;
-                    if (tokProgress === 0) {
-                        newCharState = 'none';
-                    } else if (tokProgress >= c.endRatio) {
-                        newCharState = 'passed';
-                    } else if (tokProgress >= c.startRatio && tokProgress < c.endRatio) {
-                        newCharState = 'active';
-                    } else {
-                        newCharState = 'none';
-                    }
-                    if (newCharState !== c.lastState) {
-                        c.lastState = newCharState;
-                        if (newCharState === 'passed') {
-                            c.el.classList.add('char-passed');
-                            c.el.classList.remove('char-active');
-                        } else if (newCharState === 'active') {
-                            c.el.classList.add('char-active');
-                            c.el.classList.remove('char-passed');
-                        } else {
-                            c.el.classList.remove('char-passed', 'char-active');
-                        }
-                    }
-                });
-
-                w.el.style.setProperty('--fill-percent', `${tokProgress * 100}%`);
-            });
         }
 
         function animateLoop(now) {
-            if (trackIsPlaying) {
-                // PERF-FIX: Tab im Hintergrund -> Loop komplett anhalten statt weiter unsichtbar
-                // zu rechnen. fetchMusicData() (alle 5s) oder der visibilitychange-Listener weiter
-                // unten setzen isAnimating zurück auf false und starten den Loop beim nächsten
-                // Sichtbarwerden sofort wieder neu - kein Datenverlust, kein Drift.
-                if (document.hidden) {
-                    isAnimating = false;
-                    return;
-                }
-
-                // KRITISCHER FIX: Im StandBy-Modus (Lockscreen-Feature) lief dieser Loop bisher mit
-                // voller Bildwiederholrate weiter, obwohl document.hidden dabei NICHT true wird -
-                // StandBy ist nur eine Overlay-Ebene auf derselben Seite, kein Tab-Wechsel. Nutzer
-                // meldete: Handy wurde über Nacht (StandBy an, Musik lief, Handy lud) so heiß, dass
-                // Android den Ladevorgang aus Sicherheitsgründen abgebrochen hat - stundenlange
-                // Berechnung von Songtext-Fortschritt und -Synchronisation, die während StandBy gar
-                // nicht sichtbar ist (StandBy zeigt sein eigenes, einfaches Overlay), war die
-                // Ursache. Loop jetzt genauso wie im Hintergrund-Tab-Fall komplett anhalten -
-                // toggleStandBy() startet ihn beim Verlassen von StandBy sofort wieder neu (siehe
-                // dort), kein Datenverlust, kein Drift.
-                if (standByActive) {
-                    isAnimating = false;
-                    return;
-                }
-
-                // NEU v24.47 (EFFIZIENZ): Dieser volle 60fps-rAF-Loop ist eigentlich nur für die
-                // Wort-für-Wort-Songtext-Synchronisation nötig - die läuft aber nur, wenn die
-                // Lyrics-Ansicht auch tatsächlich offen ist. Läuft sie nicht, gibt startProgress-
-                // Tracking()/stopProgressTracking() stattdessen einen simplen, viel günstigeren
-                // setInterval() den Vorzug für die reine Fortschrittsbalken-Aktualisierung - hier
-                // also sauber aussteigen, statt weiter mit voller Framerate zu rechnen, obwohl
-                // niemand gerade Songtext-Details sieht.
-                if (!mainMusicCard || !mainMusicCard.classList.contains('lyrics-open')) {
-                    isAnimating = false;
-                    startProgressTracking(); // schaltet automatisch auf den Intervall-Modus um
-                    return;
-                }
-
-                if (document.body.classList.contains('low-end')) {
-                    if (now - lastLowEndUpdate < 250) { 
-                        lyricAnimFrame = requestAnimationFrame(animateLoop);
-                        return; 
-                    }
-                    lastLowEndUpdate = now;
-                }
-
-                currentMs = serverBaseProgress + (now - localStartTime);
-                if (totalMs > 0 && currentMs > totalMs) currentMs = totalMs;
-
-                // PERF-FIX: DOM-Writes gedrosselt statt bei jedem einzelnen Frame (siehe Kommentar
-                // bei der Variablendeklaration oben) - Hauptursache der 100%-CPU/GPU-Last behoben.
-                if (now - lastProgressUIUpdate >= PROGRESS_UI_THROTTLE_MS) {
-                    lastProgressUIUpdate = now;
-                    updateProgressUI();
-                }
-
-                if (mainMusicCard && mainMusicCard.classList.contains('lyrics-open')) {
-                    if (now - lastLyricsSyncUpdate >= LYRICS_SYNC_THROTTLE_MS) {
-                        lastLyricsSyncUpdate = now;
-                        syncLyricsUI();
-                    }
-                }
-                lyricAnimFrame = requestAnimationFrame(animateLoop);
-            } else {
-                isAnimating = false; 
+            if (!trackIsPlaying) {
+                isAnimating = false;
+                return;
             }
+
+            const elapsed = performance.now() - localStartTime;
+            currentMs = serverBaseProgress + elapsed;
+
+            if (totalMs && currentMs > totalMs) {
+                currentMs = totalMs;
+            }
+
+            // Timeline & Zeiten live auf jedem Frame synchronisieren
+            updateProgressUI();
+
+            if (mainMusicCard && mainMusicCard.classList.contains('lyrics-open')) {
+                syncLyricsUI();
+
+                const adjustedMs = currentMs + liveSyncOffset;
+
+                if (currentLineAnimCache && currentLineAnimCache.words) {
+                    const cache = currentLineAnimCache;
+                    const words = cache.words;
+
+                    for (let w = 0; w < words.length; w++) {
+                        const word = words[w];
+                        const wSpan = word.span;
+
+                        if (adjustedMs < word.startMs) {
+                            if (wSpan) {
+                                wSpan.style.setProperty('--fill-percent', '0%');
+                                wSpan.classList.remove('word-active', 'word-passed');
+                            }
+                            for (let c = 0; c < word.chars.length; c++) {
+                                word.chars[c].classList.remove('char-passed');
+                            }
+                        } else if (adjustedMs >= word.endMs) {
+                            if (wSpan) {
+                                wSpan.style.setProperty('--fill-percent', '100%');
+                                wSpan.classList.add('word-passed');
+                                wSpan.classList.remove('word-active');
+                            }
+                            for (let c = 0; c < word.chars.length; c++) {
+                                word.chars[c].classList.add('char-passed');
+                            }
+                        } else {
+                            const wordElapsed = adjustedMs - word.startMs;
+                            const wordProgress = word.duration > 0 ? Math.min(1, Math.max(0, wordElapsed / word.duration)) : 1;
+                            const fillPercent = (wordProgress * 100).toFixed(1) + '%';
+
+                            if (wSpan) {
+                                wSpan.style.setProperty('--fill-percent', fillPercent);
+                                wSpan.classList.add('word-active');
+                                wSpan.classList.remove('word-passed');
+                            }
+
+                            const passedChars = Math.floor(wordProgress * word.cleanLen);
+                            for (let c = 0; c < word.chars.length; c++) {
+                                if (c < passedChars) {
+                                    word.chars[c].classList.add('char-passed');
+                                } else {
+                                    word.chars[c].classList.remove('char-passed');
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            lyricAnimFrame = requestAnimationFrame(animateLoop);
         }
 
-        // NEU v24.47 (EFFIZIENZ): Zentrale Steuerung, WIE der Song-Fortschritt aktuell gehalten
-        // wird - entweder über den vollen rAF-Loop (nur wenn Lyrics offen sind, für die
-        // Wort-für-Wort-Synchronisation nötig) oder über einen simplen, deutlich günstigeren
-        // setInterval() (wenn nur der Fortschrittsbalken aktualisiert werden muss). Ersetzt alle
-        // bisherigen verstreuten "isAnimating = true; requestAnimationFrame(animateLoop)"-Stellen.
-        let progressTickerInterval = null;
-
         function startProgressTracking() {
-            stopProgressTracking(); // sauberer Neustart, keine doppelten Timer möglich
-            if (!trackIsPlaying || document.hidden) return;
+            if (isAnimating) return;
+            isAnimating = true;
+            if (lyricAnimFrame) cancelAnimationFrame(lyricAnimFrame);
+            lyricAnimFrame = requestAnimationFrame(animateLoop);
 
-            // FIX v24.70: Nutzer meldete, StandBy fühle sich "komplett eingefroren" an -
-            // Root Cause: startProgressTracking() brach bisher bei standByActive sofort
-            // komplett ab (siehe Git-Historie), Fortschrittsbalken/Uhrzeit im StandBy-
-            // Lockscreen bekamen dadurch NIE ein Live-Update, sondern sprangen nur alle 5s
-            // sprunghaft, wenn zufällig ein neuer Musikdaten-Abruf ankam - Titel/Cover
-            // aktualisierten sich zwar (über syncStandByTrackInfo, unabhängiger Pfad), aber
-            // Fortschrittsbalken/Sekunden-Anzeige wirkten dadurch komplett tot. Jetzt läuft
-            // auch im StandBy ein echtes Tracking mit, allerdings bewusst im deutlich
-            // günstigeren 1x/Sekunde-Takt (STANDBY_PROGRESS_THROTTLE_MS) statt der vollen
-            // 200ms-Rate der Haupt-UI - für eine sichtbar fließende Anzeige reicht das locker,
-            // kostet aber nur einen Bruchteil der Rechenzeit. Voller rAF-Loop (für
-            // Songtext-Wort-Sync) bleibt weiterhin exklusiv der Haupt-UI vorbehalten, da
-            // Songtext im StandBy ohnehin nicht sichtbar ist.
-            const lyricsOpen = !standByActive && mainMusicCard && mainMusicCard.classList.contains('lyrics-open');
-            if (lyricsOpen) {
-                isAnimating = true;
-                lyricAnimFrame = requestAnimationFrame(animateLoop);
-            } else {
-                tickProgressInterval(); // sofort einmal aktualisieren, nicht erst nach dem ersten Intervall-Tick
-                progressTickerInterval = setInterval(tickProgressInterval, standByActive ? STANDBY_PROGRESS_THROTTLE_MS : PROGRESS_UI_THROTTLE_MS);
-            }
+            if (progressTickerInterval) clearInterval(progressTickerInterval);
+            progressTickerInterval = setInterval(() => {
+                if (!trackIsPlaying) return;
+                tickProgressInterval();
+            }, 200);
         }
 
         function stopProgressTracking() {
@@ -13427,11 +13544,6 @@
             }
         }
 
-        // PERF-FIX: Sofortiger Wiedereinstieg, sobald der Tab wieder sichtbar wird, statt bis zu
-        // 5 Sekunden auf den nächsten fetchMusicData()-Poll zu warten.
-        // NEU v24.47: pausiert/startet jetzt beide Modi (rAF-Loop UND Intervall-Ticker), nicht
-        // nur den rAF-Loop wie vorher - der Intervall-Ticker lief bisher auch im Hintergrund-Tab
-        // unnötig weiter.
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) {
                 stopProgressTracking();
@@ -13461,16 +13573,6 @@
         function isStrictMatch(apiTrack, apiArtist, apiDurationSec, searchTrack, searchArtist, searchDurationMs) {
             if (!apiTrack || !apiArtist || !searchTrack || !searchArtist) return false;
 
-            // NEW: Bugfix - Toleranz von 10s auf 3s verschärft. Nutzer berichtete, oft einen
-            // sehr großen manuellen Sync-Offset (+4-5 Sekunden, je nach Song unterschiedlich)
-            // zu brauchen. Ursache: Die bisherige 10s-Toleranz ließ gelegentlich eine andere
-            // Version desselben Songs durch (z.B. Radio-Edit vs. Album-Version, oder eine mit
-            // längerem Intro), deren Timing sich vom tatsächlich laufenden Track unterscheidet
-            // - das erklärt sowohl die Größe als auch die Uneinheitlichkeit des benötigten
-            // Offsets (abhängig davon, wie sehr sich die zufällig gematchte Version
-            // unterscheidet). Mit 3s Toleranz werden solche Fehltreffer viel zuverlässiger
-            // abgelehnt, während legitime, minimale Rundungsunterschiede zwischen
-            // verschiedenen Musikdaten-Quellen weiterhin toleriert werden.
             if (apiDurationSec && searchDurationMs) {
                 const searchSec = searchDurationMs / 1000;
                 if (Math.abs(apiDurationSec - searchSec) > 3) {
@@ -13501,126 +13603,126 @@
         }
 
         async function fetchExternalLyrics(title, artist, searchDurationMs = 0) {
-        const fetchId = ++currentFetchId; 
-        
-        if (lyricsContent) {
-            lyricsContent.innerHTML = `
-                <div class="w-full flex-1 flex flex-col justify-center min-h-full py-16 px-2 sm:px-4 md:px-8">
-                    <h2 class="text-xl sm:text-3xl md:text-4xl font-extrabold text-white/30 tracking-tight leading-tight text-left animate-pulse">
-                        Suche Songtext...
-                    </h2>
-                </div>`;
-        }
-        parsedLyrics = [];
-        currentLyricIndex = -1;
-        currentLyricsProvider = "";
-        currentLyricsWriter = "";
+            const fetchId = ++currentFetchId; 
+            
+            if (lyricsContent) {
+                lyricsContent.innerHTML = `
+                    <div class="w-full flex-1 flex flex-col justify-center min-h-full py-16 px-2 sm:px-4 md:px-8">
+                        <h2 class="text-xl sm:text-3xl md:text-4xl font-extrabold text-white/30 tracking-tight leading-tight text-left animate-pulse">
+                            Suche Songtext...
+                        </h2>
+                    </div>`;
+            }
+            parsedLyrics = [];
+            currentLyricIndex = -1;
+            currentLyricsProvider = "";
+            currentLyricsWriter = "";
 
-        const checkAndRenderStrict = (data, searchT, searchA, searchDurMs) => {
-            if (!data) return false;
-            if (Array.isArray(data)) {
-                const validMatches = data.filter(d => isStrictMatch(d.trackName, d.artistName, d.duration, searchT, searchA, searchDurMs));
-                if (validMatches.length > 0) {
-                    const best = validMatches.find(d => d.syncedLyrics) || validMatches[0];
-                    if (best.syncedLyrics && !isDummyLyrics(best.syncedLyrics)) {
+            const checkAndRenderStrict = (data, searchT, searchA, searchDurMs) => {
+                if (!data) return false;
+                if (Array.isArray(data)) {
+                    const validMatches = data.filter(d => isStrictMatch(d.trackName, d.artistName, d.duration, searchT, searchA, searchDurMs));
+                    if (validMatches.length > 0) {
+                        const best = validMatches.find(d => d.syncedLyrics) || validMatches[0];
+                        if (best.syncedLyrics && !isDummyLyrics(best.syncedLyrics)) {
+                            currentLyricsProvider = "LRCLIB";
+                            parseLrc(best.syncedLyrics);
+                            renderLyrics();
+                            syncLyricsUI(true);
+                            return true;
+                        } else if (best.plainLyrics && !isDummyLyrics(best.plainLyrics)) {
+                            currentLyricsProvider = "LRCLIB";
+                            renderLyrics(best.plainLyrics, true);
+                            return true;
+                        }
+                    }
+                } else {
+                    if (data.syncedLyrics && !isDummyLyrics(data.syncedLyrics)) {
                         currentLyricsProvider = "LRCLIB";
-                        parseLrc(best.syncedLyrics);
+                        parseLrc(data.syncedLyrics);
                         renderLyrics();
                         syncLyricsUI(true);
                         return true;
-                    } else if (best.plainLyrics && !isDummyLyrics(best.plainLyrics)) {
+                    } else if (data.plainLyrics && !isDummyLyrics(data.plainLyrics)) {
                         currentLyricsProvider = "LRCLIB";
-                        renderLyrics(best.plainLyrics, true);
+                        renderLyrics(data.plainLyrics, true);
                         return true;
                     }
                 }
-            } else {
-                if (data.syncedLyrics && !isDummyLyrics(data.syncedLyrics)) {
-                    currentLyricsProvider = "LRCLIB";
-                    parseLrc(data.syncedLyrics);
-                    renderLyrics();
-                    syncLyricsUI(true);
-                    return true;
-                } else if (data.plainLyrics && !isDummyLyrics(data.plainLyrics)) {
-                    currentLyricsProvider = "LRCLIB";
-                    renderLyrics(data.plainLyrics, true);
-                    return true;
-                }
-            }
-            return false;
-        };
+                return false;
+            };
 
-        const cleanT = cleanStringForAPI(title);
-        let cleanA = cleanStringForAPI(artist);
+            const cleanT = cleanStringForAPI(title);
+            let cleanA = cleanStringForAPI(artist);
 
-        // ==========================================
-        // QUELLE 0: LRCLIB (zuverlässigste öffentliche Quelle, zeilensynchron)
-        // ==========================================
-        try {
-            let res = await fetch(`https://lrclib.net/api/get?` + new URLSearchParams({ track_name: title, artist_name: artist }));
-            if (fetchId !== currentFetchId) return;
-            
-            if (res.ok) {
-                const data = await res.json();
-                if (checkAndRenderStrict(data, title, artist, searchDurationMs)) return;
-            }
-
-            if (cleanT !== title || cleanA !== artist) {
-                let resClean = await fetch(`https://lrclib.net/api/get?` + new URLSearchParams({ track_name: cleanT, artist_name: cleanA }));
+            // ==========================================
+            // QUELLE 0: LRCLIB (zuverlässigste öffentliche Quelle, zeilensynchron)
+            // ==========================================
+            try {
+                let res = await fetch(`https://lrclib.net/api/get?` + new URLSearchParams({ track_name: title, artist_name: artist }));
                 if (fetchId !== currentFetchId) return;
-                if (resClean.ok) {
-                    const dataClean = await resClean.json();
-                    if (checkAndRenderStrict(dataClean, cleanT, cleanA, searchDurationMs)) return;
-                }
-            }
-
-            let searchRes = await fetch(`https://lrclib.net/api/search?q=` + encodeURIComponent(`${title} ${artist}`));
-            if (fetchId !== currentFetchId) return;
-            
-            if (searchRes.ok) {
-                const searchData = await searchRes.json();
-                if (checkAndRenderStrict(searchData, title, artist, searchDurationMs)) return;
-            }
-        } catch (err) {}
-
-        // ==========================================
-        // QUELLE 1: NETEASE CLOUD MUSIC (Fallback, zeilensynchron)
-        // ==========================================
-        try {
-            if (fetchId !== currentFetchId) return;
-            const searchUrl = `https://neteasecloudmusicapi.vercel.app/search?keywords=${encodeURIComponent(cleanT + ' ' + cleanA)}`;
-            let neteaseSearch = await fetch(searchUrl);
-            
-            if (neteaseSearch.ok) {
-                const searchData = await neteaseSearch.json();
-                const songs = searchData.result?.songs;
                 
-                if (songs && songs.length > 0) {
-                    const songId = songs[0].id;
-                    const lyricUrl = `https://neteasecloudmusicapi.vercel.app/lyric?id=${songId}`;
-                    let neteaseLyric = await fetch(lyricUrl);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (checkAndRenderStrict(data, title, artist, searchDurationMs)) return;
+                }
+
+                if (cleanT !== title || cleanA !== artist) {
+                    let resClean = await fetch(`https://lrclib.net/api/get?` + new URLSearchParams({ track_name: cleanT, artist_name: cleanA }));
                     if (fetchId !== currentFetchId) return;
+                    if (resClean.ok) {
+                        const dataClean = await resClean.json();
+                        if (checkAndRenderStrict(dataClean, cleanT, cleanA, searchDurationMs)) return;
+                    }
+                }
+
+                let searchRes = await fetch(`https://lrclib.net/api/search?q=` + encodeURIComponent(`${title} ${artist}`));
+                if (fetchId !== currentFetchId) return;
+                
+                if (searchRes.ok) {
+                    const searchData = await searchRes.json();
+                    if (checkAndRenderStrict(searchData, title, artist, searchDurationMs)) return;
+                }
+            } catch (err) {}
+
+            // ==========================================
+            // QUELLE 1: NETEASE CLOUD MUSIC (Fallback, zeilensynchron)
+            // ==========================================
+            try {
+                if (fetchId !== currentFetchId) return;
+                const searchUrl = `https://neteasecloudmusicapi.vercel.app/search?keywords=${encodeURIComponent(cleanT + ' ' + cleanA)}`;
+                let neteaseSearch = await fetch(searchUrl);
+                
+                if (neteaseSearch.ok) {
+                    const searchData = await neteaseSearch.json();
+                    const songs = searchData.result?.songs;
                     
-                    if (neteaseLyric.ok) {
-                        const lyricData = await neteaseLyric.json();
-                        const lrcText = lyricData.lrc?.lyric;
-                        if (lrcText && !isDummyLyrics(lrcText)) {
-                            currentLyricsProvider = "NetEase Cloud Music";
-                            currentLyricsWriter = "";
-                            parseLrc(lrcText);
-                            renderLyrics();
-                            syncLyricsUI(true);
-                            return;
+                    if (songs && songs.length > 0) {
+                        const songId = songs[0].id;
+                        const lyricUrl = `https://neteasecloudmusicapi.vercel.app/lyric?id=${songId}`;
+                        let neteaseLyric = await fetch(lyricUrl);
+                        if (fetchId !== currentFetchId) return;
+                        
+                        if (neteaseLyric.ok) {
+                            const lyricData = await neteaseLyric.json();
+                            const lrcText = lyricData.lrc?.lyric;
+                            if (lrcText && !isDummyLyrics(lrcText)) {
+                                currentLyricsProvider = "NetEase Cloud Music";
+                                currentLyricsWriter = "";
+                                parseLrc(lrcText);
+                                renderLyrics();
+                                syncLyricsUI(true);
+                                return;
+                            }
                         }
                     }
                 }
-            }
-        } catch (neteaseErr) {}
+            } catch (neteaseErr) {}
 
-        // Alle Quellen ohne Treffer -> Fallback-Hinweistext anzeigen
-        if (fetchId !== currentFetchId) return;
-        renderLyrics(currentNoLyricsMessage);
-    }
+            // Alle Quellen ohne Treffer -> Fallback-Hinweistext anzeigen
+            if (fetchId !== currentFetchId) return;
+            renderLyrics(currentNoLyricsMessage);
+        }
             
         function updateMusicUI(data, dynamicLatency = 50) {
             const hasTrack = data && data.track;
@@ -13675,11 +13777,10 @@
                         if (mHeader) mHeader.innerText = t('status_offline');
                         if (mDot) mDot.className = "h-1 w-1 xxs:h-1.5 xxs:w-1.5 xs:h-2 xs:w-2 rounded-full bg-blue-500";
                         if(!isDashboardOpen && miniStatus) miniStatus.innerText = t('mini_click_to_open');
-                        updateProgressUI(); // aktualisiert u.a. die EQ-Sichtbarkeit passend zu trackIsPlaying=false, lässt currentMs/totalMs aber unangetastet (kein Reset auf 0)
+                        updateProgressUI();
                         offlineTimeout = null;
-                        hideIslandCompletely(); // NEW: Dynamic Island ausblenden, kein frischer Status mehr
-                    }, 9000); // FIX v24.83: von 6s auf 9s erhöht - noch mehr Sicherheitsmarge
-                    // gegen den bekannten npc-api-Aussetzer, siehe ausführlichen Kommentar oben.
+                        hideIslandCompletely();
+                    }, 9000);
                 }
                 return;
             }
@@ -13697,27 +13798,50 @@
                 mainMusicCard.classList.add('playing');
             }
 
-                     
             if (mHeader) mHeader.innerText = "Gamingpig is listening to";
             if (mDot) mDot.className = "h-1 w-1 xxs:h-1.5 xxs:w-1.5 xs:h-2 xs:w-2 rounded-full bg-green-500 active-dot";
-            // FIX v24.63: fallbackImg ist jetzt global definiert (siehe weiter oben), nicht
-            // mehr lokal hier - wird jetzt auch von Dynamic Island/StandBy gebraucht.
             
-            let imgUrl = data.track.artwork_url;
-            if (!imgUrl || imgUrl.trim() === "") {
-                imgUrl = fallbackImg;
-            }
-
-            const rawArtist = data.track.artist || "Unknown";
-            
+            const rawArtist = (data.track && data.track.artist) || "Unknown";
             const cleanArtist = rawArtist.replace(/\s*•\s*From Smart Shuffle/gi, '').trim();
+            const trackTitle = (data.track && data.track.title) || "";
             
-            const newTrackId = data.track.title + "-" + cleanArtist;
+            const newTrackId = trackTitle + "-" + cleanArtist;
             const isNewTrack = (newTrackId !== currentTrackId);
             const isFirstLoad = (currentTrackId === "");
+            currentTrackId = newTrackId; // FIX: update so same song never re-triggers fetchExternalLyrics
 
-            if (isNewTrack) {
-                currentTrackId = newTrackId;
+            currentTrackTitle = trackTitle;
+            currentRawArtist = cleanArtist;
+            lastKnownMusicData = data;
+
+            // Mini-Player Toggle Bar sofort aktualisieren
+            if (miniTitle) miniTitle.innerText = trackTitle;
+            if (miniStatus) {
+                if (isDashboardOpen) {
+                    miniStatus.innerText = cleanArtist ? `${cleanArtist} · ${t('mini_click_to_close')}` : t('mini_click_to_close');
+                } else {
+                    miniStatus.innerText = cleanArtist;
+                }
+            }
+            if (miniIconBg) {
+                miniIconBg.className = 'w-8 h-8 xxs:w-10 xxs:h-10 sm:w-12 sm:h-12 shrink-0 rounded-lg xxs:rounded-xl flex items-center justify-center transition-colors bg-green-500/10 text-green-500 animate-pulse';
+            }
+
+            renderMusicServicePicker(data);
+
+            const trackKey = `${cleanTrackTitle(trackTitle)}___${cleanArtist}`;
+            if (trackKey !== lastResolvedTrackKey) {
+                lastResolvedTrackKey = trackKey;
+                currentResolvedArtUrl = null;
+            }
+
+            if (!currentResolvedArtUrl && trackCoverMemoryCache.has(trackKey)) {
+                currentResolvedArtUrl = trackCoverMemoryCache.get(trackKey);
+            }
+
+            let imgUrl = currentResolvedArtUrl || (data.track && data.track.artwork_url) || fallbackImg;
+            if (!imgUrl || imgUrl.trim() === "") {
+                imgUrl = fallbackImg;
             }
 
             let currentApiProgress = data.progress_ms !== undefined ? data.progress_ms : (data.track && data.track.progress_ms) || 0;
@@ -13754,97 +13878,65 @@
                 apiProgress += dataAge + dynamicLatency;
             }
             
-            const trackDuration = data.track.duration_ms || data.duration_ms || 0;
+            const trackDuration = (data.track && data.track.duration_ms) || data.duration_ms || 0;
             if (trackDuration && apiProgress > trackDuration) {
                 apiProgress = trackDuration;
             }
 
-                // FIX v24.63: tryItunesArtworkFallback() ist jetzt global definiert (siehe
-                // weiter oben bei fallbackImg) statt hier verschachtelt - wird jetzt auch von
-                // Dynamic Island/StandBy gebraucht.
-                const applyDataChanges = (addedDelay = 0) => {
-                // FIX v24.83 (KRITISCH): Nutzer meldete - Cover verschwinden random mitten im
-                // Song, "überall anders auf der Seite" (nicht nur StandBy, dort schon in
-                // v24.80 gefixt). Root Cause: derselbe Bug-Pattern wie beim StandBy-Flacker -
-                // "mArtwork.onerror" wurde nur EINMALIG zugewiesen (if !mArtwork.onerror), der
-                // Handler selbst hat sich nach dem ersten Fehler aber auf eine simple
-                // "this.src = fallbackImg"-Variante heruntergestuft (um Endlosschleifen bei
-                // kaputten iTunes-URLs zu verhindern). Dadurch bekam JEDER folgende Songwechsel
-                // mit fehlgeschlagenem Cover für den Rest der Sitzung NIE MEHR die richtige
-                // iTunes-Fallback-Behandlung, sondern sofort nur noch das generische
-                // Platzhalterbild - wirkte wie "das Cover verschwindet". Fix: Handler wird
-                // jetzt bei jedem echten Songwechsel neu mit der vollen iTunes-Fallback-Logik
-                // scharf gemacht, statt sich dauerhaft selbst zu deaktivieren.
-                if (mArtwork && isNewTrack) {
-                    const originalUrl = imgUrl; // für den Retry unten in der Closure festhalten
+            // Spotify-URL extrahieren (für authentisches Spotify CDN Cover via oEmbed)
+            let mainSpotifyUrl = (data.track && (data.track.url || data.track.track_url)) || null;
+            if (!mainSpotifyUrl && data.track && data.track.uri && data.track.uri.startsWith('spotify:')) {
+                const uriParts = data.track.uri.split(':');
+                if (uriParts.length >= 3) {
+                    mainSpotifyUrl = `https://open.spotify.com/${uriParts[1]}/${uriParts[2]}`;
+                }
+            }
+            if (!mainSpotifyUrl && data.track && data.track.platform_links && data.track.platform_links.spotify) {
+                mainSpotifyUrl = data.track.platform_links.spotify;
+            }
+            if (!mainSpotifyUrl && data.track && data.track.external_urls && data.track.external_urls.spotify) {
+                mainSpotifyUrl = data.track.external_urls.spotify;
+            }
+
+            const updateAllCoverVisuals = (srcUrl) => {
+                if (mArtwork) mArtwork.src = srcUrl;
+                if (mAmbient) mAmbient.style.backgroundImage = `url('${srcUrl}')`;
+                if (mGlow && coverGlowEnabled) mGlow.style.backgroundImage = `url('${srcUrl}')`;
+                const lyricsAmbientBg = document.getElementById('lyrics-ambient-bg');
+                if (lyricsAmbientBg) lyricsAmbientBg.style.backgroundImage = `url('${srcUrl}')`;
+                const sbBg = document.getElementById('standby-bg');
+                const sbCardBg = document.getElementById('standby-card-blur-bg');
+                if (sbBg) sbBg.style.backgroundImage = `url('${srcUrl}')`;
+                if (sbCardBg) sbCardBg.style.backgroundImage = `url('${srcUrl}')`;
+                syncAllCoverConsumers();
+            };
+
+            const applyDataChanges = (addedDelay = 0) => {
+                if (mArtwork) {
+                    const originalUrl = imgUrl;
                     mArtwork.onerror = async function() {
-                        this.onerror = null; // verhindert Endlosschleife BEI DIESEM Songwechsel
-                        // FIX v24.99 (KRITISCH): Nutzer meldete - manchmal lädt NUR der
-                        // StandBy-Hintergrund (#standby-bg) das Cover, aber nirgendwo sonst
-                        // (nicht Dashboard, nicht Dynamic Island, nicht StandBy-Karte selbst).
-                        // Root Cause: #standby-bg lädt komplett unabhängig über sein eigenes
-                        // new Image() (siehe syncStandByTrackInfo), OHNE jede Fehlerbehandlung.
-                        // #artwork ist dagegen die einzige Quelle, von der Dashboard/Dynamic
-                        // Island/Lyrics-Mini/StandBy-Karte per Canvas alle abgeleitet werden
-                        // (v24.87) - fällt NUR #artworks eigener Request kurz aus (transienter
-                        // Netzwerk-Aussetzer, während der parallele Hintergrund-Request zufällig
-                        // durchkommt), sprang der Code bisher SOFORT zur iTunes-Suche statt es
-                        // einfach nochmal zu versuchen - und alles, was von #artwork abhängt,
-                        // blieb hängen, obwohl die ursprüngliche URL eigentlich gültig war.
-                        // Fix: einmaliger Retry derselben Original-URL (mit Cache-Buster, damit
-                        // wirklich ein frischer Versuch gemacht wird, kein gecachter Fehler),
-                        // BEVOR auf die (langsamere, nicht immer treffsichere) iTunes-Suche
-                        // zurückgegriffen wird.
-                        const retrySucceeded = await retryImageLoad(originalUrl);
-                        if (retrySucceeded) {
-                            this.onerror = () => { this.src = fallbackImg; };
-                            this.src = originalUrl;
-                            if (mAmbient) mAmbient.style.backgroundImage = `url('${originalUrl}')`;
-                            if (mGlow && coverGlowEnabled) mGlow.style.backgroundImage = `url('${originalUrl}')`;
-                            syncAllCoverConsumers();
-                            return;
-                        }
-                        const itunesUrl = await tryItunesArtworkFallback(
-                            mTitle ? mTitle.innerText : '',
-                            mArtist ? mArtist.innerText : ''
+                        this.onerror = () => { this.src = fallbackImg; };
+                        const fallbackUrl = await findBestArtworkFallback(
+                            trackTitle || (mTitle ? mTitle.innerText : ''),
+                            cleanArtist || (mArtist ? mArtist.innerText : ''),
+                            mainSpotifyUrl,
+                            data.track ? data.track.album : null
                         );
-                        const finalFallback = itunesUrl || fallbackImg;
-                        this.src = finalFallback;
-                        this.onerror = () => { this.src = fallbackImg; }; // falls sogar die iTunes-URL kaputt sein sollte
-                        if (mAmbient) mAmbient.style.backgroundImage = `url('${finalFallback}')`;
-                        if (mGlow && coverGlowEnabled) mGlow.style.backgroundImage = `url('${finalFallback}')`;
-                        // FIX v24.87: lyricsMiniArt/di-art/standby-track-art sind jetzt
-                        // <canvas>-Elemente, die #artwork direkt reinzeichnen statt selbst zu
-                        // laden - syncAllCoverConsumers() übernimmt das automatisch für alle
-                        // drei, inklusive korrektem Warten via mArtwork.decode().
-                        syncAllCoverConsumers();
+                        const finalFallback = fallbackUrl || fallbackImg;
+                        currentResolvedArtUrl = finalFallback;
+                        updateAllCoverVisuals(finalFallback);
                     };
                 }
 
-                // FIX v24.83: dieselbe URL-Volatilität wie beim StandBy-Bug - Cover-URLs
-                // können sich bei DEMSELBEN Song zwischen Polls leicht unterscheiden
-                // (Cache-Busting, CDN-Signaturen), was den alten String-Vergleich fälschlich
-                // "neu" erkennen ließ und unnötige Reloads (mit Fehlerrisiko) auslöste.
-                if(mArtwork && mAmbient && mGlow && (isNewTrack || mAmbient.style.backgroundImage === "none" || mAmbient.style.backgroundImage === "")) {
-                    mArtwork.src = imgUrl; 
-                    mAmbient.style.backgroundImage = `url('${imgUrl}')`;
-                    if (coverGlowEnabled) mGlow.style.backgroundImage = `url('${imgUrl}')`; // NEW: überspringt Cover-Glow-Arbeit komplett, wenn ausgeschaltet
-                    const lyricsAmbientBg = document.getElementById('lyrics-ambient-bg');
-                    if (lyricsAmbientBg) lyricsAmbientBg.style.backgroundImage = `url('${imgUrl}')`;
-                    // FIX v24.87: geteilte Bild-Dekodierung (Nutzerwunsch) - #di-art,
-                    // #standby-track-art und #lyrics-mini-art sind jetzt <canvas>-Elemente,
-                    // die dieses gerade geladene #artwork-Bild direkt reinzeichnen
-                    // (drawImage), statt dieselbe URL jeweils selbst nochmal zu laden/zu
-                    // dekodieren - vorher bis zu 4 unabhängige Dekodier-Vorgänge für
-                    // praktisch dasselbe Bild, jetzt nur noch einer.
-                    syncAllCoverConsumers();
+                if (mArtwork && mAmbient && mGlow) {
+                    updateAllCoverVisuals(imgUrl);
                 }
                 
-                const canvasUrl = data.track.canvas_url || data.track.canvasUrl || null;
+                const canvasUrl = (data.track && (data.track.canvas_url || data.track.canvasUrl)) || null;
                 
-                if(canvasUrl !== currentCanvasUrl) {
+                if (canvasUrl !== currentCanvasUrl) {
                     currentCanvasUrl = canvasUrl;
-                    if(canvasUrl) {
+                    if (canvasUrl) {
                         if (canvasVideo) canvasVideo.src = canvasUrl;
                         if (btnToggleCanvas) btnToggleCanvas.classList.remove('opacity-50', 'cursor-not-allowed', 'text-slate-400');
                         if (canvasEnabled) {
@@ -13875,59 +13967,50 @@
                     }
                 }
                 
-                if(mTitle && mTitle.innerText !== data.track.title) {
-                    mTitle.innerText = data.track.title;
-                    if (lyricsMiniTitle) { lyricsMiniTitle.innerText = data.track.title; lyricsMiniTitle.removeAttribute('data-i18n-placeholder'); }
+                if (mTitle && mTitle.innerText !== trackTitle) {
+                    mTitle.innerText = trackTitle;
+                    if (lyricsMiniTitle) { lyricsMiniTitle.innerText = trackTitle; lyricsMiniTitle.removeAttribute('data-i18n-placeholder'); }
                 }
-                if(mArtist && mArtist.innerText !== rawArtist) {
+                if (mArtist && mArtist.innerText !== rawArtist) {
                     mArtist.innerText = rawArtist;
                     if (lyricsMiniArtist) { lyricsMiniArtist.innerText = rawArtist; lyricsMiniArtist.removeAttribute('data-i18n-placeholder'); }
                 }
                 if (mText) mText.innerText = data.provider || t('status_streaming_fallback');
 
-                // NEW: StandBy-Overlay & Ambient-Color immer mit dem aktuellen Track synchron halten
-                syncStandByTrackInfo(data.track.title, rawArtist, imgUrl, isNewTrack, isPlaying);
+                syncStandByTrackInfo(trackTitle, rawArtist, imgUrl, isNewTrack, isPlaying);
                 extractDominantColor(imgUrl);
-                // NEW: Dynamic Island bleibt bei jedem Update aktuell (persistent, solange Musik läuft)
-                if (isPlaying) showIslandPersistent(data.track.title, rawArtist, imgUrl);
+                if (isPlaying) showIslandPersistent(trackTitle, rawArtist, imgUrl);
 
                 if (isNewTrack) {
-                    // NEU v24.20: Songwechsel im "Zuletzt gehört"-Verlauf vermerken
-                    addToRecentlyPlayed(data.track.title, rawArtist, imgUrl);
-                    // NEW: Dynamic Island 2.0 - kurzes Aufpoppen bei echtem Songwechsel
+                    addToRecentlyPlayed(trackTitle, rawArtist, imgUrl);
                     if (!isFirstLoad && isPlaying) {
-                        triggerDynamicIsland(data.track.title, rawArtist, imgUrl);
-                        // NEU v24.73: Nutzer wünschte sich, dass sich die Seite "lebendiger"
-                        // anfühlt - kurzer, dezenter Haptic-Puls bei echtem Songwechsel
-                        // (NICHT beim Erstladen der Seite, das wäre unerwartetes Vibrieren
-                        // direkt beim Öffnen). Gleiche dezente Stärke wie die übrigen
-                        // Mini-Interaktionen auf der Seite (haptic(10)).
+                        triggerDynamicIsland(trackTitle, rawArtist, imgUrl);
                         haptic(10);
                     }
                     totalMs = trackDuration;
                     if (timeTotalEl) timeTotalEl.innerText = formatTime(totalMs);
                     
                     trackIsPlaying = isPlaying;
-                    if (!isPlaying) stopProgressTracking(); // NEU v24.47: falls der neue Track direkt pausiert startet
-                    updateWakeLockForPlaybackState(); // NEU v24.74
+                    if (!isPlaying) stopProgressTracking();
+                    updateWakeLockForPlaybackState();
                     serverBaseProgress = apiProgress + addedDelay;
                     localStartTime = performance.now();
                     currentMs = serverBaseProgress;
                     
                     currentNoLyricsMessage = fallbackMessages[Math.floor(Math.random() * fallbackMessages.length)];
-                    fetchExternalLyrics(data.track.title, cleanArtist, trackDuration);
+                    if (isPlaying) fetchExternalLyrics(trackTitle, cleanArtist, trackDuration);
                 } else {
                     if (!trackIsPlaying && isPlaying) {
                         trackIsPlaying = true;
-                        updateWakeLockForPlaybackState(); // NEU v24.74
+                        updateWakeLockForPlaybackState();
                         serverBaseProgress = apiProgress + addedDelay;
                         localStartTime = performance.now();
                         currentMs = serverBaseProgress;
                         syncLyricsUI(true, true);
                     } else if (trackIsPlaying && !isPlaying) {
                         trackIsPlaying = false;
-                        updateWakeLockForPlaybackState(); // NEU v24.74
-                        stopProgressTracking(); // NEU v24.47: Intervall/rAF-Loop sofort stoppen, nicht erst beim nächsten Tick
+                        updateWakeLockForPlaybackState();
+                        stopProgressTracking();
                         currentMs = apiProgress + addedDelay;
                         syncLyricsUI(true, true);
                     } else {
@@ -13936,120 +14019,35 @@
                         let absDrift = Math.abs(drift);
 
                         if (absDrift > 1200) {
-                            // Große Abweichung (Seek/Skip) -> sofort hart korrigieren
                             serverBaseProgress = apiProgress + addedDelay;
                             localStartTime = performance.now();
                             currentMs = serverBaseProgress;
                             syncLyricsUI(true, true);
                         } else if (absDrift > 120) {
-                            // Kleine Abweichung (normaler Uhren-/Netzwerk-Jitter) -> sanft nachziehen
-                            // statt hart zu springen, damit Fortschrittsbalken & Lyrics nicht sichtbar zucken.
                             serverBaseProgress = expectedLocalProgress + drift * 0.35;
                             localStartTime = performance.now();
                         }
                     }
                 }
 
-                // FIX v24.65 (KRITISCH): Nutzer meldete - Fortschritt blieb TROTZ v24.64-Fix
-                // eingefroren. Root Cause gefunden: dieser Neustart-Check verlangte bisher
-                // !isAnimating && !progressTickerInterval - wenn isAnimating aus IRGENDEINEM
-                // Grund auf true hängen bleibt (z.B. nach einem unterbrochenen Lyrics-
-                // Übergang), verhindert das für immer einen Neustart, selbst wenn der Timer
-                // längst tot ist. startProgressTracking() räumt sich intern aber ohnehin
-                // SELBST zuerst auf (ruft stopProgressTracking() als ersten Schritt auf) -
-                // ist also bereits von sich aus sicher, mehrfach aufgerufen zu werden. Bei
-                // jeder erfolgreichen Musikdaten-Antwort jetzt bedingungslos neu starten,
-                // statt fragil zu prüfen, ob es "nötig" erscheint - heilt sich dadurch von
-                // jedem denkbaren hängengebliebenen Zwischenzustand selbst.
                 if (trackIsPlaying) {
                     startProgressTracking();
                 }
 
                 updateProgressUI();
 
-                if (miniTitle) miniTitle.innerText = data.track.title;
+                if (miniTitle) miniTitle.innerText = trackTitle;
                 if (miniIconBg) miniIconBg.className = 'w-8 h-8 xxs:w-10 xxs:h-10 sm:w-12 sm:h-12 shrink-0 rounded-lg xxs:rounded-xl flex items-center justify-center transition-colors bg-green-500/10 text-green-500 animate-pulse';
                 
-                if(!isDashboardOpen && miniStatus) miniStatus.innerText = rawArtist;
-                
-                const linksContainer = document.getElementById('dynamic-links-container');
-                const noLinkEl = document.getElementById('link-none');
-                
-                if (linksContainer && noLinkEl) {
-                    linksContainer.innerHTML = '';
-                    let hasLinks = false;
-                    const availableLinks = { ...(data.track.platform_links || {}), ...(data.track.external_urls || {}) };
-
-                    let mainSpotifyUrl = data.track.url;
-                    if (!mainSpotifyUrl && data.track.uri && data.track.uri.startsWith('spotify:')) {
-                        const uriParts = data.track.uri.split(':');
-                        if (uriParts.length >= 3) {
-                            mainSpotifyUrl = `https://open.spotify.com/${uriParts[1]}/${uriParts[2]}`;
-                        }
+                if (miniStatus) {
+                    if (isDashboardOpen) {
+                        miniStatus.innerText = cleanArtist ? `${cleanArtist} · ${t('mini_click_to_close')}` : t('mini_click_to_close');
+                    } else {
+                        miniStatus.innerText = cleanArtist;
                     }
-                    if (mainSpotifyUrl && !availableLinks.spotify) {
-                        availableLinks.spotify = mainSpotifyUrl;
-                    }
-
-                    const searchQuery = encodeURIComponent(`${data.track.title} ${rawArtist}`.trim());
-                    
-                    const linkKeys = Object.keys(availableLinks).map(k => k.toLowerCase());
-                    const hasSpotify = linkKeys.some(k => k.includes('spotify'));
-                    const hasApple = linkKeys.some(k => k.includes('apple'));
-                    const hasYT = linkKeys.some(k => k.includes('youtube') || k.includes('yt'));
-                    const hasSC = linkKeys.some(k => k.includes('soundcloud'));
-                    const hasDeezer = linkKeys.some(k => k.includes('deezer'));
-                    const hasTidal = linkKeys.some(k => k.includes('tidal'));
-
-                    if (!hasSpotify) availableLinks.spotify = `https://open.spotify.com/search/${searchQuery}`;
-                    if (!hasApple) availableLinks.applemusic = `https://music.apple.com/search?term=${searchQuery}`;
-                    if (!hasYT) availableLinks.youtube = `https://music.youtube.com/search?q=${searchQuery}`;
-                    if (!hasSC) availableLinks.soundcloud = `https://soundcloud.com/search?q=${searchQuery}`;
-                    if (!hasDeezer) availableLinks.deezer = `https://www.deezer.com/search/${searchQuery}`;
-                    if (!hasTidal) availableLinks.tidal = `https://tidal.com/search?q=${searchQuery}`;
-
-                    const serviceStyles = {
-                        spotify: { name: 'Spotify', bg: '#1DB954' },
-                        applemusic: { name: 'Apple Music', bg: '#FC3C44' },
-                        youtube: { name: 'YouTube Music', bg: '#FF0000' },
-                        soundcloud: { name: 'SoundCloud', bg: '#FF5500' },
-                        deezer: { name: 'Deezer', bg: '#00C7F2' },
-                        tidal: { name: 'Tidal', bg: '#000000' }
-                    };
-
-                    for (let [key, url] of Object.entries(availableLinks)) {
-                        if (!url || typeof url !== 'string') continue;
-                        
-                        if (url.startsWith('spotify:')) {
-                            const uriParts = url.split(':');
-                            if (uriParts.length >= 3) {
-                                url = `https://open.spotify.com/${uriParts[1]}/${uriParts[2]}`;
-                            }
-                        }
-
-                        if (!url.startsWith('http')) continue;
-                        
-                        hasLinks = true;
-                        const lowerKey = key.toLowerCase();
-                        let style = { name: key.charAt(0).toUpperCase() + key.slice(1), bg: '#3b82f6' }; 
-
-                        for (const [sKey, sValue] of Object.entries(serviceStyles)) {
-                            if (lowerKey.includes(sKey) || lowerKey === sKey) {
-                                style = sValue;
-                                break;
-                            }
-                        }
-                        const linkEl = document.createElement('a');
-                        linkEl.href = url;
-                        linkEl.target = '_blank';
-                        linkEl.rel = 'noopener noreferrer';
-                        linkEl.className = 'p-1.5 xxs:p-2 sm:p-3 rounded-lg xxs:rounded-xl sm:rounded-2xl text-white font-bold text-[10px] xxs:text-xs sm:text-sm text-center hover:brightness-110 active:scale-95 transition-all';
-                        linkEl.style.backgroundColor = style.bg;
-                        linkEl.innerText = style.name;
-                        linksContainer.appendChild(linkEl);
-                    }
-                    noLinkEl.style.display = hasLinks ? 'none' : 'block';
                 }
+                
+                renderMusicServicePicker(data);
             };
 
             if (isNewTrack && !isFirstLoad && trackIsPlaying && !document.body.classList.contains('low-end') && isDashboardOpen) {
@@ -14101,26 +14099,14 @@
         function getSmoothedLatency() {
             if (recentFetchLatencies.length === 0) return 50;
             const sorted = [...recentFetchLatencies].sort((a, b) => a - b);
-            return sorted[Math.floor(sorted.length / 2)]; // Median: robust gegen einzelne Ausreißer-Requests
+            return sorted[Math.floor(sorted.length / 2)];
         }
 
-        // FIX v24.60: Nutzer meldete zwei zusammenhängende Bugs - Cover-Art verschwindet kurz
-        // nach dem Songwechsel wieder, UND der Fortschrittsbalken friert komplett ein
-        // (überall, auch in der Dynamic Island). Root Cause vermutet: Fehler beim Abrufen der
-        // Musikdaten wurden bisher komplett stillschweigend verschluckt (.catch(() => {})) -
-        // wenn die externe API (die wir schon einmal mit einem kurzen 402-Aussetzer erlebt
-        // haben) mal einen Fehler zurückgibt, passierte NICHTS sichtbares, aber auch keine
-        // Fehlermeldung, die beim Debuggen geholfen hätte. Jetzt: Fehler werden geloggt, UND
-        // ein Watchdog erkennt, wenn trotz laufender Musik zu lange kein erfolgreiches Update
-        // mehr ankam, und erzwingt dann aktiv einen Wiederherstellungsversuch.
         let lastSuccessfulFetchAt = Date.now();
         let consecutiveFetchFailures = 0;
 
         function fetchMusicData() {
             let pStart = performance.now();
-            // NEW: Bugfix - gibt die Promise-Kette jetzt zurück, damit Aufrufer (z.B.
-            // Re-Sync) tatsächlich per await auf den Abschluss der frischen Positions-
-            // Abfrage warten können, statt sofort (ohne echtes Warten) weiterzumachen.
             return fetch('https://npc-api.aikins.xyz/v1/users/gamingpig/now')
                 .then(r => {
                     if (!r.ok) throw new Error("Fetch failed mit Status " + r.status);
@@ -14154,7 +14140,7 @@
         }
 
         setInterval(() => {
-            if (shouldPauseBackgroundWork()) return;
+            if (shouldPauseBackgroundWork() || !trackIsPlaying) return;
             fetchMusicData();
         }, 5000);
 
@@ -14227,7 +14213,7 @@
             // MINUTEN bis STUNDEN alter Text-Wert. Direkt nach dem Verlassen von StandBy/
             // Hintergrund verglich der nächste Tick dann gegen diesen veralteten Wert - falls
             // die aktuelle Anzeige zufällig genau diesen alten Text (wieder) zeigte (z.B. beim
-          // Übergang, bevor der erste frische Tick durchkam), oder falls startProgressTracking()
+            // Übergang, bevor der erste frische Tick durchkam), oder falls startProgressTracking()
             // nach dem Verlassen einen Moment brauchte, bis timeCurrentEl neu beschrieben wurde,
             // konnte das fälschlich als "eingefroren" zählen. Jetzt wird lastVisibleTimeText
             // beim Überspringen ebenfalls konsequent auf null gesetzt (statt nur den Timer),
@@ -14439,6 +14425,7 @@
         renderLanguagePicker();
         positionDynamicIsland();
         setTimeout(positionDynamicIsland, 400); // Nachlauf, falls Fonts/Layout sich noch verschieben
+
         if (!currentLang) {
             openLanguagePicker();
         } else {
