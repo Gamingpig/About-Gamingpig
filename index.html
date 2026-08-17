@@ -14063,9 +14063,9 @@
                 currentResolvedArtUrl = trackCoverMemoryCache.get(trackKey);
             }
 
-            // Proaktive Cover-Auflösung: sofort für jeden neuen Track oder gebrochene Proxy-URL starten.
-            // IMMER für neue Songs (damit auch ohne Spotify-Link Apple/Deezer greift), nicht nur bei Proxy-Fehlern.
-            if (!currentResolvedArtUrl && (isBrokenNpcProxy || !rawArtwork || isNewTrack)) {
+            // Proaktive Cover-Auflösung: startet für JEDEN Track (auch beim Erstaufruf der Seite, wenn
+            // bereits Musik läuft), solange noch kein Cover erfolgreich aufgelöst wurde.
+            if (!currentResolvedArtUrl || isBrokenNpcProxy || isNewTrack) {
                 const capturedTrackKey = trackKey; // verhindert Race Condition bei schnellem Songwechsel
                 findBestArtworkFallback(
                     trackTitle,
@@ -14097,7 +14097,8 @@
             // ── Progress-Extraktion und Dedup-Check ─────────────────────────────────
             let currentApiProgress = data.progress_ms !== undefined ? data.progress_ms : (data.track && data.track.progress_ms) || 0;
 
-            if (currentApiProgress === lastSeenProgressMs && trackIsPlaying === isPlaying && !isNewTrack) {
+            // Auf keinen Fall bei erstem Laden abbrechen (isFirstLoad / fehlendes Cover immer durchlassen)
+            if (currentApiProgress === lastSeenProgressMs && trackIsPlaying === isPlaying && !isNewTrack && currentResolvedArtUrl) {
                 return;
             }
             lastSeenProgressMs = currentApiProgress;
