@@ -13811,67 +13811,40 @@
         }
             
         function updateMusicUI(data, dynamicLatency = 50) {
-            const hasTrack = data && data.track;
+            const hasTrack = data && data.track && Boolean(data.track.title || data.track.name);
             const isPlaying = data && data.status === "playing";
 
-            // FIX v24.60 (KRITISCH): Root Cause für "Fortschrittsbalken friert ein" +
-            // "Cover-Art verschwindet kurz nach dem Songwechsel wieder" gefunden: Der Poll-
-            // Abstand beträgt 5 Sekunden, aber der Offline-Wipe-Timer lief bisher mit nur
-            // 2.5 Sekunden - KÜRZER als der Abstand zwischen zwei Abfragen! Ein einziger
-            // kurzer API-Aussetzer (z.B. mitten in einem Songwechsel, oder der 402-Fehler-
-            // Typ, den wir schon einmal beobachtet haben) reichte, um sofort synchron
-            // stopProgressTracking() auszulösen und 2.5s später das Cover zu löschen - lange
-            // bevor die nächste, eigentlich gute Antwort (erst nach 5s) überhaupt ankommen
-            // konnte. Fix: statt bei der ERSTEN "kein Track"-Antwort sofort zu reagieren,
-            // werden jetzt mehrere AUFEINANDERFOLGENDE schlechte Antworten verlangt (echte
-            // Aussetzer-Toleranz), bevor überhaupt etwas als offline behandelt wird.
-            if (!hasTrack || !isPlaying) {
+            // Fall 1: Wirklich gar kein Track vorhanden (weder laufend noch pausiert)
+            if (!hasTrack) {
                 consecutiveEmptyPolls++;
                 if (consecutiveEmptyPolls < 3) {
-                    // Erster/zweiter Aussetzer - noch nicht reagieren, auf die nächste Antwort warten.
                     return;
                 }
                 trackIsPlaying = false;
-                // NEU v24.47 (EFFIZIENZ): Fortschritts-Tracking (egal ob rAF-Loop oder
-                // Intervall-Modus) sofort stoppen, sobald die Musik pausiert/stoppt - der
-                // Intervall-Modus hätte sonst ohne trackIsPlaying-Prüfung einfach
-                // weitergezählt und unnötig updateProgressUI() aufgerufen.
                 stopProgressTracking();
                 if (!offlineTimeout) {
                     offlineTimeout = setTimeout(() => {
-                        // FIX v24.83 (KRITISCH): Nutzer meldete - Cover verschwindet random
-                        // MITTEN im Song, nicht nur bei echten Pausen, "überall auf der
-                        // Seite". Root Cause: dieser Offline-Zweig hat bisher IMMER das
-                        // Cover-Bild komplett gelöscht (removeAttribute('src')), sobald der
-                        // bekannte npc-api-Aussetzer (siehe Projektdoku: gelegentliche
-                        // 402/404-Fehler) 3 Polls lang anhielt - selbst wenn der Song auf
-                        // Spotify die ganze Zeit über tatsächlich WEITERLIEF und nur die
-                        // eigene Status-Abfrage kurz keine Antwort lieferte. Ein API-Aussetzer
-                        // ist kein Beweis dafür, dass das Cover-Bild ungültig geworden ist -
-                        // das alte Bild bleibt weiterhin korrekt, bis ein neuer Song bestätigt
-                        // wird. Fix: Cover/Titel/Künstler bleiben jetzt UNVERÄNDERT stehen
-                        // (eingefroren, nicht gelöscht) - nur der "pausiert/offline"-Status-
-                        // Indikator (Punkt-Farbe, Text) aktualisiert sich, damit trotzdem
-                        // ehrlich signalisiert wird, dass gerade keine frischen Daten kommen.
-                        // Zusätzlich Toleranz von 2 auf 3 Polls und Wartezeit von 6s auf 9s
-                        // erhöht, als weitere Sicherheitsmarge gegen den bekannten Aussetzer.
                         if (mainMusicCard) {
                             mainMusicCard.classList.add('offline');
-                            mainMusicCard.classList.remove('playing');
+                            mainMusicCard.classList.remove('playing', 'paused');
                             if(mainMusicCard.classList.contains('lyrics-open')) toggleLyrics(false);
                         }
+                        if (mTitle) mTitle.innerText = "Aktuell ist es ruhig...";
+                        if (mArtist) mArtist.innerText = "Genieße die Stille";
                         if (mHeader) mHeader.innerText = t('status_offline');
                         if (mDot) mDot.className = "h-1 w-1 xxs:h-1.5 xxs:w-1.5 xs:h-2 xs:w-2 rounded-full bg-blue-500";
-                        if(!isDashboardOpen && miniStatus) miniStatus.innerText = t('mini_click_to_open');
+                        if (miniTitle) miniTitle.innerText = t('mini_dashboard_minimized');
+                        if (miniStatus) miniStatus.innerText = t('mini_click_to_open');
+                        if (miniIconBg) miniIconBg.className = 'w-8 h-8 xxs:w-10 xxs:h-10 sm:w-12 sm:h-12 shrink-0 rounded-lg xxs:rounded-xl flex items-center justify-center transition-colors bg-white/5 text-slate-400';
                         updateProgressUI();
                         offlineTimeout = null;
                         hideIslandCompletely();
-                    }, 9000);
+                    }, 4000);
                 }
                 return;
             }
 
-            // FIX v24.60: Zähler zurücksetzen - dieser Poll hat einen echten Track geliefert.
+            // Fall 2: Ein Track ist vorhanden (egal ob spielend oder pausiert!)
             consecutiveEmptyPolls = 0;
 
             if (offlineTimeout) {
@@ -13881,11 +13854,22 @@
 
             if (mainMusicCard) {
                 mainMusicCard.classList.remove('offline');
-                mainMusicCard.classList.add('playing');
+                if (isPlaying) {
+                    mainMusicCard.classList.add('playing');
+                    mainMusicCard.classList.remove('paused');
+                } else {
+                    mainMusicCard.classList.add('paused');
+                    mainMusicCard.classList.remove('playing');
+                }
             }
 
-            if (mHeader) mHeader.innerText = "Gamingpig is listening to";
-            if (mDot) mDot.className = "h-1 w-1 xxs:h-1.5 xxs:w-1.5 xs:h-2 xs:w-2 rounded-full bg-green-500 active-dot";
+            if (isPlaying) {
+                if (mHeader) mHeader.innerText = "Gamingpig is listening to";
+                if (mDot) mDot.className = "h-1 w-1 xxs:h-1.5 xxs:w-1.5 xs:h-2 xs:w-2 rounded-full bg-green-500 active-dot";
+            } else {
+                if (mHeader) mHeader.innerText = "Pausiert";
+                if (mDot) mDot.className = "h-1 w-1 xxs:h-1.5 xxs:w-1.5 xs:h-2 xs:w-2 rounded-full bg-amber-500/80";
+            }
             
             const rawArtist = (data.track && data.track.artist) || "Unknown";
             const cleanArtist = rawArtist.replace(/\s*•\s*From Smart Shuffle/gi, '').trim();
@@ -14146,7 +14130,11 @@
                 updateProgressUI();
 
                 if (miniTitle) miniTitle.innerText = trackTitle;
-                if (miniIconBg) miniIconBg.className = 'w-8 h-8 xxs:w-10 xxs:h-10 sm:w-12 sm:h-12 shrink-0 rounded-lg xxs:rounded-xl flex items-center justify-center transition-colors bg-green-500/10 text-green-500 animate-pulse';
+                if (miniIconBg) {
+                    miniIconBg.className = isPlaying
+                        ? 'w-8 h-8 xxs:w-10 xxs:h-10 sm:w-12 sm:h-12 shrink-0 rounded-lg xxs:rounded-xl flex items-center justify-center transition-colors bg-green-500/10 text-green-500 animate-pulse'
+                        : 'w-8 h-8 xxs:w-10 xxs:h-10 sm:w-12 sm:h-12 shrink-0 rounded-lg xxs:rounded-xl flex items-center justify-center transition-colors bg-amber-500/10 text-amber-400';
+                }
                 
                 if (miniStatus) {
                     if (isDashboardOpen) {
