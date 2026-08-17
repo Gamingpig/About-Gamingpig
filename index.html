@@ -14056,11 +14056,7 @@
             const trackKey = getTrackCacheKey(trackTitle, cleanArtist);
             if (trackKey !== lastResolvedTrackKey) {
                 lastResolvedTrackKey = trackKey;
-                currentResolvedArtUrl = null;
-            }
-
-            if (!currentResolvedArtUrl && trackCoverMemoryCache.has(trackKey)) {
-                currentResolvedArtUrl = trackCoverMemoryCache.get(trackKey);
+                currentResolvedArtUrl = trackCoverMemoryCache.get(trackKey) || null;
             }
 
             const updateAllCoverVisuals = (srcUrl) => {
@@ -14076,10 +14072,10 @@
                 syncAllCoverConsumers();
             };
 
-            // Proaktive Cover-Auflösung: startet für JEDEN Track (auch beim Erstaufruf der Seite, wenn
-            // bereits Musik läuft), solange noch kein Cover erfolgreich aufgelöst wurde.
-            if (!currentResolvedArtUrl || isBrokenNpcProxy || isNewTrack) {
-                const capturedTrackKey = trackKey; // verhindert Race Condition bei schnellem Songwechsel
+            // Proaktive Cover-Auflösung: sofort starten wenn für den aktuellen Track noch kein Cover
+            // aufgelöst wurde (auch beim Erstaufruf) oder die Proxy-URL kaputt ist.
+            if (!currentResolvedArtUrl || isBrokenNpcProxy) {
+                const capturedTrackKey = trackKey;
                 findBestArtworkFallback(
                     trackTitle,
                     cleanArtist,
@@ -14087,15 +14083,16 @@
                     data.track ? data.track.album : null,
                     resolvedPlatformLinks
                 ).then(resolved => {
-                    // Nur anwenden wenn wir noch beim selben Track sind!
-                    if (resolved && resolved !== fallbackImg && capturedTrackKey === lastResolvedTrackKey) {
-                        currentResolvedArtUrl = resolved;
+                    if (resolved && resolved !== fallbackImg) {
                         setCachedCover(capturedTrackKey, resolved);
-                        // Sofort ALLE visuellen Elemente überall aktualisieren
-                        updateAllCoverVisuals(resolved);
-                        extractDominantColor(resolved);
-                        syncStandByTrackInfo(trackTitle, cleanArtist, resolved, false, trackIsPlaying);
-                        if (trackIsPlaying) showIslandPersistent(trackTitle, cleanArtist, resolved);
+                        // Nur UI aktualisieren wenn der Song während des Ladens noch derselbe ist!
+                        if (capturedTrackKey === lastResolvedTrackKey) {
+                            currentResolvedArtUrl = resolved;
+                            updateAllCoverVisuals(resolved);
+                            extractDominantColor(resolved);
+                            syncStandByTrackInfo(trackTitle, cleanArtist, resolved, false, trackIsPlaying);
+                            if (trackIsPlaying) showIslandPersistent(trackTitle, cleanArtist, resolved);
+                        }
                     }
                 });
             }
