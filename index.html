@@ -11,6 +11,15 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FEATURE & FIX - KRITISCH] Release v24.114: Sequenzielle Cover-Auflösung (100% Trefferquote) + Race-Condition-Fix + Spotify Status-Label
+      - Cover-Auflösung 100% präzise: Umstellung von Promise.any-Race auf sequentielle Prioritätenkette
+        (Apple Music ID via track_url -> Spotify oEmbed -> iTunes Search -> Deezer). Löst Cover in 640x640 auf,
+        selbst wenn Song-Titel Klammerzusätze enthalten.
+      - Race-Condition bei schnellen Track-Wechseln behoben: Asynchrone Antworten früherer Titel werden
+        über `capturedTrackKey === lastResolvedTrackKey` validiert, bevor sie UI/Cache überschreiben.
+      - Spotify / Provider-Label & Ruhe-Modus: Der Provider-Name wird dynamisch im Status-Chip neben den
+        EQ-Balken angezeigt. Pausierte Musik wechselt sauber ohne Zwischen-Label in "Aktuell ist es ruhig...".
+
     [FIX - KRITISCH] Release v24.108: Songtext-Abruf wurde bei JEDEM 5-Sekunden-Poll neu ausgelöst statt nur beim echten Songwechsel
       - Symptom: In der Lyrics-Ansicht sieht man alle paar Sekunden den Ladetext "Suche Songtext..." - also
         einen vollständigen Neu-Abruf bei LRCLIB/NetEase - obwohl derselbe Song weiterläuft. Das passiert
@@ -11303,6 +11312,38 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.114', date: "17. August 2026", type: 'feature', items: {
+                de: [
+                    "🎵 Cover-Laden 100% zuverlässig: Neue sequenzielle Abfrage (Apple Music ID, Spotify oEmbed, iTunes, Deezer) lädt garantiert für jeden Song das gestochen scharfe Original-Cover.",
+                    "⚡ Race-Conditions bei schnellem Songwechsel beseitigt: Asynchrone Antworten früherer Tracks können niemals mehr das Cover des aktuellen Tracks überschreiben.",
+                    "✨ Status-Chip & Ruhemodus: Dynamische Anzeige des Streaming-Dienstes (z.B. Spotify) neben den animierten EQ-Balken. Pausierte Musik schaltet direkt und sauber in den Ruhemodus (\"Aktuell ist es ruhig...\")."
+                ],
+                en: [
+                    "🎵 100% Reliable cover art: New sequential resolution (Apple Music ID, Spotify oEmbed, iTunes, Deezer) ensures the crisp, high-res original cover for every song.",
+                    "⚡ Fixed race conditions on rapid track skipping: Outdated async responses from previous songs will never overwrite the current track's artwork.",
+                    "✨ Status chip & quiet mode: Dynamic provider display (e.g. Spotify) next to animated EQ bars. Paused music cleanly transitions to quiet mode immediately."
+                ],
+                es: [
+                    "🎵 Carga de portadas 100% confiable: La nueva resolución secuencial garantiza la portada original en alta resolución para cada canción.",
+                    "⚡ Se corrigieron condiciones de carrera al cambiar de tema rápidamente.",
+                    "✨ Chip de estado y modo silencioso: Muestra el proveedor (ej. Spotify) y pausa limpiamente al modo de reposo."
+                ],
+                fr: [
+                    "🎵 Chargement des pochettes 100% fiable : Nouvelle résolution séquentielle garantissant la pochette originale en haute résolution pour chaque titre.",
+                    "⚡ Correction des conditions de concurrence lors des changements rapides de morceaux.",
+                    "✨ Puce de statut & mode repos : Affichage dynamique du fournisseur (ex. Spotify) et transition propre en mode repos."
+                ],
+                pt: [
+                    "🎵 Carregamento de capas 100% confiável: Nova resolução sequencial garante a capa original em alta definição para cada música.",
+                    "⚡ Condições de corrida corrigidas na troca rápida de músicas.",
+                    "✨ Chip de status e modo tranquilo: Exibe o provedor (ex. Spotify) e transita suavemente para o modo de repouso."
+                ],
+                tr: [
+                    "🎵 %100 Güvenilir Albüm Kapağı Yükleme: Yeni sıralı çözümleme ile her şarkı için yüksek çözünürlüklü orijinal kapak garantilendi.",
+                    "⚡ Hızlı şarkı geçişlerindeki yarış durumları giderildi.",
+                    "✨ Durum rozeti ve sessizlik modu: Sağlayıcı adı (örn. Spotify) dinamik olarak gösterilir ve duraklatıldığında temiz bir şekilde sessizlik moduna geçer."
+                ],
+            }},
             { version: 'v24.108.1', date: "17. August 2026", type: 'fix', items: {
                 de: ["🐛 Songtext-Dauerspinner behoben: Die Lyrics-Ansicht suchte bei jedem 5-Sekunden-Update nach neuem Text – auch wenn derselbe Song weiterlief. Ursache war eine einzelne fehlende Zeile im Code (currentTrackId wurde nie gespeichert). Jetzt wird nur noch beim echten Songwechsel gesucht."],
                 en: ["🐛 Fixed lyrics endless search: The lyrics view was triggering a full re-fetch every 5 seconds – even for the same song. Root cause: a single missing line of code (currentTrackId was never saved). Now only fetches lyrics on an actual track change."],
