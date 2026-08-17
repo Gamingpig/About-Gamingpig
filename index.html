@@ -5711,7 +5711,7 @@
 
                         <div id="media-container" onclick="toggleMusicPicker(true)" role="button" tabindex="0" class="relative z-10 w-full max-w-[100px] xxs:max-w-[140px] xs:max-w-[180px] sm:max-w-[240px] md:max-w-[280px] aspect-square shrink-0 rounded-xl xxs:rounded-2xl mx-auto mb-2 xxs:mb-3 sm:mb-4 md:mb-6 overflow-hidden flex items-center justify-center bg-[#121212] shadow-[0_10px_30px_rgba(0,0,0,0.8)] sm:shadow-[0_20px_40px_rgba(0,0,0,0.8)] cursor-pointer hover:ring-2 hover:ring-white/20 transition-all">
                             <!-- FIX v24.85: decoding="async" ergänzt + fetchpriority="high" -->
-                            <img id="artwork" src="" alt="Album Artwork" class="w-full h-full object-cover" decoding="async" fetchpriority="high">
+                            <img id="artwork" src="" alt="" aria-label="Album Artwork" class="w-full h-full object-cover" decoding="async" fetchpriority="high">
                             <div id="offline-icon" class="absolute text-2xl xxs:text-4xl sm:text-6xl" aria-hidden="true">🌙</div>
                         </div>
 
@@ -14021,8 +14021,10 @@
                     };
                 }
 
+                const finalArtUrl = currentResolvedArtUrl || trackCoverMemoryCache.get(trackKey) || (!isBrokenNpcProxy && rawArtwork ? rawArtwork : fallbackImg);
+
                 if (mArtwork && mAmbient && mGlow) {
-                    updateAllCoverVisuals(imgUrl);
+                    updateAllCoverVisuals(finalArtUrl);
                 }
                 
                 const canvasUrl = (data.track && (data.track.canvas_url || data.track.canvasUrl)) || null;
@@ -14070,12 +14072,12 @@
                 }
                 if (mText) mText.innerText = data.provider || t('status_streaming_fallback');
 
-                syncStandByTrackInfo(trackTitle, rawArtist, imgUrl, isNewTrack, isPlaying);
-                extractDominantColor(imgUrl);
-                if (isPlaying) showIslandPersistent(trackTitle, rawArtist, imgUrl);
+                syncStandByTrackInfo(trackTitle, rawArtist, finalArtUrl, isNewTrack, isPlaying);
+                extractDominantColor(finalArtUrl);
+                if (isPlaying) showIslandPersistent(trackTitle, rawArtist, finalArtUrl);
 
                 if (isNewTrack) {
-                    addToRecentlyPlayed(trackTitle, rawArtist, imgUrl);
+                    addToRecentlyPlayed(trackTitle, rawArtist, finalArtUrl);
                     if (!isFirstLoad && isPlaying) {
                         triggerDynamicIsland(trackTitle, rawArtist, imgUrl);
                         haptic(10);
