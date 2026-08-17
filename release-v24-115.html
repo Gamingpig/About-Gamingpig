@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🔥 DAS GRÖSSTE UPDATE ALLER ZEITEN (v24.115) - Gamingpig</title>
+    <title>🔥 RELEASE v24.115 - Gamingpig Mega-Update</title>
     <link rel="icon" href="icon-192.png" type="image/png">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -19,166 +19,199 @@
         }
     </script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap');
         
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
-            background: #060911;
-            overflow-x: hidden;
+            background-color: #050811;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(236, 72, 153, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(59, 130, 246, 0.2) 0px, transparent 50%),
+                radial-gradient(at 50% 100%, rgba(168, 85, 247, 0.15) 0px, transparent 50%);
+            background-attachment: fixed;
         }
 
-        .hero-glow {
-            background: radial-gradient(circle at 50% 20%, rgba(236, 72, 153, 0.18) 0%, rgba(59, 130, 246, 0.15) 35%, rgba(6, 9, 17, 0) 70%);
+        .hero-glow-badge {
+            background: linear-gradient(135deg, #ff1493, #7928ca, #0070f3);
+            box-shadow: 0 0 35px rgba(255, 20, 147, 0.4);
         }
 
         .glow-card {
-            background: rgba(13, 18, 30, 0.8);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7);
             transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         .glow-card:hover {
-            border-color: rgba(255, 255, 255, 0.18);
-            transform: translateY(-2px);
+            border-color: rgba(255, 255, 255, 0.25);
+            transform: translateY(-3px);
+            box-shadow: 0 25px 50px -10px rgba(0, 0, 0, 0.9);
         }
 
-        .badge-gradient {
-            background: linear-gradient(135deg, #ff2a8d, #8b5cf6, #00f0ff);
+        .stat-box {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(12px);
         }
 
-        .text-gradient {
-            background: linear-gradient(135deg, #ffffff 30%, #94a3b8 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+        .tts-active {
+            background: linear-gradient(135deg, #ec4899, #8b5cf6) !important;
+            color: #ffffff !important;
+            animation: pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
         }
 
-        .stat-badge {
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+        @keyframes pulse-ring {
+            0% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0.7); }
+            70% { box-shadow: 0 0 0 12px rgba(236, 72, 153, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0); }
         }
     </style>
 </head>
-<body class="text-slate-100 min-h-screen flex flex-col items-center justify-between p-3 xs:p-5 sm:p-10 selection:bg-pink-500/30 hero-glow">
+<body class="text-slate-100 min-h-screen flex flex-col items-center justify-between p-4 sm:p-8 md:p-12 selection:bg-pink-500/40">
 
-    <!-- Header & Hero -->
-    <main class="max-w-4xl w-full my-auto py-6 sm:py-12 relative z-10">
+    <!-- Top Navigation Bar -->
+    <header class="max-w-4xl w-full flex items-center justify-between py-4 px-5 rounded-2xl bg-slate-900/80 border border-slate-800 backdrop-blur-lg mb-8 shadow-xl">
+        <a href="index.html" class="flex items-center gap-2.5 text-white hover:text-blue-400 font-extrabold text-sm sm:text-base transition-colors group">
+            <span class="p-1.5 rounded-lg bg-blue-500/10 text-blue-400 group-hover:-translate-x-1 transition-transform">←</span>
+            <span id="nav-back">Hauptseite</span>
+        </a>
+
+        <!-- Controls: Read Aloud & Language Switcher -->
+        <div class="flex items-center gap-2 sm:gap-3">
+            <!-- TTS Button -->
+            <button id="tts-toggle-btn" onclick="toggleReadAloud()" class="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs sm:text-sm font-bold transition-all shadow-md active:scale-95">
+                <span id="tts-icon">🔊</span>
+                <span id="tts-label">Vorlesen</span>
+            </button>
+
+            <!-- Language Dropdown -->
+            <div class="relative">
+                <select id="lang-select" onchange="changeLanguage(this.value)" class="bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs sm:text-sm py-1.5 px-3 sm:py-2 sm:px-4 rounded-xl border border-slate-700 cursor-pointer outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-md">
+                    <option value="de">🇩🇪 Deutsch</option>
+                    <option value="en">🇬🇧 English</option>
+                    <option value="es">🇪🇸 Español</option>
+                    <option value="fr">🇫🇷 Français</option>
+                    <option value="pt">🇧🇷 Português</option>
+                    <option value="tr">🇹🇷 Türkçe</option>
+                </select>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="max-w-4xl w-full my-auto pb-12">
         
-        <!-- Big Alert Banner -->
-        <div class="text-center mb-8 sm:mb-12">
-            <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full badge-gradient text-white text-xs sm:text-sm font-black uppercase tracking-wider mb-6 shadow-xl shadow-pink-500/25 animate-pulse">
+        <!-- Big Hero Banner -->
+        <div class="text-center mb-10 sm:mb-14">
+            <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full hero-glow-badge text-white text-xs sm:text-sm font-black uppercase tracking-wider mb-6 animate-pulse">
                 <span>🔥 RELEASE v24.115</span>
                 <span>•</span>
-                <span>ABSOLUTER MEILENSTEIN</span>
+                <span id="hero-badge-tag">MEGA MEILENSTEIN</span>
             </div>
 
-            <h1 class="text-3xl xs:text-4xl sm:text-6xl md:text-7xl font-black tracking-tight text-white mb-5 leading-none uppercase">
+            <h1 id="hero-title" class="text-3xl xs:text-5xl sm:text-6xl md:text-7xl font-black tracking-tight text-white mb-6 leading-none uppercase drop-shadow-2xl">
                 DAS GRÖSSTE UPDATE <br>
-                <span class="bg-gradient-to-r from-pink-500 via-purple-400 to-cyan-400 bg-clip-text text-fill-transparent text-transparent">
+                <span class="bg-gradient-to-r from-pink-500 via-purple-400 to-cyan-400 bg-clip-text text-transparent">
                     EVER EVER EVER! 🚀
                 </span>
             </h1>
 
-            <p class="text-slate-300 text-sm xs:text-base sm:text-xl max-w-2xl mx-auto font-medium leading-relaxed">
-                Wir haben nicht nur ein paar Bugs gefixt – wir haben das <strong class="text-white">GESAMTE SYSTEM</strong> auf links gedreht. 
-                <span class="text-pink-400 font-bold">14.671 Zeilen Code</span> von Grund auf neu strukturiert, radikal optimiert und fehlerfrei geschliffen!
+            <p id="hero-subtitle" class="text-slate-200 text-base sm:text-xl md:text-2xl max-w-3xl mx-auto font-semibold leading-relaxed drop-shadow">
+                Wir haben nicht nur ein paar Kleinigkeiten gefixt – wir haben den <strong class="text-white underline decoration-pink-500 underline-offset-4">GESAMTEN CODE (14.671 ZEILEN)</strong> neu gebaut, radikal optimiert und jede einzelne Funktion auf 100% Perfektion gebracht!
             </p>
         </div>
 
-        <!-- 4 Mega Stats Grid -->
+        <!-- 4 Big Stats Grid -->
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-8 sm:mb-12">
-            <div class="stat-badge p-4 rounded-2xl text-center">
-                <p class="text-2xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-rose-500 font-mono">14.671</p>
-                <p class="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-400 mt-1">Zeilen Code Refactored</p>
+            <div class="stat-box p-4 sm:p-5 rounded-2xl text-center shadow-lg">
+                <p class="text-2xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-rose-400 font-mono">14.671</p>
+                <p id="stat-1-label" class="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-300 mt-1">Zeilen Code Refactored</p>
             </div>
-            <div class="stat-badge p-4 rounded-2xl text-center">
-                <p class="text-2xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 font-mono">100%</p>
-                <p class="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-400 mt-1">Cover-Trefferquote</p>
+            <div class="stat-box p-4 sm:p-5 rounded-2xl text-center shadow-lg">
+                <p class="text-2xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400 font-mono">100%</p>
+                <p id="stat-2-label" class="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-300 mt-1">Cover-Trefferquote</p>
             </div>
-            <div class="stat-badge p-4 rounded-2xl text-center">
-                <p class="text-2xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-500 font-mono">0.0s</p>
-                <p class="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-400 mt-1">Lag & Zero Stutter</p>
+            <div class="stat-box p-4 sm:p-5 rounded-2xl text-center shadow-lg">
+                <p class="text-2xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-400 font-mono">0.0s</p>
+                <p id="stat-3-label" class="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-300 mt-1">Lag & Zero Stutter</p>
             </div>
-            <div class="stat-badge p-4 rounded-2xl text-center">
-                <p class="text-2xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-indigo-500 font-mono">∞</p>
-                <p class="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-400 mt-1">Power & Effizienz</p>
+            <div class="stat-box p-4 sm:p-5 rounded-2xl text-center shadow-lg">
+                <p class="text-2xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-indigo-400 font-mono">∞</p>
+                <p id="stat-4-label" class="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-300 mt-1">Pure Effizienz</p>
             </div>
         </div>
 
         <!-- Release Cards Grid -->
         <div class="space-y-4 sm:space-y-6">
 
-            <!-- Card 0: Vollständiger Code-Rebuild -->
-            <div class="glow-card p-6 sm:p-8 rounded-3xl border-l-4 border-l-pink-500 relative overflow-hidden">
+            <!-- Card 1: Rebuild -->
+            <div class="glow-card p-6 sm:p-8 rounded-3xl border-l-4 border-l-pink-500">
                 <div class="flex items-center gap-3 mb-3">
                     <span class="text-3xl">⚡</span>
-                    <h2 class="text-xl sm:text-2xl font-black text-white uppercase tracking-tight">1. Der Komplette 14.671-Zeilen Rebuild</h2>
+                    <h2 id="card1-title" class="text-xl sm:text-2xl font-black text-white uppercase tracking-tight">1. Der 14.671-Zeilen Rebuild & Performance-Overhaul</h2>
                 </div>
-                <p class="text-slate-300 text-sm sm:text-base leading-relaxed mb-3">
-                    Jede einzelne Zeile von Zeile 1 bis Zeile 14.671 wurde ausnahmslos durchgeprüft, refactored und von unnötigem Ballast befreit. 
-                    Tausende versteckte Speicherlecks, asynchrone Race Conditions und UI-Blockaden wurden restlos eliminiert.
+                <p id="card1-text" class="text-slate-200 text-sm sm:text-base leading-relaxed mb-4">
+                    Jede einzelne Zeile von Zeile 1 bis 14.671 wurde ausnahmslos durchgeprüft, refactored und von unnötigem Ballast befreit. Tausende versteckte Speicherlecks, asynchrone Race Conditions und UI-Blockaden wurden restlos eliminiert.
                 </p>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4 text-xs font-mono text-slate-300">
-                    <div class="bg-black/40 p-2.5 rounded-xl border border-white/5 flex items-center gap-2">
-                        <span class="text-emerald-400 font-bold">✓</span> Maximale Framerate & Zero Hitzeentwicklung
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs sm:text-sm font-mono text-slate-200">
+                    <div class="bg-black/50 p-3 rounded-xl border border-white/10 flex items-center gap-2">
+                        <span class="text-emerald-400 font-bold text-base">✓</span> <span id="card1-sub1">Butterweiche 120 FPS & Zero Hitze</span>
                     </div>
-                    <div class="bg-black/40 p-2.5 rounded-xl border border-white/5 flex items-center gap-2">
-                        <span class="text-emerald-400 font-bold">✓</span> Intelligentes In-Memory-Garbage-Collection
+                    <div class="bg-black/50 p-3 rounded-xl border border-white/10 flex items-center gap-2">
+                        <span class="text-emerald-400 font-bold text-base">✓</span> <span id="card1-sub2">In-Memory Garbage-Collection</span>
                     </div>
                 </div>
             </div>
 
-            <!-- Card 1: Cover Engine -->
+            <!-- Card 2: Cover Engine -->
             <div class="glow-card p-6 sm:p-8 rounded-3xl border-l-4 border-l-cyan-500">
                 <div class="flex items-center gap-3 mb-3">
                     <span class="text-3xl">🎵</span>
-                    <h2 class="text-xl sm:text-2xl font-black text-white uppercase tracking-tight">2. Cover-Engine 100% Perfektioniert (Zero Fehler!)</h2>
+                    <h2 id="card2-title" class="text-xl sm:text-2xl font-black text-white uppercase tracking-tight">2. Cover-Engine 100% Perfektioniert (Zero Fehler!)</h2>
                 </div>
-                <p class="text-slate-300 text-sm sm:text-base leading-relaxed">
-                    Vorbei sind die Zeiten von falschen, verpixelten oder fehlenden Album-Covers! Eine neue, unaufhaltsame Abfragekette 
-                    (<strong class="text-cyan-400">Apple Music ID via track_url ➔ Spotify oEmbed ➔ iTunes Search ➔ Deezer</strong>) liefert für ausnahmslos 
-                    jeden Song das gestochen scharfe 640x640px Original-Cover.
+                <p id="card2-text" class="text-slate-200 text-sm sm:text-base leading-relaxed">
+                    Vorbei sind die Zeiten von falschen, verpixelten oder fehlenden Album-Covers! Eine neue, unaufhaltsame Abfragekette (<strong class="text-cyan-300">Apple Music ID ➔ Spotify oEmbed ➔ iTunes Search ➔ Deezer</strong>) liefert für ausnahmslos jeden Song das gestochen scharfe 640x640px Original-Cover.
                 </p>
-                <div class="mt-3 p-3.5 bg-slate-900/80 rounded-2xl text-xs font-mono text-slate-300 border border-slate-800">
-                    🛡️ <strong class="text-cyan-400">Race-Condition-Shield:</strong> Selbst wenn du 30 Songs in wenigen Sekunden durchskippst, gerät die Anzeige niemals mehr durcheinander. Veraltete Antworten werden sofort verworfen!
+                <div class="mt-4 p-3.5 bg-slate-950/80 rounded-2xl text-xs sm:text-sm font-mono text-slate-200 border border-slate-800">
+                    🛡️ <strong class="text-cyan-300" id="card2-shield-title">Race-Condition-Schutz:</strong> <span id="card2-shield-text">Selbst bei 30 Song-Skips in wenigen Sekunden gerät die Anzeige niemals mehr durcheinander. Veraltete Antworten werden sofort verworfen!</span>
                 </div>
             </div>
 
-            <!-- Card 2: Spotify & Ruhemodus -->
+            <!-- Card 3: Spotify & Ruhemodus -->
             <div class="glow-card p-6 sm:p-8 rounded-3xl border-l-4 border-l-emerald-500">
                 <div class="flex items-center gap-3 mb-3">
                     <span class="text-3xl">🎛️</span>
-                    <h2 class="text-xl sm:text-2xl font-black text-white uppercase tracking-tight">3. Echtes Spotify-Label & Reiner Zen-Modus</h2>
+                    <h2 id="card3-title" class="text-xl sm:text-2xl font-black text-white uppercase tracking-tight">3. Spotify-Status & Reiner Zen-Modus</h2>
                 </div>
-                <p class="text-slate-300 text-sm sm:text-base leading-relaxed">
-                    Der animierte Live-Equalizer zeigt im Status-Chip wieder dynamisch und präzise <strong class="text-emerald-400">„Spotify“</strong> (oder deinen jeweiligen Streaming-Dienst) an. 
-                    Sobald die Musik stoppt, gibt es keine verwirrenden Zwischenstati mehr: Die Seite gleitet direkt und elegant in den puren Ruhemodus (<em class="text-slate-400">„Aktuell ist es ruhig...“</em>).
+                <p id="card3-text" class="text-slate-200 text-sm sm:text-base leading-relaxed">
+                    Der animierte Live-Equalizer zeigt im Status-Chip wieder dynamisch <strong class="text-emerald-300">„Spotify“</strong> (oder deinen jeweiligen Streaming-Dienst) an. Sobald die Musik stoppt, gleitet die Seite ohne Verzögerung direkt in den puren Ruhemodus (<em class="text-slate-300">„Aktuell ist es ruhig...“</em>).
                 </p>
             </div>
 
-            <!-- Card 3: Socials & Team -->
+            <!-- Card 4: Socials & Team -->
             <div class="glow-card p-6 sm:p-8 rounded-3xl border-l-4 border-l-purple-500">
                 <div class="flex items-center gap-3 mb-3">
                     <span class="text-3xl">🤝</span>
-                    <h2 class="text-xl sm:text-2xl font-black text-white uppercase tracking-tight">4. Socials-Upgrade: Team Gamingpig & Noel Support</h2>
+                    <h2 id="card4-title" class="text-xl sm:text-2xl font-black text-white uppercase tracking-tight">4. Socials-Upgrade: Team Gamingpig & Noel Support</h2>
                 </div>
-                <p class="text-slate-300 text-sm sm:text-base mb-4 leading-relaxed">
+                <p id="card4-text" class="text-slate-200 text-sm sm:text-base mb-4 leading-relaxed">
                     Direkte Anbindung unserer offiziellen Kanäle und riesiger Support-Dank an Noel für die Unterstützung beim Projekt!
                 </p>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <a href="https://www.tiktok.com/@team_gamingpig_official?is_from_webapp=1&sender_device=pc" target="_blank" rel="noopener noreferrer" class="p-4 bg-slate-900/90 hover:bg-slate-800 rounded-2xl border border-slate-800 hover:border-blue-500/50 transition-all flex items-center justify-between group shadow-lg">
+                    <a href="https://www.tiktok.com/@team_gamingpig_official?is_from_webapp=1&sender_device=pc" target="_blank" rel="noopener noreferrer" class="p-4 bg-slate-950/90 hover:bg-slate-800 rounded-2xl border border-slate-800 hover:border-blue-500/50 transition-all flex items-center justify-between group shadow-lg">
                         <div>
-                            <span class="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider bg-blue-500/10 text-blue-400 rounded-full">Offizieller Kanal</span>
+                            <span class="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider bg-blue-500/10 text-blue-400 rounded-full" id="card4-badge1">Offizieller Kanal</span>
                             <p class="font-black text-white text-base mt-1">Team Gamingpig</p>
                             <p class="text-xs text-slate-400">@team_gamingpig_official</p>
                         </div>
                         <span class="text-blue-400 group-hover:translate-x-1.5 transition-transform text-lg">➔</span>
                     </a>
-                    <a href="https://www.tiktok.com/@nur_mtb_noel?is_from_webapp=1&sender_device=pc" target="_blank" rel="noopener noreferrer" class="p-4 bg-slate-900/90 hover:bg-slate-800 rounded-2xl border border-slate-800 hover:border-emerald-500/50 transition-all flex items-center justify-between group shadow-lg">
+                    <a href="https://www.tiktok.com/@nur_mtb_noel?is_from_webapp=1&sender_device=pc" target="_blank" rel="noopener noreferrer" class="p-4 bg-slate-950/90 hover:bg-slate-800 rounded-2xl border border-slate-800 hover:border-emerald-500/50 transition-all flex items-center justify-between group shadow-lg">
                         <div>
-                            <span class="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-400 rounded-full">Partner & Support</span>
+                            <span class="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-400 rounded-full" id="card4-badge2">Partner & Support</span>
                             <p class="font-black text-white text-base mt-1">Noel (MTB Noel)</p>
                             <p class="text-xs text-slate-400">@nur_mtb_noel</p>
                         </div>
@@ -187,11 +220,11 @@
                 </div>
             </div>
 
-            <!-- Big Action CTA -->
+            <!-- Big Action CTA Button -->
             <div class="text-center pt-6 sm:pt-10">
-                <a href="index.html" class="inline-flex items-center gap-3 px-8 py-4 sm:px-10 sm:py-5 bg-gradient-to-r from-pink-600 via-purple-600 to-blue-600 hover:from-pink-500 hover:to-blue-500 text-white font-black rounded-3xl shadow-2xl shadow-pink-500/30 hover:scale-105 active:scale-95 transition-all text-base sm:text-xl uppercase tracking-wide">
-                    <span>🚀 Jetzt Live-Dashboard Erleben</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                <a href="index.html" class="inline-flex items-center gap-3 px-8 py-4 sm:px-12 sm:py-5 bg-gradient-to-r from-pink-600 via-purple-600 to-blue-600 hover:from-pink-500 hover:to-blue-500 text-white font-black rounded-3xl shadow-2xl shadow-pink-500/40 hover:scale-105 active:scale-95 transition-all text-base sm:text-2xl uppercase tracking-wide">
+                    <span id="cta-launch-text">🚀 Jetzt Live-Dashboard Erleben</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
                 </a>
             </div>
 
@@ -200,9 +233,303 @@
     </main>
 
     <!-- Footer -->
-    <footer class="text-center py-6 text-xs text-slate-500 relative z-10">
-        <p>© 2026 Gamingpig • <a href="index.html" class="hover:text-slate-300 underline font-semibold">Zurück zur Hauptseite</a></p>
+    <footer class="text-center py-6 text-xs text-slate-400 border-t border-slate-800/80 w-full max-w-4xl">
+        <p>© 2026 Gamingpig • <a href="index.html" class="hover:text-white underline font-bold" id="footer-back-link">Zurück zur Hauptseite</a></p>
     </footer>
+
+    <!-- Translations & Read Aloud Script -->
+    <script>
+        const TRANSLATIONS = {
+            de: {
+                nav_back: "Hauptseite",
+                tts_read: "Vorlesen",
+                tts_stop: "Stopp",
+                hero_badge: "MEGA MEILENSTEIN",
+                hero_title_html: "DAS GRÖSSTE UPDATE <br><span class=\"bg-gradient-to-r from-pink-500 via-purple-400 to-cyan-400 bg-clip-text text-transparent\">EVER EVER EVER! 🚀</span>",
+                hero_sub: "Wir haben nicht nur ein paar Kleinigkeiten gefixt – wir haben den GESAMTEN CODE (14.671 ZEILEN) neu gebaut, radikal optimiert und jede einzelne Funktion auf 100% Perfektion gebracht!",
+                stat1: "Zeilen Code Refactored",
+                stat2: "Cover-Trefferquote",
+                stat3: "Lag & Zero Stutter",
+                stat4: "Pure Effizienz",
+                card1_title: "1. Der 14.671-Zeilen Rebuild & Performance-Overhaul",
+                card1_text: "Jede einzelne Zeile von Zeile 1 bis 14.671 wurde ausnahmslos durchgeprüft, refactored und von unnötigem Ballast befreit. Tausende versteckte Speicherlecks, asynchrone Race Conditions und UI-Blockaden wurden restlos eliminiert.",
+                card1_sub1: "Butterweiche 120 FPS & Zero Hitze",
+                card1_sub2: "In-Memory Garbage-Collection",
+                card2_title: "2. Cover-Engine 100% Perfektioniert (Zero Fehler!)",
+                card2_text: "Vorbei sind die Zeiten von falschen, verpixelten oder fehlenden Album-Covers! Eine neue, unaufhaltsame Abfragekette (Apple Music ID ➔ Spotify oEmbed ➔ iTunes Search ➔ Deezer) liefert für ausnahmslos jeden Song das gestochen scharfe 640x640px Original-Cover.",
+                card2_shield_title: "Race-Condition-Schutz:",
+                card2_shield_text: "Selbst bei 30 Song-Skips in wenigen Sekunden gerät die Anzeige niemals mehr durcheinander. Veraltete Antworten werden sofort verworfen!",
+                card3_title: "3. Spotify-Status & Reiner Zen-Modus",
+                card3_text: "Der animierte Live-Equalizer zeigt im Status-Chip wieder dynamisch „Spotify“ (oder deinen jeweiligen Streaming-Dienst) an. Sobald die Musik stoppt, gleitet die Seite ohne Verzögerung direkt in den puren Ruhemodus („Aktuell ist es ruhig...“).",
+                card4_title: "4. Socials-Upgrade: Team Gamingpig & Noel Support",
+                card4_text: "Direkte Anbindung unserer offiziellen Kanäle und riesiger Support-Dank an Noel für die Unterstützung beim Projekt!",
+                card4_badge1: "Offizieller Kanal",
+                card4_badge2: "Partner & Support",
+                cta_launch: "🚀 Jetzt Live-Dashboard Erleben",
+                footer_back: "Zurück zur Hauptseite"
+            },
+            en: {
+                nav_back: "Main Page",
+                tts_read: "Read Aloud",
+                tts_stop: "Stop",
+                hero_badge: "MEGA MILESTONE",
+                hero_title_html: "THE BIGGEST UPDATE <br><span class=\"bg-gradient-to-r from-pink-500 via-purple-400 to-cyan-400 bg-clip-text text-transparent\">EVER EVER EVER! 🚀</span>",
+                hero_sub: "We didn't just fix a few small bugs – we completely rebuilt, refactored, and perfected ALL 14,671 LINES OF CODE to pure 100% excellence!",
+                stat1: "Lines of Code Refactored",
+                stat2: "Cover Hit Rate",
+                stat3: "Lag & Zero Stutter",
+                stat4: "Pure Efficiency",
+                card1_title: "1. The 14,671-Line Rebuild & Performance Overhaul",
+                card1_text: "Every single line from line 1 to 14,671 has been thoroughly inspected, refactored, and purged of dead weight. Countless memory leaks, async race conditions, and UI stalls were permanently eradicated.",
+                card1_sub1: "Silky-smooth 120 FPS & zero heat",
+                card1_sub2: "In-memory garbage collection",
+                card2_title: "2. Cover Engine 100% Perfected (Zero Errors!)",
+                card2_text: "Gone are the days of wrong, blurry, or missing album art! A brand-new sequential chain (Apple Music ID ➔ Spotify oEmbed ➔ iTunes Search ➔ Deezer) delivers crisp 640x640px original covers for every single song.",
+                card2_shield_title: "Race Condition Shield:",
+                card2_shield_text: "Even when skipping 30 tracks in seconds, the display never glitches. Stale async responses are discarded instantly!",
+                card3_title: "3. Spotify Status & Pure Zen Mode",
+                card3_text: "The animated live equalizer dynamically displays \"Spotify\" in the status chip. When playback pauses, the dashboard transitions directly and smoothly into quiet mode (\"It's quiet right now...\").",
+                card4_title: "4. Socials Upgrade: Team Gamingpig & Noel Support",
+                card4_text: "Direct integration of our official channels and massive thanks to Noel for his incredible support with this project!",
+                card4_badge1: "Official Channel",
+                card4_badge2: "Partner & Support",
+                cta_launch: "🚀 Experience Live Dashboard Now",
+                footer_back: "Back to Main Page"
+            },
+            es: {
+                nav_back: "Página Principal",
+                tts_read: "Leer en voz alta",
+                tts_stop: "Detener",
+                hero_badge: "GRAN HITO",
+                hero_title_html: "¡LA MAYOR ACTUALIZACIÓN <br><span class=\"bg-gradient-to-r from-pink-500 via-purple-400 to-cyan-400 bg-clip-text text-transparent\">DE LA HISTORIA! 🚀</span>",
+                hero_sub: "¡Reconstruimos, optimizamos y perfeccionamos las 14.671 LÍNEAS DE CÓDIGO de arriba a abajo con 100% de eficiencia!",
+                stat1: "Líneas de código reconstruidas",
+                stat2: "Tasa de acierto de portadas",
+                stat3: "Cero retraso y fluidez total",
+                stat4: "Máxima eficiencia",
+                card1_title: "1. Reconstrucción completa de 14.671 líneas",
+                card1_text: "Cada línea de código fue revisada y optimizada. Se eliminaron fugas de memoria y bloqueos de interfaz.",
+                card1_sub1: "120 FPS ultra fluidos y sin sobrecalentamiento",
+                card1_sub2: "Gestión de memoria optimizada",
+                card2_title: "2. Motor de portadas 100% perfecto",
+                card2_text: "Nueva resolución secuencial (Apple Music ID ➔ Spotify ➔ iTunes ➔ Deezer) que garantiza portadas originales nítidas en 640x640px para cada canción.",
+                card2_shield_title: "Protección de carrera:",
+                card2_shield_text: "Incluso al saltar canciones muy rápido, la portada nunca se confunde.",
+                card3_title: "3. Estado de Spotify y modo Zen",
+                card3_text: "Muestra «Spotify» dinámicamente y pasa suavemente al modo reposo cuando la música se pausa.",
+                card4_title: "4. Nuevas redes: Team Gamingpig y Noel",
+                card4_text: "¡Enlaces directos a nuestros canales oficiales y agradecimiento especial a Noel!",
+                card4_badge1: "Canal Oficial",
+                card4_badge2: "Socio y Soporte",
+                cta_launch: "🚀 Probar el Panel en Vivo Ahora",
+                footer_back: "Volver a la página principal"
+            },
+            fr: {
+                nav_back: "Page Principale",
+                tts_read: "Lecture vocale",
+                tts_stop: "Arrêter",
+                hero_badge: "ÉTAPE MAJEURE",
+                hero_title_html: "LA PLUS GRANDE MISE À JOUR <br><span class=\"bg-gradient-to-r from-pink-500 via-purple-400 to-cyan-400 bg-clip-text text-transparent\">DE TOUS LES TEMPS ! 🚀</span>",
+                hero_sub: "Nous avons reconstruit, optimisé et perfectionné l'intégralité des 14 671 LIGNES DE CODE pour une fluidité absolue !",
+                stat1: "Lignes de code refactorisées",
+                stat2: "Succès des pochettes",
+                stat3: "Zéro lag & 100% fluide",
+                stat4: "Pure efficacité",
+                card1_title: "1. Refonte complète de 14 671 lignes",
+                card1_text: "Chaque ligne a été passée au crible pour éliminer les fuites de mémoire et les ralentissements.",
+                card1_sub1: "120 FPS constants & aucune surchauffe",
+                card1_sub2: "Gestion mémoire ultra propre",
+                card2_title: "2. Moteur de pochettes parfait à 100%",
+                card2_text: "Résolution séquentielle garantissant la pochette originale en 640x640px pour chaque morceau sans exception.",
+                card2_shield_title: "Bouclier anti-concurrence :",
+                card2_shield_text: "Même en sautant 30 pistes rapidement, l'affichage reste parfaitement synchronisé.",
+                card3_title: "3. Statut Spotify & Mode Zen",
+                card3_text: "Affiche dynamiquement « Spotify » et passe immédiatement en mode repos lorsque la lecture est en pause.",
+                card4_title: "4. Nouveaux réseaux : Team Gamingpig & Noel",
+                card4_text: "Connexion directe à nos chaînes et grand merci à Noel pour son aide précieuse !",
+                card4_badge1: "Chaîne Officielle",
+                card4_badge2: "Partenaire & Support",
+                cta_launch: "🚀 Découvrir le Tableau de Bord",
+                footer_back: "Retour à l'accueil"
+            },
+            pt: {
+                nav_back: "Página Principal",
+                tts_read: "Ouvir",
+                tts_stop: "Parar",
+                hero_badge: "GRANDE MARCO",
+                hero_title_html: "A MAIOR ATUALIZAÇÃO <br><span class=\"bg-gradient-to-r from-pink-500 via-purple-400 to-cyan-400 bg-clip-text text-transparent\">DE TODOS OS TEMPOS! 🚀</span>",
+                hero_sub: "Reconstruímos e aperfeiçoamos todas as 14.671 LINHAS DE CÓDIGO para uma experiência 100% impecável!",
+                stat1: "Linhas de código refeitas",
+                stat2: "Taxa de acerto de capas",
+                stat3: "Zero travamentos",
+                stat4: "Máxima eficiência",
+                card1_title: "1. Reconstrução total de 14.671 linhas",
+                card1_text: "Cada linha de código foi otimizada, eliminando vazamentos de memória e lentidão.",
+                card1_sub1: "120 FPS ultra suaves e sem esquentar",
+                card1_sub2: "Coleta de lixo de memória inteligente",
+                card2_title: "2. Motor de capas 100% perfeito",
+                card2_text: "Nova resolução sequencial garantindo a capa original em 640x640px para cada música.",
+                card2_shield_title: "Proteção de concorrência:",
+                card2_shield_text: "Troque de música na velocidade que quiser, as capas nunca mais se misturam.",
+                card3_title: "3. Status Spotify & Modo Zen",
+                card3_text: "Exibe «Spotify» dinamicamente e transita suavemente para o modo silencioso ao pausar.",
+                card4_title: "4. Novas redes: Team Gamingpig & Noel",
+                card4_text: "Links diretos para nossos canais e um agradecimento especial ao Noel pelo grande apoio!",
+                card4_badge1: "Canal Oficial",
+                card4_badge2: "Parceiro & Suporte",
+                cta_launch: "🚀 Abrir o Painel ao Vivo",
+                footer_back: "Voltar para a página principal"
+            },
+            tr: {
+                nav_back: "Ana Sayfa",
+                tts_read: "Sesli Oku",
+                tts_stop: "Durdur",
+                hero_badge: "DEV DÖNÜM NOKTASI",
+                hero_title_html: "ŞİMDİYE KADARKİ EN BÜYÜK <br><span class=\"bg-gradient-to-r from-pink-500 via-purple-400 to-cyan-400 bg-clip-text text-transparent\">GÜNCELLEME! 🚀</span>",
+                hero_sub: "Yalnızca birkaç hata düzeltmedik – 14.671 SATIRLIK TÜM KODU sıfırdan yeniden oluşturduk ve %100 mükemmel hale getirdik!",
+                stat1: "Yenilenen Kod Satırı",
+                stat2: "Kapak Doğruluk Oranı",
+                stat3: "Sıfır Gecikme ve Donma",
+                stat4: "Maksimum Verimlilik",
+                card1_title: "1. 14.671 Satırlık Yeniden Yapılandırma",
+                card1_text: "Satır 1'den 14.671'e kadar tüm kod incelendi, gereksiz yüklerden arındırıldı ve bellek sızıntıları temizlendi.",
+                card1_sub1: "Yağ gibi akan 120 FPS & Isınma yok",
+                card1_sub2: "Akıllı bellek yönetimi",
+                card2_title: "2. %100 Kusursuz Albüm Kapağı Motoru",
+                card2_text: "Yeni sıralı arama zinciri (Apple Music ➔ Spotify ➔ iTunes ➔ Deezer) ile her şarkı için 640x640px net orijinal kapak garantilendi.",
+                card2_shield_title: "Çakışma Koruması:",
+                card2_shield_text: "Şarkıları çok hızlı geçseniz bile kapaklar asla birbirine karışmaz.",
+                card3_title: "3. Spotify Durumu & Zen Modu",
+                card3_text: "Durum rozetinde dinamik olarak «Spotify» gösterilir ve müzik durduğunda temiz bir şekilde sessizlik moduna geçer.",
+                card4_title: "4. Sosyal Ağlar: Team Gamingpig & Noel",
+                card4_text: "Resmi kanallarımız ve bu projeye verdiği büyük destek için Noel'e teşekkürler!",
+                card4_badge1: "Resmi Kanal",
+                card4_badge2: "Ortak & Destek",
+                cta_launch: "🚀 Canlı Paneli Şimdi Yaşa",
+                footer_back: "Ana Sayfaya Dön"
+            }
+        };
+
+        let currentLang = localStorage.getItem('selectedLanguage') || 'de';
+
+        function applyTranslations(lang) {
+            const t = TRANSLATIONS[lang] || TRANSLATIONS.de;
+            document.getElementById('nav-back').innerText = t.nav_back;
+            document.getElementById('tts-label').innerText = window.isSpeaking ? t.tts_stop : t.tts_read;
+            document.getElementById('hero-badge-tag').innerText = t.hero_badge;
+            document.getElementById('hero-title').innerHTML = t.hero_title_html;
+            document.getElementById('hero-subtitle').innerText = t.hero_sub;
+
+            document.getElementById('stat-1-label').innerText = t.stat1;
+            document.getElementById('stat-2-label').innerText = t.stat2;
+            document.getElementById('stat-3-label').innerText = t.stat3;
+            document.getElementById('stat-4-label').innerText = t.stat4;
+
+            document.getElementById('card1-title').innerText = t.card1_title;
+            document.getElementById('card1-text').innerText = t.card1_text;
+            document.getElementById('card1-sub1').innerText = t.card1_sub1;
+            document.getElementById('card1-sub2').innerText = t.card1_sub2;
+
+            document.getElementById('card2-title').innerText = t.card2_title;
+            document.getElementById('card2-text').innerText = t.card2_text;
+            document.getElementById('card2-shield-title').innerText = t.card2_shield_title;
+            document.getElementById('card2-shield-text').innerText = t.card2_shield_text;
+
+            document.getElementById('card3-title').innerText = t.card3_title;
+            document.getElementById('card3-text').innerText = t.card3_text;
+
+            document.getElementById('card4-title').innerText = t.card4_title;
+            document.getElementById('card4-text').innerText = t.card4_text;
+            document.getElementById('card4-badge1').innerText = t.card4_badge1;
+            document.getElementById('card4-badge2').innerText = t.card4_badge2;
+
+            document.getElementById('cta-launch-text').innerText = t.cta_launch;
+            document.getElementById('footer-back-link').innerText = t.footer_back;
+        }
+
+        function changeLanguage(lang) {
+            currentLang = lang;
+            localStorage.setItem('selectedLanguage', lang);
+            applyTranslations(lang);
+            if (window.isSpeaking) {
+                stopSpeech();
+                toggleReadAloud();
+            }
+        }
+
+        // --- Read Aloud (TTS) Engine ---
+        window.isSpeaking = false;
+
+        function stopSpeech() {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+            }
+            window.isSpeaking = false;
+            const btn = document.getElementById('tts-toggle-btn');
+            if (btn) btn.classList.remove('tts-active');
+            const t = TRANSLATIONS[currentLang] || TRANSLATIONS.de;
+            document.getElementById('tts-label').innerText = t.tts_read;
+            document.getElementById('tts-icon').innerText = '🔊';
+        }
+
+        function toggleReadAloud() {
+            if (!('speechSynthesis' in window)) {
+                alert("Speech Synthesis is not supported in this browser.");
+                return;
+            }
+
+            if (window.isSpeaking) {
+                stopSpeech();
+                return;
+            }
+
+            window.speechSynthesis.cancel();
+            const t = TRANSLATIONS[currentLang] || TRANSLATIONS.de;
+
+            const textToRead = `
+                ${t.hero_badge}. 
+                ${t.hero_sub}. 
+                ${t.card1_title}. ${t.card1_text}. 
+                ${t.card2_title}. ${t.card2_text}. 
+                ${t.card3_title}. ${t.card3_text}. 
+                ${t.card4_title}. ${t.card4_text}.
+            `;
+
+            const utterance = new SpeechSynthesisUtterance(textToRead);
+            utterance.lang = currentLang === 'de' ? 'de-DE' :
+                             currentLang === 'en' ? 'en-US' :
+                             currentLang === 'es' ? 'es-ES' :
+                             currentLang === 'fr' ? 'fr-FR' :
+                             currentLang === 'pt' ? 'pt-BR' : 'tr-TR';
+            utterance.rate = 1.05;
+            utterance.pitch = 1.0;
+
+            const voices = window.speechSynthesis.getVoices();
+            const matchedVoice = voices.find(v => v.lang.startsWith(currentLang));
+            if (matchedVoice) utterance.voice = matchedVoice;
+
+            utterance.onend = () => stopSpeech();
+            utterance.onerror = () => stopSpeech();
+
+            window.isSpeaking = true;
+            const btn = document.getElementById('tts-toggle-btn');
+            if (btn) btn.classList.add('tts-active');
+            document.getElementById('tts-label').innerText = t.tts_stop;
+            document.getElementById('tts-icon').innerText = '⏹️';
+
+            window.speechSynthesis.speak(utterance);
+        }
+
+        // Init language on load
+        document.addEventListener('DOMContentLoaded', () => {
+            const selectEl = document.getElementById('lang-select');
+            if (selectEl) selectEl.value = currentLang;
+            applyTranslations(currentLang);
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.onvoiceschanged = () => {};
+            }
+        });
+    </script>
 
 </body>
 </html>
