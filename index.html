@@ -8009,14 +8009,32 @@
             });
         }
 
-        const MAX_COVER_CACHE_SIZE = 10;
+        const MAX_COVER_CACHE_SIZE = 30;
         const trackCoverMemoryCache = new Map();
+        const pendingArtworkPromises = new Map();
         let currentResolvedArtUrl = null;
         let lastResolvedTrackKey = '';
         let lastKnownMusicData = null;
 
+        // Persistent Cover Cache in LocalStorage für sofortigen Kaltstart ohne Ladezeit
+        (function initLocalCoverCache() {
+            try {
+                const stored = localStorage.getItem('gp_cover_cache_v1');
+                if (stored) {
+                    const parsed = JSON.parse(stored);
+                    if (parsed && typeof parsed === 'object') {
+                        for (const [k, v] of Object.entries(parsed)) {
+                            if (k && v && typeof v === 'string') {
+                                trackCoverMemoryCache.set(k, v);
+                            }
+                        }
+                    }
+                }
+            } catch (e) {}
+        })();
+
         function setCachedCover(key, url) {
-            if (!key || !url) return;
+            if (!key || !url || url === fallbackImg) return;
             if (trackCoverMemoryCache.has(key)) {
                 trackCoverMemoryCache.delete(key);
             }
@@ -8025,6 +8043,13 @@
                 const oldestKey = trackCoverMemoryCache.keys().next().value;
                 trackCoverMemoryCache.delete(oldestKey);
             }
+            try {
+                const obj = {};
+                for (const [k, v] of trackCoverMemoryCache.entries()) {
+                    obj[k] = v;
+                }
+                localStorage.setItem('gp_cover_cache_v1', JSON.stringify(obj));
+            } catch (e) {}
         }
 
         // ── Cover-Auflösung ──────────────────────────────────────────────────────────
@@ -8035,8 +8060,8 @@
         //   platform_links.appleMusic = https://geo.music.apple.com/.../XXXXXXXX?i=XXXXXXXX
         //
         // PRIO 1: iTunes Direkt-Lookup via Apple Music Song-ID (exakter Track-Match, 640x640)
-        // PRIO 2: Spotify oEmbed (nur wenn open.spotify.com-URL vorhanden – aktuell selten)
-        // PRIO 3: iTunes Suche Artist + Titel
+        // PRIO 2: Spotify oEmbed (wenn open.spotify.com-URL vorhanden)
+        // PRIO 3: iTunes Suche (Artist + Titel & erweiterte Suchfilter)
         // PRIO 4: Deezer Suche
         //
         async function findBestArtworkFallback(title, artist, spotifyUrl = null, album = null, platformLinks = null) {
@@ -8046,103 +8071,122 @@
                 return trackCoverMemoryCache.get(cacheKey);
             }
 
+            if (pendingArtworkPromises.has(cacheKey)) {
+                return pendingArtworkPromises.get(cacheKey);
+            }
+
             const cleanT = cleanTrackTitle(title || '');
             const cleanA = cleanArtistName(artist || '');
 
-            // Apple Music Song-ID aus einer URL extrahieren
-            function extractAppleId(url) {
-                if (!url || typeof url !== 'string') return null;
-                let m = url.match(/[?&]i=(\d+)/);
-                if (m) return m[1];
-                m = url.match(/\/song\/(\d+)/);
-                if (m) return m[1];
-                m = url.match(/\/album\/[^/]+\/(\d+)/);
-                if (m) return m[1];
+            const resolverPromise = (async () => {
+                // Apple Music Song-ID aus einer URL extrahieren
+                function extractAppleId(url) {
+                    if (!url || typeof url !== 'string') return null;
+                    let m = url.match(/[?&]i=(\d+)/);
+                    if (m) return m[1];
+                    m = url.match(/\/song\/(\d+)/);
+                    if (m) return m[1];
+                    m = url.match(/\/album\/[^/]+\/(\d+)/);
+                    if (m) return m[1];
+                    return null;
+                }
+
+                // ID aus platform_links.appleMusic, track_url (kommt als Apple URL), oder direkt
+                let appleId = null;
+                if (platformLinks && typeof platformLinks === 'object') {
+                    appleId = extractAppleId(platformLinks.appleMusic)
+                           || extractAppleId(platformLinks.apple)
+                           || extractAppleId(platformLinks.track_url);
+                }
+                if (!appleId && typeof platformLinks === 'string') {
+                    appleId = extractAppleId(platformLinks);
+                }
+                if (!appleId && spotifyUrl && !String(spotifyUrl).includes('spotify.com')) {
+                    appleId = extractAppleId(spotifyUrl);
+                }
+
+                // ── PRIO 1: iTunes Direkt-Lookup via Song-ID ─────────────────────────────
+                if (appleId) {
+                    try {
+                        const r = await fetch(
+                            `https://itunes.apple.com/lookup?id=${appleId}`,
+                            { signal: AbortSignal.timeout(6000) }
+                        );
+                        if (r.ok) {
+                            const d = await r.json();
+                            const art = d?.results?.[0]?.artworkUrl100;
+                            if (art) {
+                                const hd = art.replace('100x100bb', '640x640bb');
+                                setCachedCover(cacheKey, hd);
+                                return hd;
+                            }
+                        }
+                    } catch (_) {}
+                }
+
+                // ── PRIO 2: Spotify oEmbed ───────────────────────────────────────────────
+                if (spotifyUrl && typeof spotifyUrl === 'string' && spotifyUrl.includes('open.spotify.com')) {
+                    try {
+                        const r = await fetch(
+                            `https://open.spotify.com/oembed?url=${encodeURIComponent(spotifyUrl)}`,
+                            { signal: AbortSignal.timeout(6000) }
+                        );
+                        if (r.ok) {
+                            const d = await r.json();
+                            if (d?.thumbnail_url) {
+                                setCachedCover(cacheKey, d.thumbnail_url);
+                                return d.thumbnail_url;
+                            }
+                        }
+                    } catch (_) {}
+                }
+
+                // ── PRIO 3: iTunes Suche (Artist + Titel & Fallback auf nur Titel/Album) ─
+                const searchQueries = [];
+                if (cleanA && cleanT) searchQueries.push(`${cleanA} ${cleanT}`);
+                if (album && cleanA) searchQueries.push(`${cleanA} ${album}`);
+                if (cleanT) searchQueries.push(cleanT);
+
+                for (const qStr of searchQueries) {
+                    try {
+                        const q = encodeURIComponent(qStr);
+                        const r = await fetch(
+                            `https://itunes.apple.com/search?term=${q}&media=music&entity=song&limit=1`,
+                            { signal: AbortSignal.timeout(6000) }
+                        );
+                        if (r.ok) {
+                            const d = await r.json();
+                            const art = d?.results?.[0]?.artworkUrl100;
+                            if (art) {
+                                const hd = art.replace('100x100bb', '640x640bb');
+                                setCachedCover(cacheKey, hd);
+                                return hd;
+                            }
+                        }
+                    } catch (_) {}
+                }
+
+                // ── PRIO 4: Deezer Suche ─────────────────────────────────────────────────
+                if (cleanT || cleanA) {
+                    try {
+                        const url = await fetchDeezerCoverJsonp(cleanT, cleanA);
+                        if (url) {
+                            setCachedCover(cacheKey, url);
+                            return url;
+                        }
+                    } catch (_) {}
+                }
+
                 return null;
-            }
+            })();
 
-            // ID aus platform_links.appleMusic, track_url (kommt als Apple URL), oder direkt
-            let appleId = null;
-            if (platformLinks && typeof platformLinks === 'object') {
-                appleId = extractAppleId(platformLinks.appleMusic)
-                       || extractAppleId(platformLinks.apple)
-                       || extractAppleId(platformLinks.track_url);
+            pendingArtworkPromises.set(cacheKey, resolverPromise);
+            try {
+                const res = await resolverPromise;
+                return res;
+            } finally {
+                pendingArtworkPromises.delete(cacheKey);
             }
-            if (!appleId && typeof platformLinks === 'string') {
-                appleId = extractAppleId(platformLinks);
-            }
-            if (!appleId && spotifyUrl && !String(spotifyUrl).includes('spotify.com')) {
-                appleId = extractAppleId(spotifyUrl);
-            }
-
-            // ── PRIO 1: iTunes Direkt-Lookup via Song-ID ─────────────────────────────
-            if (appleId) {
-                try {
-                    const r = await fetch(
-                        `https://itunes.apple.com/lookup?id=${appleId}`,
-                        { signal: AbortSignal.timeout(5000) }
-                    );
-                    if (r.ok) {
-                        const d = await r.json();
-                        const art = d?.results?.[0]?.artworkUrl100;
-                        if (art) {
-                            const hd = art.replace('100x100bb', '640x640bb');
-                            setCachedCover(cacheKey, hd);
-                            return hd;
-                        }
-                    }
-                } catch (_) {}
-            }
-
-            // ── PRIO 2: Spotify oEmbed ───────────────────────────────────────────────
-            if (spotifyUrl && typeof spotifyUrl === 'string' && spotifyUrl.includes('open.spotify.com')) {
-                try {
-                    const r = await fetch(
-                        `https://open.spotify.com/oembed?url=${encodeURIComponent(spotifyUrl)}`,
-                        { signal: AbortSignal.timeout(5000) }
-                    );
-                    if (r.ok) {
-                        const d = await r.json();
-                        if (d?.thumbnail_url) {
-                            setCachedCover(cacheKey, d.thumbnail_url);
-                            return d.thumbnail_url;
-                        }
-                    }
-                } catch (_) {}
-            }
-
-            // ── PRIO 3: iTunes Suche (Artist + Titel) ───────────────────────────────
-            if (cleanA && cleanT) {
-                try {
-                    const q = encodeURIComponent(`${cleanA} ${cleanT}`);
-                    const r = await fetch(
-                        `https://itunes.apple.com/search?term=${q}&media=music&entity=song&limit=1`,
-                        { signal: AbortSignal.timeout(5000) }
-                    );
-                    if (r.ok) {
-                        const d = await r.json();
-                        const art = d?.results?.[0]?.artworkUrl100;
-                        if (art) {
-                            const hd = art.replace('100x100bb', '640x640bb');
-                            setCachedCover(cacheKey, hd);
-                            return hd;
-                        }
-                    }
-                } catch (_) {}
-            }
-
-            // ── PRIO 4: Deezer Suche ─────────────────────────────────────────────────
-            if (cleanT || cleanA) {
-                try {
-                    const url = await fetchDeezerCoverJsonp(cleanT, cleanA);
-                    if (url) {
-                        setCachedCover(cacheKey, url);
-                        return url;
-                    }
-                } catch (_) {}
-            }
-
-            return null;
         }
 
         async function tryItunesArtworkFallback(title, artist, spotifyUrl = null, album = null, platformLinks = null) {
@@ -14117,8 +14161,8 @@
                             currentResolvedArtUrl = resolved;
                             updateAllCoverVisuals(resolved);
                             extractDominantColor(resolved);
-                            syncStandByTrackInfo(trackTitle, cleanArtist, resolved, false, trackIsPlaying);
-                            if (trackIsPlaying) showIslandPersistent(trackTitle, cleanArtist, resolved);
+                            syncStandByTrackInfo(trackTitle, rawArtist, resolved, false, trackIsPlaying);
+                            if (trackIsPlaying) showIslandPersistent(trackTitle, rawArtist, resolved);
                         }
                     }
                 });
@@ -14181,10 +14225,15 @@
                             setCachedCover(trackKey, fallbackUrl);
                         }
                         updateAllCoverVisuals(finalFallback);
+                        syncStandByTrackInfo(trackTitle, rawArtist, finalFallback, false, trackIsPlaying);
+                        extractDominantColor(finalFallback);
+                        if (trackIsPlaying) showIslandPersistent(trackTitle, rawArtist, finalFallback);
                     };
                 }
 
-                const finalArtUrl = currentResolvedArtUrl || trackCoverMemoryCache.get(trackKey) || (!isBrokenNpcProxy && rawArtwork ? rawArtwork : fallbackImg);
+                const cachedCover = trackCoverMemoryCache.get(trackKey);
+                const safeRawCover = (!isBrokenNpcProxy && rawArtwork) ? rawArtwork : null;
+                const finalArtUrl = currentResolvedArtUrl || cachedCover || safeRawCover || fallbackImg;
 
                 if (mArtwork && mAmbient && mGlow) {
                     updateAllCoverVisuals(finalArtUrl);
