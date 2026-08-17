@@ -7946,6 +7946,18 @@
             }
         }
 
+        // ── Cover-Auflösung ──────────────────────────────────────────────────────────
+        // Strategie: sequenziell, höchste Präzision zuerst.
+        //
+        // Die NPC-API liefert immer:
+        //   track_url = https://music.apple.com/us/song/XXXXXXXX
+        //   platform_links.appleMusic = https://geo.music.apple.com/.../XXXXXXXX?i=XXXXXXXX
+        //
+        // PRIO 1: iTunes Direkt-Lookup via Apple Music Song-ID (exakter Track-Match, 640x640)
+        // PRIO 2: Spotify oEmbed (nur wenn open.spotify.com-URL vorhanden – aktuell selten)
+        // PRIO 3: iTunes Suche Artist + Titel
+        // PRIO 4: Deezer Suche
+        //
         async function findBestArtworkFallback(title, artist, spotifyUrl = null, album = null, platformLinks = null) {
             const cacheKey = getTrackCacheKey(title, artist);
 
@@ -7955,82 +7967,99 @@
 
             const cleanT = cleanTrackTitle(title || '');
             const cleanA = cleanArtistName(artist || '');
-            const candidates = [];
-            const controller = new AbortController();
-            const signal = controller.signal;
 
-            // 0. Apple Music / iTunes ID Lookup (Präzise 100% Trefferquote)
-            if (platformLinks) {
-                const appleUrl = typeof platformLinks === 'string' ? platformLinks : (platformLinks.appleMusic || platformLinks.apple || platformLinks.track_url || '');
-                if (appleUrl && typeof appleUrl === 'string') {
-                    const match = appleUrl.match(/[?&]i=(\d+)/) || appleUrl.match(/\/album\/[^\/]+\/(\d+)/) || appleUrl.match(/\/id(\d+)/);
-                    if (match && match[1]) {
-                        candidates.push(
-                            fetch(`https://itunes.apple.com/lookup?id=${match[1]}`, { signal })
-                                .then(r => r.ok ? r.json() : Promise.reject())
-                                .then(d => (d && d.results && d.results[0] && d.results[0].artworkUrl100)
-                                    ? d.results[0].artworkUrl100.replace('100x100bb', '600x600bb')
-                                    : Promise.reject()
-                                )
-                        );
+            // Apple Music Song-ID aus einer URL extrahieren
+            function extractAppleId(url) {
+                if (!url || typeof url !== 'string') return null;
+                let m = url.match(/[?&]i=(\d+)/);
+                if (m) return m[1];
+                m = url.match(/\/song\/(\d+)/);
+                if (m) return m[1];
+                m = url.match(/\/album\/[^/]+\/(\d+)/);
+                if (m) return m[1];
+                return null;
+            }
+
+            // ID aus platform_links.appleMusic, track_url (kommt als Apple URL), oder direkt
+            let appleId = null;
+            if (platformLinks && typeof platformLinks === 'object') {
+                appleId = extractAppleId(platformLinks.appleMusic)
+                       || extractAppleId(platformLinks.apple)
+                       || extractAppleId(platformLinks.track_url);
+            }
+            if (!appleId && typeof platformLinks === 'string') {
+                appleId = extractAppleId(platformLinks);
+            }
+            if (!appleId && spotifyUrl && !String(spotifyUrl).includes('spotify.com')) {
+                appleId = extractAppleId(spotifyUrl);
+            }
+
+            // ── PRIO 1: iTunes Direkt-Lookup via Song-ID ─────────────────────────────
+            if (appleId) {
+                try {
+                    const r = await fetch(
+                        `https://itunes.apple.com/lookup?id=${appleId}`,
+                        { signal: AbortSignal.timeout(5000) }
+                    );
+                    if (r.ok) {
+                        const d = await r.json();
+                        const art = d?.results?.[0]?.artworkUrl100;
+                        if (art) {
+                            const hd = art.replace('100x100bb', '640x640bb');
+                            setCachedCover(cacheKey, hd);
+                            return hd;
+                        }
                     }
-                }
+                } catch (_) {}
             }
 
-            // 1. Spotify oEmbed (offizielles, authentisches Spotify CDN Cover)
-            if (spotifyUrl && typeof spotifyUrl === 'string' && spotifyUrl.includes('spotify.com')) {
-                candidates.push(
-                    fetch(`https://open.spotify.com/oembed?url=${encodeURIComponent(spotifyUrl)}`, { signal })
-                        .then(r => r.ok ? r.json() : Promise.reject())
-                        .then(d => (d && d.thumbnail_url) ? d.thumbnail_url : Promise.reject())
-                );
+            // ── PRIO 2: Spotify oEmbed ───────────────────────────────────────────────
+            if (spotifyUrl && typeof spotifyUrl === 'string' && spotifyUrl.includes('open.spotify.com')) {
+                try {
+                    const r = await fetch(
+                        `https://open.spotify.com/oembed?url=${encodeURIComponent(spotifyUrl)}`,
+                        { signal: AbortSignal.timeout(5000) }
+                    );
+                    if (r.ok) {
+                        const d = await r.json();
+                        if (d?.thumbnail_url) {
+                            setCachedCover(cacheKey, d.thumbnail_url);
+                            return d.thumbnail_url;
+                        }
+                    }
+                } catch (_) {}
             }
 
-            // 2. iTunes Search API (Artist + Title) - extrem schnell & verlässlich
+            // ── PRIO 3: iTunes Suche (Artist + Titel) ───────────────────────────────
             if (cleanA && cleanT) {
-                const q1 = encodeURIComponent(`${cleanA} ${cleanT}`);
-                candidates.push(
-                    fetch(`https://itunes.apple.com/search?term=${q1}&media=music&limit=1`, { signal })
-                        .then(r => r.ok ? r.json() : Promise.reject())
-                        .then(d => (d && d.results && d.results[0] && d.results[0].artworkUrl100)
-                            ? d.results[0].artworkUrl100.replace('100x100bb', '600x600bb')
-                            : Promise.reject()
-                        )
-                );
+                try {
+                    const q = encodeURIComponent(`${cleanA} ${cleanT}`);
+                    const r = await fetch(
+                        `https://itunes.apple.com/search?term=${q}&media=music&entity=song&limit=1`,
+                        { signal: AbortSignal.timeout(5000) }
+                    );
+                    if (r.ok) {
+                        const d = await r.json();
+                        const art = d?.results?.[0]?.artworkUrl100;
+                        if (art) {
+                            const hd = art.replace('100x100bb', '640x640bb');
+                            setCachedCover(cacheKey, hd);
+                            return hd;
+                        }
+                    }
+                } catch (_) {}
             }
 
-            // 3. Deezer JSONP (1000x1000 Ultra-HD Cover)
+            // ── PRIO 4: Deezer Suche ─────────────────────────────────────────────────
             if (cleanT || cleanA) {
-                candidates.push(
-                    fetchDeezerCoverJsonp(cleanT, cleanA)
-                        .then(url => url ? url : Promise.reject())
-                );
+                try {
+                    const url = await fetchDeezerCoverJsonp(cleanT, cleanA);
+                    if (url) {
+                        setCachedCover(cacheKey, url);
+                        return url;
+                    }
+                } catch (_) {}
             }
-
-            // 4. iTunes Search API (Nur Title)
-            if (cleanT) {
-                const q2 = encodeURIComponent(cleanT);
-                candidates.push(
-                    fetch(`https://itunes.apple.com/search?term=${q2}&media=music&limit=1`, { signal })
-                        .then(r => r.ok ? r.json() : Promise.reject())
-                        .then(d => (d && d.results && d.results[0] && d.results[0].artworkUrl100)
-                            ? d.results[0].artworkUrl100.replace('100x100bb', '600x600bb')
-                            : Promise.reject()
-                        )
-                );
-            }
-
-            if (candidates.length === 0) return null;
-
-            try {
-                // Parallel-Abfrage: wer zuerst antwortet, gewinnt!
-                const fastestCover = await Promise.any(candidates);
-                controller.abort(); // Breche restliche Anfragen ab, spart Bandbreite & Speicher
-                if (fastestCover) {
-                    setCachedCover(cacheKey, fastestCover);
-                    return fastestCover;
-                }
-            } catch (e) {}
 
             return null;
         }
