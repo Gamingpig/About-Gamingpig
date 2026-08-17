@@ -4642,51 +4642,21 @@
             #standby-hint { padding-bottom: 10px; }
         }
 
-        /* --- Große Now-Playing Lockscreen-Karte --- */
         #standby-nowplaying {
             position: relative; z-index: 2; width: min(94vw, 520px); margin-bottom: 40px;
-            /* FIX v24.90 (KRITISCH): Nutzerwunsch - Blur soll bleiben, aber effizienter
-               laufen. v24.89 hatte backdrop-filter komplett entfernt (Pixel-Hitze-Notlösung),
-               das ist aber teurer als nötig: backdrop-filter ist grundsätzlich teuer, weil
-               es bei JEDEM Frame live abtasten muss, was optisch DAHINTER liegt - selbst wenn
-               sich dort nichts ändert, behandeln viele Browser/GPU-Treiber (besonders Android
-               Chrome) das konservativ als "muss neu berechnet werden". Diese Karte hat jetzt
-               stattdessen eine EIGENE, unabhängige Hintergrund-Ebene (#standby-card-blur-bg,
-               siehe dort) mit normalem "filter: blur()" statt "backdrop-filter" - der große
-               Unterschied: normales filter() blurt nur den EIGENEN, bereits feststehenden
-               Inhalt dieser einen Ebene, once-und-fertig, der Browser kann das Ergebnis als
-               einzelne, stabile Ebene cachen und wiederverwenden, OHNE bei jedem Frame neu
-               abzutasten, was sich dahinter befindet. Optisch fast identisch zum alten
-               Live-Blur (dieselbe Cover-Art, nur separat vorgeblurt statt live durchgereicht),
-               technisch aber grundlegend billiger.
-            */
-            background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14);
-            border-radius: var(--standby-radius, 32px); padding: 26px; box-shadow: 0 20px 60px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.15);
-            /* contain:paint clippt zuverlässig auch #standby-card-blur-bg (die bewusst über
-               die Kartengrenzen hinausragt, siehe dort) exakt auf die abgerundeten Ecken der
-               Karte - kein zusätzliches overflow:hidden nötig. Isoliert wie gehabt zusätzlich
-               die animierenden Kinder (EQ-Balken/Fortschrittsbalken) vom Rest der Seite. */
+            /* Nahtloses Glasdesign: Eigene sparsame Hintergrundebene (#standby-card-blur-bg)
+               mit identischem Ausschnitt und Kontrast zum StandBy-Hintergrund für einen
+               perfekt durchgehenden Look ohne GPU-Overhead. */
+            background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.16);
+            border-radius: var(--standby-radius, 32px); padding: 26px; box-shadow: 0 20px 60px rgba(0,0,0,0.55), inset 0 1px 1px rgba(255,255,255,0.2);
             contain: paint;
         }
         #standby-card-blur-bg {
-            /* FIX v24.90: eigene, vorgeblurte Hintergrund-Ebene statt backdrop-filter - siehe
-               ausführliche Begründung oben bei #standby-nowplaying. Negativer inset (statt 0)
-               plus leichtes Hochskalieren verhindert einen sichtbaren, unschönen Blur-Rand am
-               Kartenrand (dasselbe bewährte Prinzip wie schon bei #standby-bg selbst). z-index
-               -1 hält sie zuverlässig hinter dem restlichen Karteninhalt, unabhängig von der
-               Dokument-Reihenfolge - kein manuelles z-index-Anheben der übrigen Kinder nötig.
-               will-change: transform, da die Ebene bei jedem Songwechsel per opacity-
-               Crossfade aus- und eingeblendet wird (siehe syncStandByTrackInfo() im Script)
-               - dieselbe Isolations-Lektion wie bei den EQ-Balken (v24.71).
-               FIX v24.103: zurück auf <div background-image> - siehe ausführliche Begründung
-               bei #standby-bg. (Historie: v24.101 hatte kurzzeitig auf <canvas> umgestellt,
-               das hat sich für Elemente mit schwerem CSS-Filter/Transform als teurer statt
-               billiger herausgestellt - Nutzer bestätigte per direktem Vergleich messbar
-               höhere Pixel-Temperatur seit der Canvas-Umstellung.) */
             position: absolute; inset: -20px; z-index: -1; border-radius: inherit;
             background-size: cover; background-position: center;
-            filter: blur(9px) brightness(0.55) saturate(140%);
-            transform: scale(1.15);
+            /* Nahtlose Abstimmung auf den StandBy-Hintergrund */
+            filter: blur(14px) brightness(0.44) saturate(150%);
+            transform: scale(1.18);
             transition: opacity 0.5s ease;
             will-change: transform, opacity;
             pointer-events: none;
@@ -8374,7 +8344,7 @@
             const card = document.getElementById('standby-nowplaying');
             const overlay = document.getElementById('standby-overlay');
             if (!card || !overlay || !standByActive) return;
-            syncStandbyScaleSliderUI(); // NEU v24.93: Regler zeigt den Wert für DIESES Design+diese Ausrichtung
+            syncStandbyScaleSliderUI();
             const dims = `${overlay.clientWidth}x${overlay.clientHeight}`;
             const cacheKey = `standbyFitScale:${standbyDesign}:${dims}`;
             if (!forceRemeasure) {
@@ -8384,19 +8354,21 @@
                     return;
                 }
             }
-            // Skalierung kurz zurücksetzen, um die tatsächliche NATÜRLICHE Größe zu messen
-            // (sonst würde eine bereits verkleinerte Größe erneut vermessen und sich immer
-            // weiter verkleinern). Zwei rAF, damit das Layout nach dem Reset wirklich neu
-            // berechnet wurde, bevor gemessen wird.
             card.style.transform = '';
             requestAnimationFrame(() => {
                 requestAnimationFrame(() => {
                     const rect = card.getBoundingClientRect();
-                    // 6% Sicherheitsabstand zum Rand auf allen Seiten.
-                    const availW = overlay.clientWidth * 0.94;
-                    const availH = overlay.clientHeight * 0.94;
-                    let autoScale = Math.min(availW / rect.width, availH / rect.height, 1);
+                    // Nutzt 95% der Breite und 85% der verfügbaren Höhe unter der Uhr optimal aus
+                    const clockzone = document.getElementById('standby-clockzone');
+                    const clockH = (clockzone && clockzone.offsetHeight) || 0;
+                    const availW = overlay.clientWidth * 0.95;
+                    const availH = Math.max(160, (overlay.clientHeight - clockH) * 0.88);
+                    
+                    let autoScale = Math.min(availW / (rect.width || 1), availH / (rect.height || 1));
+                    // Intelligenter Begrenzer: Lässt die Karte auf Tablets & großen Screens bis zu 1.15x wachsen, auf kleinen Screens sauber schrumpfen
+                    autoScale = Math.min(1.15, Math.max(0.4, autoScale));
                     if (!isFinite(autoScale) || autoScale <= 0) autoScale = 1;
+                    
                     localStorage.setItem(cacheKey, autoScale.toString());
                     applyStandbyFitScale(card, autoScale);
                 });
