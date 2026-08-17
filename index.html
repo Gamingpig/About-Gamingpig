@@ -3479,7 +3479,7 @@
 
         #music-card-layout-wrapper {
             display: grid; grid-template-rows: 0fr; width: 100%; padding-top: 0;
-            transition: grid-template-rows 0.75s var(--apple-spring), padding 0.75s var(--apple-spring);
+            transition: grid-template-rows 0.6s var(--apple-spring), padding 0.6s var(--apple-spring);
         }
         #music-card-layout-wrapper.hidden { display: none !important; }
         body.liquid-glass-active #music-card-layout-wrapper { transition: grid-template-rows 1.2s var(--liquid-fluid), padding 1.2s var(--liquid-fluid); }
@@ -3491,7 +3491,7 @@
            Animation ohne feste Pixel-Höhen angeben zu müssen). */
         #kart-card-layout-wrapper {
             display: grid; grid-template-rows: 0fr; width: 100%; padding-top: 0;
-            transition: grid-template-rows 0.75s var(--apple-spring), padding 0.75s var(--apple-spring);
+            transition: grid-template-rows 0.6s var(--apple-spring), padding 0.6s var(--apple-spring);
         }
         #kart-card-layout-wrapper.hidden { display: none !important; }
         #kart-card-layout-wrapper.is-open { grid-template-rows: 1fr; padding-top: 1.5rem; }
@@ -3559,8 +3559,8 @@
         /* --- STANDARD FALLBACKS --- */
         .modal-opening .modal-content, .picker-opening, .tutorial-opening, .settings-opening { animation: std-pop-in 0.5s var(--apple-spring) forwards; }
         .modal-closing .modal-content, .picker-closing, .tutorial-closing, .settings-closing { animation: std-pop-out 0.4s var(--apple-ease) forwards; }
-        .dashboard-opening #main-music-card { animation: std-dashboard-in 0.65s var(--apple-spring) forwards; transform-origin: top center; }
-        .dashboard-closing #main-music-card { animation: std-dashboard-out 0.55s var(--apple-ease) forwards; transform-origin: top center; }
+        .dashboard-opening #main-music-card { animation: std-pop-in 0.5s var(--apple-spring) forwards; transform-origin: top center; }
+        .dashboard-closing #main-music-card { animation: std-pop-out 0.4s var(--apple-ease) forwards; transform-origin: top center; }
         /* NEW: Kart-Dashboard bekommt dieselben Pop-In/Pop-Out-Animationen wie das Musik-
            Dashboard, statt nur auf den grid-template-rows-Trick des Wrappers angewiesen
            zu sein - sorgt für ein einheitliches, "fertig" wirkendes Schließverhalten. */
@@ -3570,8 +3570,8 @@
            fälschlicherweise als Nachfahren-Selektoren geschrieben (Leerzeichen = "Kind-
            Element davon"), wodurch sie nie griffen. Jetzt als zusammengesetzter Selektor
            auf demselben Element (kein Leerzeichen). */
-        #kart-card-wrapper.kart-dashboard-opening { animation: std-dashboard-in 0.65s var(--apple-spring) forwards; transform-origin: top center; }
-        #kart-card-wrapper.kart-dashboard-closing { animation: std-dashboard-out 0.55s var(--apple-ease) forwards; transform-origin: top center; }
+        #kart-card-wrapper.kart-dashboard-opening { animation: std-pop-in 0.5s var(--apple-spring) forwards; transform-origin: top center; }
+        #kart-card-wrapper.kart-dashboard-closing { animation: std-pop-out 0.4s var(--apple-ease) forwards; transform-origin: top center; }
         body.low-end #kart-card-wrapper.kart-dashboard-opening, body.low-end #kart-card-wrapper.kart-dashboard-closing {
             opacity: 1 !important; visibility: visible !important; transform: none !important; animation: none !important;
         }
@@ -3580,9 +3580,6 @@
 
         @keyframes std-pop-in { 0% { opacity: 0; transform: scale(0.8) translate3d(0, -20px, 0); } 100% { opacity: 1; transform: scale(1) translate3d(0, 0, 0); } }
         @keyframes std-pop-out { 0% { opacity: 1; transform: scale(1) translate3d(0, 0, 0); } 100% { opacity: 0; transform: scale(0.8) translate3d(0, 20px, 0); } }
-        /* Dashboard-spezifische Variante: sanfterer Einstieg (weniger aggressiver Scale-Sprung) */
-        @keyframes std-dashboard-in { 0% { opacity: 0; transform: scale(0.88) translate3d(0, -16px, 0); } 100% { opacity: 1; transform: scale(1) translate3d(0, 0, 0); } }
-        @keyframes std-dashboard-out { 0% { opacity: 1; transform: scale(1) translate3d(0, 0, 0); } 100% { opacity: 0; transform: scale(0.88) translate3d(0, 14px, 0); } }
 
         /* Apple Aura Background */
         #liquid-blobs {
@@ -12667,7 +12664,7 @@
                         if (musicCardLayoutWrapper) musicCardLayoutWrapper.classList.add('hidden');
                         if (musicCardWrapper) musicCardWrapper.classList.remove('dashboard-closing');
                     }
-                }, isLowEndClose ? 50 : 1100); 
+                }, isLowEndClose ? 50 : 900); 
                 
                 if (mainMusicCard && mainMusicCard.classList.contains('offline')) {
                     if (miniTitle) miniTitle.innerText = t('mini_dashboard_minimized');
