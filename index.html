@@ -8741,15 +8741,46 @@
             } catch (e) { return []; }
         }
 
+        // NEU v24.109: Beim Seitenstart alle gespeicherten Cover sofort in den
+        // In-Memory-Cache (trackCoverMemoryCache) laden. Dadurch steht beim nächsten
+        // Abspielen eines bereits bekannten Songs die Cover-URL SOFORT bereit - kein
+        // Netzwerk-Request, kein Flackern, keine Ladeanzeige. Das Cover erscheint instant.
+        function prewarmCoverCacheFromStorage() {
+            try {
+                const list = getRecentlyPlayed();
+                list.forEach(item => {
+                    if (!item.art || !item.title) return;
+                    const key = `${cleanTrackTitle(item.title)}___${item.artist || ''}`;
+                    if (!trackCoverMemoryCache.has(key)) {
+                        trackCoverMemoryCache.set(key, item.art);
+                    }
+                });
+            } catch (e) {}
+        }
+
         function addToRecentlyPlayed(title, artist, art) {
             if (!title) return;
             try {
                 let list = getRecentlyPlayed();
                 // Dedupe: falls der letzte Eintrag exakt derselbe Song ist, nicht doppelt speichern
-                if (list.length > 0 && list[0].title === title && list[0].artist === artist) return;
+                if (list.length > 0 && list[0].title === title && list[0].artist === artist) {
+                    // NEU v24.109: auch bei Dedupe das Cover aktualisieren, falls es inzwischen
+                    // besser aufgelöst wurde (z.B. iTunes statt Spotify-Thumbnail)
+                    if (art && art !== list[0].art) {
+                        list[0].art = art;
+                        localStorage.setItem(RECENTLY_PLAYED_KEY, JSON.stringify(list));
+                    }
+                    return;
+                }
                 list.unshift({ title, artist: artist || '', art: art || '', ts: Date.now() });
                 if (list.length > RECENTLY_PLAYED_MAX) list = list.slice(0, RECENTLY_PLAYED_MAX);
                 localStorage.setItem(RECENTLY_PLAYED_KEY, JSON.stringify(list));
+                // NEU v24.109: Cover sofort in den In-Memory-Cache schreiben, damit
+                // trackCoverMemoryCache beim nächsten Abspielen dieses Songs sofort trifft
+                if (art) {
+                    const cacheKey = `${cleanTrackTitle(title)}___${artist || ''}`;
+                    trackCoverMemoryCache.set(cacheKey, art);
+                }
                 renderRecentlyPlayed();
             } catch (e) { /* localStorage voll o.ä. - stillschweigend ignorieren */ }
         }
@@ -8765,15 +8796,21 @@
                 return;
             }
             if (emptyEl) emptyEl.classList.add('hidden');
-            listEl.innerHTML = list.map(item => `
+            listEl.innerHTML = list.map(item => {
+                // NEU v24.109: Cache-Hit prüfen - falls das Cover zwischenzeitlich besser
+                // aufgelöst wurde (z.B. via iTunes/Deezer), das bessere Bild nehmen
+                const cacheKey = `${cleanTrackTitle(item.title)}___${item.artist || ''}`;
+                const cachedArt = trackCoverMemoryCache.get(cacheKey) || item.art || '';
+                return `
                 <div class="recently-played-item">
-                    <img src="${item.art ? escapeHTML(item.art) : ''}" alt="" onerror="this.style.visibility='hidden'" loading="lazy">
+                    <img src="${escapeHTML(cachedArt)}" alt="${escapeHTML(item.title)}" loading="eager" decoding="async"
+                         onerror="this.src=''; this.style.background='rgba(255,255,255,0.06)'; this.removeAttribute('src');">
                     <div class="recently-played-info">
                         <span class="recently-played-title">${escapeHTML(item.title)}</span>
                         <span class="recently-played-artist">${escapeHTML(item.artist)}</span>
                     </div>
-                </div>
-            `).join('');
+                </div>`;
+            }).join('');
         }
 
         window.toggleRecentlyPlayed = function() {
@@ -14363,6 +14400,7 @@
             // Sekunden Verzögerung für etwas, das mit dem eigentlichen Musik-Status gar nichts
             // zu tun hat. fetchMusicData() läuft jetzt sofort und unabhängig, Zeit-Sync
             // parallel im Hintergrund statt blockierend davor.
+            prewarmCoverCacheFromStorage(); // NEU v24.109: Cover der letzten 10 Songs sofort in Memory-Cache laden
             fetchMusicData();
             syncWorldwideTime();
             setInterval(syncWorldwideTime, 600000);
