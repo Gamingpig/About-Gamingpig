@@ -5752,11 +5752,12 @@
                         </div>
 
                         <div id="controls-container" class="relative z-10 flex items-center justify-between px-1 sm:px-2 w-full shrink-0 transition-all">
-                            <div class="inline-flex items-center gap-1 xxs:gap-1.5 xs:gap-2.5 px-2 py-1 xxs:px-3 xxs:py-1.5 xs:px-4 xs:py-2 bg-white/5 rounded-full border border-white/10">
-                                <span id="status-dot" class="h-1 w-1 xxs:h-1.5 xxs:w-1.5 xs:h-2 xs:w-2 rounded-full bg-blue-500"></span>
+                            <div class="inline-flex items-center gap-1 xxs:gap-1.5 xs:gap-2.5 px-2 py-1 xxs:px-3 xxs:py-1.5 xs:px-4 xs:py-2 bg-white/5 rounded-full border border-white/10 text-[0.5rem] xxs:text-[0.65rem] xs:text-[0.75rem] font-extrabold uppercase tracking-[1px] xs:tracking-[2px] text-white/70">
+                                <span id="status-dot" class="h-1 w-1 xxs:h-1.5 xxs:w-1.5 xs:h-2 xs:w-2 rounded-full bg-blue-500 shrink-0"></span>
                                 <div class="eq-bars hidden xxs:flex">
                                     <div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div>
                                 </div>
+                                <span id="status-text">Spotify</span>
                             </div>
                             
                             <button onclick="toggleLyrics(true)" id="btn-lyrics-show" aria-label="Lyrics anzeigen" class="p-1 xxs:p-1.5 xs:p-2 text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all" title="Lyrics anzeigen">
@@ -7864,13 +7865,13 @@
 
         function cleanTrackTitle(title) {
             if (!title) return '';
+            // Nur echte Metadaten-Artefakte entfernen die die Suche stören,
+            // aber Titel-Bestandteile wie "(aus The Voice Kids...)" behalten,
+            // da diese für den korrekten Track-Match via iTunes-Suche nötig sind.
             return title
-                .replace(/\s*\(aus\s+[^)]+\)/gi, '')
-                .replace(/\s*\(live[^)]*\)/gi, '')
-                .replace(/\s*-\s*live/gi, '')
                 .replace(/\b(feat|ft|prod)\.?\s+.*$/gi, '')
-                .replace(/\((?:official|music|video|audio|lyric|visualizer|deluxe|bonus|remastered|remaster|radio\s*edit)[^)]*\)/gi, '')
-                .replace(/\[(?:official|music|video|audio|lyric|visualizer|deluxe|bonus|remastered|remaster|radio\s*edit)[^\]]*\]/gi, '')
+                .replace(/\((?:official\s+music\s+video|official\s+video|official\s+audio|official\s+lyric|visualizer|radio\s*edit)[^)]*\)/gi, '')
+                .replace(/\[(?:official\s+music\s+video|official\s+video|official\s+audio|official\s+lyric|visualizer|radio\s*edit)[^\]]*\]/gi, '')
                 .trim();
         }
 
@@ -13934,10 +13935,13 @@
                 mainSpotifyUrl = data.track.external_urls.spotify;
             }
 
-            // Apple Music ID direkt aus platform_links oder track_url extrahieren
-            const platformLinks = data.track ? (data.track.platform_links || null) : null;
-            const trackUrlForApple = (data.track && data.track.track_url) || null;
-            const resolvedPlatformLinks = platformLinks || trackUrlForApple;
+            // Alle verfügbaren Apple-Music-Links in einem Objekt zusammenfassen
+            // damit extractAppleId alle Quellen durchsuchen kann
+            const platformLinks = data.track ? {
+                ...(data.track.platform_links || {}),
+                track_url: data.track.track_url || null
+            } : null;
+            const resolvedPlatformLinks = platformLinks;
 
             let rawArtwork = (data.track && data.track.artwork_url) || '';
             let isBrokenNpcProxy = rawArtwork.includes('npc-api.aikins.xyz/v1/artwork/');
@@ -14103,7 +14107,11 @@
                     mArtist.innerText = rawArtist;
                     if (lyricsMiniArtist) { lyricsMiniArtist.innerText = rawArtist; lyricsMiniArtist.removeAttribute('data-i18n-placeholder'); }
                 }
-                // Provider-Name nicht anzeigen – nur EQ-Bars + Status-Dot genügen
+                // Provider-Name im Status-Chip anzeigen (z.B. "Spotify")
+                const mText = document.getElementById('status-text');
+                if (mText && data.provider) {
+                    mText.innerText = data.provider.charAt(0).toUpperCase() + data.provider.slice(1);
+                }
 
                 syncStandByTrackInfo(trackTitle, rawArtist, finalArtUrl, isNewTrack, isPlaying);
                 extractDominantColor(finalArtUrl);
