@@ -13899,81 +13899,9 @@
 
             renderMusicServicePicker(data);
 
-            const trackKey = getTrackCacheKey(trackTitle, cleanArtist);
-            if (trackKey !== lastResolvedTrackKey) {
-                lastResolvedTrackKey = trackKey;
-                currentResolvedArtUrl = null;
-            }
-
-            if (!currentResolvedArtUrl && trackCoverMemoryCache.has(trackKey)) {
-                currentResolvedArtUrl = trackCoverMemoryCache.get(trackKey);
-            }
-
-            let rawArtwork = (data.track && data.track.artwork_url) || '';
-            let isBrokenNpcProxy = rawArtwork.includes('npc-api.aikins.xyz/v1/artwork/');
-
-            let imgUrl = currentResolvedArtUrl || (!isBrokenNpcProxy && rawArtwork ? rawArtwork : fallbackImg);
-            if (!imgUrl || imgUrl.trim() === "") {
-                imgUrl = fallbackImg;
-            }
-
-            // Proaktiver Fallback-Start: Sobald wir keinen sauberen CDN-Link haben, sofort im Hintergrund auflösen
-            if (!currentResolvedArtUrl && (isBrokenNpcProxy || !rawArtwork || imgUrl === fallbackImg)) {
-                findBestArtworkFallback(
-                    trackTitle || (mTitle ? mTitle.innerText : ''),
-                    cleanArtist || (mArtist ? mArtist.innerText : ''),
-                    mainSpotifyUrl,
-                    data.track ? data.track.album : null,
-                    data.track ? (data.track.platform_links || data.track.track_url) : null
-                ).then(resolved => {
-                    if (resolved && resolved !== fallbackImg) {
-                        currentResolvedArtUrl = resolved;
-                        setCachedCover(trackKey, resolved);
-                        updateAllCoverVisuals(resolved);
-                    }
-                });
-            }
-
-            let currentApiProgress = data.progress_ms !== undefined ? data.progress_ms : (data.track && data.track.progress_ms) || 0;
-
-            if (currentApiProgress === lastSeenProgressMs && trackIsPlaying === isPlaying && !isNewTrack) {
-                return;
-            }
-            lastSeenProgressMs = currentApiProgress;
-
-            let apiProgress = currentApiProgress;
-            if (isPlaying) {
-                let dataAge = 0;
-                let serverTimestamp = data.timestamp || data.updated_at || data.fetched_at || (data.track && data.track.timestamp);
-                
-                if (serverTimestamp) {
-                    let st = typeof serverTimestamp === 'number'
-                        ? (serverTimestamp < 20000000000 ? serverTimestamp * 1000 : serverTimestamp)
-                        : new Date(serverTimestamp).getTime();
-
-                    let trueNow = getTrueDateNow();
-                    let rawAge = trueNow - st;
-                    
-                    let maxAllowedAge = (data.track && data.track.duration_ms) ? data.track.duration_ms : 600000;
-
-                    if (rawAge >= 0 && rawAge <= maxAllowedAge) {
-                        dataAge = rawAge;
-                    } else {
-                        dataAge = 0; 
-                    }
-                } else {
-                    dataAge = 0; 
-                }
-                
-                apiProgress += dataAge + dynamicLatency;
-            }
-            
-            const trackDuration = (data.track && data.track.duration_ms) || data.duration_ms || 0;
-            if (trackDuration && apiProgress > trackDuration) {
-                apiProgress = trackDuration;
-            }
-
-            // Spotify-URL extrahieren (für authentisches Spotify CDN Cover via oEmbed)
+            // ── Alle Platform-Links vorab extrahieren ────────────────────────────────
+            // WICHTIG: muss VOR dem proaktiven findBestArtworkFallback-Aufruf stehen,
+            // damit mainSpotifyUrl und platformLinks dort schon gesetzt sind.
             let mainSpotifyUrl = (data.track && (data.track.url || data.track.track_url)) || null;
             if (!mainSpotifyUrl && data.track && data.track.uri && data.track.uri.startsWith('spotify:')) {
                 const uriParts = data.track.uri.split(':');
@@ -13986,6 +13914,93 @@
             }
             if (!mainSpotifyUrl && data.track && data.track.external_urls && data.track.external_urls.spotify) {
                 mainSpotifyUrl = data.track.external_urls.spotify;
+            }
+
+            // Apple Music ID direkt aus platform_links oder track_url extrahieren
+            const platformLinks = data.track ? (data.track.platform_links || null) : null;
+            const trackUrlForApple = (data.track && data.track.track_url) || null;
+            const resolvedPlatformLinks = platformLinks || trackUrlForApple;
+
+            let rawArtwork = (data.track && data.track.artwork_url) || '';
+            let isBrokenNpcProxy = rawArtwork.includes('npc-api.aikins.xyz/v1/artwork/');
+
+            const trackKey = getTrackCacheKey(trackTitle, cleanArtist);
+            if (trackKey !== lastResolvedTrackKey) {
+                lastResolvedTrackKey = trackKey;
+                currentResolvedArtUrl = null;
+            }
+
+            if (!currentResolvedArtUrl && trackCoverMemoryCache.has(trackKey)) {
+                currentResolvedArtUrl = trackCoverMemoryCache.get(trackKey);
+            }
+
+            // Proaktive Cover-Auflösung: sofort für jeden neuen Track oder gebrochene Proxy-URL starten.
+            // IMMER für neue Songs (damit auch ohne Spotify-Link Apple/Deezer greift), nicht nur bei Proxy-Fehlern.
+            if (!currentResolvedArtUrl && (isBrokenNpcProxy || !rawArtwork || isNewTrack)) {
+                findBestArtworkFallback(
+                    trackTitle,
+                    cleanArtist,
+                    mainSpotifyUrl,
+                    data.track ? data.track.album : null,
+                    resolvedPlatformLinks
+                ).then(resolved => {
+                    if (resolved && resolved !== fallbackImg) {
+                        currentResolvedArtUrl = resolved;
+                        setCachedCover(trackKey, resolved);
+                        // Sofort alle visuellen Elemente aktualisieren
+                        const sbBg = document.getElementById('standby-bg');
+                        const sbCardBg = document.getElementById('standby-card-blur-bg');
+                        if (mArtwork && mArtwork.src !== resolved) mArtwork.src = resolved;
+                        if (mAmbient) mAmbient.style.backgroundImage = `url('${resolved}')`;
+                        if (mGlow && coverGlowEnabled) mGlow.style.backgroundImage = `url('${resolved}')`;
+                        const lyricsAmbientBg = document.getElementById('lyrics-ambient-bg');
+                        if (lyricsAmbientBg) lyricsAmbientBg.style.backgroundImage = `url('${resolved}')`;
+                        if (sbBg) sbBg.style.backgroundImage = `url('${resolved}')`;
+                        if (sbCardBg) sbCardBg.style.backgroundImage = `url('${resolved}')`;
+                        extractDominantColor(resolved);
+                        syncAllCoverConsumers();
+                    }
+                });
+            }
+
+            // ── Progress-Extraktion und Dedup-Check ─────────────────────────────────
+            let currentApiProgress = data.progress_ms !== undefined ? data.progress_ms : (data.track && data.track.progress_ms) || 0;
+
+            if (currentApiProgress === lastSeenProgressMs && trackIsPlaying === isPlaying && !isNewTrack) {
+                return;
+            }
+            lastSeenProgressMs = currentApiProgress;
+
+            let apiProgress = currentApiProgress;
+            if (isPlaying) {
+                let dataAge = 0;
+                let serverTimestamp = data.timestamp || data.updated_at || data.fetched_at || (data.track && data.track.timestamp);
+
+                if (serverTimestamp) {
+                    let st = typeof serverTimestamp === 'number'
+                        ? (serverTimestamp < 20000000000 ? serverTimestamp * 1000 : serverTimestamp)
+                        : new Date(serverTimestamp).getTime();
+
+                    let trueNow = getTrueDateNow();
+                    let rawAge = trueNow - st;
+
+                    let maxAllowedAge = (data.track && data.track.duration_ms) ? data.track.duration_ms : 600000;
+
+                    if (rawAge >= 0 && rawAge <= maxAllowedAge) {
+                        dataAge = rawAge;
+                    } else {
+                        dataAge = 0;
+                    }
+                } else {
+                    dataAge = 0;
+                }
+
+                apiProgress += dataAge + dynamicLatency;
+            }
+
+            const trackDuration = (data.track && data.track.duration_ms) || data.duration_ms || 0;
+            if (trackDuration && apiProgress > trackDuration) {
+                apiProgress = trackDuration;
             }
 
             const updateAllCoverVisuals = (srcUrl) => {
@@ -14079,7 +14094,7 @@
                 if (isNewTrack) {
                     addToRecentlyPlayed(trackTitle, rawArtist, finalArtUrl);
                     if (!isFirstLoad && isPlaying) {
-                        triggerDynamicIsland(trackTitle, rawArtist, imgUrl);
+                        triggerDynamicIsland(trackTitle, rawArtist, finalArtUrl);
                         haptic(10);
                     }
                     totalMs = trackDuration;
