@@ -7929,10 +7929,23 @@
             });
         }
 
+        const MAX_COVER_CACHE_SIZE = 10;
         const trackCoverMemoryCache = new Map();
         let currentResolvedArtUrl = null;
         let lastResolvedTrackKey = '';
         let lastKnownMusicData = null;
+
+        function setCachedCover(key, url) {
+            if (!key || !url) return;
+            if (trackCoverMemoryCache.has(key)) {
+                trackCoverMemoryCache.delete(key);
+            }
+            trackCoverMemoryCache.set(key, url);
+            while (trackCoverMemoryCache.size > MAX_COVER_CACHE_SIZE) {
+                const oldestKey = trackCoverMemoryCache.keys().next().value;
+                trackCoverMemoryCache.delete(oldestKey);
+            }
+        }
 
         async function findBestArtworkFallback(title, artist, spotifyUrl = null, album = null, platformLinks = null) {
             const cacheKey = getTrackCacheKey(title, artist);
@@ -7944,6 +7957,8 @@
             const cleanT = cleanTrackTitle(title || '');
             const cleanA = cleanArtistName(artist || '');
             const candidates = [];
+            const controller = new AbortController();
+            const signal = controller.signal;
 
             // 0. Apple Music / iTunes ID Lookup (Präzise 100% Trefferquote)
             if (platformLinks) {
@@ -7952,7 +7967,7 @@
                     const match = appleUrl.match(/[?&]i=(\d+)/) || appleUrl.match(/\/album\/[^\/]+\/(\d+)/) || appleUrl.match(/\/id(\d+)/);
                     if (match && match[1]) {
                         candidates.push(
-                            fetch(`https://itunes.apple.com/lookup?id=${match[1]}`)
+                            fetch(`https://itunes.apple.com/lookup?id=${match[1]}`, { signal })
                                 .then(r => r.ok ? r.json() : Promise.reject())
                                 .then(d => (d && d.results && d.results[0] && d.results[0].artworkUrl100)
                                     ? d.results[0].artworkUrl100.replace('100x100bb', '600x600bb')
@@ -7966,7 +7981,7 @@
             // 1. Spotify oEmbed (offizielles, authentisches Spotify CDN Cover)
             if (spotifyUrl && typeof spotifyUrl === 'string' && spotifyUrl.includes('spotify.com')) {
                 candidates.push(
-                    fetch(`https://open.spotify.com/oembed?url=${encodeURIComponent(spotifyUrl)}`)
+                    fetch(`https://open.spotify.com/oembed?url=${encodeURIComponent(spotifyUrl)}`, { signal })
                         .then(r => r.ok ? r.json() : Promise.reject())
                         .then(d => (d && d.thumbnail_url) ? d.thumbnail_url : Promise.reject())
                 );
@@ -7976,7 +7991,7 @@
             if (cleanA && cleanT) {
                 const q1 = encodeURIComponent(`${cleanA} ${cleanT}`);
                 candidates.push(
-                    fetch(`https://itunes.apple.com/search?term=${q1}&media=music&limit=1`)
+                    fetch(`https://itunes.apple.com/search?term=${q1}&media=music&limit=1`, { signal })
                         .then(r => r.ok ? r.json() : Promise.reject())
                         .then(d => (d && d.results && d.results[0] && d.results[0].artworkUrl100)
                             ? d.results[0].artworkUrl100.replace('100x100bb', '600x600bb')
@@ -7997,7 +8012,7 @@
             if (cleanT) {
                 const q2 = encodeURIComponent(cleanT);
                 candidates.push(
-                    fetch(`https://itunes.apple.com/search?term=${q2}&media=music&limit=1`)
+                    fetch(`https://itunes.apple.com/search?term=${q2}&media=music&limit=1`, { signal })
                         .then(r => r.ok ? r.json() : Promise.reject())
                         .then(d => (d && d.results && d.results[0] && d.results[0].artworkUrl100)
                             ? d.results[0].artworkUrl100.replace('100x100bb', '600x600bb')
@@ -8011,8 +8026,9 @@
             try {
                 // Parallel-Abfrage: wer zuerst antwortet, gewinnt!
                 const fastestCover = await Promise.any(candidates);
+                controller.abort(); // Breche restliche Anfragen ab, spart Bandbreite & Speicher
                 if (fastestCover) {
-                    trackCoverMemoryCache.set(cacheKey, fastestCover);
+                    setCachedCover(cacheKey, fastestCover);
                     return fastestCover;
                 }
             } catch (e) {}
@@ -8710,7 +8726,7 @@
                     if (!item.art || !item.title) return;
                     const key = getTrackCacheKey(item.title, item.artist);
                     if (!trackCoverMemoryCache.has(key)) {
-                        trackCoverMemoryCache.set(key, item.art);
+                        setCachedCover(key, item.art);
                     }
                 });
             } catch (e) {}
@@ -8737,7 +8753,7 @@
                 // trackCoverMemoryCache beim nächsten Abspielen dieses Songs sofort trifft
                 if (art) {
                     const cacheKey = getTrackCacheKey(title, artist);
-                    trackCoverMemoryCache.set(cacheKey, art);
+                    setCachedCover(cacheKey, art);
                 }
                 renderRecentlyPlayed();
             } catch (e) { /* localStorage voll o.ä. - stillschweigend ignorieren */ }
@@ -13928,7 +13944,7 @@
                 ).then(resolved => {
                     if (resolved && resolved !== fallbackImg) {
                         currentResolvedArtUrl = resolved;
-                        trackCoverMemoryCache.set(trackKey, resolved);
+                        setCachedCover(trackKey, resolved);
                         updateAllCoverVisuals(resolved);
                     }
                 });
@@ -14015,7 +14031,7 @@
                         const finalFallback = fallbackUrl || fallbackImg;
                         currentResolvedArtUrl = finalFallback;
                         if (fallbackUrl) {
-                            trackCoverMemoryCache.set(trackKey, fallbackUrl);
+                            setCachedCover(trackKey, fallbackUrl);
                         }
                         updateAllCoverVisuals(finalFallback);
                     };
