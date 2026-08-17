@@ -5752,12 +5752,11 @@
                         </div>
 
                         <div id="controls-container" class="relative z-10 flex items-center justify-between px-1 sm:px-2 w-full shrink-0 transition-all">
-                            <div class="inline-flex items-center gap-1 xxs:gap-1.5 xs:gap-2.5 px-2 py-1 xxs:px-3 xxs:py-1.5 xs:px-4 xs:py-2 bg-white/5 rounded-full text-[0.4rem] xxs:text-[0.6rem] xs:text-[0.7rem] font-extrabold uppercase tracking-[0.5px] xxs:tracking-[1px] xs:tracking-[2px] border border-white/10 text-white">
+                            <div class="inline-flex items-center gap-1 xxs:gap-1.5 xs:gap-2.5 px-2 py-1 xxs:px-3 xxs:py-1.5 xs:px-4 xs:py-2 bg-white/5 rounded-full border border-white/10">
                                 <span id="status-dot" class="h-1 w-1 xxs:h-1.5 xxs:w-1.5 xs:h-2 xs:w-2 rounded-full bg-blue-500"></span>
                                 <div class="eq-bars hidden xxs:flex">
                                     <div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div>
                                 </div>
-                                <span id="status-text">Zen Mode</span>
                             </div>
                             
                             <button onclick="toggleLyrics(true)" id="btn-lyrics-show" aria-label="Lyrics anzeigen" class="p-1 xxs:p-1.5 xs:p-2 text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all" title="Lyrics anzeigen">
@@ -13814,8 +13813,9 @@
             const hasTrack = data && data.track && Boolean(data.track.title || data.track.name);
             const isPlaying = data && data.status === "playing";
 
-            // Fall 1: Wirklich gar kein Track vorhanden (weder laufend noch pausiert)
-            if (!hasTrack) {
+            // Entweder läuft was oder es ist Ruhe — Pause gibt es nicht.
+            // Wenn pausiert oder kein Track → sofort Offline-/Ruhe-Zustand.
+            if (!hasTrack || !isPlaying) {
                 consecutiveEmptyPolls++;
                 if (consecutiveEmptyPolls < 3) {
                     return;
@@ -13844,7 +13844,7 @@
                 return;
             }
 
-            // Fall 2: Ein Track ist vorhanden (egal ob spielend oder pausiert!)
+            // Ab hier: Song läuft wirklich.
             consecutiveEmptyPolls = 0;
 
             if (offlineTimeout) {
@@ -13853,23 +13853,12 @@
             }
 
             if (mainMusicCard) {
-                mainMusicCard.classList.remove('offline');
-                if (isPlaying) {
-                    mainMusicCard.classList.add('playing');
-                    mainMusicCard.classList.remove('paused');
-                } else {
-                    mainMusicCard.classList.add('paused');
-                    mainMusicCard.classList.remove('playing');
-                }
+                mainMusicCard.classList.remove('offline', 'paused');
+                mainMusicCard.classList.add('playing');
             }
 
-            if (isPlaying) {
-                if (mHeader) mHeader.innerText = "Gamingpig is listening to";
-                if (mDot) mDot.className = "h-1 w-1 xxs:h-1.5 xxs:w-1.5 xs:h-2 xs:w-2 rounded-full bg-green-500 active-dot";
-            } else {
-                if (mHeader) mHeader.innerText = "Pausiert";
-                if (mDot) mDot.className = "h-1 w-1 xxs:h-1.5 xxs:w-1.5 xs:h-2 xs:w-2 rounded-full bg-amber-500/80";
-            }
+            if (mHeader) mHeader.innerText = "Gamingpig is listening to";
+            if (mDot) mDot.className = "h-1 w-1 xxs:h-1.5 xxs:w-1.5 xs:h-2 xs:w-2 rounded-full bg-green-500 active-dot";
             
             const rawArtist = (data.track && data.track.artist) || "Unknown";
             const cleanArtist = rawArtist.replace(/\s*•\s*From Smart Shuffle/gi, '').trim();
@@ -14085,7 +14074,7 @@
                     mArtist.innerText = rawArtist;
                     if (lyricsMiniArtist) { lyricsMiniArtist.innerText = rawArtist; lyricsMiniArtist.removeAttribute('data-i18n-placeholder'); }
                 }
-                if (mText) mText.innerText = data.provider || t('status_streaming_fallback');
+                // Provider-Name nicht anzeigen – nur EQ-Bars + Status-Dot genügen
 
                 syncStandByTrackInfo(trackTitle, rawArtist, finalArtUrl, isNewTrack, isPlaying);
                 extractDominantColor(finalArtUrl);
