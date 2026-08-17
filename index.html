@@ -13367,6 +13367,7 @@
                     const charSpan = document.getElementById(`char-${idx}-${wIdx}-${cIdx}`);
                     if (charSpan) {
                         charSpan.classList.add('char-passed');
+                        charSpan.classList.remove('char-active');
                     }
                 }
             });
@@ -13384,7 +13385,7 @@
                 for (let cIdx = 0; cIdx < tok.cleanText.length; cIdx++) {
                     const charSpan = document.getElementById(`char-${idx}-${wIdx}-${cIdx}`);
                     if (charSpan) {
-                        charSpan.classList.remove('char-passed');
+                        charSpan.classList.remove('char-passed', 'char-active');
                     }
                 }
             });
@@ -13397,20 +13398,45 @@
             const words = [];
             line.tokens.forEach((tok, wIdx) => {
                 const wSpan = document.getElementById(`word-${idx}-${wIdx}`);
-                const cSpans = [];
-                for (let cIdx = 0; cIdx < tok.cleanText.length; cIdx++) {
-                    const cSpan = document.getElementById(`char-${idx}-${wIdx}-${cIdx}`);
-                    if (cSpan) cSpans.push(cSpan);
+                const tokLen = tok.cleanText.length;
+                let currentTokWeightPassed = 0;
+                let pureText = tok.cleanText.replace(/[.,!?]/g, '');
+                let totalWordWeight = 0;
+                for (let c of pureText) {
+                    totalWordWeight += getCharWeight(c, tok.isPhraseEnd, /[aeiouyäöü]/i.test(c));
                 }
+                if (totalWordWeight <= 0) totalWordWeight = Math.max(1, tokLen);
+
+                const cData = [];
+                for (let cIdx = 0; cIdx < tokLen; cIdx++) {
+                    const char = tok.cleanText[cIdx];
+                    let cWeight = getCharWeight(char, tok.isPhraseEnd, /[aeiouyäöü]/i.test(char));
+                    if (cWeight === 0 && totalWordWeight > 0) cWeight = totalWordWeight * 0.05;
+                    let charStartRatio = totalWordWeight > 0 ? (currentTokWeightPassed / totalWordWeight) : (cIdx / tokLen);
+                    let charEndRatio = totalWordWeight > 0 ? ((currentTokWeightPassed + cWeight) / totalWordWeight) : ((cIdx + 1) / tokLen);
+                    currentTokWeightPassed += cWeight;
+
+                    const cSpan = document.getElementById(`char-${idx}-${wIdx}-${cIdx}`);
+                    cData.push({
+                        el: cSpan,
+                        startRatio: charStartRatio,
+                        endRatio: charEndRatio,
+                        lastState: 'none'
+                    });
+                }
+
                 const start = typeof tok.startMs === 'number' ? tok.startMs : tok.timeMs;
                 const dur = typeof tok.duration === 'number' ? tok.duration : 100;
+                const holdScale = Math.min(1.16, Math.max(1.02, 1.0 + Math.sqrt(dur / 1000) * 0.10)).toFixed(3);
+
                 words.push({
                     startMs: start,
                     endMs: typeof tok.endMs === 'number' ? tok.endMs : (start + dur),
                     duration: dur,
-                    cleanLen: tok.cleanText.length,
+                    holdScale: holdScale,
+                    cleanLen: tokLen,
                     span: wSpan,
-                    chars: cSpans
+                    chars: cData
                 });
             });
 
@@ -13518,7 +13544,11 @@
                                 wSpan.classList.remove('word-active', 'word-passed');
                             }
                             for (let c = 0; c < word.chars.length; c++) {
-                                word.chars[c].classList.remove('char-passed');
+                                const charObj = word.chars[c];
+                                if (charObj.el && charObj.lastState !== 'none') {
+                                    charObj.lastState = 'none';
+                                    charObj.el.classList.remove('char-passed', 'char-active');
+                                }
                             }
                         } else if (adjustedMs >= word.endMs) {
                             if (wSpan) {
@@ -13527,7 +13557,12 @@
                                 wSpan.classList.remove('word-active');
                             }
                             for (let c = 0; c < word.chars.length; c++) {
-                                word.chars[c].classList.add('char-passed');
+                                const charObj = word.chars[c];
+                                if (charObj.el && charObj.lastState !== 'passed') {
+                                    charObj.lastState = 'passed';
+                                    charObj.el.classList.add('char-passed');
+                                    charObj.el.classList.remove('char-active');
+                                }
                             }
                         } else {
                             const wordElapsed = adjustedMs - word.startMs;
@@ -13536,16 +13571,36 @@
 
                             if (wSpan) {
                                 wSpan.style.setProperty('--fill-percent', fillPercent);
+                                wSpan.style.setProperty('--word-hold-scale', word.holdScale);
                                 wSpan.classList.add('word-active');
                                 wSpan.classList.remove('word-passed');
                             }
 
-                            const passedChars = Math.floor(wordProgress * word.cleanLen);
                             for (let c = 0; c < word.chars.length; c++) {
-                                if (c < passedChars) {
-                                    word.chars[c].classList.add('char-passed');
+                                const charObj = word.chars[c];
+                                if (!charObj.el) continue;
+                                let state = 'none';
+                                if (wordProgress === 0) {
+                                    state = 'none';
+                                } else if (wordProgress >= charObj.endRatio) {
+                                    state = 'passed';
+                                } else if (wordProgress >= charObj.startRatio && wordProgress < charObj.endRatio) {
+                                    state = 'active';
                                 } else {
-                                    word.chars[c].classList.remove('char-passed');
+                                    state = 'none';
+                                }
+
+                                if (state !== charObj.lastState) {
+                                    charObj.lastState = state;
+                                    if (state === 'passed') {
+                                        charObj.el.classList.add('char-passed');
+                                        charObj.el.classList.remove('char-active');
+                                    } else if (state === 'active') {
+                                        charObj.el.classList.add('char-active');
+                                        charObj.el.classList.remove('char-passed');
+                                    } else {
+                                        charObj.el.classList.remove('char-passed', 'char-active');
+                                    }
                                 }
                             }
                         }
