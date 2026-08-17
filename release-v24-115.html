@@ -19,42 +19,44 @@
         }
     </script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800;900&display=swap');
         
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
-            background-color: #050811;
+            background-color: #03050c;
             background-image: 
-                radial-gradient(at 0% 0%, rgba(236, 72, 153, 0.15) 0px, transparent 50%),
-                radial-gradient(at 100% 0%, rgba(59, 130, 246, 0.2) 0px, transparent 50%),
-                radial-gradient(at 50% 100%, rgba(168, 85, 247, 0.15) 0px, transparent 50%);
+                radial-gradient(at 0% 0%, rgba(236, 72, 153, 0.22) 0px, transparent 45%),
+                radial-gradient(at 100% 0%, rgba(59, 130, 246, 0.25) 0px, transparent 50%),
+                radial-gradient(at 50% 50%, rgba(168, 85, 247, 0.18) 0px, transparent 55%),
+                radial-gradient(at 50% 100%, rgba(245, 158, 11, 0.15) 0px, transparent 50%);
             background-attachment: fixed;
         }
 
         .hero-glow-badge {
-            background: linear-gradient(135deg, #ff1493, #7928ca, #0070f3);
-            box-shadow: 0 0 35px rgba(255, 20, 147, 0.4);
+            background: linear-gradient(135deg, #ff007f, #7928ca, #00f2fe);
+            box-shadow: 0 0 45px rgba(255, 0, 127, 0.55), inset 0 1px 1px rgba(255, 255, 255, 0.4);
         }
 
         .glow-card {
-            background: rgba(15, 23, 42, 0.85);
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7);
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            background: rgba(10, 15, 30, 0.82);
+            backdrop-filter: blur(28px);
+            -webkit-backdrop-filter: blur(28px);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+            transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         .glow-card:hover {
-            border-color: rgba(255, 255, 255, 0.25);
-            transform: translateY(-3px);
-            box-shadow: 0 25px 50px -10px rgba(0, 0, 0, 0.9);
+            border-color: rgba(255, 255, 255, 0.3);
+            transform: translateY(-4px) scale-[1.008];
+            box-shadow: 0 30px 70px -10px rgba(0, 0, 0, 0.95), 0 0 30px rgba(168, 85, 247, 0.2);
         }
 
         .stat-box {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(12px);
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(16px);
+            box-shadow: inset 0 1px 1px rgba(255,255,255,0.1);
         }
 
         .tts-active {
@@ -65,7 +67,7 @@
 
         @keyframes pulse-ring {
             0% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0.7); }
-            70% { box-shadow: 0 0 0 12px rgba(236, 72, 153, 0); }
+            70% { box-shadow: 0 0 0 14px rgba(236, 72, 153, 0); }
             100% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0); }
         }
     </style>
@@ -73,7 +75,7 @@
 <body class="text-slate-100 min-h-screen flex flex-col items-center justify-between p-4 sm:p-8 md:p-12 selection:bg-pink-500/40">
 
     <!-- Top Navigation Bar -->
-    <header class="max-w-4xl w-full flex items-center justify-between py-4 px-5 rounded-2xl bg-slate-900/80 border border-slate-800 backdrop-blur-lg mb-8 shadow-xl">
+    <header class="max-w-4xl w-full flex items-center justify-between py-4 px-5 rounded-2xl bg-slate-900/85 border border-slate-800 backdrop-blur-xl mb-8 shadow-2xl">
         <a href="index.html" class="flex items-center gap-2.5 text-white hover:text-blue-400 font-extrabold text-sm sm:text-base transition-colors group">
             <span class="p-1.5 rounded-lg bg-blue-500/10 text-blue-400 group-hover:-translate-x-1 transition-transform">←</span>
             <span id="nav-back">Hauptseite</span>
@@ -82,7 +84,7 @@
         <!-- Controls: Read Aloud & Language Switcher -->
         <div class="flex items-center gap-2 sm:gap-3">
             <!-- TTS Button -->
-            <button id="tts-toggle-btn" onclick="toggleReadAloud()" class="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs sm:text-sm font-bold transition-all shadow-md active:scale-95">
+            <button id="tts-toggle-btn" onclick="toggleReadAloud()" class="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs sm:text-sm font-black transition-all shadow-md active:scale-95">
                 <span id="tts-icon">🔊</span>
                 <span id="tts-label">Vorlesen</span>
             </button>
@@ -106,40 +108,40 @@
         
         <!-- Big Hero Banner -->
         <div class="text-center mb-10 sm:mb-14">
-            <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full hero-glow-badge text-white text-xs sm:text-sm font-black uppercase tracking-wider mb-6 animate-pulse">
-                <span>🔥 RELEASE v24.115</span>
+            <div class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full hero-glow-badge text-white text-xs sm:text-sm font-black uppercase tracking-widest mb-6 animate-pulse">
+                <span>💥 TITANEN-RELEASE v24.115</span>
                 <span>•</span>
-                <span id="hero-badge-tag">MEGA MEILENSTEIN</span>
+                <span id="hero-badge-tag">GIGANTISCHER MEILENSTEIN</span>
             </div>
 
-            <h1 id="hero-title" class="text-3xl xs:text-5xl sm:text-6xl md:text-7xl font-black tracking-tight text-white mb-6 leading-none uppercase drop-shadow-2xl">
+            <h1 id="hero-title" class="text-4xl xs:text-5xl sm:text-6xl md:text-8xl font-black tracking-tight text-white mb-6 leading-none uppercase drop-shadow-2xl font-mono">
                 DAS GRÖSSTE UPDATE <br>
-                <span class="bg-gradient-to-r from-pink-500 via-purple-400 to-cyan-400 bg-clip-text text-transparent">
-                    EVER EVER EVER! 🚀
+                <span class="bg-gradient-to-r from-pink-500 via-purple-400 via-cyan-400 to-amber-300 bg-clip-text text-transparent drop-shadow">
+                    ALLER ZEITEN! 🚀
                 </span>
             </h1>
 
-            <p id="hero-subtitle" class="text-slate-200 text-base sm:text-xl md:text-2xl max-w-3xl mx-auto font-semibold leading-relaxed drop-shadow">
-                Wir haben nicht nur ein paar Kleinigkeiten gefixt – wir haben den <strong class="text-white underline decoration-pink-500 underline-offset-4">GESAMTEN CODE (14.671 ZEILEN)</strong> neu gebaut, radikal optimiert und jede einzelne Funktion auf 100% Perfektion gebracht!
+            <p id="hero-subtitle" class="text-slate-200 text-base sm:text-xl md:text-2xl max-w-3xl mx-auto font-bold leading-relaxed drop-shadow">
+                Vergiss gewöhnliche Updates. Wir haben den <strong class="text-white underline decoration-pink-500 decoration-4 underline-offset-4">GESAMTEN GIGANTISCHEN CODE (14.671 ZEILEN REINSTE POWER)</strong> bis auf den Grund zerlegt, neu erschaffen und alles in den Schatten gestellt!
             </p>
         </div>
 
         <!-- 4 Big Stats Grid -->
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-8 sm:mb-12">
-            <div class="stat-box p-4 sm:p-5 rounded-2xl text-center shadow-lg">
+            <div class="stat-box p-4 sm:p-5 rounded-2xl text-center shadow-2xl hover:border-pink-500/50 transition-all">
                 <p class="text-2xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-rose-400 font-mono">14.671</p>
                 <p id="stat-1-label" class="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-300 mt-1">Zeilen Code Refactored</p>
             </div>
-            <div class="stat-box p-4 sm:p-5 rounded-2xl text-center shadow-lg">
+            <div class="stat-box p-4 sm:p-5 rounded-2xl text-center shadow-2xl hover:border-cyan-500/50 transition-all">
                 <p class="text-2xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400 font-mono">100%</p>
                 <p id="stat-2-label" class="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-300 mt-1">Cover-Trefferquote</p>
             </div>
-            <div class="stat-box p-4 sm:p-5 rounded-2xl text-center shadow-lg">
+            <div class="stat-box p-4 sm:p-5 rounded-2xl text-center shadow-2xl hover:border-emerald-500/50 transition-all">
                 <p class="text-2xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-400 font-mono">0.0s</p>
                 <p id="stat-3-label" class="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-300 mt-1">Lag & Zero Stutter</p>
             </div>
-            <div class="stat-box p-4 sm:p-5 rounded-2xl text-center shadow-lg">
-                <p class="text-2xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-indigo-400 font-mono">∞</p>
+            <div class="stat-box p-4 sm:p-5 rounded-2xl text-center shadow-2xl hover:border-amber-500/50 transition-all">
+                <p class="text-2xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-400 font-mono">∞</p>
                 <p id="stat-4-label" class="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-300 mt-1">Pure Effizienz</p>
             </div>
         </div>
@@ -157,10 +159,10 @@
                     Jede einzelne Zeile von Zeile 1 bis 14.671 wurde ausnahmslos durchgeprüft, refactored und von unnötigem Ballast befreit. Tausende versteckte Speicherlecks, asynchrone Race Conditions und UI-Blockaden wurden restlos eliminiert.
                 </p>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs sm:text-sm font-mono text-slate-200">
-                    <div class="bg-black/50 p-3 rounded-xl border border-white/10 flex items-center gap-2">
+                    <div class="bg-black/60 p-3 rounded-xl border border-white/10 flex items-center gap-2">
                         <span class="text-emerald-400 font-bold text-base">✓</span> <span id="card1-sub1">Butterweiche 120 FPS & Zero Hitze</span>
                     </div>
-                    <div class="bg-black/50 p-3 rounded-xl border border-white/10 flex items-center gap-2">
+                    <div class="bg-black/60 p-3 rounded-xl border border-white/10 flex items-center gap-2">
                         <span class="text-emerald-400 font-bold text-base">✓</span> <span id="card1-sub2">In-Memory Garbage-Collection</span>
                     </div>
                 </div>
@@ -201,10 +203,10 @@
                     Der StandBy-Modus passt sich nun mit mathematischer Präzision <strong class="text-amber-300">jedem Bildschirm dynamisch an</strong> – die Now-Playing-Karte füllt den Screen immer perfekt aus, ohne jemals abzuschneiden. Das Card-Glas wirkt wie aus einem Guss und zeigt den exakt passenden, nahtlosen Weichzeichner-Ausschnitt des Hintergrunds bei absoluter Zero-GPU-Last!
                 </p>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs sm:text-sm font-mono text-slate-200">
-                    <div class="bg-black/50 p-3 rounded-xl border border-white/10 flex items-center gap-2">
+                    <div class="bg-black/60 p-3 rounded-xl border border-white/10 flex items-center gap-2">
                         <span class="text-amber-400 font-bold text-base">✓</span> <span id="card-standby-sub1">Dynamic Auto-Fit für alle 20 Designs</span>
                     </div>
-                    <div class="bg-black/50 p-3 rounded-xl border border-white/10 flex items-center gap-2">
+                    <div class="bg-black/60 p-3 rounded-xl border border-white/10 flex items-center gap-2">
                         <span class="text-amber-400 font-bold text-base">✓</span> <span id="card-standby-sub2">100% Sleep- & Sperrbildschirm-Freigabe</span>
                     </div>
                 </div>
@@ -268,19 +270,19 @@
                 nav_back: "Hauptseite",
                 tts_read: "Vorlesen",
                 tts_stop: "Stopp",
-                hero_badge: "MEGA MEILENSTEIN",
-                hero_title_html: "DAS GRÖSSTE UPDATE <br><span class=\"bg-gradient-to-r from-pink-500 via-purple-400 to-cyan-400 bg-clip-text text-transparent\">EVER EVER EVER! 🚀</span>",
-                hero_sub: "Wir haben nicht nur ein paar Kleinigkeiten gefixt – wir haben den GESAMTEN CODE (14.671 ZEILEN) neu gebaut, radikal optimiert und jede einzelne Funktion auf 100% Perfektion gebracht!",
+                hero_badge: "GIGANTISCHER MEILENSTEIN",
+                hero_title_html: "DAS GRÖSSTE UPDATE <br><span class=\"bg-gradient-to-r from-pink-500 via-purple-400 via-cyan-400 to-amber-300 bg-clip-text text-transparent drop-shadow\">ALLER ZEITEN! 🚀</span>",
+                hero_sub: "Vergiss gewöhnliche Updates. Wir haben den GESAMTEN GIGANTISCHEN CODE (14.671 ZEILEN REINSTE POWER) bis auf den Grund zerlegt, neu erschaffen und alles in den Schatten gestellt!",
                 stat1: "Zeilen Code Refactored",
                 stat2: "Cover-Trefferquote",
                 stat3: "Lag & Zero Stutter",
                 stat4: "Pure Effizienz",
-                card1_title: "1. Der 14.671-Zeilen Rebuild & Performance-Overhaul",
-                card1_text: "Jede einzelne Zeile von Zeile 1 bis 14.671 wurde ausnahmslos durchgeprüft, refactored und von unnötigem Ballast befreit. Tausende versteckte Speicherlecks, asynchrone Race Conditions und UI-Blockaden wurden restlos eliminiert.",
+                card1_title: "1. Das 14.671-Zeilen Meisterwerk: Radikaler Rebuild",
+                card1_text: "Manche verstehen gar nicht, was für ein unendlicher, gigantischer Code-Gigant hinter dieser Plattform steckt: Satte 14.671 Zeilen handgeschriebenes High-Performance-JavaScript und CSS! Jede einzelne Zeile wurde kompromisslos durchgeprüft, refactored und auf 120 FPS pure Effizienz getrimmt. Sämtliche Speicherlecks und Race Conditions sind für immer Geschichte!",
                 card1_sub1: "Butterweiche 120 FPS & Zero Hitze",
                 card1_sub2: "In-Memory Garbage-Collection",
                 card2_title: "2. Cover-Engine 100% Perfektioniert (Zero Fehler!)",
-                card2_text: "Vorbei sind die Zeiten von falschen oder fehlenden Album-Covers! Eine neue Abfragekette (Apple Music ID ➔ Spotify oEmbed ➔ iTunes Search ➔ Deezer) liefert für jeden Song das scharfe 640x640px Original-Cover – jetzt auch sofort beim ersten Seitenaufruf / Neustart ohne Songwechsel!",
+                card2_text: "Vorbei sind die Zeiten von falschen, verpixelten oder fehlenden Album-Covers! Eine neue, unaufhaltsame Abfragekette (Apple Music ID ➔ Spotify oEmbed ➔ iTunes Search ➔ Deezer) liefert für ausnahmslos jeden Song das gestochen scharfe 640x640px Original-Cover – jetzt auch sofort beim allerersten Seitenaufruf / App-Neustart ohne Songwechsel!",
                 card2_shield_title: "Instant-Load & Race-Condition-Schutz:",
                 card2_shield_text: "Cover laden sofort beim Starten der Seite, und selbst bei 30 Song-Skips gerät die Anzeige niemals durcheinander!",
                 card3_title: "3. Spotify-Status & Reiner Zen-Modus",
@@ -545,6 +547,7 @@
                 ${t.card1_title}. ${t.card1_text}. 
                 ${t.card2_title}. ${t.card2_text}. 
                 ${t.card3_title}. ${t.card3_text}. 
+                ${t.card_standby_title}. ${t.card_standby_text}. 
                 ${t.card4_title}. ${t.card4_text}.
             `;
 

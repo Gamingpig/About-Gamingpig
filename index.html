@@ -14357,10 +14357,23 @@
             return document.hidden;
         }
 
-        setInterval(() => {
-            if (shouldPauseBackgroundWork() || !trackIsPlaying) return;
-            fetchMusicData();
-        }, 5000);
+        // Adaptive Polling: Wenn Musik läuft -> alle 5 Sekunden abfragen.
+        // Wenn keine Musik läuft (Ruhemodus / leeres Resultat) -> alle 15 Sekunden statt komplett aufzuhören.
+        let musicPollTimer = null;
+        function scheduleNextMusicPoll() {
+            if (musicPollTimer) clearTimeout(musicPollTimer);
+            const delay = trackIsPlaying ? 5000 : 15000;
+            musicPollTimer = setTimeout(() => {
+                if (!shouldPauseBackgroundWork()) {
+                    fetchMusicData().finally(() => {
+                        scheduleNextMusicPoll();
+                    });
+                } else {
+                    scheduleNextMusicPoll();
+                }
+            }, delay);
+        }
+        scheduleNextMusicPoll();
 
         // NEU v24.60: Watchdog - prüft alle 15s, ob trotz vermeintlich laufender Musik seit
         // über 30 Sekunden kein erfolgreiches Update mehr angekommen ist. Falls doch, wird
