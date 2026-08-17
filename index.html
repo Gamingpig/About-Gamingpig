@@ -7807,27 +7807,23 @@
         function drawCoverToCanvas(canvas, sourceImg) {
             if (!canvas || !sourceImg) return false;
             if (!sourceImg.complete || !sourceImg.naturalWidth) {
-                if (typeof sourceImg.addEventListener === 'function' && !sourceImg.dataset.canvasListenerAttached) {
-                    sourceImg.dataset.canvasListenerAttached = 'true';
-                    sourceImg.addEventListener('load', () => {
-                        drawCoverToCanvas(canvas, sourceImg);
-                    }, { once: true });
-                }
+                const onImageReady = () => {
+                    sourceImg.removeEventListener('load', onImageReady);
+                    drawCoverToCanvas(canvas, sourceImg);
+                };
+                sourceImg.addEventListener('load', onImageReady);
                 return false;
             }
             const rect = canvas.getBoundingClientRect();
             const dpr = window.devicePixelRatio || 1;
             const cw = Math.max(1, Math.round((rect.width || canvas.clientWidth || 64) * dpr));
             const ch = Math.max(1, Math.round((rect.height || canvas.clientHeight || 64) * dpr));
-            // Zeichenpuffer nur bei tatsächlicher Größenänderung neu zuweisen (das leert
-            // sonst unnötig den Inhalt und kostet mehr als nötig).
             if (canvas.width !== cw) canvas.width = cw;
             if (canvas.height !== ch) canvas.height = ch;
             const ctx = canvas.getContext('2d');
             if (!ctx) return false;
-            // "object-fit: cover" von Hand nachgebaut - Canvas kennt das CSS-Feature nicht,
-            // nur die Quell-/Zielrechtecke von drawImage() selbst.
             const iw = sourceImg.naturalWidth, ih = sourceImg.naturalHeight;
+            if (!iw || !ih) return false;
             const canvasRatio = cw / ch, imgRatio = iw / ih;
             let sx, sy, sw, sh;
             if (imgRatio > canvasRatio) { sh = ih; sw = ih * canvasRatio; sx = (iw - sw) / 2; sy = 0; }
@@ -7837,85 +7833,27 @@
                 ctx.drawImage(sourceImg, sx, sy, sw, sh, 0, 0, cw, ch);
                 return true;
             } catch (e) {
-                // z.B. Bild doch (noch) nicht sauber ladbar - beim nächsten Sync-Aufruf
-                // (nächster Songwechsel/Poll) automatisch erneut versucht, kein Absturz.
                 return false;
             }
         }
-        // Zeichnet das aktuelle Haupt-Cover in alle Canvas-Verbraucher, die es gerade
-        // brauchen. StandBy-Karte bewusst NUR, wenn StandBy auch tatsächlich aktiv ist -
-        // das Performance-Prinzip aus v24.79 (nichts laden/zeichnen, das gerade unsichtbar
-        // ist) bleibt dadurch erhalten, auch mit dem neuen Canvas-Ansatz.
         async function syncAllCoverConsumers() {
             if (!mArtwork || !mArtwork.src) return;
-            // FIX v24.96 (KRITISCH): Nutzer meldete - Cover laden nicht, wenn das Dashboard
-            // gar nicht geöffnet ist (z.B. Dynamic Island allein sichtbar). Root Cause im
-            // eigenen v24.87-Umbau: mArtwork.decode() kann bei einem unsichtbaren/0px-hohen
-            // Element scheitern (Dashboard eingeklappt -> grid-template-rows:0fr, siehe
-            // #music-card-layout-wrapper) - manche Browser lehnen decode() für Elemente ohne
-            // gerenderte Größe ab, OBWOHL das Bild selbst längst fertig geladen ist. Der
-            // bisherige Code brach bei einem fehlgeschlagenen decode() per "return" KOMPLETT
-            // ab - und riss dabei auch #di-art/#lyrics-mini-art/#standby-track-art mit in den
-            // Abbruch, obwohl die dafür zuständige drawCoverToCanvas() ohnehin ihre eigene,
-            // von decode() unabhängige Bereitschaftsprüfung hat (komplett + naturalWidth) und
-            // drawImage() selbst notfalls synchron nachdekodiert. decode() bleibt als reiner
-            // Performance-Vorteil bestehen (vermeidet Jank, wenn's klappt), ein Fehlschlag ist
-            // aber jetzt NICHT mehr fatal für den Rest der Funktion - läuft danach normal weiter.
             try {
                 if (typeof mArtwork.decode === 'function') await mArtwork.decode();
-            } catch (e) { /* kein Abbruch mehr - siehe Begründung oben, drawCoverToCanvas prüft selbst */ }
+            } catch (e) { }
             const diCanvas = document.getElementById('di-art');
             if (diCanvas) drawCoverToCanvas(diCanvas, mArtwork);
             const lyricsCanvas = document.getElementById('lyrics-mini-art');
             if (lyricsCanvas) drawCoverToCanvas(lyricsCanvas, mArtwork);
-            if (typeof standByActive !== 'undefined' && standByActive) {
-                const sbCanvas = document.getElementById('standby-track-art');
-                if (sbCanvas) drawCoverToCanvas(sbCanvas, mArtwork);
-            }
+            const sbCanvas = document.getElementById('standby-track-art');
+            if (sbCanvas) drawCoverToCanvas(sbCanvas, mArtwork);
         }
-        // Canvas-Zeichenpuffer folgen NICHT automatisch einer reinen CSS-Größenänderung
-        // (anders als <img>/background-image) - bei Fenstergrößenänderung/Drehung muss neu
-        // gezeichnet werden, sonst bleibt die interne Auflösung auf dem alten Stand stehen
-        // und das Bild wirkt verpixelt/falsch zugeschnitten.
         window.addEventListener('resize', () => { syncAllCoverConsumers(); }, { passive: true });
-        // FIX v24.94 (KRITISCH): Nutzer schickte ein Screen-Recording - Cover verschwinden
-        // dauerhaft (Lyrics-Mini-Vorschau UND teils Dynamic Island betroffen, Hauptkarte
-        // selbst blieb meist korrekt), nachdem die App verlassen (nicht geschlossen) und
-        // später wieder geöffnet wurde. Root Cause im eigenen Canvas-Umbau (v24.87) gefunden:
-        // syncAllCoverConsumers() wird nur an einzelnen, festen Auslösepunkten aufgerufen
-        // (Songwechsel-Erkennung, StandBy-Öffnen). Direkt nach dem Zurückkehren aus dem
-        // Hintergrund kann #artwork sein NEUES Bild noch mitten im Laden haben, wenn dieser
-        // Aufruf zufällig genau in diesem Moment feuert - mArtwork.decode() schlägt dann
-        // fehl, die Funktion bricht per "return" ab, OHNE dass die Canvas-Elemente je (neu)
-        // gezeichnet werden - und ohne Wiederholungsversuch blieben sie fortan dauerhaft leer,
-        // bis der nächste ECHTE Songwechsel zufällig alles neu anstößt. Fix: zusätzlich ein
-        // dauerhafter "load"-Listener direkt auf #artwork selbst - sobald es IRGENDWANN
-        // erfolgreich ein Bild lädt (normaler Fluss, verzögerter Nachzügler nach Hintergrund-
-        // Rückkehr, oder die iTunes-Fallback-Kette), werden die Canvas-Verbraucher garantiert
-        // synchronisiert, unabhängig vom exakten Timing des ursprünglichen Auslösers -
-        // selbstheilend statt auf einen einzigen perfekten Moment angewiesen.
         if (mArtwork) mArtwork.addEventListener('load', () => syncAllCoverConsumers());
-        // FIX v24.94: zusätzliche Absicherung - beim Zurückkehren aus dem Hintergrund (App
-        // verlassen, nicht geschlossen, später wieder geöffnet - exakt das vom Nutzer
-        // gemeldete Szenario) einmal proaktiv nachziehen, unabhängig davon, ob gerade ein
-        // Songwechsel erkannt wurde oder nicht. Günstig (nur ein Zeichenvorgang, kein
-        // Netzwerk-Request), kann also ruhig bei jedem Sichtbarwerden laufen.
         document.addEventListener('visibilitychange', () => {
             if (!document.hidden) syncAllCoverConsumers();
         });
 
-        // NEU v24.61 (jetzt v24.63 global gemacht): Bevor auf das generische Platzhalterbild
-        // zurückgegriffen wird - npc-api.aikins.xyz gibt manchmal 404 für den Cover-Art-Proxy
-        // zurück (externes Problem, siehe Chat-Verlauf). Die iTunes-Search-API ist kostenlos,
-        // braucht keinen API-Key/Login und ist CORS-freundlich - perfekt als Rückfallebene,
-        // bevor wirklich nur noch das generische Musiknoten-Icon übrig bleibt. Jetzt global,
-        // damit auch Dynamic Island und StandBy-Lockscreen sie nutzen können, nicht nur die
-        // Haupt-Musikkarte.
-        // NEU v24.100: gemeinsamer Retry-Helfer, ausgelagert aus dem mArtwork-spezifischen
-        // Retry aus v24.99 - wird jetzt auch für #standby-bg gebraucht (siehe dort), das
-        // bisher als "der zuverlässige Pfad" galt, aber laut Nutzer-Video genau umgekehrt
-        // stecken bleiben kann: die Karte (via #artwork) erholte sich dank des v24.99-Retries,
-        // der Hintergrund aber nicht, weil er ihn schlicht nie hatte.
         function retryImageLoad(url) {
             if (!url || typeof url !== 'string' || !url.startsWith('http')) return Promise.resolve(false);
             return new Promise((resolve) => {
@@ -7944,6 +7882,12 @@
                 .replace(/\s*•\s*From Smart Shuffle/gi, '')
                 .split(/[,&]/)[0]
                 .trim();
+        }
+
+        function getTrackCacheKey(title, artist) {
+            const cleanT = cleanTrackTitle(title || '');
+            const cleanA = cleanArtistName(artist || '');
+            return `${cleanT}___${cleanA}`.toLowerCase();
         }
 
         function fetchDeezerCoverJsonp(title, artist) {
@@ -7992,14 +7936,14 @@
         let lastKnownMusicData = null;
 
         async function findBestArtworkFallback(title, artist, spotifyUrl = null, album = null) {
-            const cleanT = cleanTrackTitle(title || '');
-            const cleanA = cleanArtistName(artist || '');
-            const cacheKey = `${cleanT}___${cleanA}`;
+            const cacheKey = getTrackCacheKey(title, artist);
 
             if (trackCoverMemoryCache.has(cacheKey)) {
                 return trackCoverMemoryCache.get(cacheKey);
             }
 
+            const cleanT = cleanTrackTitle(title || '');
+            const cleanA = cleanArtistName(artist || '');
             const candidates = [];
 
             // 1. Spotify oEmbed (offizielles, authentisches Spotify CDN Cover)
@@ -8747,7 +8691,7 @@
                 const list = getRecentlyPlayed();
                 list.forEach(item => {
                     if (!item.art || !item.title) return;
-                    const key = `${cleanTrackTitle(item.title)}___${item.artist || ''}`;
+                    const key = getTrackCacheKey(item.title, item.artist);
                     if (!trackCoverMemoryCache.has(key)) {
                         trackCoverMemoryCache.set(key, item.art);
                     }
@@ -8775,7 +8719,7 @@
                 // NEU v24.109: Cover sofort in den In-Memory-Cache schreiben, damit
                 // trackCoverMemoryCache beim nächsten Abspielen dieses Songs sofort trifft
                 if (art) {
-                    const cacheKey = `${cleanTrackTitle(title)}___${artist || ''}`;
+                    const cacheKey = getTrackCacheKey(title, artist);
                     trackCoverMemoryCache.set(cacheKey, art);
                 }
                 renderRecentlyPlayed();
@@ -8796,7 +8740,7 @@
             listEl.innerHTML = list.map(item => {
                 // NEU v24.109: Cache-Hit prüfen - falls das Cover zwischenzeitlich besser
                 // aufgelöst wurde (z.B. via iTunes/Deezer), das bessere Bild nehmen
-                const cacheKey = `${cleanTrackTitle(item.title)}___${item.artist || ''}`;
+                const cacheKey = getTrackCacheKey(item.title, item.artist);
                 const cachedArt = trackCoverMemoryCache.get(cacheKey) || item.art || '';
                 return `
                 <div class="recently-played-item">
@@ -13918,7 +13862,7 @@
 
             renderMusicServicePicker(data);
 
-            const trackKey = `${cleanTrackTitle(trackTitle)}___${cleanArtist}`;
+            const trackKey = getTrackCacheKey(trackTitle, cleanArtist);
             if (trackKey !== lastResolvedTrackKey) {
                 lastResolvedTrackKey = trackKey;
                 currentResolvedArtUrl = null;
@@ -13988,7 +13932,7 @@
             }
 
             const updateAllCoverVisuals = (srcUrl) => {
-                if (mArtwork) mArtwork.src = srcUrl;
+                if (mArtwork && mArtwork.src !== srcUrl) mArtwork.src = srcUrl;
                 if (mAmbient) mAmbient.style.backgroundImage = `url('${srcUrl}')`;
                 if (mGlow && coverGlowEnabled) mGlow.style.backgroundImage = `url('${srcUrl}')`;
                 const lyricsAmbientBg = document.getElementById('lyrics-ambient-bg');
@@ -14002,7 +13946,6 @@
 
             const applyDataChanges = (addedDelay = 0) => {
                 if (mArtwork) {
-                    const originalUrl = imgUrl;
                     mArtwork.onerror = async function() {
                         this.onerror = () => { this.src = fallbackImg; };
                         const fallbackUrl = await findBestArtworkFallback(
@@ -14013,6 +13956,9 @@
                         );
                         const finalFallback = fallbackUrl || fallbackImg;
                         currentResolvedArtUrl = finalFallback;
+                        if (fallbackUrl) {
+                            trackCoverMemoryCache.set(trackKey, fallbackUrl);
+                        }
                         updateAllCoverVisuals(finalFallback);
                     };
                 }
