@@ -8154,7 +8154,7 @@
                     strategies.push((async () => {
                         try {
                             const q = encodeURIComponent(`${cleanA} ${cleanT}`);
-                            const r = await fetch(`https://itunes.apple.com/search?term=${q}&media=music&entity=song&limit=1`, { signal: AbortSignal.timeout(4500) });
+                            const r = await fetch(`https://itunes.apple.com/search?term=${q}&media=music&entity=song&limit=1`, { signal: AbortSignal.timeout(4000) });
                             if (r.ok) {
                                 const d = await r.json();
                                 const art = d?.results?.[0]?.artworkUrl100;
@@ -8182,11 +8182,30 @@
                         try {
                             const qStr = album ? `${cleanT} ${album}` : cleanT;
                             const q = encodeURIComponent(qStr);
-                            const r = await fetch(`https://itunes.apple.com/search?term=${q}&media=music&entity=song&limit=1`, { signal: AbortSignal.timeout(4500) });
+                            const r = await fetch(`https://itunes.apple.com/search?term=${q}&media=music&entity=song&limit=1`, { signal: AbortSignal.timeout(4000) });
                             if (r.ok) {
                                 const d = await r.json();
                                 const art = d?.results?.[0]?.artworkUrl100;
                                 if (art) return art.replace('100x100bb', '640x640bb');
+                            }
+                        } catch (_) {}
+                        return null;
+                    })());
+                }
+
+                // 6. iTunes Search nur nach Titel
+                if (cleanT && cleanA) {
+                    strategies.push((async () => {
+                        try {
+                            const q = encodeURIComponent(cleanT);
+                            const r = await fetch(`https://itunes.apple.com/search?term=${q}&media=music&entity=song&limit=5`, { signal: AbortSignal.timeout(4000) });
+                            if (r.ok) {
+                                const d = await r.json();
+                                if (d?.results?.length) {
+                                    const match = d.results.find(it => it.artistName && it.artistName.toLowerCase().includes(cleanA.toLowerCase())) || d.results[0];
+                                    const art = match?.artworkUrl100;
+                                    if (art) return art.replace('100x100bb', '640x640bb');
+                                }
                             }
                         } catch (_) {}
                         return null;
@@ -14281,7 +14300,7 @@
                 }
 
                 const cachedCover = trackCoverMemoryCache.get(trackKey);
-                const safeRawCover = (!isBrokenNpcProxy && rawArtwork && rawArtwork.startsWith('http')) ? rawArtwork : null;
+                const safeRawCover = (!isBrokenNpcProxy && rawArtwork && rawArtwork.startsWith('http') && !rawArtwork.includes('npc-api.aikins.xyz/v1/artwork/')) ? rawArtwork : null;
                 const finalArtUrl = currentResolvedArtUrl || cachedCover || safeRawCover || fallbackImg;
 
                 updateAllCoverVisuals(finalArtUrl);
