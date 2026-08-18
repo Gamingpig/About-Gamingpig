@@ -5108,7 +5108,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.118 · 2026-08-18';
+        const SITE_VERSION = 'v24.119 · 2026-08-18';
 
         // =========================================================
         // NEU v24.118: Automatischer Reset veralteter Cached Flags bei Versionswechsel
@@ -5143,21 +5143,40 @@
 
         const DEFAULT_SYNC_OFFSET = -400;
 
-        // NEU v24.117: Prüfe ob die Seite über einen Live-Share-Link geöffnet wurde
-        (function checkSharedLiveParam() {
+        // NEU v24.119: Dynamischer Live-Share Handler für geteilte Links
+        (function handleLiveShareIncoming() {
             try {
                 const params = new URLSearchParams(window.location.search);
                 if (params.get('share') === 'nowplaying') {
-                    const song = params.get('song');
-                    const artist = params.get('artist');
+                    const song = params.get('song') || '';
+                    const artist = params.get('artist') || '';
+                    const art = params.get('art') || '';
+                    
                     if (song) {
-                        document.title = '🎵 Now Playing: ' + song + (artist ? ' - ' + artist : '') + ' | Gamingpig';
+                        document.title = '🎵 Gamingpig hört gerade: ' + song + (artist ? ' – ' + artist : '') + ' | Portfolio';
                     }
+
+                    // Sobald das DOM bereit ist: Automatisch zum Dashboard scrollen, aufklappen & Song hervorheben
+                    window.addEventListener('DOMContentLoaded', () => {
+                        setTimeout(() => {
+                            try {
+                                if (typeof toggleDashboard === 'function' && !isDashboardOpen) {
+                                    toggleDashboard();
+                                }
+                                const musicSec = document.getElementById('music-section');
+                                if (musicSec) {
+                                    musicSec.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                }
+                                if (song && typeof showToast === 'function') {
+                                    showToast('🎧 Live geteilter Track: ' + song + (artist ? ' – ' + artist : ''), 5000);
+                                }
+                            } catch (err) {}
+                        }, 350);
+                    });
                 }
             } catch (e) {}
         })();
- 
-    </script>
+</script>
 </head>
 <body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen selection:bg-blue-500/30 overflow-x-hidden">
 
@@ -6090,7 +6109,7 @@
                 <div class="hidden sm:block h-4 w-px bg-slate-300 dark:bg-slate-700"></div>
                 <!-- NEW: Versionsnummer im Footer, immer sichtbar ohne Menüs öffnen zu müssen -->
                 <p id="footer-version-label" class="text-[8px] xxs:text-[10px] font-mono text-slate-500 dark:text-slate-500 select-all"></p>
-                <a href="release-v24-115.html" class="inline-flex items-center gap-1 text-[8px] xxs:text-[10px] sm:text-xs font-black text-pink-600 dark:text-pink-400 hover:underline">🔥 v24.118 Update</a>
+                <a href="release-v24-115.html" class="inline-flex items-center gap-1 text-[8px] xxs:text-[10px] sm:text-xs font-black text-pink-600 dark:text-pink-400 hover:underline">🔥 v24.119 Update</a>
                 <div class="hidden sm:block h-4 w-px bg-slate-300 dark:bg-slate-700"></div>
                 <button onclick="openChangelogModal()" id="footer-whats-new-btn" class="text-[8px] xxs:text-[10px] sm:text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 rounded">Was ist neu?</button>
                 <div class="hidden sm:block h-4 w-px bg-slate-300 dark:bg-slate-700"></div>
@@ -9961,38 +9980,46 @@
             const artist = (artistEl && artistEl.innerText) ? artistEl.innerText : '';
             const artSrc = artworkEl ? artworkEl.getAttribute('src') : '';
 
-            // Baue die dynamische Live-URL zusammen
-            const baseUrl = 'https://gamingpig.github.io/About-Gamingpig/';
-            const params = new URLSearchParams();
-            params.set('share', 'nowplaying');
-            if (title && title !== t('standby_idle_title')) params.set('song', title);
-            if (artist && artist !== t('standby_idle_subtitle')) params.set('artist', artist);
-            if (artSrc && !artSrc.startsWith('data:')) params.set('art', artSrc);
+            const isQuiet = (!title || title === t('standby_idle_title') || title.includes('ruhig') || title.includes('Offline'));
 
-            const liveShareUrl = baseUrl + '?' + params.toString();
-            const shareText = '🎵 Gamingpig hört gerade: ' + title + (artist ? ' – ' + artist : '') + ' 🔥 ' + liveShareUrl;
+            let liveShareUrl = 'https://gamingpig.github.io/About-Gamingpig/';
+            let shareText = '';
+
+            if (isQuiet) {
+                liveShareUrl += '?share=nowplaying';
+                shareText = '🎧 Gamingpig hört gerade nichts (Stille genießen) 💤 Live ansehen: ' + liveShareUrl;
+            } else {
+                const params = new URLSearchParams();
+                params.set('share', 'nowplaying');
+                params.set('song', title);
+                if (artist && artist !== t('standby_idle_subtitle')) params.set('artist', artist);
+                if (artSrc && !artSrc.startsWith('data:')) params.set('art', artSrc);
+                liveShareUrl += '?' + params.toString();
+                shareText = '🎧 Gamingpig hört gerade: **' + title + '**' + (artist ? ' von *' + artist + '*' : '') + ' 🎵\n\n🔗 Jetzt live mitlauschen: ' + liveShareUrl;
+            }
+
+            const copySuccess = () => {
+                if (typeof showToast === 'function') showToast(t('toast_live_share_copied'), 3500);
+                if (navigator.share) {
+                    navigator.share({
+                        title: isQuiet ? '🎧 Gamingpig Portfolio' : '🎧 Gamingpig hört gerade: ' + title,
+                        text: shareText,
+                        url: liveShareUrl
+                    }).catch(() => {});
+                }
+            };
 
             if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(liveShareUrl)
-                    .then(() => {
-                        if (typeof showToast === 'function') showToast(t('toast_live_share_copied'), 3500);
-                        if (navigator.share) {
-                            navigator.share({
-                                title: '🎵 Gamingpig hört gerade: ' + title,
-                                text: shareText,
-                                url: liveShareUrl
-                            }).catch(() => {});
-                        }
-                    })
+                navigator.clipboard.writeText(shareText)
+                    .then(copySuccess)
                     .catch(() => {
-                        prompt('Live-Link kopieren:', liveShareUrl);
+                        prompt('Text mit Link kopieren & teilen:', shareText);
                     });
             } else {
-                prompt('Live-Link kopieren:', liveShareUrl);
+                prompt('Text mit Link kopieren & teilen:', shareText);
             }
         };
-
-        window.generateShareCard = function() {
+window.generateShareCard = function() {
             const titleEl = document.getElementById('track-title');
             const artistEl = document.getElementById('track-artist');
             const artworkEl = document.getElementById('artwork');
