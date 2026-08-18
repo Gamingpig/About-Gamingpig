@@ -27,7 +27,7 @@ import urllib.error
 # ==============================================================================
 # 1. Erstelle in Discord einen Webhook für deinen gewünschten Kanal:
 #    Kanaleinstellungen -> Integrationen -> Webhooks -> Neuer Webhook -> URL kopieren
-DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL", "DEINE_DISCORD_WEBHOOK_URL_HIER_EINFUEGEN")
+DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL", "https://discord.com/api/webhooks/1539292490618773614/UBPbdZJSWvndeKKW-LjwHLDyoJiPhRiiEjVSJz-m6qT9NC_97nzdJw68bIH6OASno2tg")
 
 # Deine Live-Musik-API URL
 MUSIC_API_URL = "https://npc-api.aikins.xyz/v1/users/gamingpig/now"

@@ -26,7 +26,7 @@ chmod +x "$PYTHON_SCRIPT"
 if [ -z "$DISCORD_WEBHOOK_URL" ]; then
     echo ""
     read -rp "👉 Bitte gib deine Discord Webhook URL ein: " INPUT_WEBHOOK_URL
-    DISCORD_WEBHOOK_URL="$INPUT_WEBHOOK_URL"
+    DISCORD_WEBHOOK_URL="${INPUT_WEBHOOK_URL:-https://discord.com/api/webhooks/1539292490618773614/UBPbdZJSWvndeKKW-LjwHLDyoJiPhRiiEjVSJz-m6qT9NC_97nzdJw68bIH6OASno2tg}"
 fi
 
 if [ -z "$DISCORD_WEBHOOK_URL" ]; then
