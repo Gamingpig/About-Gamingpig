@@ -5108,7 +5108,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.119 · 2026-08-18';
+        const SITE_VERSION = 'v24.120 · 2026-08-18';
 
         // =========================================================
         // NEU v24.118: Automatischer Reset veralteter Cached Flags bei Versionswechsel
@@ -6109,7 +6109,7 @@
                 <div class="hidden sm:block h-4 w-px bg-slate-300 dark:bg-slate-700"></div>
                 <!-- NEW: Versionsnummer im Footer, immer sichtbar ohne Menüs öffnen zu müssen -->
                 <p id="footer-version-label" class="text-[8px] xxs:text-[10px] font-mono text-slate-500 dark:text-slate-500 select-all"></p>
-                <a href="release-v24-115.html" class="inline-flex items-center gap-1 text-[8px] xxs:text-[10px] sm:text-xs font-black text-pink-600 dark:text-pink-400 hover:underline">🔥 v24.119 Update</a>
+                <a href="release-v24-115.html" class="inline-flex items-center gap-1 text-[8px] xxs:text-[10px] sm:text-xs font-black text-pink-600 dark:text-pink-400 hover:underline">🔥 v24.120 Update</a>
                 <div class="hidden sm:block h-4 w-px bg-slate-300 dark:bg-slate-700"></div>
                 <button onclick="openChangelogModal()" id="footer-whats-new-btn" class="text-[8px] xxs:text-[10px] sm:text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 rounded">Was ist neu?</button>
                 <div class="hidden sm:block h-4 w-px bg-slate-300 dark:bg-slate-700"></div>
@@ -14763,16 +14763,24 @@ window.generateShareCard = function() {
 
             const updateAllCoverVisuals = (srcUrl) => {
                 if (!srcUrl) srcUrl = fallbackImg;
-                if (mArtwork) mArtwork.src = srcUrl;
-                if (mAmbient) mAmbient.style.backgroundImage = `url('${srcUrl}')`;
-                if (mGlow && coverGlowEnabled) mGlow.style.backgroundImage = `url('${srcUrl}')`;
+                // FIX v24.120: Flackern bei periodischen API-Polls verhindern.
+                // Nur neu zuweisen/re-rendern, wenn sich die Bild-URL tatsächlich geändert hat!
+                const currentSrc = mArtwork ? mArtwork.getAttribute('src') : null;
+                if (mArtwork && currentSrc !== srcUrl) {
+                    mArtwork.src = srcUrl;
+                }
+                const urlBg = 'url("' + srcUrl + '")';
+                if (mAmbient && mAmbient.style.backgroundImage !== urlBg) mAmbient.style.backgroundImage = urlBg;
+                if (mGlow && coverGlowEnabled && mGlow.style.backgroundImage !== urlBg) mGlow.style.backgroundImage = urlBg;
                 const lyricsAmbientBg = document.getElementById('lyrics-ambient-bg');
-                if (lyricsAmbientBg) lyricsAmbientBg.style.backgroundImage = `url('${srcUrl}')`;
+                if (lyricsAmbientBg && lyricsAmbientBg.style.backgroundImage !== urlBg) lyricsAmbientBg.style.backgroundImage = urlBg;
                 const sbBg = document.getElementById('standby-bg');
                 const sbCardBg = document.getElementById('standby-card-blur-bg');
-                if (sbBg) sbBg.style.backgroundImage = `url('${srcUrl}')`;
-                if (sbCardBg) sbCardBg.style.backgroundImage = `url('${srcUrl}')`;
-                syncAllCoverConsumers(srcUrl);
+                if (sbBg && sbBg.style.backgroundImage !== urlBg) sbBg.style.backgroundImage = urlBg;
+                if (sbCardBg && sbCardBg.style.backgroundImage !== urlBg) sbCardBg.style.backgroundImage = urlBg;
+                if (currentSrc !== srcUrl) {
+                    syncAllCoverConsumers(srcUrl);
+                }
             };
 
             // Proaktive Cover-Auflösung: sofort starten wenn für den aktuellen Track noch kein Cover
