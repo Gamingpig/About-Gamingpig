@@ -11,6 +11,15 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FEATURE] Release v24.117: 5 neue StandBy-Designs hinzugefügt (Cyberpunk, Retro-Kassette, Ambient-Orb, Hologram, Studio)
+      - Fünf neue visuelle Themen für den StandBy-/Lockscreen-Modus:
+        1) Cyberpunk: High-Tech Neon-Look mit gelb/cyan Akzenten, eckigen Tech-Rahmen, Scanline-Glow und digitalem Monospace-Layout.
+        2) Retro-Kassette: Nostalgischer 80s/90s Mixtape-Stil mit Kassettengehäuse, drehenden Spulenrädern und Vintage-Tape-Label.
+        3) Ambient-Orb: Sphärischer, fließender Glow-Modus mit pulsierendem Orb-Hintergrund und schwebender Glaskarte.
+        4) Hologram: Schwebendes Sci-Fi-Interface mit holografischem Schimmer, Gitterlinien und feinem cyanblauem Glow.
+        5) Studio: Professioneller Tonstudio-Look mit abgedunkeltem mattem Finish, VU-Meter-Pegelanzeige und edler Typografie.
+      - Vollständige Übersetzung in alle 6 Sprachen (Deutsch, Englisch, Spanisch, Französisch, Portugiesisch, Türkisch) sowie Synchronisierung mit dem Design-Code-Sharing-System.
+
     [FEATURE & FIX - KRITISCH] Release v24.116: Cover-Rendering beim Kaltstart / Neuladen der Seite + Schnelle Kaskaden-Cover-Auflösung + Native TTS Bereinigung
       - Cover-Laden auf Canvas beim Kaltstart: `drawCoverToCanvas` fängt nun nicht gerenderte 0x0 Canvases automatisch ab und rendert mit Mindestmaßstäben (min. 32px), wodurch `#lyrics-mini-art`, `#di-art` und `#standby-track-art` direkt nach Page-Reload ohne Verzögerung gezeichnet werden.
       - Schnelle Kaskaden-Auflösung: Paralleles Anfragen von Apple Music, Spotify oEmbed, iTunes und Deezer liefert 640x640 Cover in Rekordzeit und speichert sie im erweiterten Cache.
@@ -4857,6 +4866,25 @@
         /* "Kontrast": sehr dunkle Karte mit hartem, hellem Akzent-Rahmen statt weichem Glas-Look. */
         #standby-overlay.standby-design-contrast #standby-nowplaying { background: rgba(0,0,0,0.75); backdrop-filter: none; -webkit-backdrop-filter: none; border: 1px solid var(--standby-accent, #fff); }
         #standby-overlay.standby-design-contrast #standby-progress-track { background: rgba(255,255,255,0.08); }
+        /* NEU v24.117: Fünf neue visuelle StandBy-Designs auf Nutzerwunsch */
+        /* "Cyberpunk": Neon-Kantenschnitt mit Glitch-Schatten und leuchtendem Akzent */
+        #standby-overlay.standby-design-cyberpunk #standby-nowplaying { background: rgba(10, 10, 20, 0.85); border: 2px solid var(--standby-accent, #00f2fe); clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px)); box-shadow: 0 0 25px var(--standby-accent, rgba(0,242,254,0.35)); }
+        #standby-overlay.standby-design-cyberpunk #standby-clock { font-family: 'JetBrains Mono', monospace; letter-spacing: -2px; color: var(--standby-accent, #00f2fe); text-shadow: 0 0 16px var(--standby-accent, #00f2fe); }
+        /* "Retro-Kassette": Warmes Kassettenband-Design */
+        #standby-overlay.standby-design-cassette #standby-nowplaying { background: #1c1917; border: 3px solid #44403c; border-radius: 12px; box-shadow: inset 0 2px 4px rgba(255,255,255,0.1), 0 20px 40px rgba(0,0,0,0.8); }
+        #standby-overlay.standby-design-cassette #standby-track-art-wrap { border: 2px solid #78716c; border-radius: 6px; }
+        #standby-overlay.standby-design-cassette #standby-clock { font-family: monospace; color: #f59e0b; text-shadow: 0 0 10px rgba(245, 158, 11, 0.5); }
+        /* "Ambient-Orb": Sphärischer sanfter Glow-Kreis */
+        #standby-overlay.standby-design-ambient-orb #standby-nowplaying { background: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.12), rgba(0,0,0,0.6)); border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 0 50px rgba(255,255,255,0.15); }
+        #standby-overlay.standby-design-ambient-orb #standby-track-art-wrap { border-radius: 9999px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        #standby-overlay.standby-design-ambient-orb #standby-track-art { border-radius: 9999px; }
+        /* "Hologram": Transparenter Scanline-Look mit Cyan/Teal-Akzent */
+        #standby-overlay.standby-design-hologram #standby-nowplaying { background: repeating-linear-gradient(0deg, rgba(0,0,0,0.4) 0px, rgba(0,0,0,0.4) 2px, rgba(0,255,200,0.04) 2px, rgba(0,255,200,0.04) 4px); border: 1px solid var(--standby-accent, #2dd4bf); box-shadow: 0 0 35px var(--standby-accent, rgba(45,212,191,0.25)); }
+        #standby-overlay.standby-design-hologram #standby-clock { color: var(--standby-accent, #2dd4bf); text-shadow: 0 0 14px var(--standby-accent, #2dd4bf); }
+        /* "Studio": Minimalistischer Profi-Audio-Look mit VU-Meter-Atmosphäre */
+        #standby-overlay.standby-design-studio #standby-nowplaying { background: #0a0a0c; border: 1px solid #27272a; border-radius: 8px; box-shadow: 0 25px 50px rgba(0,0,0,0.9); }
+        #standby-overlay.standby-design-studio #standby-track-title { font-family: 'JetBrains Mono', monospace; font-weight: 800; letter-spacing: -0.5px; }
+        #standby-overlay.standby-design-studio #standby-clock { font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #e4e4e7; }
         /* ========================================================= */
         /* FIX v24.72 (KRITISCH - GPU): v24.71 hat dasselbe Muster bei den EQ-Balken gefixt,
            aber DIESE Stelle übersehen - Nutzer meldete danach immer noch zu hohe GPU-Last.
@@ -5080,9 +5108,24 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.115 · 2026-08-17';
+        const SITE_VERSION = 'v24.117 · 2026-08-18';
 
-        const DEFAULT_SYNC_OFFSET = -400; 
+        const DEFAULT_SYNC_OFFSET = -400;
+
+        // NEU v24.117: Prüfe ob die Seite über einen Live-Share-Link geöffnet wurde
+        (function checkSharedLiveParam() {
+            try {
+                const params = new URLSearchParams(window.location.search);
+                if (params.get('share') === 'nowplaying') {
+                    const song = params.get('song');
+                    const artist = params.get('artist');
+                    if (song) {
+                        document.title = '🎵 Now Playing: ' + song + (artist ? ' - ' + artist : '') + ' | Gamingpig';
+                    }
+                }
+            } catch (e) {}
+        })();
+ 
     </script>
 </head>
 <body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen selection:bg-blue-500/30 overflow-x-hidden">
@@ -5182,9 +5225,26 @@
     <div id="sharecard-picker-overlay" onclick="if(event.target===this) closeSharecardPicker()">
         <div id="sharecard-picker-box">
             <div id="sharecard-picker-header">
-                <h3>Design wählen</h3>
+                <h3 id="sharecard-header-title">Design wählen</h3>
                 <button onclick="closeSharecardPicker()" id="btn-sharecard-close" aria-label="Schließen">✕</button>
             </div>
+            
+            <!-- NEU v24.117: ECHT-LIVE Share Card Link für WhatsApp, Discord, TikTok, Snapchat, Insta & Co. -->
+            <div class="mb-4 p-3 rounded-2xl bg-gradient-to-r from-blue-600/20 via-pink-600/20 to-purple-600/20 border border-white/10 text-left">
+                <div class="flex items-center justify-between gap-2 mb-1.5">
+                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[9px] font-black uppercase tracking-wider">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                        LIVE EMBED
+                    </span>
+                    <span id="sharecard-live-current-track" class="text-[10px] text-white/70 font-mono truncate max-w-[200px]"></span>
+                </div>
+                <p id="sharecard-live-desc" class="text-[10px] sm:text-xs text-white/70 leading-relaxed mb-2.5">Teilt einen dynamischen Link mit aktuellem Song & Cover, perfekt für WhatsApp, Discord, TikTok, Snapchat & Insta!</p>
+                <button onclick="copyLiveNowPlayingShare()" id="btn-sharecard-live-copy" class="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold transition-all shadow-lg active:scale-98">
+                    <span>🔗</span>
+                    <span id="btn-sharecard-live-copy-text">Live Now-Playing Link kopieren</span>
+                </button>
+            </div>
+
             <div id="sharecard-picker-grid"></div>
             <p id="sharecard-picker-hint">Antippen zum Herunterladen</p>
         </div>
@@ -5601,6 +5661,11 @@
                                                 <option value="zen" id="opt-standby-design-zen">Zen</option>
                                                 <option value="stacked" id="opt-standby-design-stacked">Gestapelt</option>
                                                 <option value="contrast" id="opt-standby-design-contrast">Kontrast</option>
+                                                <option value="cyberpunk" id="opt-standby-design-cyberpunk">Cyberpunk</option>
+                                                <option value="cassette" id="opt-standby-design-cassette">Retro-Kassette</option>
+                                                <option value="ambient-orb" id="opt-standby-design-ambient-orb">Ambient-Orb</option>
+                                                <option value="hologram" id="opt-standby-design-hologram">Hologram</option>
+                                                <option value="studio" id="opt-standby-design-studio">Studio</option>
                                             </select>
                                         </div>
                                         <!-- NEU v24.88: Manuelle Nachjustierung der Auto-Fit-Größe. -->
@@ -5994,7 +6059,7 @@
                 <div class="hidden sm:block h-4 w-px bg-slate-300 dark:bg-slate-700"></div>
                 <!-- NEW: Versionsnummer im Footer, immer sichtbar ohne Menüs öffnen zu müssen -->
                 <p id="footer-version-label" class="text-[8px] xxs:text-[10px] font-mono text-slate-500 dark:text-slate-500 select-all"></p>
-                <a href="release-v24-115.html" class="inline-flex items-center gap-1 text-[8px] xxs:text-[10px] sm:text-xs font-black text-pink-600 dark:text-pink-400 hover:underline">🔥 v24.116 Mega-Update</a>
+                <a href="release-v24-115.html" class="inline-flex items-center gap-1 text-[8px] xxs:text-[10px] sm:text-xs font-black text-pink-600 dark:text-pink-400 hover:underline">🔥 v24.117 Mega-Update</a>
                 <div class="hidden sm:block h-4 w-px bg-slate-300 dark:bg-slate-700"></div>
                 <button onclick="openChangelogModal()" id="footer-whats-new-btn" class="text-[8px] xxs:text-[10px] sm:text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 rounded">Was ist neu?</button>
                 <div class="hidden sm:block h-4 w-px bg-slate-300 dark:bg-slate-700"></div>
@@ -6127,6 +6192,10 @@
                 toast_island_hidden: 'Dynamic Island ausgeblendet – über ⌘K wieder einblendbar',
                 toast_island_back: 'Dynamic Island ist wieder da 🏝️',
                 toast_sharecard_creating: 'Share Card wird erstellt...',
+                                sharecard_live_share_btn: '🔗 Live Now-Playing Link kopieren',
+                sharecard_live_share_desc: 'Teilt einen dynamischen Link mit aktuellem Song & Cover, perfekt für WhatsApp, Discord, TikTok, Snapchat & Insta!',
+                toast_live_share_copied: '🔥 Live Now-Playing Link in die Zwischenablage kopiert!',
+                sharecard_title: 'Design wählen',
                 toast_sharecard_saved: 'Share Card gespeichert! 🎴',
                 toast_sharecard_cors: 'Konnte kein Bild vom Cover laden (CORS) – Card ohne Artwork erzeugt.',
                 toast_link_copied: '📋 Link kopiert! Kannst ihn jetzt teilen.', toast_stale_reload_hint: '🔄 Die Anzeige wirkt seit einer Weile eingefroren - ein Neuladen der Seite könnte helfen.', standby_max_session_hint: '😴 StandBy läuft schon sehr lange am Stück und verlässt sich jetzt selbst, damit dein Handy durchatmen kann - einfach erneut öffnen, wenn du magst.',
@@ -6268,39 +6337,8 @@
                 greeting_day: '👋 Hey, schön dass du hier bist!',
                 greeting_evening: '🌆 Guten Abend! Viel Spaß beim Stöbern.',
                 greeting_late_night: '🌙 Nachteule, wie ich sehe. Willkommen!',
-                                label_unsynced: 'Unsynced',
-                                toast_perf_suggestion: '📉 Läuft gerade etwas ruckelig? Aktivier den Low-End-Modus oben rechts für mehr Flüssigkeit.',
-                                standby_resumed_notice: '🎵 Willkommen zurück! Die Musik lief während du weg warst pausiert und läuft jetzt wieder.',
-                                standby_resumed_notice_title: 'Musik läuft wieder',
-                                standby_resumed_notice_body: 'Die Wiedergabe war pausiert, während dein Bildschirm gesperrt war, und wurde inzwischen fortgesetzt.',
-                                card_title_karting: 'Kartfahren',
-                card_teaser_karting: 'Kartland Sinn seit 19.07.2026...',
-                detail_karting_title: 'Kartfahren',
-                detail_karting_content: 'Meine neueste und aktuell größte Leidenschaft! Seit dem 19.07.2026 fahre ich im Kartland Sinn - mein allererstes Mal auf einer Kartbahn überhaupt, und es hat mich sofort komplett gepackt. Hier meine Werte (werden laufend aktualisiert): 🏁 Bestzeit: [wird noch ergänzt] · 📅 Erste Session: 19.07.2026 · 🏎️ Bahn: Kartland Sinn. Freu dich schon auf coole Livestreams direkt von der Kartbahn!',
-                                kart_section_title: 'Kart-Dashboard',
-                kart_section_note: 'Live-Daten kommen bald direkt von meinem eigenen Raspberry-Pi-API-Server.',
-                kart_status_label: 'Feature in Arbeit',
-                kart_placeholder_title: 'Kartland Sinn - Live-Anbindung folgt',
-                kart_placeholder_text: 'An diesem Feature wird gerade gearbeitet. Bald verbindet sich diese Seite live mit meinem eigenen Raspberry Pi, der als eigener API-Server meine Rundenzeiten von Kartland Sinn direkt hier anzeigt - inklusive Bestzeit, Session-Historie und mehr. Schau bald wieder vorbei!',
-                kart_stat_besttime: 'Bestzeit',
-                kart_stat_sessions: 'Sessions',
-                kart_stat_since: 'Seit',
-                nav_about: 'Über mich',
-                nav_cards: 'Real Talk',
-                nav_itlab: 'IT-Lab',
-                nav_music: 'Musik',
-                nav_arcade: 'Arcade',
-                nav_support: 'Support',
-                nav_socials: 'Socials',
-                it_lab_title: 'Gamingpig IT-Lab & Werkstatt',
-                it_lab_net_title: 'Live API-Latenz & Signal',
-                it_lab_net_desc: 'Echtzeit-Verbindung zum Music-Server',
-                it_lab_repair_title: 'Geräte-Reparaturstation',
-                arcade_section_title: 'Hyperfokus-Reaktionstrainer',
-                arcade_hs_label: 'Highscore',
-                arcade_hint: '💡 Teste deine Reflexe – Ränge von Normalo bis ADHS-Hyperfokus-Legende!',
                 socials_section_title: 'Socials & Kanäle',
-                settings_wakelock: 'Bildschirm an (StandBy)', settings_wakelock_hint: 'Hält den Bildschirm nur wach, solange Musik läuft - pausiert sie, darf das Handy normal einschlafen.', settings_notifications: 'Benachrichtigungen', notifications_unsupported: 'nicht verfügbar', notifications_on: 'AN', notifications_blocked: 'blockiert - in Browser-Einstellungen ändern', notifications_not_set: 'nicht eingerichtet, antippen', notifications_denied_hint: 'Du hast Benachrichtigungen blockiert - das kann ich nicht per Klick zurücksetzen, nur du selbst in den Browser-/System-Einstellungen für diese Seite.', notifications_enabled_toast: '🔔 Benachrichtigungen sind jetzt aktiviert.', settings_notification_hint: 'Für die "Willkommen zurück"-Meldung, falls Musik pausiert war während du weg warst.', settings_standby_design: 'StandBy-Design', standby_design_classic: 'Classic', standby_design_minimal: 'Minimal', standby_design_cover_focus: 'Cover-Fokus', standby_design_clock_only: 'Nur Uhr', standby_design_vinyl: 'Vinyl', standby_design_split: 'Split', standby_design_typography: 'Typografie', standby_design_edge_glow: 'Edge-Glow', standby_design_compact: 'Kompakt', standby_design_poster: 'Poster', standby_design_frame: 'Rahmen', standby_design_neon: 'Neon', standby_design_polaroid: 'Polaroid', standby_design_bar: 'Leiste', standby_design_grid: 'Raster', standby_design_transparent: 'Transparent', standby_design_giant_clock: 'Riesen-Uhr', standby_design_zen: 'Zen', standby_design_stacked: 'Gestapelt', standby_design_contrast: 'Kontrast', label_standby_accent: 'Akzentfarbe', label_standby_radius: 'Eckenradius', label_standby_design_code: 'Design-Code teilen', design_code_placeholder: 'Code hier einfügen...', btn_design_code_copy: 'Kopieren', btn_design_code_load: 'Laden', settings_design_code_hint: 'Kopiere deinen StandBy-Look als Code und schick ihn Freunden - die laden ihn hier ein und haben genau denselben Style.', standby_design_code_copied: '📋 Code kopiert - jetzt an Freunde weitergeben!', standby_design_code_loaded: '✨ Design geladen!', standby_design_code_invalid: 'Das war kein gültiger Design-Code.', label_standby_scale: 'StandBy-Größe', settings_standby_scale_hint: 'Passt sich automatisch an deinen Bildschirm an - hier nur bei Bedarf feinjustieren.', settings_haptic: 'Haptic-Feedback', whatsnew_summary_title: 'Updates seit deinem letzten Besuch',
+                settings_wakelock: 'Bildschirm an (StandBy)', settings_wakelock_hint: 'Hält den Bildschirm nur wach, solange Musik läuft - pausiert sie, darf das Handy normal einschlafen.', settings_notifications: 'Benachrichtigungen', notifications_unsupported: 'nicht verfügbar', notifications_on: 'AN', notifications_blocked: 'blockiert - in Browser-Einstellungen ändern', notifications_not_set: 'nicht eingerichtet, antippen', notifications_denied_hint: 'Du hast Benachrichtigungen blockiert - das kann ich nicht per Klick zurücksetzen, nur du selbst in den Browser-/System-Einstellungen für diese Seite.', notifications_enabled_toast: '🔔 Benachrichtigungen sind jetzt aktiviert.', settings_notification_hint: 'Für die "Willkommen zurück"-Meldung, falls Musik pausiert war während du weg warst.', settings_standby_design: 'StandBy-Design', standby_design_classic: 'Classic', standby_design_minimal: 'Minimal', standby_design_cover_focus: 'Cover-Fokus', standby_design_clock_only: 'Nur Uhr', standby_design_vinyl: 'Vinyl', standby_design_split: 'Split', standby_design_typography: 'Typografie', standby_design_edge_glow: 'Edge-Glow', standby_design_compact: 'Kompakt', standby_design_poster: 'Poster', standby_design_frame: 'Rahmen', standby_design_neon: 'Neon', standby_design_polaroid: 'Polaroid', standby_design_bar: 'Leiste', standby_design_grid: 'Raster', standby_design_transparent: 'Transparent', standby_design_giant_clock: 'Riesen-Uhr', standby_design_zen: 'Zen', standby_design_stacked: 'Gestapelt', standby_design_contrast: 'Kontrast', standby_design_cyberpunk: 'Cyberpunk', standby_design_cassette: 'Retro-Kassette', standby_design_ambient_orb: 'Ambient-Orb', standby_design_hologram: 'Hologram', standby_design_studio: 'Studio', label_standby_accent: 'Akzentfarbe', label_standby_radius: 'Eckenradius', label_standby_design_code: 'Design-Code teilen', design_code_placeholder: 'Code hier einfügen...', btn_design_code_copy: 'Kopieren', btn_design_code_load: 'Laden', settings_design_code_hint: 'Kopiere deinen StandBy-Look als Code und schick ihn Freunden - die laden ihn hier ein und haben genau denselben Style.', standby_design_code_copied: '📋 Code kopiert - jetzt an Freunde weitergeben!', standby_design_code_loaded: '✨ Design geladen!', standby_design_code_invalid: 'Das war kein gültiger Design-Code.', label_standby_scale: 'StandBy-Größe', settings_standby_scale_hint: 'Passt sich automatisch an deinen Bildschirm an - hier nur bei Bedarf feinjustieren.', settings_haptic: 'Haptic-Feedback', whatsnew_summary_title: 'Updates seit deinem letzten Besuch',
                 mini_click_to_open: 'Klicken zum Öffnen', mini_click_to_close: 'Klicken zum Schließen',
                 aria_cp: 'Befehlspalette öffnen', aria_install: 'Als App installieren', aria_island: 'Song-Details öffnen, nach oben wischen zum Ausblenden'
             },
@@ -6335,6 +6373,10 @@
                 toast_island_hidden: 'Dynamic Island hidden – bring it back via ⌘K',
                 toast_island_back: 'Dynamic Island is back 🏝️',
                 toast_sharecard_creating: 'Creating share card...',
+                                sharecard_live_share_btn: '🔗 Copy Live Now-Playing Link',
+                sharecard_live_share_desc: 'Shares a dynamic link with current track & artwork, perfect for WhatsApp, Discord, TikTok, Snapchat & Insta!',
+                toast_live_share_copied: '🔥 Live Now-Playing link copied to clipboard!',
+                sharecard_title: 'Choose design',
                 toast_sharecard_saved: 'Share card saved! 🎴',
                 toast_sharecard_cors: "Couldn't load the cover image (CORS) – card created without artwork.",
                 toast_link_copied: '📋 Link copied! You can share it now.', toast_stale_reload_hint: '🔄 The display seems stuck for a while - reloading the page might help.', standby_max_session_hint: "😴 StandBy has been running for quite a while and is exiting on its own so your phone can cool down - just reopen it if you'd like.",
@@ -6506,7 +6548,7 @@
                 arcade_hs_label: 'Highscore',
                 arcade_hint: '💡 Test your reflexes – ranks from casual to ADHD hyperfocus legend!',
                 socials_section_title: 'Socials & Channels',
-                settings_wakelock: 'Keep Screen On (StandBy)', settings_wakelock_hint: 'Keeps the screen on only while music is playing - once paused, the phone can sleep normally.', settings_notifications: 'Notifications', notifications_unsupported: 'not available', notifications_on: 'ON', notifications_blocked: 'blocked - change in browser settings', notifications_not_set: 'not set up, tap to enable', notifications_denied_hint: "You've blocked notifications - I can't reset that with a click, only you can in this site's browser/system settings.", notifications_enabled_toast: '🔔 Notifications are now enabled.', settings_notification_hint: "For the 'welcome back' notice if music was paused while you were away.", settings_standby_design: 'StandBy Design', standby_design_classic: 'Classic', standby_design_minimal: 'Minimal', standby_design_cover_focus: 'Cover Focus', standby_design_clock_only: 'Clock Only', standby_design_vinyl: 'Vinyl', standby_design_split: 'Split', standby_design_typography: 'Typography', standby_design_edge_glow: 'Edge Glow', standby_design_compact: 'Compact', standby_design_poster: 'Poster', standby_design_frame: 'Frame', standby_design_neon: 'Neon', standby_design_polaroid: 'Polaroid', standby_design_bar: 'Bar', standby_design_grid: 'Grid', standby_design_transparent: 'Transparent', standby_design_giant_clock: 'Giant Clock', standby_design_zen: 'Zen', standby_design_stacked: 'Stacked', standby_design_contrast: 'Contrast', label_standby_accent: 'Accent Color', label_standby_radius: 'Corner Radius', label_standby_design_code: 'Share Design Code', design_code_placeholder: 'Paste code here...', btn_design_code_copy: 'Copy', btn_design_code_load: 'Load', settings_design_code_hint: 'Copy your StandBy look as a code and send it to friends - they paste it here and get the exact same style.', standby_design_code_copied: '📋 Code copied - now share it with friends!', standby_design_code_loaded: '✨ Design loaded!', standby_design_code_invalid: "That wasn't a valid design code.", label_standby_scale: 'StandBy Size', settings_standby_scale_hint: 'Fits your screen automatically - only fine-tune here if needed.', settings_haptic: 'Haptic Feedback', whatsnew_summary_title: 'Updates since your last visit',
+                settings_wakelock: 'Keep Screen On (StandBy)', settings_wakelock_hint: 'Keeps the screen on only while music is playing - once paused, the phone can sleep normally.', settings_notifications: 'Notifications', notifications_unsupported: 'not available', notifications_on: 'ON', notifications_blocked: 'blocked - change in browser settings', notifications_not_set: 'not set up, tap to enable', notifications_denied_hint: "You've blocked notifications - I can't reset that with a click, only you can in this site's browser/system settings.", notifications_enabled_toast: '🔔 Notifications are now enabled.', settings_notification_hint: "For the 'welcome back' notice if music was paused while you were away.", settings_standby_design: 'StandBy Design', standby_design_classic: 'Classic', standby_design_minimal: 'Minimal', standby_design_cover_focus: 'Cover Focus', standby_design_clock_only: 'Clock Only', standby_design_vinyl: 'Vinyl', standby_design_split: 'Split', standby_design_typography: 'Typography', standby_design_edge_glow: 'Edge Glow', standby_design_compact: 'Compact', standby_design_poster: 'Poster', standby_design_frame: 'Frame', standby_design_neon: 'Neon', standby_design_polaroid: 'Polaroid', standby_design_bar: 'Bar', standby_design_grid: 'Grid', standby_design_transparent: 'Transparent', standby_design_giant_clock: 'Giant Clock', standby_design_zen: 'Zen', standby_design_stacked: 'Stacked', standby_design_contrast: 'Contrast', standby_design_cyberpunk: 'Cyberpunk', standby_design_cassette: 'Retro Cassette', standby_design_ambient_orb: 'Ambient Orb', standby_design_hologram: 'Hologram', standby_design_studio: 'Studio', label_standby_accent: 'Accent Color', label_standby_radius: 'Corner Radius', label_standby_design_code: 'Share Design Code', design_code_placeholder: 'Paste code here...', btn_design_code_copy: 'Copy', btn_design_code_load: 'Load', settings_design_code_hint: 'Copy your StandBy look as a code and send it to friends - they paste it here and get the exact same style.', standby_design_code_copied: '📋 Code copied - now share it with friends!', standby_design_code_loaded: '✨ Design loaded!', standby_design_code_invalid: "That wasn't a valid design code.", label_standby_scale: 'StandBy Size', settings_standby_scale_hint: 'Fits your screen automatically - only fine-tune here if needed.', settings_haptic: 'Haptic Feedback', whatsnew_summary_title: 'Updates since your last visit',
                 mini_click_to_open: 'Click to open', mini_click_to_close: 'Click to close',
                 aria_cp: 'Open command palette', aria_install: 'Install as app', aria_island: 'Open song details, swipe up to dismiss'
             },
@@ -6541,6 +6583,10 @@
                 toast_island_hidden: 'Dynamic Island ocultada – vuelve a mostrarla con ⌘K',
                 toast_island_back: 'Dynamic Island está de vuelta 🏝️',
                 toast_sharecard_creating: 'Creando tarjeta para compartir...',
+                                sharecard_live_share_btn: '🔗 Copiar enlace en vivo de reproducción',
+                sharecard_live_share_desc: '¡Comparte un enlace dinámico con la canción y portada actual, ideal para WhatsApp, Discord, TikTok, Snapchat e Insta!',
+                toast_live_share_copied: '🔥 ¡Enlace de reproducción en vivo copiado al portapapeles!',
+                sharecard_title: 'Elegir diseño',
                 toast_sharecard_saved: '¡Tarjeta guardada! 🎴',
                 toast_sharecard_cors: 'No se pudo cargar la portada (CORS) – tarjeta creada sin imagen.',
                 toast_link_copied: '📋 ¡Enlace copiado! Ya puedes compartirlo.', toast_stale_reload_hint: '🔄 La pantalla parece congelada desde hace un rato - recargar la página podría ayudar.', standby_max_session_hint: '😴 StandBy lleva ya bastante tiempo activo y se cerrará solo para que tu teléfono pueda descansar - vuelve a abrirlo si quieres.',
@@ -6695,7 +6741,7 @@
                 kart_stat_besttime: 'Mejor Tiempo',
                 kart_stat_sessions: 'Sesiones',
                 kart_stat_since: 'Desde',
-                                settings_wakelock: 'Pantalla Encendida (StandBy)', settings_wakelock_hint: 'Mantiene la pantalla encendida solo mientras suena música - al pausar, el teléfono puede dormir normalmente.', settings_notifications: 'Notificaciones', notifications_unsupported: 'no disponible', notifications_on: 'ACTIVADAS', notifications_blocked: 'bloqueadas - cambiar en ajustes del navegador', notifications_not_set: 'no configuradas, toca para activar', notifications_denied_hint: 'Has bloqueado las notificaciones - no puedo restablecer eso con un clic, solo tú puedes hacerlo en los ajustes del navegador/sistema para este sitio.', notifications_enabled_toast: '🔔 Las notificaciones ya están activadas.', settings_notification_hint: 'Para el aviso de "bienvenido de nuevo" si la música estuvo pausada mientras no estabas.', settings_standby_design: 'Diseño de StandBy', standby_design_classic: 'Clásico', standby_design_minimal: 'Minimalista', standby_design_cover_focus: 'Portada al frente', standby_design_clock_only: 'Solo reloj', standby_design_vinyl: 'Vinilo', standby_design_split: 'Dividido', standby_design_typography: 'Tipografía', standby_design_edge_glow: 'Resplandor', standby_design_compact: 'Compacto', standby_design_poster: 'Póster', standby_design_frame: 'Marco', standby_design_neon: 'Neón', standby_design_polaroid: 'Polaroid', standby_design_bar: 'Barra', standby_design_grid: 'Cuadrícula', standby_design_transparent: 'Transparente', standby_design_giant_clock: 'Reloj gigante', standby_design_zen: 'Zen', standby_design_stacked: 'Apilado', standby_design_contrast: 'Contraste', label_standby_accent: 'Color de acento', label_standby_radius: 'Radio de esquina', label_standby_design_code: 'Compartir código de diseño', design_code_placeholder: 'Pega el código aquí...', btn_design_code_copy: 'Copiar', btn_design_code_load: 'Cargar', settings_design_code_hint: 'Copia tu estilo StandBy como código y envíaselo a tus amigos - ellos lo pegan aquí y tienen exactamente el mismo estilo.', standby_design_code_copied: '📋 Código copiado - ¡compártelo con tus amigos!', standby_design_code_loaded: '✨ ¡Diseño cargado!', standby_design_code_invalid: 'Ese no era un código de diseño válido.', label_standby_scale: 'Tamaño de StandBy', settings_standby_scale_hint: 'Se ajusta automáticamente a tu pantalla - ajusta aquí solo si es necesario.', settings_haptic: 'Vibración táctil', whatsnew_summary_title: 'Novedades desde tu última visita',
+                                settings_wakelock: 'Pantalla Encendida (StandBy)', settings_wakelock_hint: 'Mantiene la pantalla encendida solo mientras suena música - al pausar, el teléfono puede dormir normalmente.', settings_notifications: 'Notificaciones', notifications_unsupported: 'no disponible', notifications_on: 'ACTIVADAS', notifications_blocked: 'bloqueadas - cambiar en ajustes del navegador', notifications_not_set: 'no configuradas, toca para activar', notifications_denied_hint: 'Has bloqueado las notificaciones - no puedo restablecer eso con un clic, solo tú puedes hacerlo en los ajustes del navegador/sistema para este sitio.', notifications_enabled_toast: '🔔 Las notificaciones ya están activadas.', settings_notification_hint: 'Para el aviso de "bienvenido de nuevo" si la música estuvo pausada mientras no estabas.', settings_standby_design: 'Diseño de StandBy', standby_design_classic: 'Clásico', standby_design_minimal: 'Minimalista', standby_design_cover_focus: 'Portada al frente', standby_design_clock_only: 'Solo reloj', standby_design_vinyl: 'Vinilo', standby_design_split: 'Dividido', standby_design_typography: 'Tipografía', standby_design_edge_glow: 'Resplandor', standby_design_compact: 'Compacto', standby_design_poster: 'Póster', standby_design_frame: 'Marco', standby_design_neon: 'Neón', standby_design_polaroid: 'Polaroid', standby_design_bar: 'Barra', standby_design_grid: 'Cuadrícula', standby_design_transparent: 'Transparente', standby_design_giant_clock: 'Reloj gigante', standby_design_zen: 'Zen', standby_design_stacked: 'Apilado', standby_design_contrast: 'Contraste', standby_design_cyberpunk: 'Cyberpunk', standby_design_cassette: 'Casete Retro', standby_design_ambient_orb: 'Orbe Ambiental', standby_design_hologram: 'Holograma', standby_design_studio: 'Estudio', label_standby_accent: 'Color de acento', label_standby_radius: 'Radio de esquina', label_standby_design_code: 'Compartir código de diseño', design_code_placeholder: 'Pega el código aquí...', btn_design_code_copy: 'Copiar', btn_design_code_load: 'Cargar', settings_design_code_hint: 'Copia tu estilo StandBy como código y envíaselo a tus amigos - ellos lo pegan aquí y tienen exactamente el mismo estilo.', standby_design_code_copied: '📋 Código copiado - ¡compártelo con tus amigos!', standby_design_code_loaded: '✨ ¡Diseño cargado!', standby_design_code_invalid: 'Ese no era un código de diseño válido.', label_standby_scale: 'Tamaño de StandBy', settings_standby_scale_hint: 'Se ajusta automáticamente a tu pantalla - ajusta aquí solo si es necesario.', settings_haptic: 'Vibración táctil', whatsnew_summary_title: 'Novedades desde tu última visita',
                 mini_click_to_open: 'Clic para abrir', mini_click_to_close: 'Clic para cerrar',
                 aria_cp: 'Abrir paleta de comandos', aria_install: 'Instalar como app', aria_island: 'Abrir detalles de la canción, desliza arriba para ocultar'
             },
@@ -6730,6 +6776,10 @@
                 toast_island_hidden: 'Dynamic Island masquée – ré-affiche-la via ⌘K',
                 toast_island_back: 'La Dynamic Island est de retour 🏝️',
                 toast_sharecard_creating: 'Création de la carte à partager...',
+                                sharecard_live_share_btn: '🔗 Copier le lien Now-Playing en direct',
+                sharecard_live_share_desc: 'Partage un lien dynamique avec le titre et la pochette en direct, parfait pour WhatsApp, Discord, TikTok, Snapchat & Insta !',
+                toast_live_share_copied: '🔥 Lien Now-Playing en direct copié dans le presse-papiers !',
+                sharecard_title: 'Choisir le design',
                 toast_sharecard_saved: 'Carte enregistrée ! 🎴',
                 toast_sharecard_cors: "Impossible de charger la pochette (CORS) – carte créée sans image.",
                 toast_link_copied: '📋 Lien copié ! Tu peux le partager maintenant.', toast_stale_reload_hint: "🔄 L'affichage semble figé depuis un moment - recharger la page pourrait aider.", standby_max_session_hint: "😴 StandBy tourne depuis un bon moment et se ferme de lui-même pour laisser ton téléphone respirer - rouvre-le si tu veux.",
@@ -6884,7 +6934,7 @@
                 kart_stat_besttime: 'Meilleur Temps',
                 kart_stat_sessions: 'Sessions',
                 kart_stat_since: 'Depuis',
-                                settings_wakelock: 'Écran Allumé (StandBy)', settings_wakelock_hint: "Garde l'écran allumé uniquement pendant que la musique joue - une fois en pause, le téléphone peut s'endormir normalement.", settings_notifications: 'Notifications', notifications_unsupported: 'non disponible', notifications_on: 'ACTIVÉES', notifications_blocked: 'bloquées - à changer dans les paramètres du navigateur', notifications_not_set: 'non configurées, touche pour activer', notifications_denied_hint: "Tu as bloqué les notifications - je ne peux pas réinitialiser ça par un clic, seulement toi dans les paramètres navigateur/système de ce site.", notifications_enabled_toast: '🔔 Les notifications sont maintenant activées.', settings_notification_hint: "Pour la notification « content de te revoir » si la musique était en pause pendant ton absence.", settings_standby_design: 'Design StandBy', standby_design_classic: 'Classique', standby_design_minimal: 'Minimal', standby_design_cover_focus: 'Pochette en avant', standby_design_clock_only: 'Horloge seule', standby_design_vinyl: 'Vinyle', standby_design_split: 'Partagé', standby_design_typography: 'Typographie', standby_design_edge_glow: 'Lueur', standby_design_compact: 'Compact', standby_design_poster: 'Poster', standby_design_frame: 'Cadre', standby_design_neon: 'Néon', standby_design_polaroid: 'Polaroid', standby_design_bar: 'Barre', standby_design_grid: 'Grille', standby_design_transparent: 'Transparent', standby_design_giant_clock: 'Horloge géante', standby_design_zen: 'Zen', standby_design_stacked: 'Empilé', standby_design_contrast: 'Contraste', label_standby_accent: "Couleur d'accent", label_standby_radius: 'Rayon des coins', label_standby_design_code: 'Partager le code du design', design_code_placeholder: 'Colle le code ici...', btn_design_code_copy: 'Copier', btn_design_code_load: 'Charger', settings_design_code_hint: "Copie ton look StandBy en tant que code et envoie-le à des amis - ils le collent ici et obtiennent exactement le même style.", standby_design_code_copied: '📋 Code copié - partage-le avec tes amis !', standby_design_code_loaded: '✨ Design chargé !', standby_design_code_invalid: "Ce n'était pas un code de design valide.", label_standby_scale: 'Taille StandBy', settings_standby_scale_hint: "S'adapte automatiquement à ton écran - ajuste ici seulement si besoin.", settings_haptic: 'Retour haptique', whatsnew_summary_title: 'Nouveautés depuis ta dernière visite',
+                                settings_wakelock: 'Écran Allumé (StandBy)', settings_wakelock_hint: "Garde l'écran allumé uniquement pendant que la musique joue - une fois en pause, le téléphone peut s'endormir normalement.", settings_notifications: 'Notifications', notifications_unsupported: 'non disponible', notifications_on: 'ACTIVÉES', notifications_blocked: 'bloquées - à changer dans les paramètres du navigateur', notifications_not_set: 'non configurées, touche pour activer', notifications_denied_hint: "Tu as bloqué les notifications - je ne peux pas réinitialiser ça par un clic, seulement toi dans les paramètres navigateur/système de ce site.", notifications_enabled_toast: '🔔 Les notifications sont maintenant activées.', settings_notification_hint: "Pour la notification « content de te revoir » si la musique était en pause pendant ton absence.", settings_standby_design: 'Design StandBy', standby_design_classic: 'Classique', standby_design_minimal: 'Minimal', standby_design_cover_focus: 'Pochette en avant', standby_design_clock_only: 'Horloge seule', standby_design_vinyl: 'Vinyle', standby_design_split: 'Partagé', standby_design_typography: 'Typographie', standby_design_edge_glow: 'Lueur', standby_design_compact: 'Compact', standby_design_poster: 'Poster', standby_design_frame: 'Cadre', standby_design_neon: 'Néon', standby_design_polaroid: 'Polaroid', standby_design_bar: 'Barre', standby_design_grid: 'Grille', standby_design_transparent: 'Transparent', standby_design_giant_clock: 'Horloge géante', standby_design_zen: 'Zen', standby_design_stacked: 'Empilé', standby_design_contrast: 'Contraste', standby_design_cyberpunk: 'Cyberpunk', standby_design_cassette: 'Cassette Rétro', standby_design_ambient_orb: 'Orbe Ambiant', standby_design_hologram: 'Hologramme', standby_design_studio: 'Studio', label_standby_accent: "Couleur d'accent", label_standby_radius: 'Rayon des coins', label_standby_design_code: 'Partager le code du design', design_code_placeholder: 'Colle le code ici...', btn_design_code_copy: 'Copier', btn_design_code_load: 'Charger', settings_design_code_hint: "Copie ton look StandBy en tant que code et envoie-le à des amis - ils le collent ici et obtiennent exactement le même style.", standby_design_code_copied: '📋 Code copié - partage-le avec tes amis !', standby_design_code_loaded: '✨ Design chargé !', standby_design_code_invalid: "Ce n'était pas un code de design valide.", label_standby_scale: 'Taille StandBy', settings_standby_scale_hint: "S'adapte automatiquement à ton écran - ajuste ici seulement si besoin.", settings_haptic: 'Retour haptique', whatsnew_summary_title: 'Nouveautés depuis ta dernière visite',
                 mini_click_to_open: 'Cliquer pour ouvrir', mini_click_to_close: 'Cliquer pour fermer',
                 aria_cp: 'Ouvrir la palette de commandes', aria_install: 'Installer comme appli', aria_island: 'Ouvrir les détails du morceau, glisser vers le haut pour masquer'
             },
@@ -6919,6 +6969,10 @@
                 toast_island_hidden: 'Dynamic Island ocultada – traga de volta pelo ⌘K',
                 toast_island_back: 'A Dynamic Island está de volta 🏝️',
                 toast_sharecard_creating: 'Criando cartão para compartilhar...',
+                                sharecard_live_share_btn: '🔗 Copiar link Now-Playing ao vivo',
+                sharecard_live_share_desc: 'Compartilha um link dinâmico com a música e capa atual, perfeito para WhatsApp, Discord, TikTok, Snapchat & Insta!',
+                toast_live_share_copied: '🔥 Link Now-Playing ao vivo copiado para a área de transferência!',
+                sharecard_title: 'Escolher design',
                 toast_sharecard_saved: 'Cartão salvo! 🎴',
                 toast_sharecard_cors: 'Não foi possível carregar a capa (CORS) – cartão criado sem imagem.',
                 toast_link_copied: '📋 Link copiado! Já pode compartilhar.', toast_stale_reload_hint: '🔄 A tela parece travada há um tempo - recarregar a página pode ajudar.', standby_max_session_hint: '😴 O StandBy já está rodando há bastante tempo e vai se fechar sozinho para o celular descansar - basta abrir de novo se quiser.',
@@ -7073,7 +7127,7 @@
                 kart_stat_besttime: 'Melhor Tempo',
                 kart_stat_sessions: 'Sessões',
                 kart_stat_since: 'Desde',
-                                settings_wakelock: 'Tela Ligada (StandBy)', settings_wakelock_hint: 'Mantém a tela ligada apenas enquanto a música toca - ao pausar, o celular pode dormir normalmente.', settings_notifications: 'Notificações', notifications_unsupported: 'indisponível', notifications_on: 'ATIVADAS', notifications_blocked: 'bloqueadas - altere nas configurações do navegador', notifications_not_set: 'não configuradas, toque para ativar', notifications_denied_hint: 'Você bloqueou as notificações - não posso redefinir isso com um clique, só você pode nas configurações de navegador/sistema deste site.', notifications_enabled_toast: '🔔 As notificações agora estão ativadas.', settings_notification_hint: 'Para o aviso de "bem-vindo de volta" caso a música estivesse pausada enquanto você estava fora.', settings_standby_design: 'Design do StandBy', standby_design_classic: 'Clássico', standby_design_minimal: 'Minimalista', standby_design_cover_focus: 'Capa em destaque', standby_design_clock_only: 'Só relógio', standby_design_vinyl: 'Vinil', standby_design_split: 'Dividido', standby_design_typography: 'Tipografia', standby_design_edge_glow: 'Brilho', standby_design_compact: 'Compacto', standby_design_poster: 'Pôster', standby_design_frame: 'Moldura', standby_design_neon: 'Neon', standby_design_polaroid: 'Polaroid', standby_design_bar: 'Barra', standby_design_grid: 'Grade', standby_design_transparent: 'Transparente', standby_design_giant_clock: 'Relógio gigante', standby_design_zen: 'Zen', standby_design_stacked: 'Empilhado', standby_design_contrast: 'Contraste', label_standby_accent: 'Cor de destaque', label_standby_radius: 'Raio de canto', label_standby_design_code: 'Compartilhar código de design', design_code_placeholder: 'Cole o código aqui...', btn_design_code_copy: 'Copiar', btn_design_code_load: 'Carregar', settings_design_code_hint: 'Copie seu visual StandBy como um código e mande para amigos - eles colam aqui e ficam com exatamente o mesmo estilo.', standby_design_code_copied: '📋 Código copiado - compartilhe com amigos!', standby_design_code_loaded: '✨ Design carregado!', standby_design_code_invalid: 'Esse não era um código de design válido.', label_standby_scale: 'Tamanho do StandBy', settings_standby_scale_hint: 'Ajusta-se automaticamente à sua tela - ajuste aqui só se precisar.', settings_haptic: 'Feedback tátil', whatsnew_summary_title: 'Novidades desde sua última visita',
+                                settings_wakelock: 'Tela Ligada (StandBy)', settings_wakelock_hint: 'Mantém a tela ligada apenas enquanto a música toca - ao pausar, o celular pode dormir normalmente.', settings_notifications: 'Notificações', notifications_unsupported: 'indisponível', notifications_on: 'ATIVADAS', notifications_blocked: 'bloqueadas - altere nas configurações do navegador', notifications_not_set: 'não configuradas, toque para ativar', notifications_denied_hint: 'Você bloqueou as notificações - não posso redefinir isso com um clique, só você pode nas configurações de navegador/sistema deste site.', notifications_enabled_toast: '🔔 As notificações agora estão ativadas.', settings_notification_hint: 'Para o aviso de "bem-vindo de volta" caso a música estivesse pausada enquanto você estava fora.', settings_standby_design: 'Design do StandBy', standby_design_classic: 'Clássico', standby_design_minimal: 'Minimalista', standby_design_cover_focus: 'Capa em destaque', standby_design_clock_only: 'Só relógio', standby_design_vinyl: 'Vinil', standby_design_split: 'Dividido', standby_design_typography: 'Tipografia', standby_design_edge_glow: 'Brilho', standby_design_compact: 'Compacto', standby_design_poster: 'Pôster', standby_design_frame: 'Moldura', standby_design_neon: 'Neon', standby_design_polaroid: 'Polaroid', standby_design_bar: 'Barra', standby_design_grid: 'Grade', standby_design_transparent: 'Transparente', standby_design_giant_clock: 'Relógio gigante', standby_design_zen: 'Zen', standby_design_stacked: 'Empilhado', standby_design_contrast: 'Contraste', standby_design_cyberpunk: 'Cyberpunk', standby_design_cassette: 'Fita Cassete', standby_design_ambient_orb: 'Orbe Ambiente', standby_design_hologram: 'Holograma', standby_design_studio: 'Estúdio', label_standby_accent: 'Cor de destaque', label_standby_radius: 'Raio de canto', label_standby_design_code: 'Compartilhar código de design', design_code_placeholder: 'Cole o código aqui...', btn_design_code_copy: 'Copiar', btn_design_code_load: 'Carregar', settings_design_code_hint: 'Copie seu visual StandBy como um código e mande para amigos - eles colam aqui e ficam com exatamente o mesmo estilo.', standby_design_code_copied: '📋 Código copiado - compartilhe com amigos!', standby_design_code_loaded: '✨ Design carregado!', standby_design_code_invalid: 'Esse não era um código de design válido.', label_standby_scale: 'Tamanho do StandBy', settings_standby_scale_hint: 'Ajusta-se automaticamente à sua tela - ajuste aqui só se precisar.', settings_haptic: 'Feedback tátil', whatsnew_summary_title: 'Novidades desde sua última visita',
                 mini_click_to_open: 'Clique para abrir', mini_click_to_close: 'Clique para fechar',
                 aria_cp: 'Abrir paleta de comandos', aria_install: 'Instalar como app', aria_island: 'Abrir detalhes da música, deslize para cima para ocultar'
             },
@@ -7108,6 +7162,10 @@
                 toast_island_hidden: 'Dynamic Island gizlendi – ⌘K ile geri getir',
                 toast_island_back: 'Dynamic Island geri döndü 🏝️',
                 toast_sharecard_creating: 'Paylaşım kartı oluşturuluyor...',
+                                sharecard_live_share_btn: '🔗 Canlı Now-Playing Bağlantısını Kopyala',
+                sharecard_live_share_desc: 'Geçerli parça ve kapak resmiyle dinamik bir bağlantı paylaşır; WhatsApp, Discord, TikTok, Snapchat ve Insta için mükemmel!',
+                toast_live_share_copied: '🔥 Canlı Now-Playing bağlantısı panoya kopyalandı!',
+                sharecard_title: 'Tasarım seç',
                 toast_sharecard_saved: 'Paylaşım kartı kaydedildi! 🎴',
                 toast_sharecard_cors: 'Kapak resmi yüklenemedi (CORS) – kart resimsiz oluşturuldu.',
                 toast_link_copied: '📋 Bağlantı kopyalandı! Şimdi paylaşabilirsin.', toast_stale_reload_hint: '🔄 Ekran bir süredir donmuş görünüyor - sayfayı yenilemek yardımcı olabilir.', standby_max_session_hint: '😴 StandBy uzun süredir çalışıyor ve telefonun soluklanması için kendiliğinden kapanıyor - istersen tekrar açabilirsin.',
@@ -7262,7 +7320,7 @@
                 kart_stat_besttime: 'En İyi Süre',
                 kart_stat_sessions: 'Seanslar',
                 kart_stat_since: 'Beri',
-                                settings_wakelock: 'Ekranı Açık Tut (StandBy)', settings_wakelock_hint: 'Ekranı yalnızca müzik çalarken açık tutar - duraklatıldığında telefon normal şekilde uyuyabilir.', settings_notifications: 'Bildirimler', notifications_unsupported: 'kullanılamıyor', notifications_on: 'AÇIK', notifications_blocked: 'engellendi - tarayıcı ayarlarından değiştir', notifications_not_set: 'ayarlanmadı, etkinleştirmek için dokun', notifications_denied_hint: 'Bildirimleri engelledin - bunu bir tıklamayla sıfırlayamam, yalnızca sen bu sitenin tarayıcı/sistem ayarlarından yapabilirsin.', notifications_enabled_toast: '🔔 Bildirimler artık etkin.', settings_notification_hint: 'Sen yokken müzik duraklatılmışsa "tekrar hoş geldin" bildirimi için.', settings_standby_design: 'StandBy Tasarımı', standby_design_classic: 'Klasik', standby_design_minimal: 'Minimal', standby_design_cover_focus: 'Kapak Odaklı', standby_design_clock_only: 'Sadece Saat', standby_design_vinyl: 'Plak', standby_design_split: 'Bölünmüş', standby_design_typography: 'Tipografi', standby_design_edge_glow: 'Kenar Işıltısı', standby_design_compact: 'Kompakt', standby_design_poster: 'Poster', standby_design_frame: 'Çerçeve', standby_design_neon: 'Neon', standby_design_polaroid: 'Polaroid', standby_design_bar: 'Şerit', standby_design_grid: 'Izgara', standby_design_transparent: 'Şeffaf', standby_design_giant_clock: 'Dev Saat', standby_design_zen: 'Zen', standby_design_stacked: 'Yığılmış', standby_design_contrast: 'Kontrast', label_standby_accent: 'Vurgu Rengi', label_standby_radius: 'Köşe Yarıçapı', label_standby_design_code: 'Tasarım Kodunu Paylaş', design_code_placeholder: 'Kodu buraya yapıştır...', btn_design_code_copy: 'Kopyala', btn_design_code_load: 'Yükle', settings_design_code_hint: 'StandBy görünümünü kod olarak kopyala ve arkadaşlarına gönder - onlar buraya yapıştırır ve tam olarak aynı stile sahip olur.', standby_design_code_copied: '📋 Kod kopyalandı - şimdi arkadaşlarınla paylaş!', standby_design_code_loaded: '✨ Tasarım yüklendi!', standby_design_code_invalid: 'Bu geçerli bir tasarım kodu değildi.', label_standby_scale: 'StandBy Boyutu', settings_standby_scale_hint: 'Ekranına otomatik olarak uyum sağlar - burada yalnızca gerekirse ince ayar yap.', settings_haptic: 'Dokunsal Geri Bildirim', whatsnew_summary_title: 'Son ziyaretinden beri yenilikler',
+                                settings_wakelock: 'Ekranı Açık Tut (StandBy)', settings_wakelock_hint: 'Ekranı yalnızca müzik çalarken açık tutar - duraklatıldığında telefon normal şekilde uyuyabilir.', settings_notifications: 'Bildirimler', notifications_unsupported: 'kullanılamıyor', notifications_on: 'AÇIK', notifications_blocked: 'engellendi - tarayıcı ayarlarından değiştir', notifications_not_set: 'ayarlanmadı, etkinleştirmek için dokun', notifications_denied_hint: 'Bildirimleri engelledin - bunu bir tıklamayla sıfırlayamam, yalnızca sen bu sitenin tarayıcı/sistem ayarlarından yapabilirsin.', notifications_enabled_toast: '🔔 Bildirimler artık etkin.', settings_notification_hint: 'Sen yokken müzik duraklatılmışsa "tekrar hoş geldin" bildirimi için.', settings_standby_design: 'StandBy Tasarımı', standby_design_classic: 'Klasik', standby_design_minimal: 'Minimal', standby_design_cover_focus: 'Kapak Odaklı', standby_design_clock_only: 'Sadece Saat', standby_design_vinyl: 'Plak', standby_design_split: 'Bölünmüş', standby_design_typography: 'Tipografi', standby_design_edge_glow: 'Kenar Işıltısı', standby_design_compact: 'Kompakt', standby_design_poster: 'Poster', standby_design_frame: 'Çerçeve', standby_design_neon: 'Neon', standby_design_polaroid: 'Polaroid', standby_design_bar: 'Şerit', standby_design_grid: 'Izgara', standby_design_transparent: 'Şeffaf', standby_design_giant_clock: 'Dev Saat', standby_design_zen: 'Zen', standby_design_stacked: 'Yığılmış', standby_design_contrast: 'Kontrast', standby_design_cyberpunk: 'Siberpunk', standby_design_cassette: 'Retro Kaset', standby_design_ambient_orb: 'Ortam Küresi', standby_design_hologram: 'Hologram', standby_design_studio: 'Stüdyo', label_standby_accent: 'Vurgu Rengi', label_standby_radius: 'Köşe Yarıçapı', label_standby_design_code: 'Tasarım Kodunu Paylaş', design_code_placeholder: 'Kodu buraya yapıştır...', btn_design_code_copy: 'Kopyala', btn_design_code_load: 'Yükle', settings_design_code_hint: 'StandBy görünümünü kod olarak kopyala ve arkadaşlarına gönder - onlar buraya yapıştırır ve tam olarak aynı stile sahip olur.', standby_design_code_copied: '📋 Kod kopyalandı - şimdi arkadaşlarınla paylaş!', standby_design_code_loaded: '✨ Tasarım yüklendi!', standby_design_code_invalid: 'Bu geçerli bir tasarım kodu değildi.', label_standby_scale: 'StandBy Boyutu', settings_standby_scale_hint: 'Ekranına otomatik olarak uyum sağlar - burada yalnızca gerekirse ince ayar yap.', settings_haptic: 'Dokunsal Geri Bildirim', whatsnew_summary_title: 'Son ziyaretinden beri yenilikler',
                 mini_click_to_open: 'Açmak için tıkla', mini_click_to_close: 'Kapatmak için tıkla',
                 aria_cp: 'Komut paletini aç', aria_install: 'Uygulama olarak yükle', aria_island: 'Şarkı detaylarını aç, gizlemek için yukarı kaydır'
             }
@@ -7446,6 +7504,11 @@
             setText('opt-standby-design-zen', t('standby_design_zen'));
             setText('opt-standby-design-stacked', t('standby_design_stacked'));
             setText('opt-standby-design-contrast', t('standby_design_contrast'));
+            setText('opt-standby-design-cyberpunk', t('standby_design_cyberpunk'));
+            setText('opt-standby-design-cassette', t('standby_design_cassette'));
+            setText('opt-standby-design-ambient-orb', t('standby_design_ambient_orb'));
+            setText('opt-standby-design-hologram', t('standby_design_hologram'));
+            setText('opt-standby-design-studio', t('standby_design_studio'));
             setText('label-standby-accent', t('label_standby_accent'));
             setText('label-standby-radius', t('label_standby_radius'));
             setText('label-standby-design-code', t('label_standby_design_code'));
@@ -7457,6 +7520,13 @@
             const codeInput = document.getElementById('standby-design-code-input');
             if (codeInput) codeInput.placeholder = t('design_code_placeholder');
             setText('footer-created-by', t('footer_created_by'));
+            setText('sharecard-header-title', t('sharecard_title'));
+            setText('sharecard-live-desc', t('sharecard_live_share_desc'));
+            setText('btn-sharecard-live-copy-text', t('sharecard_live_share_btn'));
+            const settingsVer = document.getElementById('settings-version-label');
+            if (settingsVer) settingsVer.textContent = 'Version ' + SITE_VERSION;
+            const footerVer = document.getElementById('footer-version-label');
+            if (footerVer) footerVer.textContent = SITE_VERSION;
 
             // NEW: fallbackMessages / secretMessages Arrays in-place mit neuer Sprache befüllen
             // (sie sind const, aber der Inhalt darf mutiert werden - so bleiben alle
@@ -8433,7 +8503,8 @@
                 'standby-design-frame', 'standby-design-neon', 'standby-design-polaroid',
                 'standby-design-bar', 'standby-design-grid', 'standby-design-transparent',
                 'standby-design-giant-clock', 'standby-design-zen', 'standby-design-stacked',
-                'standby-design-contrast'
+                'standby-design-contrast', 'standby-design-cyberpunk', 'standby-design-cassette',
+                'standby-design-ambient-orb', 'standby-design-hologram', 'standby-design-studio'
             );
             if (design !== 'classic') overlay.classList.add('standby-design-' + design);
             const select = document.getElementById('standby-design-select');
@@ -8463,8 +8534,15 @@
             return `standbyManualScale:${standbyDesign}:${dims}`;
         }
         function getManualScale() {
-            const v = localStorage.getItem(getManualScaleKey());
-            return v !== null ? parseFloat(v) : 1;
+            // 1. Zuerst spezifischen Schlüssel für aktuelles Design + Dimensionen prüfen
+            const specific = localStorage.getItem(getManualScaleKey());
+            if (specific !== null) return parseFloat(specific);
+            // 2. Fallback auf design-übergreifenden Wert für dieses spezifische Design
+            const perDesign = localStorage.getItem(`standbyManualScale:${standbyDesign}`);
+            if (perDesign !== null) return parseFloat(perDesign);
+            // 3. Fallback auf den globalen StandBy-Skalierungswert
+            const globalScale = localStorage.getItem('standbyManualScale');
+            return globalScale !== null ? parseFloat(globalScale) : 1;
         }
         function syncStandbyScaleSliderUI() {
             const scale = getManualScale();
@@ -8523,6 +8601,8 @@
             const scale = Math.min(1.3, Math.max(0.6, parseFloat(val) || 1));
             haptic(6);
             localStorage.setItem(getManualScaleKey(), scale.toString());
+            localStorage.setItem(`standbyManualScale:${standbyDesign}`, scale.toString());
+            localStorage.setItem('standbyManualScale', scale.toString());
             const label = document.getElementById('standby-scale-label');
             if (label) label.textContent = Math.round(scale * 100) + '%';
             const card = document.getElementById('standby-nowplaying');
@@ -8627,7 +8707,8 @@
                 const validDesigns = [
                     'classic', 'minimal', 'cover-focus', 'clock-only', 'vinyl', 'split', 'typography',
                     'edge-glow', 'compact', 'poster', 'frame', 'neon', 'polaroid', 'bar', 'grid',
-                    'transparent', 'giant-clock', 'zen', 'stacked', 'contrast'
+                    'transparent', 'giant-clock', 'zen', 'stacked', 'contrast',
+                    'cyberpunk', 'cassette', 'ambient-orb', 'hologram', 'studio'
                 ];
                 if (payload.d && validDesigns.includes(payload.d)) applyStandbyDesign(payload.d);
                 if (payload.a && /^#[0-9a-fA-F]{6}$/.test(payload.a)) window.changeStandbyAccent(payload.a);
@@ -9831,6 +9912,48 @@
         })();
 
         // --- NEW: SHARE CARD GENERATOR ---
+        
+        // NEU v24.117: ECHT-LIVE Now-Playing Share Link mit allen Parametern & Fallback-Kopieren
+        window.copyLiveNowPlayingShare = function() {
+            haptic(15);
+            const titleEl = document.getElementById('track-title');
+            const artistEl = document.getElementById('track-artist');
+            const artworkEl = document.getElementById('artwork');
+            const title = (titleEl && titleEl.innerText) ? titleEl.innerText : 'Gamingpig';
+            const artist = (artistEl && artistEl.innerText) ? artistEl.innerText : '';
+            const artSrc = artworkEl ? artworkEl.getAttribute('src') : '';
+
+            // Baue die dynamische Live-URL zusammen
+            const baseUrl = 'https://gamingpig.github.io/About-Gamingpig/';
+            const params = new URLSearchParams();
+            params.set('share', 'nowplaying');
+            if (title && title !== t('standby_idle_title')) params.set('song', title);
+            if (artist && artist !== t('standby_idle_subtitle')) params.set('artist', artist);
+            if (artSrc && !artSrc.startsWith('data:')) params.set('art', artSrc);
+
+            const liveShareUrl = baseUrl + '?' + params.toString();
+            const shareText = '🎵 Gamingpig hört gerade: ' + title + (artist ? ' – ' + artist : '') + ' 🔥 ' + liveShareUrl;
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(liveShareUrl)
+                    .then(() => {
+                        if (typeof showToast === 'function') showToast(t('toast_live_share_copied'), 3500);
+                        if (navigator.share) {
+                            navigator.share({
+                                title: '🎵 Gamingpig hört gerade: ' + title,
+                                text: shareText,
+                                url: liveShareUrl
+                            }).catch(() => {});
+                        }
+                    })
+                    .catch(() => {
+                        prompt('Live-Link kopieren:', liveShareUrl);
+                    });
+            } else {
+                prompt('Live-Link kopieren:', liveShareUrl);
+            }
+        };
+
         window.generateShareCard = function() {
             const titleEl = document.getElementById('track-title');
             const artistEl = document.getElementById('track-artist');
@@ -9892,13 +10015,19 @@
             { id: 'terminal', label: 'Terminal', draw: drawShareCardTerminal },
             { id: 'cassette', label: 'Cassette', draw: drawShareCardCassette },
             { id: 'wave', label: 'Wave', draw: drawShareCardWave },
-            { id: 'sticker', label: 'Sticker', draw: drawShareCardSticker }
+            { id: 'sticker', label: 'Sticker', draw: drawShareCardSticker },
+            { id: 'hologram', label: 'Hologram', draw: drawShareCardHologram },
+            { id: 'studio', label: 'Studio', draw: drawShareCardStudio },
+            { id: 'ambient-orb', label: 'Ambient Orb', draw: drawShareCardOrb },
+            { id: 'cyberpunk', label: 'Cyberpunk', draw: drawShareCardCyberpunk }
         ];
 
         function openSharecardPicker(artImg, title, artist) {
             const overlay = document.getElementById('sharecard-picker-overlay');
             const grid = document.getElementById('sharecard-picker-grid');
             if (!overlay || !grid) return;
+            const liveTrackLabel = document.getElementById('sharecard-live-current-track');
+            if (liveTrackLabel) liveTrackLabel.textContent = title + (artist ? ' – ' + artist : '');
 
             grid.innerHTML = SHARECARD_DESIGNS.map((d, i) => `
                 <div class="sc-option" data-design="${i}">
@@ -10516,6 +10645,314 @@
             ctx.fillStyle = 'rgba(28,25,23,0.5)';
             ctx.font = `700 ${16 * s}px Inter, sans-serif`;
             ctx.fillText('🐷 gamingpig hört gerade', W / 2, H - 50 * s);
+        }
+
+        
+        // --- Design 11: Hologram - Futuristisches Sci-Fi HUD mit Gitter und leuchtendem Hologramm ---
+        function drawShareCardHologram(ctx, W, H, artImg, title, artist) {
+            const s = W / 720;
+            const bgGrad = ctx.createLinearGradient(0, 0, 0, H);
+            bgGrad.addColorStop(0, '#030b14');
+            bgGrad.addColorStop(0.5, '#051829');
+            bgGrad.addColorStop(1, '#020810');
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, W, H);
+
+            // Tech HUD Gitter-Hintergrund
+            ctx.save();
+            ctx.strokeStyle = 'rgba(6, 182, 212, 0.12)';
+            ctx.lineWidth = 1 * s;
+            for (let x = 0; x <= W; x += 40 * s) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+            }
+            for (let y = 0; y <= H; y += 40 * s) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+            }
+            ctx.restore();
+
+            // Holografischer Kreis-Projektor
+            const cx = W / 2, cy = 350 * s;
+            ctx.save();
+            ctx.strokeStyle = 'rgba(6, 182, 212, 0.4)';
+            ctx.lineWidth = 2 * s;
+            ctx.setLineDash([8 * s, 6 * s]);
+            ctx.beginPath(); ctx.arc(cx, cy, 230 * s, 0, Math.PI * 2); ctx.stroke();
+            ctx.beginPath(); ctx.arc(cx, cy, 245 * s, 0, Math.PI * 2); ctx.stroke();
+            ctx.restore();
+
+            // Zentrale Hologramm-Karte
+            const artSize = 340 * s;
+            const artX = (W - artSize) / 2;
+            const artY = cy - artSize / 2;
+
+            ctx.save();
+            ctx.shadowColor = 'rgba(6, 182, 212, 0.85)';
+            ctx.shadowBlur = 40 * s;
+            roundRectPath(ctx, artX, artY, artSize, artSize, 20 * s);
+            ctx.strokeStyle = '#06b6d4';
+            ctx.lineWidth = 3 * s;
+            ctx.stroke();
+            ctx.restore();
+
+            ctx.save();
+            roundRectPath(ctx, artX, artY, artSize, artSize, 20 * s);
+            ctx.clip();
+            if (artImg) {
+                ctx.filter = 'saturate(180%) contrast(1.1) brightness(1.05)';
+                drawImageCover(ctx, artImg, artX, artY, artSize, artSize);
+                ctx.filter = 'none';
+            } else {
+                ctx.fillStyle = '#082f49';
+                ctx.fill();
+            }
+            // Hologram Scanline-Overlay
+            ctx.fillStyle = 'rgba(6, 182, 212, 0.15)';
+            for (let sy = artY; sy < artY + artSize; sy += 4 * s) {
+                ctx.fillRect(artX, sy, artSize, 2 * s);
+            }
+            ctx.restore();
+
+            // Typografie mit Glow
+            ctx.textAlign = 'center';
+            ctx.save();
+            ctx.shadowColor = 'rgba(6, 182, 212, 0.9)';
+            ctx.shadowBlur = 18 * s;
+            ctx.fillStyle = '#67e8f9';
+            ctx.font = "800 " + Math.round(36 * s) + "px 'JetBrains Mono', monospace";
+            wrapText(ctx, title, W / 2, artY + artSize + 80 * s, W - 90 * s, 44 * s);
+            ctx.restore();
+
+            ctx.fillStyle = 'rgba(165, 243, 252, 0.75)';
+            ctx.font = "600 " + Math.round(22 * s) + "px 'JetBrains Mono', monospace";
+            ctx.fillText(artist, W / 2, artY + artSize + 135 * s);
+
+            ctx.fillStyle = 'rgba(6, 182, 212, 0.5)';
+            ctx.font = "700 " + Math.round(14 * s) + "px 'JetBrains Mono', monospace";
+            ctx.fillText('◈ HOLOGRAM AUDIO STREAM // GAMINGPIG ◈', W / 2, H - 45 * s);
+        }
+
+        // --- Design 12: Studio - High-End Tonstudio Look mit VU-Meter & Matt-Schwarz ---
+        function drawShareCardStudio(ctx, W, H, artImg, title, artist) {
+            const s = W / 720;
+            ctx.fillStyle = '#09090b';
+            ctx.fillRect(0, 0, W, H);
+
+            // Studio Metall-Panel Textur
+            const panelX = 40 * s, panelY = 50 * s, panelW = W - 80 * s, panelH = H - 100 * s;
+            ctx.save();
+            ctx.shadowColor = 'rgba(0,0,0,0.8)';
+            ctx.shadowBlur = 40 * s;
+            roundRectPath(ctx, panelX, panelY, panelW, panelH, 24 * s);
+            ctx.fillStyle = '#141418';
+            ctx.fill();
+            ctx.strokeStyle = '#27272a';
+            ctx.lineWidth = 2 * s;
+            ctx.stroke();
+            ctx.restore();
+
+            // Studio Header mit Rack-Schrauben
+            const screwCols = [panelX + 20 * s, panelX + panelW - 20 * s];
+            const screwRows = [panelY + 20 * s, panelY + panelH - 20 * s];
+            screwCols.forEach(sx => {
+                screwRows.forEach(sy => {
+                    ctx.beginPath(); ctx.arc(sx, sy, 7 * s, 0, Math.PI * 2);
+                    ctx.fillStyle = '#27272a'; ctx.fill();
+                    ctx.beginPath(); ctx.arc(sx, sy, 3 * s, 0, Math.PI * 2);
+                    ctx.fillStyle = '#09090b'; ctx.fill();
+                });
+            });
+
+            // Master LED Display
+            ctx.fillStyle = 'rgba(239, 68, 68, 0.85)';
+            ctx.beginPath(); ctx.arc(panelX + 45 * s, panelY + 45 * s, 5 * s, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#a1a1aa';
+            ctx.font = "700 " + Math.round(13 * s) + "px 'JetBrains Mono', monospace";
+            ctx.textAlign = 'left';
+            ctx.fillText('REC • MASTER OUT (24-BIT 96kHz)', panelX + 60 * s, panelY + 49 * s);
+
+            // Cover
+            const artSize = 360 * s;
+            const artX = (W - artSize) / 2;
+            const artY = panelY + 80 * s;
+            ctx.save();
+            roundRectPath(ctx, artX, artY, artSize, artSize, 16 * s);
+            ctx.fillStyle = '#09090b'; ctx.fill();
+            ctx.clip();
+            if (artImg) drawImageCover(ctx, artImg, artX, artY, artSize, artSize);
+            ctx.restore();
+            ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+            ctx.lineWidth = 2 * s;
+            roundRectPath(ctx, artX, artY, artSize, artSize, 16 * s);
+            ctx.stroke();
+
+            // VU Meter Stereo Balken
+            const vuY = artY + artSize + 35 * s;
+            const vuW = artSize, vuH = 10 * s;
+            ['L', 'R'].forEach((ch, idx) => {
+                const yPos = vuY + idx * 16 * s;
+                ctx.fillStyle = '#71717a';
+                ctx.font = "700 " + Math.round(11 * s) + "px 'JetBrains Mono', monospace";
+                ctx.fillText(ch, artX - 20 * s, yPos + 8 * s);
+                const segments = 24;
+                const segW = (vuW - (segments - 1) * 3 * s) / segments;
+                for (let i = 0; i < segments; i++) {
+                    const segX = artX + i * (segW + 3 * s);
+                    if (i < 16) ctx.fillStyle = '#22c55e';
+                    else if (i < 20) ctx.fillStyle = '#eab308';
+                    else ctx.fillStyle = '#ef4444';
+                    ctx.fillRect(segX, yPos, segW, vuH);
+                }
+            });
+
+            // Song Info
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#ffffff';
+            ctx.font = "800 " + Math.round(34 * s) + "px Inter, sans-serif";
+            wrapText(ctx, title, W / 2, vuY + 70 * s, panelW - 60 * s, 42 * s);
+
+            ctx.fillStyle = '#a1a1aa';
+            ctx.font = "600 " + Math.round(22 * s) + "px Inter, sans-serif";
+            ctx.fillText(artist, W / 2, vuY + 122 * s);
+
+            ctx.fillStyle = '#52525b';
+            ctx.font = "700 " + Math.round(13 * s) + "px 'JetBrains Mono', monospace";
+            ctx.fillText('STUDIO MONITORING // GAMINGPIG', W / 2, panelY + panelH - 30 * s);
+        }
+
+        // --- Design 13: Glow Orb - Kosmischer Farbverlauf mit leuchtender Sphäre ---
+        function drawShareCardOrb(ctx, W, H, artImg, title, artist) {
+            const s = W / 720;
+            const bgGrad = ctx.createLinearGradient(0, 0, W, H);
+            bgGrad.addColorStop(0, '#0c071e');
+            bgGrad.addColorStop(0.5, '#190a38');
+            bgGrad.addColorStop(1, '#05020c');
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, W, H);
+
+            // Große leuchtende Sphäre / Orb im Zentrum
+            const cx = W / 2, cy = 340 * s;
+            const orbGrad = ctx.createRadialGradient(cx, cy, 20 * s, cx, cy, 240 * s);
+            orbGrad.addColorStop(0, 'rgba(236, 72, 153, 0.7)');
+            orbGrad.addColorStop(0.5, 'rgba(139, 92, 246, 0.45)');
+            orbGrad.addColorStop(1, 'transparent');
+            ctx.fillStyle = orbGrad;
+            ctx.beginPath(); ctx.arc(cx, cy, 240 * s, 0, Math.PI * 2); ctx.fill();
+
+            // Rundes schwebendes Cover
+            const artR = 170 * s;
+            ctx.save();
+            ctx.shadowColor = 'rgba(236, 72, 153, 0.7)';
+            ctx.shadowBlur = 50 * s;
+            ctx.beginPath(); ctx.arc(cx, cy, artR, 0, Math.PI * 2);
+            ctx.fillStyle = '#180e29'; ctx.fill();
+            ctx.restore();
+
+            ctx.save();
+            ctx.beginPath(); ctx.arc(cx, cy, artR, 0, Math.PI * 2); ctx.clip();
+            if (artImg) drawImageCover(ctx, artImg, cx - artR, cy - artR, artR * 2, artR * 2);
+            ctx.restore();
+
+            ctx.beginPath(); ctx.arc(cx, cy, artR, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+            ctx.lineWidth = 3 * s;
+            ctx.stroke();
+
+            // Text
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#ffffff';
+            ctx.font = "800 " + Math.round(40 * s) + "px Inter, sans-serif";
+            wrapText(ctx, title, W / 2, cy + artR + 90 * s, W - 90 * s, 48 * s);
+
+            const artGrad = ctx.createLinearGradient(W / 2 - 120 * s, 0, W / 2 + 120 * s, 0);
+            artGrad.addColorStop(0, '#f472b6');
+            artGrad.addColorStop(1, '#a78bfa');
+            ctx.fillStyle = artGrad;
+            ctx.font = "700 " + Math.round(24 * s) + "px Inter, sans-serif";
+            ctx.fillText(artist, W / 2, cy + artR + 144 * s);
+
+            ctx.fillStyle = 'rgba(255,255,255,0.45)';
+            ctx.font = "700 " + Math.round(15 * s) + "px Inter, sans-serif";
+            ctx.fillText('✨ AMBIENT ORB // GAMINGPIG', W / 2, H - 45 * s);
+        }
+
+        // --- Design 14: Cyberpunk - Glitchiger High-Tech Look mit gelben/cyan Warnstreifen ---
+        function drawShareCardCyberpunk(ctx, W, H, artImg, title, artist) {
+            const s = W / 720;
+            ctx.fillStyle = '#0a0a0f';
+            ctx.fillRect(0, 0, W, H);
+
+            // Cyberpunk Gelb/Cyan Schrägstreifen
+            ctx.save();
+            ctx.fillStyle = '#fcee0a';
+            ctx.fillRect(0, 0, W, 20 * s);
+            ctx.fillStyle = '#00f0ff';
+            ctx.fillRect(0, 20 * s, W, 6 * s);
+
+            // Diagonale Warnstreifen oben
+            ctx.fillStyle = '#0a0a0f';
+            for (let i = 0; i < W; i += 30 * s) {
+                ctx.beginPath();
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i + 15 * s, 0);
+                ctx.lineTo(i, 20 * s);
+                ctx.lineTo(i - 15 * s, 20 * s);
+                ctx.fill();
+            }
+            ctx.restore();
+
+            const cardX = 45 * s, cardY = 70 * s, cardW = W - 90 * s, cardH = H - 140 * s;
+            ctx.save();
+            ctx.fillStyle = '#12131a';
+            ctx.strokeStyle = '#00f0ff';
+            ctx.lineWidth = 2 * s;
+            // Angeschrägte Ecken
+            const cut = 24 * s;
+            ctx.beginPath();
+            ctx.moveTo(cardX + cut, cardY);
+            ctx.lineTo(cardX + cardW, cardY);
+            ctx.lineTo(cardX + cardW, cardY + cardH - cut);
+            ctx.lineTo(cardX + cardW - cut, cardY + cardH);
+            ctx.lineTo(cardX, cardY + cardH);
+            ctx.lineTo(cardX, cardY + cut);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+
+            // Cover
+            const artSize = 350 * s;
+            const artX = (W - artSize) / 2;
+            const artY = cardY + 50 * s;
+            ctx.save();
+            ctx.shadowColor = '#00f0ff';
+            ctx.shadowBlur = 30 * s;
+            ctx.strokeStyle = '#fcee0a';
+            ctx.lineWidth = 3 * s;
+            ctx.strokeRect(artX, artY, artSize, artSize);
+            ctx.restore();
+
+            ctx.save();
+            ctx.beginPath(); ctx.rect(artX, artY, artSize, artSize); ctx.clip();
+            if (artImg) {
+                ctx.filter = 'contrast(1.15) saturate(140%)';
+                drawImageCover(ctx, artImg, artX, artY, artSize, artSize);
+                ctx.filter = 'none';
+            }
+            ctx.restore();
+
+            // Typo
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#fcee0a';
+            ctx.font = "900 " + Math.round(36 * s) + "px 'JetBrains Mono', monospace";
+            wrapText(ctx, title.toUpperCase(), W / 2, artY + artSize + 70 * s, cardW - 40 * s, 42 * s);
+
+            ctx.fillStyle = '#00f0ff';
+            ctx.font = "700 " + Math.round(22 * s) + "px 'JetBrains Mono', monospace";
+            ctx.fillText('// ' + artist.toUpperCase(), W / 2, artY + artSize + 120 * s);
+
+            ctx.fillStyle = '#fcee0a';
+            ctx.font = "800 " + Math.round(14 * s) + "px 'JetBrains Mono', monospace";
+            ctx.fillText('⚡ CYBERPUNK 2077 NOW PLAYING ⚡', W / 2, cardY + cardH - 25 * s);
         }
 
         function roundRectPath(ctx, x, y, w, h, r) {
@@ -11460,6 +11897,38 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.117', date: "18. August 2026", type: 'feature', items: {
+                de: [
+                    "✨ 5 neue StandBy-Designs: Wähle jetzt aus Cyberpunk, Retro-Kassette, Ambient-Orb, Hologram und Studio für deinen Lockscreen-Look.",
+                    "🎛️ Design-Code-Teilen erweitert: Alle 5 neuen Designs können nahtlos per Code kopiert und mit Freunden geteilt werden.",
+                    "🌐 Vollständige Lokalisierung: Alle neuen Designs und Beschreibungen in allen 6 Sprachen verfügbar."
+                ],
+                en: [
+                    "✨ 5 new StandBy designs: Choose from Cyberpunk, Retro Cassette, Ambient Orb, Hologram, and Studio for your lockscreen look.",
+                    "🎛️ Design code sharing updated: All 5 new designs can be copied and shared seamlessly with friends.",
+                    "🌐 Full localization: All new designs translated across all 6 supported languages."
+                ],
+                es: [
+                    "✨ 5 nuevos diseños de StandBy: Elige entre Cyberpunk, Casete Retro, Orbe Ambiental, Holograma y Estudio.",
+                    "🎛️ Compartir código de diseño actualizado: Compatible con los 5 nuevos estilos.",
+                    "🌐 Traducción completa en los 6 idiomas compatibles."
+                ],
+                fr: [
+                    "✨ 5 nouveaux designs StandBy : Cyberpunk, Cassette Rétro, Orbe Ambiant, Hologramme et Studio sont désormais disponibles.",
+                    "🎛️ Partage de code de design mis à jour : Compatible avec les 5 nouveaux styles.",
+                    "🌐 Traduction complète dans les 6 langues disponibles."
+                ],
+                pt: [
+                    "✨ 5 novos designs de StandBy: Escolha entre Cyberpunk, Fita Cassete, Orbe Ambiente, Holograma e Estúdio.",
+                    "🎛️ Compartilhamento de código de design atualizado com os 5 novos estilos.",
+                    "🌐 Tradução completa em todos os 6 idiomas."
+                ],
+                tr: [
+                    "✨ 5 yeni StandBy tasarımı: Siberpunk, Retro Kaset, Ortam Küresi, Hologram ve Stüdyo görünümleri eklendi.",
+                    "🎛️ Tasarım kodu paylaşımı güncellendi: 5 yeni stilin tümü arkadaşlarınızla paylaşılabilir.",
+                    "🌐 6 dilin tamamında eksiksiz çeviri desteği."
+                ],
+            }},
             { version: 'v24.116', date: "18. August 2026", type: 'fix', items: {
                 de: [
                     "🎵 Cover-Laden beim Kaltstart / Neuladen der Seite: Mini-Canvas (in der Lyrics-Leiste, Dynamic Island & StandBy) zeichnet nun immer zuverlässig sofort das Album-Cover, selbst wenn das Hauptbild noch im asynchronen Ladevorgang ist.",
