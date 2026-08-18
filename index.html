@@ -5108,7 +5108,38 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.117 · 2026-08-18';
+        const SITE_VERSION = 'v24.118 · 2026-08-18';
+
+        // =========================================================
+        // NEU v24.118: Automatischer Reset veralteter Cached Flags bei Versionswechsel
+        // Behaelt Sprache ('selectedLanguage') und Haupt-Tutorial ('tutorialCompletedV3')
+        // unberuehrt, leert aber alle veralteten Cover-/Layout-/State-Caches.
+        // =========================================================
+        (function enforceVersionFreshness() {
+            try {
+                const storedVer = localStorage.getItem('site_version_installed');
+                if (storedVer !== SITE_VERSION) {
+                    const preservedLang = localStorage.getItem('selectedLanguage');
+                    const preservedTutorial = localStorage.getItem('tutorialCompletedV3');
+                    
+                    const keysToRemove = [];
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const k = localStorage.key(i);
+                        if (k && k !== 'selectedLanguage' && k !== 'tutorialCompletedV3') {
+                            keysToRemove.push(k);
+                        }
+                    }
+                    keysToRemove.forEach(k => {
+                        try { localStorage.removeItem(k); } catch (e) {}
+                    });
+                    
+                    if (preservedLang) localStorage.setItem('selectedLanguage', preservedLang);
+                    if (preservedTutorial) localStorage.setItem('tutorialCompletedV3', preservedTutorial);
+                    localStorage.setItem('site_version_installed', SITE_VERSION);
+                }
+            } catch (e) {}
+        })();
+
 
         const DEFAULT_SYNC_OFFSET = -400;
 
@@ -6059,7 +6090,7 @@
                 <div class="hidden sm:block h-4 w-px bg-slate-300 dark:bg-slate-700"></div>
                 <!-- NEW: Versionsnummer im Footer, immer sichtbar ohne Menüs öffnen zu müssen -->
                 <p id="footer-version-label" class="text-[8px] xxs:text-[10px] font-mono text-slate-500 dark:text-slate-500 select-all"></p>
-                <a href="release-v24-115.html" class="inline-flex items-center gap-1 text-[8px] xxs:text-[10px] sm:text-xs font-black text-pink-600 dark:text-pink-400 hover:underline">🔥 v24.117 Mega-Update</a>
+                <a href="release-v24-115.html" class="inline-flex items-center gap-1 text-[8px] xxs:text-[10px] sm:text-xs font-black text-pink-600 dark:text-pink-400 hover:underline">🔥 v24.118 Update</a>
                 <div class="hidden sm:block h-4 w-px bg-slate-300 dark:bg-slate-700"></div>
                 <button onclick="openChangelogModal()" id="footer-whats-new-btn" class="text-[8px] xxs:text-[10px] sm:text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 rounded">Was ist neu?</button>
                 <div class="hidden sm:block h-4 w-px bg-slate-300 dark:bg-slate-700"></div>
@@ -8194,7 +8225,7 @@
                 if (appleId) {
                     strategies.push((async () => {
                         try {
-                            const r = await fetch(`https://itunes.apple.com/lookup?id=${appleId}`, { signal: AbortSignal.timeout(4500) });
+                            const r = await fetch('https://itunes.apple.com/lookup?id=' + appleId, { signal: AbortSignal.timeout(4500) });
                             if (r.ok) {
                                 const d = await r.json();
                                 const art = d?.results?.[0]?.artworkUrl100;
@@ -8209,7 +8240,7 @@
                 if (spotifyUrl && typeof spotifyUrl === 'string' && spotifyUrl.includes('open.spotify.com')) {
                     strategies.push((async () => {
                         try {
-                            const r = await fetch(`https://open.spotify.com/oembed?url=${encodeURIComponent(spotifyUrl)}`, { signal: AbortSignal.timeout(4500) });
+                            const r = await fetch('https://open.spotify.com/oembed?url=' + encodeURIComponent(spotifyUrl), { signal: AbortSignal.timeout(4500) });
                             if (r.ok) {
                                 const d = await r.json();
                                 if (d?.thumbnail_url) return d.thumbnail_url;
@@ -8219,23 +8250,7 @@
                     })());
                 }
 
-                // 3. iTunes Search mit Artist + Titel
-                if (cleanA && cleanT) {
-                    strategies.push((async () => {
-                        try {
-                            const q = encodeURIComponent(`${cleanA} ${cleanT}`);
-                            const r = await fetch(`https://itunes.apple.com/search?term=${q}&media=music&entity=song&limit=1`, { signal: AbortSignal.timeout(4000) });
-                            if (r.ok) {
-                                const d = await r.json();
-                                const art = d?.results?.[0]?.artworkUrl100;
-                                if (art) return art.replace('100x100bb', '640x640bb');
-                            }
-                        } catch (_) {}
-                        return null;
-                    })());
-                }
-
-                // 4. Deezer JSONP Search
+                // 3. Deezer JSONP Search (extrem schnell & zuverlaessig fuer aktuelle Releases)
                 if (cleanT || cleanA) {
                     strategies.push((async () => {
                         try {
@@ -8246,33 +8261,56 @@
                     })());
                 }
 
-                // 5. iTunes Search nach Titel & Album
-                if (cleanT) {
+                // 4. iTunes Search mit Artist + Titel
+                if (cleanA && cleanT) {
                     strategies.push((async () => {
                         try {
-                            const qStr = album ? `${cleanT} ${album}` : cleanT;
-                            const q = encodeURIComponent(qStr);
-                            const r = await fetch(`https://itunes.apple.com/search?term=${q}&media=music&entity=song&limit=1`, { signal: AbortSignal.timeout(4000) });
+                            const q = encodeURIComponent(cleanA + ' ' + cleanT);
+                            const r = await fetch('https://itunes.apple.com/search?term=' + q + '&media=music&entity=song&limit=5', { signal: AbortSignal.timeout(4000) });
                             if (r.ok) {
                                 const d = await r.json();
-                                const art = d?.results?.[0]?.artworkUrl100;
-                                if (art) return art.replace('100x100bb', '640x640bb');
+                                if (d?.results?.length) {
+                                    const match = d.results.find(it => it.trackName && it.trackName.toLowerCase().includes(cleanT.toLowerCase())) || d.results[0];
+                                    const art = match?.artworkUrl100;
+                                    if (art) return art.replace('100x100bb', '640x640bb');
+                                }
                             }
                         } catch (_) {}
                         return null;
                     })());
                 }
 
-                // 6. iTunes Search nur nach Titel
-                if (cleanT && cleanA) {
+                // 5. iTunes Search nach Artist (falls Titel in Apple Music minimal anders heisst)
+                if (cleanA) {
                     strategies.push((async () => {
                         try {
-                            const q = encodeURIComponent(cleanT);
-                            const r = await fetch(`https://itunes.apple.com/search?term=${q}&media=music&entity=song&limit=5`, { signal: AbortSignal.timeout(4000) });
+                            const q = encodeURIComponent(cleanA);
+                            const r = await fetch('https://itunes.apple.com/search?term=' + q + '&media=music&entity=song&limit=15', { signal: AbortSignal.timeout(4000) });
                             if (r.ok) {
                                 const d = await r.json();
                                 if (d?.results?.length) {
-                                    const match = d.results.find(it => it.artistName && it.artistName.toLowerCase().includes(cleanA.toLowerCase())) || d.results[0];
+                                    const match = d.results.find(it => it.trackName && it.trackName.toLowerCase().includes(cleanT.toLowerCase())) ||
+                                                  d.results.find(it => cleanT.toLowerCase().includes(it.trackName ? it.trackName.toLowerCase() : ''));
+                                    if (match && match.artworkUrl100) {
+                                        return match.artworkUrl100.replace('100x100bb', '640x640bb');
+                                    }
+                                }
+                            }
+                        } catch (_) {}
+                        return null;
+                    })());
+                }
+
+                // 6. iTunes Search nach Titel
+                if (cleanT) {
+                    strategies.push((async () => {
+                        try {
+                            const q = encodeURIComponent(cleanT);
+                            const r = await fetch('https://itunes.apple.com/search?term=' + q + '&media=music&entity=song&limit=10', { signal: AbortSignal.timeout(4000) });
+                            if (r.ok) {
+                                const d = await r.json();
+                                if (d?.results?.length) {
+                                    const match = (cleanA ? d.results.find(it => it.artistName && it.artistName.toLowerCase().includes(cleanA.toLowerCase())) : null) || d.results[0];
                                     const art = match?.artworkUrl100;
                                     if (art) return art.replace('100x100bb', '640x640bb');
                                 }
@@ -11897,6 +11935,35 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.118', date: "18. August 2026", type: 'feature', items: {
+                de: [
+                    "Automatischer Cache- & Flag-Reset bei Updates (behaelt gewaehlte Sprache & Tutorial)",
+                    "Verbesserte Cover-Aufloesung via paralleler Deezer- und iTunes-Multi-Matching-Engine",
+                    "Sofortiges Laden und Rendering des Album-Artworks ohne leere Platzhalter"
+                ],
+                en: [
+                    "Automatic cache & flags reset on site updates (keeps selected language & tutorial)",
+                    "Improved artwork resolution via parallel Deezer and iTunes multi-matching engine",
+                    "Instant loading and rendering of album artwork without blank placeholders"
+                ],
+                es: [
+                    "Restablecimiento automatico de cache e indicadores en actualizaciones",
+                    "Resolucion mejorada de portadas con motor paralelo de Deezer e iTunes"
+                ],
+                fr: [
+                    "Reinitialisation automatique du cache et des indicateurs lors des mises a jour",
+                    "Resolution amelioree des pochettes via Deezer et iTunes en parallele"
+                ],
+                pt: [
+                    "Redefinicao automatica de cache e sinalizadores em atualizacoes",
+                    "Resolucao aprimorada de capas via mecanismo paralelo Deezer e iTunes"
+                ],
+                tr: [
+                    "Guncellemelerde onbellek ve bayraklarin otomatik sifirlanmasi",
+                    "Deezer ve iTunes paralel motoru ile gelistirilmis album kapagi cozunurlugu"
+                ]
+            }},
+
             { version: 'v24.117', date: "18. August 2026", type: 'feature', items: {
                 de: [
                     "✨ 5 neue StandBy-Designs: Wähle jetzt aus Cyberpunk, Retro-Kassette, Ambient-Orb, Hologram und Studio für deinen Lockscreen-Look.",
