@@ -8997,169 +8997,11 @@
         // wird NUR heruntergeladen, wenn jemand tatsächlich auf "Vorlesen" klickt - kostet
         // Besuchern, die es nie nutzen, exakt null zusätzliche Ladezeit oder Ressourcen.
         // ========================================================= //
-        // FIX v24.36 (WEB SPEECH API): Nach sechs erfolglosen Anläufen mit browserbasierter
-        // --- NEURAL AI WASM-TTS ENGINE + RESILIENT FALLBACK ---
-        // Integriert eine hochmoderne clientseitige Neural-TTS Engine via Web Worker (WASM / ONNX)
-        // mit automatischem Fallback auf die native Web Speech API (speechSynthesis).
+        // VORLESEFUNKTION (Web Speech API)
+        // 100% nativ, schnell, ressourcenschonend und browserweit stabil.
+        // ========================================================= //
         const TTS_LANG_PREFIX = { de: 'de', en: 'en', es: 'es', fr: 'fr', pt: 'pt', tr: 'tr' };
         const TTS_LANG_BCP47 = { de: 'de-DE', en: 'en-US', es: 'es-ES', fr: 'fr-FR', pt: 'pt-BR', tr: 'tr-TR' };
-
-        // 1. Web Audio Player für WASM PCM Audio Buffer
-        class HybridAudioPlayer {
-            constructor() {
-                this.ctx = null;
-                this.currentSource = null;
-                this.isPlaying = false;
-                this.gainNode = null;
-            }
-
-            ensureContext() {
-                if (!this.ctx) {
-                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-                    if (AudioCtx) {
-                        this.ctx = new AudioCtx();
-                        this.gainNode = this.ctx.createGain();
-                        this.gainNode.connect(this.ctx.destination);
-                    }
-                }
-                if (this.ctx && this.ctx.state === 'suspended') {
-                    this.ctx.resume();
-                }
-            }
-
-            playPcmBuffer(arrayBuffer, sampleRate, onEnded) {
-                this.ensureContext();
-                this.stop();
-
-                if (!this.ctx) {
-                    if (onEnded) onEnded();
-                    return;
-                }
-
-                try {
-                    const float32Data = new Float32Array(arrayBuffer);
-                    const audioBuf = this.ctx.createBuffer(1, float32Data.length, sampleRate || 24000);
-                    audioBuf.getChannelData(0).set(float32Data);
-
-                    const source = this.ctx.createBufferSource();
-                    source.buffer = audioBuf;
-                    source.connect(this.gainNode);
-
-                    source.onended = () => {
-                        this.isPlaying = false;
-                        this.currentSource = null;
-                        if (onEnded) onEnded();
-                    };
-
-                    this.currentSource = source;
-                    this.isPlaying = true;
-                    source.start(0);
-                } catch (err) {
-                    console.warn('[HybridAudioPlayer] Error playing buffer:', err);
-                    this.isPlaying = false;
-                    this.currentSource = null;
-                    if (onEnded) onEnded();
-                }
-            }
-
-            stop() {
-                if (this.currentSource) {
-                    try {
-                        this.currentSource.stop();
-                        this.currentSource.disconnect();
-                    } catch (e) {}
-                    this.currentSource = null;
-                }
-                this.isPlaying = false;
-            }
-        }
-
-        const hybridPlayer = new HybridAudioPlayer();
-        let ttsWorker = null;
-        let wasmEngineReady = false;
-        let wasmInitPromise = null;
-        let wasmSynthJobId = 0;
-
-        function initNeuralTTS() {
-            if (wasmInitPromise) return wasmInitPromise;
-
-            wasmInitPromise = new Promise((resolve) => {
-                // Prüfe grundlegenden WebAssembly & Worker Support
-                if (typeof WebAssembly !== 'object' || typeof Worker === 'undefined') {
-                    wasmEngineReady = false;
-                    return resolve(false);
-                }
-
-                try {
-                    ttsWorker = new Worker('tts-worker.js');
-                    
-                    // Fallback Timeout, falls CDN / WASM Download hängt
-                    const initTimeout = setTimeout(() => {
-                        console.info('[TTS] WASM initialization timeout - using speechSynthesis fallback');
-                        wasmEngineReady = false;
-                        resolve(false);
-                    }, 12000);
-
-                    ttsWorker.onmessage = (e) => {
-                        const data = e.data || {};
-                        if (data.type === 'INIT_SUCCESS') {
-                            clearTimeout(initTimeout);
-                            wasmEngineReady = true;
-                            console.info('[TTS] Neural WASM Engine successfully initialized and ready');
-                            resolve(true);
-                        } else if (data.type === 'INIT_ERROR') {
-                            clearTimeout(initTimeout);
-                            wasmEngineReady = false;
-                            resolve(false);
-                        }
-                    };
-
-                    ttsWorker.onerror = () => {
-                        clearTimeout(initTimeout);
-                        wasmEngineReady = false;
-                        resolve(false);
-                    };
-
-                    ttsWorker.postMessage({ type: 'INIT', lang: currentLang || 'de' });
-                } catch (err) {
-                    wasmEngineReady = false;
-                    resolve(false);
-                }
-            });
-
-            return wasmInitPromise;
-        }
-
-        // Proaktives Vorladen der Neural TTS Engine bei erstem Benutzer-Hover oder Klick
-        if (typeof window !== 'undefined') {
-            window.addEventListener('load', () => {
-                setTimeout(() => {
-                    initNeuralTTS().catch(() => {});
-                }, 1500);
-            }, { once: true });
-        }
-
-        function synthesizeNeuralChunk(text, lang, voice) {
-            return new Promise((resolve, reject) => {
-                if (!ttsWorker || !wasmEngineReady) return reject(new Error('WASM Worker inactive'));
-                const jobId = ++wasmSynthJobId;
-                
-                const handler = (e) => {
-                    const data = e.data || {};
-                    if (data.id === jobId) {
-                        ttsWorker.removeEventListener('message', handler);
-                        if (data.type === 'SYNTH_SUCCESS') {
-                            resolve({ buffer: data.audioBuffer, sampleRate: data.sampleRate });
-                        } else {
-                            reject(new Error(data.error || 'Synth failed'));
-                        }
-                    }
-                };
-
-                ttsWorker.addEventListener('message', handler);
-                ttsWorker.postMessage({ type: 'SYNTHESIZE', text, lang: lang || currentLang || 'de', voice: voice || null, id: jobId });
-            });
-        }
 
         function getVoicesForCurrentLang() {
             const lang = currentLang || 'de';
@@ -9184,18 +9026,9 @@
             });
         }
 
-        const NEURAL_VOICES = [
-            { id: 'neural_de_fable', name: '✨ Neural AI (Deutsch / Fable)', lang: 'de', speaker: 'bm_fable' },
-            { id: 'neural_en_heart', name: '✨ Neural AI (English / Heart)', lang: 'en', speaker: 'af_heart' },
-            { id: 'neural_es_george', name: '✨ Neural AI (Español / George)', lang: 'es', speaker: 'bm_george' },
-            { id: 'neural_fr_lewis', name: '✨ Neural AI (Français / Lewis)', lang: 'fr', speaker: 'bm_lewis' },
-            { id: 'neural_pt_george', name: '✨ Neural AI (Português / George)', lang: 'pt', speaker: 'bm_george' },
-            { id: 'neural_tr_fable', name: '✨ Neural AI (Türkçe / Fable)', lang: 'tr', speaker: 'bm_fable' }
-        ];
-
         function getTtsVoiceId() {
             const lang = currentLang || 'de';
-            return localStorage.getItem('ttsVoiceId_' + lang) || 'neural_' + lang;
+            return localStorage.getItem('ttsVoiceId_' + lang) || '';
         }
         window.setTtsVoiceId = function(voiceId) {
             const lang = currentLang || 'de';
@@ -9206,43 +9039,17 @@
             const select = document.getElementById('tts-voice-select');
             if (!select) return;
             await ensureVoicesLoaded();
-            const lang = currentLang || 'de';
             const matching = getVoicesForCurrentLang();
-
-            let optionsHtml = '';
-            // 1. Neural AI Stimmen ganz oben hervorheben
-            const neuralMatching = NEURAL_VOICES.filter(nv => nv.lang === lang || nv.lang === 'de');
-            if (neuralMatching.length > 0) {
-                optionsHtml += `<optgroup label="✨ Neural AI (Klangtreu / Natürlich)">`;
-                neuralMatching.forEach(nv => {
-                    optionsHtml += `<option value="${nv.id}">${nv.name}</option>`;
-                });
-                optionsHtml += `</optgroup>`;
-            }
-
-            // 2. Browser Stimmen darunter als Fallback
-            if (matching.length > 0) {
-                optionsHtml += `<optgroup label="Geräte-Stimmen (System)">`;
-                matching.forEach(v => {
-                    optionsHtml += `<option value="${escapeHTML(v.name)}">${escapeHTML(v.name)}${v.localService ? '' : ' (Online)'}</option>`;
-                });
-                optionsHtml += `</optgroup>`;
-            }
-
-            if (!optionsHtml) {
+            if (matching.length === 0) {
                 select.innerHTML = `<option value="">${escapeHTML(t('tts_no_voice_found'))}</option>`;
                 return;
             }
-
-            select.innerHTML = optionsHtml;
+            select.innerHTML = matching.map(v =>
+                `<option value="${escapeHTML(v.name)}">${escapeHTML(v.name)}${v.localService ? '' : ' (Online)'}</option>`
+            ).join('');
             const saved = getTtsVoiceId();
-            if (saved && Array.from(select.options).some(o => o.value === saved)) {
-                select.value = saved;
-            } else if (neuralMatching.length > 0) {
-                select.value = neuralMatching[0].id;
-            } else if (matching.length > 0) {
-                select.value = matching[0].name;
-            }
+            if (saved && matching.some(v => v.name === saved)) select.value = saved;
+            else select.value = matching[0].name;
         }
 
         function ttsSetButtonState(btnEl, state) {
@@ -9313,14 +9120,16 @@
         async function ttsSpeak(text, btnEl) {
             if (!text || !text.trim()) return;
 
-            // Stoppen, falls aktuell etwas wiedergegeben wird
-            const isNativeSpeaking = typeof speechSynthesis !== 'undefined' && (speechSynthesis.speaking || speechSynthesis.pending);
-            if (ttsQueueActive || hybridPlayer.isPlaying || isNativeSpeaking) {
+            if (ttsQueueActive || (typeof speechSynthesis !== 'undefined' && (speechSynthesis.speaking || speechSynthesis.pending))) {
                 ttsQueueActive = false;
-                hybridPlayer.stop();
                 if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel();
                 ttsSetButtonState(btnEl, 'idle');
                 return;
+            }
+
+            const voice = ttsPickVoice();
+            if (!voice && typeof showToast === 'function') {
+                showToast(t('tts_no_voice_found'));
             }
 
             const chunks = splitIntoSpeechChunks(text.trim());
@@ -9328,47 +9137,9 @@
 
             ttsQueueActive = true;
             ttsSetButtonState(btnEl, 'speaking');
-
             try {
-                const selectedVoiceId = getTtsVoiceId();
-                const isExplicitNeural = !selectedVoiceId || selectedVoiceId.startsWith('neural_');
-                
-                // Initialisiere WASM Engine asynchron wenn Neural gewünscht ist
-                let isWasmReady = false;
-                if (isExplicitNeural) {
-                    isWasmReady = await initNeuralTTS();
-                }
-
-                // Ermittle gewählten Neural Speaker
-                let customSpeaker = null;
-                if (selectedVoiceId) {
-                    const matchedNeural = NEURAL_VOICES.find(nv => nv.id === selectedVoiceId);
-                    if (matchedNeural) customSpeaker = matchedNeural.speaker;
-                }
-
                 for (const chunk of chunks) {
                     if (!ttsQueueActive) break;
-
-                    // Option A: Client-Side Neural AI WASM Engine
-                    if (isExplicitNeural && isWasmReady && wasmEngineReady) {
-                        try {
-                            const synthResult = await synthesizeNeuralChunk(chunk, currentLang || 'de', customSpeaker);
-                            if (!ttsQueueActive) break;
-
-                            await new Promise(res => {
-                                hybridPlayer.playPcmBuffer(synthResult.buffer, synthResult.sampleRate, res);
-                            });
-                            continue;
-                        } catch (wasmErr) {
-                            console.warn('[TTS] WASM Synthesize failed, switching to native fallback:', wasmErr);
-                        }
-                    }
-
-                    // Option B: Bulletproof Browser SpeechSynthesis Fallback
-                    const voice = ttsPickVoice();
-                    if (!voice && typeof showToast === 'function') {
-                        showToast(t('tts_no_voice_found'));
-                    }
                     await speakChunkAndWait(chunk, voice);
                 }
             } finally {
