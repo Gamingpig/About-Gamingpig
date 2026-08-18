@@ -7909,7 +7909,15 @@
             const ctx = canvas.getContext('2d');
             if (!ctx) return false;
             const iw = sourceImg.naturalWidth, ih = sourceImg.naturalHeight;
-            if (!iw || !ih) return false;
+            if (!iw || !ih) {
+                const temp = new Image();
+                temp.crossOrigin = "anonymous";
+                temp.onload = () => {
+                    drawCoverToCanvas(canvas, temp);
+                };
+                if (sourceImg.src) temp.src = sourceImg.src;
+                return false;
+            }
             const canvasRatio = cw / ch, imgRatio = iw / ih;
             let sx, sy, sw, sh;
             if (imgRatio > canvasRatio) { sh = ih; sw = ih * canvasRatio; sx = (iw - sw) / 2; sy = 0; }
@@ -7922,17 +7930,27 @@
                 return false;
             }
         }
-        async function syncAllCoverConsumers() {
-            if (!mArtwork || !mArtwork.src) return;
-            try {
-                if (typeof mArtwork.decode === 'function') await mArtwork.decode();
-            } catch (e) { }
-            const diCanvas = document.getElementById('di-art');
-            if (diCanvas) drawCoverToCanvas(diCanvas, mArtwork);
-            const lyricsCanvas = document.getElementById('lyrics-mini-art');
-            if (lyricsCanvas) drawCoverToCanvas(lyricsCanvas, mArtwork);
-            const sbCanvas = document.getElementById('standby-track-art');
-            if (sbCanvas) drawCoverToCanvas(sbCanvas, mArtwork);
+        async function syncAllCoverConsumers(explicitUrl) {
+            const artSrc = explicitUrl || (mArtwork ? mArtwork.src : null);
+            if (!artSrc) return;
+
+            const drawToAll = (imgElement) => {
+                const diCanvas = document.getElementById('di-art');
+                if (diCanvas) drawCoverToCanvas(diCanvas, imgElement);
+                const lyricsCanvas = document.getElementById('lyrics-mini-art');
+                if (lyricsCanvas) drawCoverToCanvas(lyricsCanvas, imgElement);
+                const sbCanvas = document.getElementById('standby-track-art');
+                if (sbCanvas) drawCoverToCanvas(sbCanvas, imgElement);
+            };
+
+            if (mArtwork && mArtwork.complete && mArtwork.naturalWidth > 0) {
+                drawToAll(mArtwork);
+            } else {
+                const img = new Image();
+                img.crossOrigin = "anonymous";
+                img.onload = () => drawToAll(img);
+                img.src = artSrc;
+            }
         }
         window.addEventListener('resize', () => { syncAllCoverConsumers(); }, { passive: true });
         if (mArtwork) mArtwork.addEventListener('load', () => syncAllCoverConsumers());
@@ -9121,7 +9139,7 @@
             }, { once: true });
         }
 
-        function synthesizeNeuralChunk(text, lang) {
+        function synthesizeNeuralChunk(text, lang, voice) {
             return new Promise((resolve, reject) => {
                 if (!ttsWorker || !wasmEngineReady) return reject(new Error('WASM Worker inactive'));
                 const jobId = ++wasmSynthJobId;
@@ -9139,7 +9157,7 @@
                 };
 
                 ttsWorker.addEventListener('message', handler);
-                ttsWorker.postMessage({ type: 'SYNTHESIZE', text, lang: lang || currentLang || 'de', id: jobId });
+                ttsWorker.postMessage({ type: 'SYNTHESIZE', text, lang: lang || currentLang || 'de', voice: voice || null, id: jobId });
             });
         }
 
@@ -9166,9 +9184,18 @@
             });
         }
 
+        const NEURAL_VOICES = [
+            { id: 'neural_de_fable', name: '✨ Neural AI (Deutsch / Fable)', lang: 'de', speaker: 'bm_fable' },
+            { id: 'neural_en_heart', name: '✨ Neural AI (English / Heart)', lang: 'en', speaker: 'af_heart' },
+            { id: 'neural_es_george', name: '✨ Neural AI (Español / George)', lang: 'es', speaker: 'bm_george' },
+            { id: 'neural_fr_lewis', name: '✨ Neural AI (Français / Lewis)', lang: 'fr', speaker: 'bm_lewis' },
+            { id: 'neural_pt_george', name: '✨ Neural AI (Português / George)', lang: 'pt', speaker: 'bm_george' },
+            { id: 'neural_tr_fable', name: '✨ Neural AI (Türkçe / Fable)', lang: 'tr', speaker: 'bm_fable' }
+        ];
+
         function getTtsVoiceId() {
             const lang = currentLang || 'de';
-            return localStorage.getItem('ttsVoiceId_' + lang) || '';
+            return localStorage.getItem('ttsVoiceId_' + lang) || 'neural_' + lang;
         }
         window.setTtsVoiceId = function(voiceId) {
             const lang = currentLang || 'de';
@@ -9179,17 +9206,43 @@
             const select = document.getElementById('tts-voice-select');
             if (!select) return;
             await ensureVoicesLoaded();
+            const lang = currentLang || 'de';
             const matching = getVoicesForCurrentLang();
-            if (matching.length === 0) {
+
+            let optionsHtml = '';
+            // 1. Neural AI Stimmen ganz oben hervorheben
+            const neuralMatching = NEURAL_VOICES.filter(nv => nv.lang === lang || nv.lang === 'de');
+            if (neuralMatching.length > 0) {
+                optionsHtml += `<optgroup label="✨ Neural AI (Klangtreu / Natürlich)">`;
+                neuralMatching.forEach(nv => {
+                    optionsHtml += `<option value="${nv.id}">${nv.name}</option>`;
+                });
+                optionsHtml += `</optgroup>`;
+            }
+
+            // 2. Browser Stimmen darunter als Fallback
+            if (matching.length > 0) {
+                optionsHtml += `<optgroup label="Geräte-Stimmen (System)">`;
+                matching.forEach(v => {
+                    optionsHtml += `<option value="${escapeHTML(v.name)}">${escapeHTML(v.name)}${v.localService ? '' : ' (Online)'}</option>`;
+                });
+                optionsHtml += `</optgroup>`;
+            }
+
+            if (!optionsHtml) {
                 select.innerHTML = `<option value="">${escapeHTML(t('tts_no_voice_found'))}</option>`;
                 return;
             }
-            select.innerHTML = matching.map(v =>
-                `<option value="${escapeHTML(v.name)}">${escapeHTML(v.name)}${v.localService ? '' : ' (Online)'}</option>`
-            ).join('');
+
+            select.innerHTML = optionsHtml;
             const saved = getTtsVoiceId();
-            if (saved && matching.some(v => v.name === saved)) select.value = saved;
-            else select.value = matching[0].name;
+            if (saved && Array.from(select.options).some(o => o.value === saved)) {
+                select.value = saved;
+            } else if (neuralMatching.length > 0) {
+                select.value = neuralMatching[0].id;
+            } else if (matching.length > 0) {
+                select.value = matching[0].name;
+            }
         }
 
         function ttsSetButtonState(btnEl, state) {
@@ -9277,16 +9330,29 @@
             ttsSetButtonState(btnEl, 'speaking');
 
             try {
-                // Initialisiere WASM Engine asynchron (sofern noch nicht geschehen)
-                const isWasmReady = await initNeuralTTS();
+                const selectedVoiceId = getTtsVoiceId();
+                const isExplicitNeural = !selectedVoiceId || selectedVoiceId.startsWith('neural_');
+                
+                // Initialisiere WASM Engine asynchron wenn Neural gewünscht ist
+                let isWasmReady = false;
+                if (isExplicitNeural) {
+                    isWasmReady = await initNeuralTTS();
+                }
+
+                // Ermittle gewählten Neural Speaker
+                let customSpeaker = null;
+                if (selectedVoiceId) {
+                    const matchedNeural = NEURAL_VOICES.find(nv => nv.id === selectedVoiceId);
+                    if (matchedNeural) customSpeaker = matchedNeural.speaker;
+                }
 
                 for (const chunk of chunks) {
                     if (!ttsQueueActive) break;
 
                     // Option A: Client-Side Neural AI WASM Engine
-                    if (isWasmReady && wasmEngineReady) {
+                    if (isExplicitNeural && isWasmReady && wasmEngineReady) {
                         try {
-                            const synthResult = await synthesizeNeuralChunk(chunk, currentLang || 'de');
+                            const synthResult = await synthesizeNeuralChunk(chunk, currentLang || 'de', customSpeaker);
                             if (!ttsQueueActive) break;
 
                             await new Promise(res => {
@@ -14310,6 +14376,7 @@
             }
 
             const updateAllCoverVisuals = (srcUrl) => {
+                if (!srcUrl) srcUrl = fallbackImg;
                 if (mArtwork && mArtwork.src !== srcUrl) mArtwork.src = srcUrl;
                 if (mAmbient) mAmbient.style.backgroundImage = `url('${srcUrl}')`;
                 if (mGlow && coverGlowEnabled) mGlow.style.backgroundImage = `url('${srcUrl}')`;
@@ -14319,7 +14386,7 @@
                 const sbCardBg = document.getElementById('standby-card-blur-bg');
                 if (sbBg) sbBg.style.backgroundImage = `url('${srcUrl}')`;
                 if (sbCardBg) sbCardBg.style.backgroundImage = `url('${srcUrl}')`;
-                syncAllCoverConsumers();
+                syncAllCoverConsumers(srcUrl);
             };
 
             // Proaktive Cover-Auflösung: sofort starten wenn für den aktuellen Track noch kein Cover
