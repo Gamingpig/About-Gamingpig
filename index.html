@@ -8093,9 +8093,16 @@
             const cleanA = cleanArtistName(artist || '');
 
             const resolverPromise = (async () => {
-                // Apple Music Song-ID aus einer URL extrahieren
                 function extractAppleId(url) {
-                    if (!url || typeof url !== 'string') return null;
+                    if (!url) return null;
+                    if (typeof url === 'object') {
+                        for (const val of Object.values(url)) {
+                            const found = extractAppleId(val);
+                            if (found) return found;
+                        }
+                        return null;
+                    }
+                    if (typeof url !== 'string') return null;
                     let m = url.match(/[?&]i=(\d+)/);
                     if (m) return m[1];
                     m = url.match(/\/song\/(\d+)/);
@@ -8105,15 +8112,7 @@
                     return null;
                 }
 
-                let appleId = null;
-                if (platformLinks && typeof platformLinks === 'object') {
-                    appleId = extractAppleId(platformLinks.appleMusic)
-                           || extractAppleId(platformLinks.apple)
-                           || extractAppleId(platformLinks.track_url);
-                }
-                if (!appleId && typeof platformLinks === 'string') {
-                    appleId = extractAppleId(platformLinks);
-                }
+                let appleId = extractAppleId(platformLinks);
                 if (!appleId && spotifyUrl && !String(spotifyUrl).includes('spotify.com')) {
                     appleId = extractAppleId(spotifyUrl);
                 }
@@ -8194,14 +8193,18 @@
                     })());
                 }
 
-                // Schneller Gewinner (Race der ersten erfolgreichen Strategie)
-                for (const p of strategies) {
-                    const res = await p;
-                    if (res && typeof res === 'string') {
-                        setCachedCover(cacheKey, res);
-                        return res;
+                // Echter paralleler Race: die erste Quelle, die erfolgreich ein Bild liefert, gewinnt
+                try {
+                    const validStrategies = strategies.map(p => p.then(res => {
+                        if (res && typeof res === 'string' && res !== fallbackImg) return res;
+                        throw new Error('No artwork');
+                    }));
+                    const winner = await Promise.any(validStrategies);
+                    if (winner) {
+                        setCachedCover(cacheKey, winner);
+                        return winner;
                     }
-                }
+                } catch (_) {}
 
                 return null;
             })();
@@ -14203,7 +14206,6 @@
                 ).then(resolved => {
                     if (resolved && resolved !== fallbackImg) {
                         setCachedCover(capturedTrackKey, resolved);
-                        // Nur UI aktualisieren wenn der Song während des Ladens noch derselbe ist!
                         if (capturedTrackKey === lastResolvedTrackKey) {
                             currentResolvedArtUrl = resolved;
                             updateAllCoverVisuals(resolved);
@@ -14279,12 +14281,10 @@
                 }
 
                 const cachedCover = trackCoverMemoryCache.get(trackKey);
-                const safeRawCover = (!isBrokenNpcProxy && rawArtwork) ? rawArtwork : null;
+                const safeRawCover = (!isBrokenNpcProxy && rawArtwork && rawArtwork.startsWith('http')) ? rawArtwork : null;
                 const finalArtUrl = currentResolvedArtUrl || cachedCover || safeRawCover || fallbackImg;
 
-                if (mArtwork && mAmbient && mGlow) {
-                    updateAllCoverVisuals(finalArtUrl);
-                }
+                updateAllCoverVisuals(finalArtUrl);
                 
                 const canvasUrl = (data.track && (data.track.canvas_url || data.track.canvasUrl)) || null;
                 
