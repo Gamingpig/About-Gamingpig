@@ -7984,7 +7984,7 @@
                 let timeoutId = setTimeout(() => {
                     cleanup();
                     resolve(null);
-                }, 3500);
+                }, 4000);
 
                 function cleanup() {
                     clearTimeout(timeoutId);
@@ -8016,7 +8016,7 @@
             });
         }
 
-        const MAX_COVER_CACHE_SIZE = 30;
+        const MAX_COVER_CACHE_SIZE = 50;
         const trackCoverMemoryCache = new Map();
         const pendingArtworkPromises = new Map();
         let currentResolvedArtUrl = null;
@@ -8059,18 +8059,9 @@
             } catch (e) {}
         }
 
-        // ── Cover-Auflösung ──────────────────────────────────────────────────────────
-        // Strategie: sequenziell, höchste Präzision zuerst.
-        //
-        // Die NPC-API liefert immer:
-        //   track_url = https://music.apple.com/us/song/XXXXXXXX
-        //   platform_links.appleMusic = https://geo.music.apple.com/.../XXXXXXXX?i=XXXXXXXX
-        //
-        // PRIO 1: iTunes Direkt-Lookup via Apple Music Song-ID (exakter Track-Match, 640x640)
-        // PRIO 2: Spotify oEmbed (wenn open.spotify.com-URL vorhanden)
-        // PRIO 3: iTunes Suche (Artist + Titel & erweiterte Suchfilter)
-        // PRIO 4: Deezer Suche
-        //
+        // ── Ultra-Robuste Cover-Auflösung ─────────────────────────────────────────────
+        // Löst Cover schnellstmöglich über Apple Music Lookup, iTunes API, Spotify oEmbed
+        // und Deezer JSONP parallel/kaskadierend auf.
         async function findBestArtworkFallback(title, artist, spotifyUrl = null, album = null, platformLinks = null) {
             const cacheKey = getTrackCacheKey(title, artist);
 
@@ -8098,7 +8089,6 @@
                     return null;
                 }
 
-                // ID aus platform_links.appleMusic, track_url (kommt als Apple URL), oder direkt
                 let appleId = null;
                 if (platformLinks && typeof platformLinks === 'object') {
                     appleId = extractAppleId(platformLinks.appleMusic)
@@ -8112,76 +8102,89 @@
                     appleId = extractAppleId(spotifyUrl);
                 }
 
-                // ── PRIO 1: iTunes Direkt-Lookup via Song-ID ─────────────────────────────
+                // Sammle parallele Resolution-Strategien
+                const strategies = [];
+
+                // 1. Direct Apple Music ID Lookup
                 if (appleId) {
-                    try {
-                        const r = await fetch(
-                            `https://itunes.apple.com/lookup?id=${appleId}`,
-                            { signal: AbortSignal.timeout(6000) }
-                        );
-                        if (r.ok) {
-                            const d = await r.json();
-                            const art = d?.results?.[0]?.artworkUrl100;
-                            if (art) {
-                                const hd = art.replace('100x100bb', '640x640bb');
-                                setCachedCover(cacheKey, hd);
-                                return hd;
+                    strategies.push((async () => {
+                        try {
+                            const r = await fetch(`https://itunes.apple.com/lookup?id=${appleId}`, { signal: AbortSignal.timeout(4500) });
+                            if (r.ok) {
+                                const d = await r.json();
+                                const art = d?.results?.[0]?.artworkUrl100;
+                                if (art) return art.replace('100x100bb', '640x640bb');
                             }
-                        }
-                    } catch (_) {}
+                        } catch (_) {}
+                        return null;
+                    })());
                 }
 
-                // ── PRIO 2: Spotify oEmbed ───────────────────────────────────────────────
+                // 2. Spotify oEmbed (wenn Spotify-Link vorhanden)
                 if (spotifyUrl && typeof spotifyUrl === 'string' && spotifyUrl.includes('open.spotify.com')) {
-                    try {
-                        const r = await fetch(
-                            `https://open.spotify.com/oembed?url=${encodeURIComponent(spotifyUrl)}`,
-                            { signal: AbortSignal.timeout(6000) }
-                        );
-                        if (r.ok) {
-                            const d = await r.json();
-                            if (d?.thumbnail_url) {
-                                setCachedCover(cacheKey, d.thumbnail_url);
-                                return d.thumbnail_url;
+                    strategies.push((async () => {
+                        try {
+                            const r = await fetch(`https://open.spotify.com/oembed?url=${encodeURIComponent(spotifyUrl)}`, { signal: AbortSignal.timeout(4500) });
+                            if (r.ok) {
+                                const d = await r.json();
+                                if (d?.thumbnail_url) return d.thumbnail_url;
                             }
-                        }
-                    } catch (_) {}
+                        } catch (_) {}
+                        return null;
+                    })());
                 }
 
-                // ── PRIO 3: iTunes Suche (Artist + Titel & Fallback auf nur Titel/Album) ─
-                const searchQueries = [];
-                if (cleanA && cleanT) searchQueries.push(`${cleanA} ${cleanT}`);
-                if (album && cleanA) searchQueries.push(`${cleanA} ${album}`);
-                if (cleanT) searchQueries.push(cleanT);
-
-                for (const qStr of searchQueries) {
-                    try {
-                        const q = encodeURIComponent(qStr);
-                        const r = await fetch(
-                            `https://itunes.apple.com/search?term=${q}&media=music&entity=song&limit=1`,
-                            { signal: AbortSignal.timeout(6000) }
-                        );
-                        if (r.ok) {
-                            const d = await r.json();
-                            const art = d?.results?.[0]?.artworkUrl100;
-                            if (art) {
-                                const hd = art.replace('100x100bb', '640x640bb');
-                                setCachedCover(cacheKey, hd);
-                                return hd;
+                // 3. iTunes Search mit Artist + Titel
+                if (cleanA && cleanT) {
+                    strategies.push((async () => {
+                        try {
+                            const q = encodeURIComponent(`${cleanA} ${cleanT}`);
+                            const r = await fetch(`https://itunes.apple.com/search?term=${q}&media=music&entity=song&limit=1`, { signal: AbortSignal.timeout(4500) });
+                            if (r.ok) {
+                                const d = await r.json();
+                                const art = d?.results?.[0]?.artworkUrl100;
+                                if (art) return art.replace('100x100bb', '640x640bb');
                             }
-                        }
-                    } catch (_) {}
+                        } catch (_) {}
+                        return null;
+                    })());
                 }
 
-                // ── PRIO 4: Deezer Suche ─────────────────────────────────────────────────
+                // 4. Deezer JSONP Search
                 if (cleanT || cleanA) {
-                    try {
-                        const url = await fetchDeezerCoverJsonp(cleanT, cleanA);
-                        if (url) {
-                            setCachedCover(cacheKey, url);
-                            return url;
-                        }
-                    } catch (_) {}
+                    strategies.push((async () => {
+                        try {
+                            const dzUrl = await fetchDeezerCoverJsonp(cleanT, cleanA);
+                            if (dzUrl) return dzUrl;
+                        } catch (_) {}
+                        return null;
+                    })());
+                }
+
+                // 5. iTunes Search nach Titel & Album
+                if (cleanT) {
+                    strategies.push((async () => {
+                        try {
+                            const qStr = album ? `${cleanT} ${album}` : cleanT;
+                            const q = encodeURIComponent(qStr);
+                            const r = await fetch(`https://itunes.apple.com/search?term=${q}&media=music&entity=song&limit=1`, { signal: AbortSignal.timeout(4500) });
+                            if (r.ok) {
+                                const d = await r.json();
+                                const art = d?.results?.[0]?.artworkUrl100;
+                                if (art) return art.replace('100x100bb', '640x640bb');
+                            }
+                        } catch (_) {}
+                        return null;
+                    })());
+                }
+
+                // Schneller Gewinner (Race der ersten erfolgreichen Strategie)
+                for (const p of strategies) {
+                    const res = await p;
+                    if (res && typeof res === 'string') {
+                        setCachedCover(cacheKey, res);
+                        return res;
+                    }
                 }
 
                 return null;
