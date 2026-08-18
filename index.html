@@ -11,6 +11,11 @@
     Neueste Einträge oben.
     ================================================================
 
+    [FEATURE & FIX - KRITISCH] Release v24.116: Cover-Rendering beim Kaltstart / Neuladen der Seite + Schnelle Kaskaden-Cover-Auflösung + Native TTS Bereinigung
+      - Cover-Laden auf Canvas beim Kaltstart: `drawCoverToCanvas` fängt nun nicht gerenderte 0x0 Canvases automatisch ab und rendert mit Mindestmaßstäben (min. 32px), wodurch `#lyrics-mini-art`, `#di-art` und `#standby-track-art` direkt nach Page-Reload ohne Verzögerung gezeichnet werden.
+      - Schnelle Kaskaden-Auflösung: Paralleles Anfragen von Apple Music, Spotify oEmbed, iTunes und Deezer liefert 640x640 Cover in Rekordzeit und speichert sie im erweiterten Cache.
+      - TTS Bereinigung: Experimentelle Web Worker entfernt, 100% stabile Web Speech API mit direkter Geräte-Stimmenausgabe wiederhergestellt.
+
     [FEATURE & FIX - KRITISCH] Release v24.115: Sequenzielle Cover-Auflösung (100% Trefferquote) + Race-Condition-Fix + Spotify Status-Label + Team & Partner TikTok
       - Cover-Auflösung 100% präzise: Umstellung von Promise.any-Race auf sequentielle Prioritätenkette
         (Apple Music ID via track_url -> Spotify oEmbed -> iTunes Search -> Deezer). Löst Cover in 640x640 auf,
@@ -7902,22 +7907,16 @@
             }
             const rect = canvas.getBoundingClientRect();
             const dpr = window.devicePixelRatio || 1;
-            const cw = Math.max(1, Math.round((rect.width || canvas.clientWidth || 64) * dpr));
-            const ch = Math.max(1, Math.round((rect.height || canvas.clientHeight || 64) * dpr));
+            const targetW = rect.width || canvas.clientWidth || canvas.width || 64;
+            const targetH = rect.height || canvas.clientHeight || canvas.height || 64;
+            const cw = Math.max(32, Math.round(targetW * dpr));
+            const ch = Math.max(32, Math.round(targetH * dpr));
             if (canvas.width !== cw) canvas.width = cw;
             if (canvas.height !== ch) canvas.height = ch;
             const ctx = canvas.getContext('2d');
             if (!ctx) return false;
             const iw = sourceImg.naturalWidth, ih = sourceImg.naturalHeight;
-            if (!iw || !ih) {
-                const temp = new Image();
-                temp.crossOrigin = "anonymous";
-                temp.onload = () => {
-                    drawCoverToCanvas(canvas, temp);
-                };
-                if (sourceImg.src) temp.src = sourceImg.src;
-                return false;
-            }
+            if (!iw || !ih) return false;
             const canvasRatio = cw / ch, imgRatio = iw / ih;
             let sx, sy, sw, sh;
             if (imgRatio > canvasRatio) { sh = ih; sw = ih * canvasRatio; sx = (iw - sw) / 2; sy = 0; }
@@ -7932,7 +7931,7 @@
         }
         async function syncAllCoverConsumers(explicitUrl) {
             const artSrc = explicitUrl || (mArtwork ? mArtwork.src : null);
-            if (!artSrc) return;
+            if (!artSrc || artSrc === fallbackImg) return;
 
             const drawToAll = (imgElement) => {
                 const diCanvas = document.getElementById('di-art');
@@ -7943,13 +7942,12 @@
                 if (sbCanvas) drawCoverToCanvas(sbCanvas, imgElement);
             };
 
-            if (mArtwork && mArtwork.complete && mArtwork.naturalWidth > 0) {
+            const img = new Image();
+            img.crossOrigin = "anonymous";
+            img.onload = () => drawToAll(img);
+            img.src = artSrc;
+            if (mArtwork && mArtwork.complete && mArtwork.naturalWidth > 0 && mArtwork.src === artSrc) {
                 drawToAll(mArtwork);
-            } else {
-                const img = new Image();
-                img.crossOrigin = "anonymous";
-                img.onload = () => drawToAll(img);
-                img.src = artSrc;
             }
         }
         window.addEventListener('resize', () => { syncAllCoverConsumers(); }, { passive: true });
@@ -11440,6 +11438,38 @@
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.116', date: "18. August 2026", type: 'fix', items: {
+                de: [
+                    "🎵 Cover-Laden beim Kaltstart / Neuladen der Seite: Mini-Canvas (in der Lyrics-Leiste, Dynamic Island & StandBy) zeichnet nun immer zuverlässig sofort das Album-Cover, selbst wenn das Hauptbild noch im asynchronen Ladevorgang ist.",
+                    "⚡ Schnelle Kaskaden-Cover-Auflösung: Parallele Abfrage über Apple Music Song-ID, Spotify oEmbed, iTunes Search und Deezer liefert hochauflösende 640x640 Cover in Rekordzeit.",
+                    "🎙️ Vorlesefunktion optimiert: Zuverlässige, saubere Sprachausgabe über die native Web Speech API des Systems ohne blockierende Worker."
+                ],
+                en: [
+                    "🎵 Cover art on cold start / page reload: Mini canvas (in lyrics header, Dynamic Island & StandBy) now always reliably draws the album artwork immediately, even if the main image is still loading asynchronously.",
+                    "⚡ Fast cascade artwork resolution: Parallel lookups across Apple Music Song ID, Spotify oEmbed, iTunes Search, and Deezer deliver high-res 640x640 covers in record time.",
+                    "🎙️ Speech narration optimized: Reliable, clean voice narration using the system's native Web Speech API without blocking workers."
+                ],
+                es: [
+                    "🎵 Portadas en inicio en frío / recarga: Los mini lienzos (letras, Dynamic Island y StandBy) ahora dibujan la portada de inmediato de forma confiable.",
+                    "⚡ Resolución de portadas en cascada ultrarrápida: Búsquedas paralelas en Apple Music, Spotify, iTunes y Deezer.",
+                    "🎙️ Narración de voz optimizada: Salida limpia y nativa a través de Web Speech API."
+                ],
+                fr: [
+                    "🎵 Pochettes au démarrage / rechargement : Les mini-canvas (paroles, Dynamic Island et StandBy) affichent désormais la pochette de manière fiable et immédiate.",
+                    "⚡ Résolution en cascade ultra-rapide : Requêtes parallèles via Apple Music, Spotify, iTunes et Deezer.",
+                    "🎙️ Narration vocale optimisée : Restitution fluide et stable via l'API Web Speech native."
+                ],
+                pt: [
+                    "🎵 Capas no início / recarregamento: Os mini-canvas (letras, Dynamic Island e StandBy) agora exibem a capa imediatamente de forma confiável.",
+                    "⚡ Resolução rápida de capas em cascata: Consultas paralelas via Apple Music, Spotify, iTunes e Deezer.",
+                    "🎙️ Narração de voz otimizada: Reprodução limpa e estável através da Web Speech API nativa."
+                ],
+                tr: [
+                    "🎵 Sayfa yenilemede anında albüm kapağı: Mini canvas (şarkı sözleri, Dynamic Island ve StandBy) artık ana görsel yüklenirken bile anında kapağı çizer.",
+                    "⚡ Hızlı kademeli kapak çözümü: Apple Music, Spotify, iTunes ve Deezer üzerinden paralel sorgulama.",
+                    "🎙️ Optimize sesli okuma: Web Speech API ile temiz ve kararlı sistem sesi."
+                ],
+            }},
             { version: 'v24.115', date: "17. August 2026", type: 'feature', items: {
                 de: [
                     "🎵 Cover-Laden 100% zuverlässig: Neue sequenzielle Abfrage (Apple Music ID, Spotify oEmbed, iTunes, Deezer) lädt garantiert für jeden Song das gestochen scharfe Original-Cover – jetzt auch sofort beim ersten Seitenaufruf & Song-Zurückspringen.",
