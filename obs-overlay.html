@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gamingpig OBS Live Music Overlay</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800;900&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: transparent;
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: flex-end;
+            justify-content: flex-start;
+            padding: 24px;
+        }
+
+        /* Widget Container */
+        .obs-widget {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 12px 18px 12px 12px;
+            background: rgba(10, 15, 29, 0.85);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            border-radius: 24px;
+            box-shadow: 0 16px 36px rgba(0, 0, 0, 0.55), 0 0 24px rgba(59, 130, 246, 0.25);
+            max-width: 440px;
+            transform: translateY(120px);
+            opacity: 0;
+            transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+        }
+
+        .obs-widget.visible {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        /* Album Artwork */
+        .art-wrap {
+            position: relative;
+            width: 68px;
+            height: 68px;
+            flex-shrink: 0;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .art-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.4s ease;
+        }
+
+        /* Equalizer Bars on Cover */
+        .eq-overlay {
+            position: absolute;
+            bottom: 6px;
+            right: 6px;
+            display: flex;
+            align-items: flex-end;
+            gap: 2.5px;
+            height: 14px;
+            padding: 3px 5px;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(8px);
+            border-radius: 6px;
+        }
+
+        .eq-bar {
+            width: 2.5px;
+            background: #22c55e;
+            border-radius: 2px;
+            animation: eqAnim 1s ease-in-out infinite alternate;
+        }
+
+        .eq-bar:nth-child(1) { height: 40%; animation-delay: 0.1s; }
+        .eq-bar:nth-child(2) { height: 80%; animation-delay: 0.3s; }
+        .eq-bar:nth-child(3) { height: 100%; animation-delay: 0.2s; }
+        .eq-bar:nth-child(4) { height: 50%; animation-delay: 0.4s; }
+
+        @keyframes eqAnim {
+            0% { height: 20%; }
+            100% { height: 100%; }
+        }
+
+        /* Track Metadata */
+        .track-info {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-width: 0;
+            flex: 1;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 10px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #22c55e;
+            margin-bottom: 4px;
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            background: #22c55e;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #22c55e;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.3); opacity: 0.7; }
+        }
+
+        .title {
+            color: #ffffff;
+            font-size: 15px;
+            font-weight: 800;
+            line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .artist {
+            color: #94a3b8;
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Progress Bar */
+        .progress-bar-container {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.12);
+            border-radius: 4px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
+            border-radius: 4px;
+            transition: width 0.3s linear;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="obs-card" class="obs-widget">
+        <div class="art-wrap">
+            <img id="track-art" class="art-img" src="icon-192.png" alt="Cover">
+            <div class="eq-overlay">
+                <div class="eq-bar"></div>
+                <div class="eq-bar"></div>
+                <div class="eq-bar"></div>
+                <div class="eq-bar"></div>
+            </div>
+        </div>
+
+        <div class="track-info">
+            <div class="status-badge">
+                <span class="status-dot"></span>
+                <span>NOW PLAYING</span>
+            </div>
+            <div id="track-title" class="title">Wird geladen...</div>
+            <div id="track-artist" class="artist">Gamingpig Live</div>
+            <div class="progress-bar-container">
+                <div id="track-progress" class="progress-fill"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'https://npc-api.aikins.xyz/v1/users/gamingpig/now';
+        const FALLBACK_ART = 'icon-192.png';
+
+        const widgetEl = document.getElementById('obs-card');
+        const titleEl = document.getElementById('track-title');
+        const artistEl = document.getElementById('track-artist');
+        const artEl = document.getElementById('track-art');
+        const progressEl = document.getElementById('track-progress');
+
+        let lastSongKey = '';
+        let localStartTime = 0;
+        let baseProgressMs = 0;
+        let totalDurationMs = 0;
+        let isPlaying = false;
+        const coverCache = new Map();
+
+        async function resolveCover(title, artist, rawArt, platformLinks) {
+            const key = `${title}___${artist}`.toLowerCase();
+            if (coverCache.has(key)) return coverCache.get(key);
+
+            // 1. Deezer
+            try {
+                const q = encodeURIComponent(`${artist} ${title}`);
+                const r = await fetch(`https://api.deezer.com/search?q=${q}&limit=1`);
+                const d = await r.json();
+                const cover = d?.data?.[0]?.album?.cover_xl || d?.data?.[0]?.album?.cover_big;
+                if (cover) {
+                    coverCache.set(key, cover);
+                    return cover;
+                }
+            } catch(e) {}
+
+            // 2. iTunes
+            try {
+                const q = encodeURIComponent(`${artist} ${title}`);
+                const r = await fetch(`https://itunes.apple.com/search?term=${q}&media=music&entity=song&limit=1`);
+                const d = await r.json();
+                let art = d?.results?.[0]?.artworkUrl100;
+                if (art) {
+                    art = art.replace('100x100bb', '600x600bb');
+                    coverCache.set(key, art);
+                    return art;
+                }
+            } catch(e) {}
+
+            if (rawArt && rawArt.startsWith('http') && !rawArt.includes('npc-api.aikins.xyz/v1/artwork/')) {
+                coverCache.set(key, rawArt);
+                return rawArt;
+            }
+
+            return FALLBACK_ART;
+        }
+
+        async function fetchNowPlaying() {
+            try {
+                const res = await fetch(API_URL, { cache: 'no-store' });
+                if (!res.ok) throw new Error('API down');
+                const data = await res.json();
+
+                const status = data.status;
+                const track = data.track || {};
+                const title = track.title || track.name;
+                const artist = track.artist || '';
+                const rawArt = track.artwork_url || '';
+                const duration = track.duration_ms || 0;
+                const progress = track.progress_ms || 0;
+                const platformLinks = track.platform_links || {};
+
+                if (status === 'playing' && title && title !== 'Aktuell ist es ruhig...') {
+                    isPlaying = true;
+                    totalDurationMs = duration;
+
+                    const songKey = `${title}-${artist}`;
+                    if (songKey !== lastSongKey) {
+                        lastSongKey = songKey;
+                        titleEl.innerText = title;
+                        artistEl.innerText = artist;
+
+                        baseProgressMs = progress;
+                        localStartTime = performance.now();
+
+                        resolveCover(title, artist, rawArt, platformLinks).then(artUrl => {
+                            if (artEl.src !== artUrl) artEl.src = artUrl;
+                        });
+                    } else {
+                        const expected = baseProgressMs + (performance.now() - localStartTime);
+                        if (Math.abs(progress - expected) > 3000) {
+                            baseProgressMs = progress;
+                            localStartTime = performance.now();
+                        }
+                    }
+
+                    widgetEl.classList.add('visible');
+                } else {
+                    isPlaying = false;
+                    lastSongKey = '';
+                    widgetEl.classList.remove('visible');
+                }
+            } catch (err) {
+                widgetEl.classList.remove('visible');
+            }
+        }
+
+        function tickProgress() {
+            if (isPlaying && totalDurationMs > 0) {
+                const elapsed = performance.now() - localStartTime;
+                const current = Math.min(totalDurationMs, baseProgressMs + elapsed);
+                const percent = (current / totalDurationMs) * 100;
+                progressEl.style.width = `${percent}%`;
+            }
+            requestAnimationFrame(tickProgress);
+        }
+
+        setInterval(fetchNowPlaying, 4000);
+        fetchNowPlaying();
+        requestAnimationFrame(tickProgress);
+    </script>
+</body>
+</html>
