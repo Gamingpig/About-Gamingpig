@@ -3,16 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GAMINGPIG // HYPERSPEED WARP STUDIO</title>
+    <title>GAMINGPIG // STUDIO EXPERIENCE</title>
     <link rel="icon" href="icon-192.png" type="image/png">
     
-    <!-- Three.js + GSAP -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;800&display=swap');
 
         * {
             margin: 0;
@@ -23,292 +19,169 @@
         }
 
         body {
-            background-color: #000000;
+            background-color: #030712;
             color: #ffffff;
             font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
             overflow: hidden;
             width: 100vw;
             height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        #webgl-canvas {
+        /* Fluid Aurora Mesh Background */
+        .aurora-container {
             position: fixed;
             inset: 0;
             z-index: 1;
-            outline: none;
+            overflow: hidden;
+            background: #020617;
         }
 
-        /* Pure Dark Vignette */
-        .vignette-overlay {
-            position: fixed;
-            inset: 0;
-            background: radial-gradient(circle at center, transparent 35%, rgba(0, 0, 0, 0.85) 100%);
-            pointer-events: none;
-            z-index: 2;
-        }
-
-        /* HUD Layer */
-        .hud-layer {
-            position: fixed;
-            inset: 0;
-            z-index: 10;
-            pointer-events: none;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            padding: 24px sm:p-10;
-        }
-
-        .interactive {
-            pointer-events: auto;
-        }
-
-        /* Luxury Dark Glass */
-        .luxury-glass {
-            background: rgba(10, 10, 15, 0.65);
-            backdrop-filter: blur(40px) saturate(200%);
-            -webkit-backdrop-filter: blur(40px) saturate(200%);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            box-shadow: 0 30px 100px rgba(0, 0, 0, 0.95), 0 0 60px rgba(59, 130, 246, 0.2);
-            border-radius: 32px;
-            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .luxury-glass:hover {
-            border-color: rgba(255, 255, 255, 0.25);
-            box-shadow: 0 35px 110px rgba(0, 0, 0, 1), 0 0 80px rgba(59, 130, 246, 0.35);
-        }
-
-        /* Ambient Dynamic Artwork Glow */
-        #dynamic-art-glow {
+        .aurora-orb {
             position: absolute;
-            inset: -40px;
-            border-radius: 48px;
-            background-size: cover;
-            background-position: center;
-            filter: blur(50px);
-            opacity: 0.5;
-            transition: opacity 1s ease, background-image 1s ease;
-            z-index: 0;
-            pointer-events: none;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.6;
+            animation: floatOrb 20s infinite alternate ease-in-out;
+            transition: background-color 1.5s ease;
         }
 
-        /* Smooth Breathing Wave Line (Canvas) */
-        #wave-canvas {
-            width: 100%;
-            height: 48px;
-            display: block;
+        .orb-1 {
+            width: 600px;
+            height: 600px;
+            background: #3b82f6;
+            top: -100px;
+            left: -100px;
+            animation-duration: 18s;
         }
 
-        .mono-font {
+        .orb-2 {
+            width: 700px;
+            height: 700px;
+            background: #8b5cf6;
+            bottom: -200px;
+            right: -100px;
+            animation-duration: 24s;
+            animation-delay: -5s;
+        }
+
+        .orb-3 {
+            width: 500px;
+            height: 500px;
+            background: #ec4899;
+            top: 40%;
+            left: 30%;
+            animation-duration: 22s;
+            animation-delay: -10s;
+        }
+
+        @keyframes floatOrb {
+            0% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(120px, 80px) scale(1.15); }
+            100% { transform: translate(-80px, 140px) scale(0.9); }
+        }
+
+        /* Glass Stage Card */
+        .glass-stage {
+            background: rgba(15, 23, 42, 0.45);
+            backdrop-filter: blur(40px) saturate(190%);
+            -webkit-backdrop-filter: blur(40px) saturate(190%);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            border-radius: 36px;
+            position: relative;
+            z-index: 10;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        /* Vinyl Spin & Glow */
+        .cover-art-box {
+            box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+
+        .mono {
             font-family: 'JetBrains Mono', monospace;
             font-feature-settings: "tnum" on, "zero" on;
         }
     </style>
 </head>
-<body>
+<body class="p-4 sm:p-8">
 
-    <!-- 3D Hyperspeed Warp Canvas -->
-    <canvas id="webgl-canvas"></canvas>
+    <!-- Atmospheric Liquid Aurora Background -->
+    <div class="aurora-container">
+        <div id="orb1" class="aurora-orb orb-1"></div>
+        <div id="orb2" class="aurora-orb orb-2"></div>
+        <div id="orb3" class="aurora-orb orb-3"></div>
+    </div>
 
-    <!-- Dark Vignette Overlay -->
-    <div class="vignette-overlay"></div>
-
-    <!-- HUD Overlay -->
-    <div class="hud-layer p-4 sm:p-8">
+    <!-- Main Stage Center Piece -->
+    <main class="w-full max-w-xl glass-stage p-6 sm:p-10 flex flex-col items-center text-center">
         
-        <!-- Top Status Bar -->
-        <header class="flex items-center justify-between w-full flex-wrap gap-3">
-            <div class="luxury-glass interactive px-5 py-3 flex items-center gap-3.5">
-                <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></span>
-                <div>
-                    <p class="text-[10px] mono-font tracking-widest text-cyan-400 font-bold uppercase">WARP SPEED // 3.8 MACH</p>
-                    <p class="text-xs font-bold text-slate-200">Gamingpig Spatial Studio</p>
-                </div>
+        <!-- Top Status Telemetry -->
+        <div class="w-full flex items-center justify-between mb-8">
+            <div class="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/5 border border-white/10 text-[10px] mono font-bold uppercase tracking-widest text-emerald-400">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span id="live-badge">LIVE PLAYBACK</span>
             </div>
 
-            <!-- Warp Controls -->
-            <div class="luxury-glass interactive p-1.5 flex items-center gap-1.5">
-                <button onclick="triggerHyperspeedBurst()" class="px-4 py-2 text-xs font-black rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg hover:scale-105 active:scale-95 transition-all">🚀 WARP BOOST</button>
-                <button onclick="switchTunnelColor()" class="px-4 py-2 text-xs font-bold rounded-2xl bg-white/5 text-white hover:bg-white/10 transition-all">🌌 Galaxy Color</button>
+            <a href="index.html" class="text-xs font-bold text-white/60 hover:text-white px-3 py-1.5 rounded-xl hover:bg-white/10 transition-colors">
+                ← Portfolio
+            </a>
+        </div>
+
+        <!-- Center Artwork -->
+        <div class="relative w-48 h-48 sm:w-60 sm:h-60 rounded-3xl overflow-hidden mb-8 cover-art-box bg-slate-900 flex items-center justify-center">
+            <img id="track-artwork" src="icon-192.png" alt="Artwork" class="w-full h-full object-cover">
+        </div>
+
+        <!-- Track Metadata -->
+        <div class="w-full mb-8">
+            <h1 id="track-title" class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight mb-2 truncate">
+                Wird geladen...
+            </h1>
+            <p id="track-artist" class="text-white/60 text-sm sm:text-base font-semibold truncate">
+                Gamingpig Studio
+            </p>
+        </div>
+
+        <!-- Clean Progress Bar & Timers -->
+        <div class="w-full bg-slate-950/50 rounded-2xl p-4 border border-white/5 mb-6">
+            <div class="flex justify-between text-xs mono font-bold mb-2">
+                <span id="time-current" class="text-white">0:00</span>
+                <span id="time-total" class="text-white/40">0:00</span>
             </div>
-        </header>
-
-        <!-- Center Player Hub -->
-        <div class="w-full flex justify-center items-center my-auto pointer-events-none py-6">
-            <div id="player-card" class="luxury-glass interactive p-6 sm:p-10 max-w-lg w-full text-center relative overflow-hidden">
-                
-                <!-- Dynamic Backlight Glow from Album Cover -->
-                <div id="dynamic-art-glow"></div>
-
-                <!-- Floating Artwork -->
-                <div class="relative w-44 h-44 sm:w-56 sm:h-56 mx-auto mb-6 flex items-center justify-center z-10">
-                    <div class="w-40 h-40 sm:w-52 sm:h-52 rounded-3xl overflow-hidden shadow-2xl border-2 border-white/20 relative bg-black/60">
-                        <img id="holo-artwork" src="icon-192.png" alt="Cover" class="w-full h-full object-cover">
-                    </div>
-                </div>
-
-                <div class="relative z-10">
-                    <!-- Status Badge -->
-                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-[9px] mono-font uppercase tracking-widest text-cyan-300 mb-3 font-bold">
-                        <span id="provider-badge">SPOTIFY // LIVE FEED</span>
-                    </div>
-
-                    <!-- Song Info -->
-                    <h1 id="holo-title" class="text-2xl sm:text-4xl font-black tracking-tight text-white mb-2 leading-tight truncate drop-shadow-md">
-                        Wird initialisiert...
-                    </h1>
-                    <p id="holo-artist" class="text-white/60 text-sm sm:text-base font-bold mb-6 truncate">
-                        Gamingpig Live
-                    </p>
-
-                    <!-- Ultra Smooth Harmonic Audio Wave (Single Fluid Ribbon) -->
-                    <div class="w-full mb-6">
-                        <canvas id="wave-canvas"></canvas>
-                    </div>
-
-                    <!-- Live Progress HUD -->
-                    <div class="w-full bg-black/50 rounded-2xl p-3.5 border border-white/10 flex items-center justify-between gap-4 mono-font text-xs">
-                        <span id="time-current" class="text-cyan-400 font-bold">0:00</span>
-                        <div class="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden relative">
-                            <div id="holo-progress-fill" class="h-full w-0 bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 rounded-full transition-all duration-75"></div>
-                        </div>
-                        <span id="time-total" class="text-white/40 font-bold">0:00</span>
-                    </div>
-                </div>
+            <div class="w-full h-2 bg-white/10 rounded-full overflow-hidden relative">
+                <div id="progress-fill" class="h-full w-0 bg-white rounded-full transition-all duration-75"></div>
             </div>
         </div>
 
-        <!-- Bottom Controls -->
-        <footer class="flex items-center justify-between w-full flex-wrap gap-3">
-            <div class="luxury-glass interactive px-5 py-2.5 text-[11px] mono-font text-white/60 flex items-center gap-3">
-                <span>WARP TUNNEL: <strong class="text-cyan-400">Active</strong></span>
-                <span>•</span>
-                <span>STARS: <strong class="text-white">8,000</strong></span>
-            </div>
+        <!-- Bottom Ambient Switcher -->
+        <div class="w-full flex items-center justify-between text-[11px] mono text-white/40 pt-2 border-t border-white/10">
+            <span>GAMINGPIG STUDIO ENGINE</span>
+            <button onclick="cycleAurora()" class="text-white/70 hover:text-white font-bold transition-colors">
+                🎨 Aura wechseln
+            </button>
+        </div>
+    </main>
 
-            <a href="index.html" class="luxury-glass interactive px-6 py-3 text-xs font-black text-white bg-blue-600/40 hover:bg-blue-600/70 border border-blue-500/40 rounded-2xl flex items-center gap-2 transition-all shadow-lg active:scale-95">
-                <span>← Zurück zum Haupt-Portfolio</span>
-            </a>
-        </footer>
-    </div>
-
-    <!-- WebGL Warp Engine & Fluid Audio Ribbon -->
     <script>
         const API_URL = 'https://npc-api.aikins.xyz/v1/users/gamingpig/now';
         const FALLBACK_ART = 'https://gamingpig.github.io/About-Gamingpig/og-v2.jpg';
 
-        // -------------------------------------------------------------
-        // 1. THREE.JS HYPERSPEED WARP TUNNEL (8,000 STREAKING STARS)
-        // -------------------------------------------------------------
-        const canvas = document.getElementById('webgl-canvas');
-        const scene = new THREE.Scene();
-        scene.fog = new THREE.FogExp2(0x000000, 0.02);
-
-        const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.z = 5;
-
-        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: "high-performance" });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-
-        const starCount = 8000;
-        const starGeom = new THREE.BufferGeometry();
-        const starPositions = new Float32Array(starCount * 3);
-        const starVelocities = new Float32Array(starCount);
-
-        let baseWarpSpeed = 0.8;
-        let targetWarpSpeed = 0.8;
-
-        for (let i = 0; i < starCount; i++) {
-            starPositions[i * 3] = (Math.random() - 0.5) * 60;
-            starPositions[i * 3 + 1] = (Math.random() - 0.5) * 60;
-            starPositions[i * 3 + 2] = (Math.random() - 0.5) * 80;
-            starVelocities[i] = 0.2 + Math.random() * 0.8;
-        }
-
-        starGeom.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
-
-        const starMat = new THREE.PointsMaterial({
-            size: 0.18,
-            color: 0x38bdf8,
-            transparent: true,
-            opacity: 0.9,
-            blending: THREE.AdditiveBlending
-        });
-
-        const starField = new THREE.Points(starGeom, starMat);
-        scene.add(starField);
-
-        // Rotating Cyber Tunnel Wire
-        const tunnelGeom = new THREE.CylinderGeometry(14, 14, 120, 24, 40, true);
-        const tunnelMat = new THREE.MeshBasicMaterial({
-            color: 0x1e293b,
-            wireframe: true,
-            transparent: true,
-            opacity: 0.25
-        });
-        const tunnelMesh = new THREE.Mesh(tunnelGeom, tunnelMat);
-        tunnelMesh.rotation.x = Math.PI / 2;
-        scene.add(tunnelMesh);
-
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            resizeWaveCanvas();
-        });
-
-        // -------------------------------------------------------------
-        // 2. SMOOTH FLUID AUDIO WAVE (CANVAS HARMONIC RIBBON)
-        // -------------------------------------------------------------
-        const waveCanvas = document.getElementById('wave-canvas');
-        const waveCtx = waveCanvas.getContext('2d');
-
-        function resizeWaveCanvas() {
-            waveCanvas.width = waveCanvas.clientWidth * (window.devicePixelRatio || 1);
-            waveCanvas.height = waveCanvas.clientHeight * (window.devicePixelRatio || 1);
-        }
-        resizeWaveCanvas();
-
-        let wavePhase = 0;
-        function drawHarmonicWave(time, isLive) {
-            const w = waveCanvas.width;
-            const h = waveCanvas.height;
-            waveCtx.clearRect(0, 0, w, h);
-
-            waveCtx.beginPath();
-            waveCtx.lineWidth = 3 * (window.devicePixelRatio || 1);
-            const gradient = waveCtx.createLinearGradient(0, 0, w, 0);
-            gradient.addColorStop(0, '#38bdf8');
-            gradient.addColorStop(0.5, '#a855f7');
-            gradient.addColorStop(1, '#ec4899');
-            waveCtx.strokeStyle = gradient;
-            waveCtx.lineCap = 'round';
-
-            const amplitude = isLive ? h * 0.35 : h * 0.1;
-            const frequency = 0.008;
-
-            for (let x = 0; x <= w; x += 4) {
-                const y = h / 2 + Math.sin(x * frequency + wavePhase) * amplitude * Math.sin(x / w * Math.PI);
-                if (x === 0) waveCtx.moveTo(x, y);
-                else waveCtx.lineTo(x, y);
-            }
-            waveCtx.stroke();
-            wavePhase += isLive ? 0.06 : 0.02;
-        }
-
-        // -------------------------------------------------------------
-        // 3. ROCK-SOLID SYNC & TELEMETRY ENGINE
-        // -------------------------------------------------------------
-        const titleEl = document.getElementById('holo-title');
-        const artistEl = document.getElementById('holo-artist');
-        const artworkEl = document.getElementById('holo-artwork');
-        const fillEl = document.getElementById('holo-progress-fill');
+        const titleEl = document.getElementById('track-title');
+        const artistEl = document.getElementById('track-artist');
+        const artworkEl = document.getElementById('track-artwork');
+        const fillEl = document.getElementById('progress-fill');
         const timeCurEl = document.getElementById('time-current');
         const timeTotEl = document.getElementById('time-total');
-        const artGlow = document.getElementById('dynamic-art-glow');
-        const providerBadge = document.getElementById('provider-badge');
+        const liveBadge = document.getElementById('live-badge');
+
+        const orb1 = document.getElementById('orb1');
+        const orb2 = document.getElementById('orb2');
+        const orb3 = document.getElementById('orb3');
 
         let lastTrackKey = '';
         let serverBaseMs = 0;
@@ -316,7 +189,7 @@
         let totalDuration = 0;
         let isPlaying = false;
         let timeOffset = 0;
-        const cache = new Map();
+        const coverCache = new Map();
 
         async function syncWorldClock() {
             try {
@@ -339,14 +212,14 @@
 
         async function resolveCover(title, artist) {
             const key = `${title}-${artist}`.toLowerCase();
-            if (cache.has(key)) return cache.get(key);
+            if (coverCache.has(key)) return coverCache.get(key);
 
             try {
                 const q = encodeURIComponent(`${artist} ${title}`);
                 const r = await fetch(`https://api.deezer.com/search?q=${q}&limit=1`);
                 const d = await r.json();
                 const cover = d?.data?.[0]?.album?.cover_xl || d?.data?.[0]?.album?.cover_big;
-                if (cover) { cache.set(key, cover); return cover; }
+                if (cover) { coverCache.set(key, cover); return cover; }
             } catch(e) {}
 
             try {
@@ -354,7 +227,7 @@
                 const r = await fetch(`https://itunes.apple.com/search?term=${q}&media=music&entity=song&limit=1`);
                 const d = await r.json();
                 let art = d?.results?.[0]?.artworkUrl100;
-                if (art) { art = art.replace('100x100bb', '600x600bb'); cache.set(key, art); return art; }
+                if (art) { art = art.replace('100x100bb', '600x600bb'); coverCache.set(key, art); return art; }
             } catch(e) {}
 
             return FALLBACK_ART;
@@ -377,7 +250,7 @@
                     isPlaying = true;
                     totalDuration = dur;
                     timeTotEl.innerText = formatTime(dur);
-                    targetWarpSpeed = 1.4;
+                    liveBadge.innerText = 'LIVE PLAYBACK';
 
                     let serverTimestamp = d.timestamp || d.updated_at || (tr && tr.timestamp);
                     if (serverTimestamp) {
@@ -388,10 +261,6 @@
                         if (rawAge >= 0 && rawAge <= (dur || 600000)) {
                             prog += rawAge;
                         }
-                    }
-
-                    if (d.provider) {
-                        providerBadge.innerText = `${d.provider.toUpperCase()} // HIGH-SPEED LIVE`;
                     }
 
                     const key = `${title}-${artist}`;
@@ -405,11 +274,7 @@
 
                         resolveCover(title, artist).then(src => {
                             if (artworkEl.getAttribute('src') !== src) artworkEl.src = src;
-                            artGlow.style.backgroundImage = `url('${src}')`;
                         });
-
-                        // Speed Burst bei Songwechsel
-                        triggerHyperspeedBurst();
                     } else {
                         const expected = serverBaseMs + (performance.now() - localStart);
                         const drift = prog - expected;
@@ -423,11 +288,10 @@
                     }
                 } else {
                     isPlaying = false;
-                    targetWarpSpeed = 0.3;
+                    liveBadge.innerText = 'STANDBY';
                     titleEl.innerText = 'Aktuell ist es ruhig...';
                     artistEl.innerText = 'Gamingpig genießt die Stille';
                     artworkEl.src = FALLBACK_ART;
-                    artGlow.style.backgroundImage = `url('${FALLBACK_ART}')`;
                     fillEl.style.width = '0%';
                     timeCurEl.innerText = '0:00';
                     timeTotEl.innerText = '0:00';
@@ -435,69 +299,34 @@
             } catch(e) {}
         }
 
-        // -------------------------------------------------------------
-        // 4. ANIMATION LOOP (WARP TUNNEL SPEED FLUIDITY)
-        // -------------------------------------------------------------
-        let clock = new THREE.Clock();
-
-        function render() {
-            requestAnimationFrame(render);
-
-            const t = clock.getElapsedTime();
-            baseWarpSpeed += (targetWarpSpeed - baseWarpSpeed) * 0.05;
-
-            // Move Stars in 3D Warp
-            const positions = starField.geometry.attributes.position.array;
-            for (let i = 0; i < starCount; i++) {
-                positions[i * 3 + 2] += starVelocities[i] * baseWarpSpeed;
-                if (positions[i * 3 + 2] > 20) {
-                    positions[i * 3 + 2] = -60;
-                    positions[i * 3] = (Math.random() - 0.5) * 60;
-                    positions[i * 3 + 1] = (Math.random() - 0.5) * 60;
-                }
-            }
-            starField.geometry.attributes.position.needsUpdate = true;
-
-            tunnelMesh.rotation.z = t * 0.1;
-
-            // Harmonic Wave Rendering
-            drawHarmonicWave(t, isPlaying);
-
-            // Progress Telemetry
+        function renderProgress() {
             if (isPlaying && totalDuration > 0) {
                 const currentMs = Math.min(totalDuration, serverBaseMs + (performance.now() - localStart));
                 timeCurEl.innerText = formatTime(currentMs);
                 const pct = Math.max(0, Math.min(100, (currentMs / totalDuration) * 100));
                 fillEl.style.width = `${pct}%`;
             }
-
-            renderer.render(scene, camera);
+            requestAnimationFrame(renderProgress);
         }
 
-        // -------------------------------------------------------------
-        // 5. HYPERSPEED BURST & COLOR PALETTES
-        // -------------------------------------------------------------
-        window.triggerHyperspeedBurst = function() {
-            gsap.fromTo(camera.position, { z: 2 }, { z: 5, duration: 1.5, ease: "power3.out" });
-            gsap.to(window, {
-                targetWarpSpeed: 3.5,
-                duration: 0.3,
-                onComplete: () => {
-                    gsap.to(window, { targetWarpSpeed: isPlaying ? 1.4 : 0.4, duration: 1.5, ease: "power2.out" });
-                }
-            });
-        };
+        const auroraThemes = [
+            ['#3b82f6', '#8b5cf6', '#ec4899'],
+            ['#06b6d4', '#3b82f6', '#10b981'],
+            ['#f43f5e', '#a855f7', '#fb923c']
+        ];
+        let auroraIdx = 0;
 
-        const colors = [0x38bdf8, 0xec4899, 0xa855f7, 0x22c55e];
-        let colorIdx = 0;
-        window.switchTunnelColor = function() {
-            colorIdx = (colorIdx + 1) % colors.length;
-            starMat.color.setHex(colors[colorIdx]);
+        window.cycleAurora = function() {
+            auroraIdx = (auroraIdx + 1) % auroraThemes.length;
+            const theme = auroraThemes[auroraIdx];
+            orb1.style.backgroundColor = theme[0];
+            orb2.style.backgroundColor = theme[1];
+            orb3.style.backgroundColor = theme[2];
         };
 
         setInterval(pollTelemetry, 3000);
         pollTelemetry();
-        render();
+        requestAnimationFrame(renderProgress);
     </script>
 </body>
 </html>
