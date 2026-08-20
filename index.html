@@ -5108,14 +5108,14 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.129 · 2026-08-20';
+        const SITE_VERSION = 'v24.130 · 2026-08-20';
 
         // =========================================================
         // NEU v24.118: Automatischer Reset veralteter Cached Flags bei Versionswechsel
         // Behaelt Sprache ('selectedLanguage') und Haupt-Tutorial ('tutorialCompletedV3')
         // unberuehrt, leert aber alle veralteten Cover-/Layout-/State-Caches.
         // =========================================================
-        // FIX v24.129: Behalte alle Nutzer-Präferenzen sicher bei Versionswechsel
+        // FIX v24.130: Behalte alle Nutzer-Präferenzen sicher bei Versionswechsel
         (function enforceVersionFreshness() {
             try {
                 const storedVer = localStorage.getItem('site_version_installed');
@@ -7727,15 +7727,16 @@
             // (deckt bewusst wirklich ALLES ab, keine Kürzung - nur anders präsentiert: ein
             // Schritt mit allen Punkten aufgelistet statt einem Schritt pro Version).
             // FIX v24.126: Zeige NUR die maximal 3 wirklich neuen, relevanten Updates
-            const recentMissed = missedEntries.slice(0, 3);
-            const targets = ['standby-toggle', 'main-music-card', 'footer-whats-new-btn'];
+            // Nutzerwunsch: Zeige die neuesten Updates direkt aus PUBLIC_CHANGELOG
+            const recentMissed = (missedEntries.length > 0 ? missedEntries : PUBLIC_CHANGELOG).slice(0, 4);
+            const targets = ['btn-spotify-wrapped', 'main-music-card', 'support-discord-join-btn', 'footer-whats-new-btn'];
             return recentMissed.map((entry, i) => {
                 const lang = currentLang || 'de';
                 const langItems = (entry.items && (entry.items[lang] || entry.items.de)) || [];
                 return {
-                    targetId: targets[Math.min(i, targets.length - 1)],
+                    targetId: targets[Math.min(i, targets.length - 1)] || 'main-music-card',
                     title: `✨ ${entry.version} · ${entry.date}`,
-                    text: langItems.join(' '),
+                    text: langItems.join(' • '),
                     isNew: true
                 };
             });
@@ -11932,6 +11933,71 @@ window.generateShareCard = function() {
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.130', date: "20. August 2026", type: 'feature', items: {
+                de: [
+                    "📱 4-Slide Spotify Wrapped Stories: Volles Story-Erlebnis mit Top-Songs, Top 5 Künstlern, #1 Artist-Showcase und bestem Song",
+                    "🎯 Exakte Metadaten-Trennung: Song- und Künstler-Zuordnungen sind 100% präzise synchronisiert",
+                    "💬 Discord Live-Widget & Support Fix: 2-Stufen Verbindungs-Pipeline mit sicherem Proxy-Fallback für 100% zuverlässige Server-Anzeige",
+                    "🔊 UI-Sounds & Haptik Settings-Schalter: Unabhängige Regler für Klick-Sounds und Vibrationsfeedback"
+                ],
+                en: [
+                    "📱 4-Slide Spotify Wrapped Stories: Full stories experience featuring Top Songs, Top 5 Artists, #1 Artist Spotlight & Hit Showcase",
+                    "🎯 Precise Metadata Matching: 100% accurate track-to-artist synchronization with stats.fm live API",
+                    "💬 Discord Live Widget & Support Fix: 2-tier connection pipeline with secure CORS proxy fallback",
+                    "🔊 UI Sound & Haptics Toggles: Separate settings controls for click sounds and vibration feedback"
+                ],
+                es: [
+                    "📱 Spotify Wrapped en 4 Stories: Experiencia completa con Top Canciones, Top 5 Artistas y showcase de éxitos",
+                    "🎯 Sincronización precisa de metadaten entre pistas y artistas vía stats.fm",
+                    "💬 Widget de Discord y soporte reparado con proxy fallback seguro",
+                    "🔊 Controles dedicados en ajustes para sonidos de interfaz y vibración háptica"
+                ],
+                fr: [
+                    "📱 Spotify Wrapped en 4 Stories : Expérience complète avec Top Titres, Top 5 Artistes et vitrine de hits",
+                    "🎯 Synchronisation ultra-précise des métadonnées titres/artistes via stats.fm",
+                    "💬 Widget Discord et support corrigé avec fallback proxy sécurisé",
+                    "🔊 Paramètres dédiés pour les effets sonores d'interface et le retour haptique"
+                ],
+                pt: [
+                    "📱 Spotify Wrapped em 4 Stories: Experiência completa com Top Músicas, Top 5 Artistas e destaques",
+                    "🎯 Correspondência precisa de metadados entre faixas e artistas via stats.fm",
+                    "💬 Widget do Discord corrigido com proxy fallback seguro",
+                    "🔊 Controles separados nas configurações para sons de interface e feedback tátil"
+                ],
+                tr: [
+                    "📱 4 Slaytlı Spotify Wrapped Hikayeleri: En İyi Şarkılar, En İyi 5 Sanatçı ve 1 Numaralı Hit Vitrini",
+                    "🎯 Kusursuz meta veri eşleşmesi ve stats.fm canlı senkronizasyonu",
+                    "💬 Güvenli yedek proxy ile Discord Canlı Sunucu Widget onarımı",
+                    "🔊 Arayüz sesleri ve dokunsal titreşim için bağımsız ayar anahtarları"
+                ]
+            }},
+
+            { version: 'v24.128', date: "20. August 2026", type: 'feature', items: {
+                de: [
+                    "✨ Spotify Wrapped Redesign: Kristallklare Typografie und Farbverläufe auf High-End-Niveau",
+                    "🎨 Perfekter Kontrast: Adaptive Lesbarkeit in Light- und Dark-Mode"
+                ],
+                en: [
+                    "✨ Spotify Wrapped Redesign: High-end typography and authentic gradient aesthetics",
+                    "🎨 Perfect Contrast: Adaptive readability in both Light and Dark themes"
+                ],
+                es: [
+                    "✨ Rediseño de Spotify Wrapped con tipografía de alto contraste y gradientes auténticos",
+                    "🎨 Legibilidad adaptativa perfecta en temas claro y oscuro"
+                ],
+                fr: [
+                    "✨ Redesign de Spotify Wrapped avec typographie soignée et dégradés élégants",
+                    "🎨 Contraste optimal en mode clair et sombre"
+                ],
+                pt: [
+                    "✨ Redesign do Spotify Wrapped com estética premium e gradientes autênticos",
+                    "🎨 Contraste perfeito adaptativo nos modos claro e escuro"
+                ],
+                tr: [
+                    "✨ Spotify Wrapped için yüksek kaliteli tipografi ve otantik renk geçişleri",
+                    "🎨 Açık ve koyu temalarda mükemmel kontrast ve okunabilirlik"
+                ]
+            }},
             { version: 'v24.126', date: "20. August 2026", type: 'feature', items: {
                 de: [
                     "🎁 Offizielles Stats.fm Spotify Wrapped: Direkte Live-Integration mit echten Account-Statistiken, Stream-Counts und 4-Wochen/6-Monate/All-Time Tabs",
