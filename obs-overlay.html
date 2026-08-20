@@ -31,7 +31,7 @@
             align-items: center;
             gap: 16px;
             padding: 12px 18px 12px 12px;
-            background: rgba(10, 15, 29, 0.85);
+            background: rgba(10, 15, 29, 0.88);
             backdrop-filter: blur(24px);
             -webkit-backdrop-filter: blur(24px);
             border: 1px solid rgba(255, 255, 255, 0.14);
@@ -59,6 +59,7 @@
             overflow: hidden;
             box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
             border: 1px solid rgba(255, 255, 255, 0.15);
+            background: #0f172a;
         }
 
         .art-img {
@@ -171,7 +172,7 @@
             width: 0%;
             background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
             border-radius: 4px;
-            transition: width 0.3s linear;
+            transition: width 0.1s linear;
         }
     </style>
 </head>
@@ -213,10 +214,30 @@
 
         let lastSongKey = '';
         let localStartTime = 0;
-        let baseProgressMs = 0;
+        let serverBaseProgress = 0;
         let totalDurationMs = 0;
         let isPlaying = false;
+        let timeOffset = 0;
         const coverCache = new Map();
+
+        // 1. Präziser Zeit-Sync mit WorldTime / Server
+        async function syncTime() {
+            try {
+                const t0 = performance.now();
+                const res = await fetch('https://worldtimeapi.org/api/timezone/Etc/UTC', { cache: 'no-store' });
+                const data = await res.json();
+                const t1 = performance.now();
+                const latency = (t1 - t0) / 2;
+                const serverTime = new Date(data.utc_datetime).getTime();
+                timeOffset = (serverTime + latency) - Date.now();
+            } catch(e) {}
+        }
+        syncTime();
+        setInterval(syncTime, 600000);
+
+        function getTrueDateNow() {
+            return Date.now() + timeOffset;
+        }
 
         async function resolveCover(title, artist, rawArt, platformLinks) {
             const key = `${title}___${artist}`.toLowerCase();
@@ -267,12 +288,24 @@
                 const artist = track.artist || '';
                 const rawArt = track.artwork_url || '';
                 const duration = track.duration_ms || 0;
-                const progress = track.progress_ms || 0;
+                let apiProgress = track.progress_ms || data.progress_ms || 0;
                 const platformLinks = track.platform_links || {};
 
                 if (status === 'playing' && title && title !== 'Aktuell ist es ruhig...') {
                     isPlaying = true;
                     totalDurationMs = duration;
+
+                    // Server-Alter und Latenz kompensieren (Exakt wie auf der Hauptseite!)
+                    let serverTimestamp = data.timestamp || data.updated_at || (data.track && data.track.timestamp);
+                    if (serverTimestamp) {
+                        let st = typeof serverTimestamp === 'number'
+                            ? (serverTimestamp < 20000000000 ? serverTimestamp * 1000 : serverTimestamp)
+                            : new Date(serverTimestamp).getTime();
+                        let rawAge = getTrueDateNow() - st;
+                        if (rawAge >= 0 && rawAge <= (duration || 600000)) {
+                            apiProgress += rawAge;
+                        }
+                    }
 
                     const songKey = `${title}-${artist}`;
                     if (songKey !== lastSongKey) {
@@ -280,16 +313,23 @@
                         titleEl.innerText = title;
                         artistEl.innerText = artist;
 
-                        baseProgressMs = progress;
+                        serverBaseProgress = apiProgress;
                         localStartTime = performance.now();
 
                         resolveCover(title, artist, rawArt, platformLinks).then(artUrl => {
-                            if (artEl.src !== artUrl) artEl.src = artUrl;
+                            if (artEl.getAttribute('src') !== artUrl) artEl.src = artUrl;
                         });
                     } else {
-                        const expected = baseProgressMs + (performance.now() - localStartTime);
-                        if (Math.abs(progress - expected) > 3000) {
-                            baseProgressMs = progress;
+                        // Glatter Drift-Sync ohne Springen
+                        const expectedLocalProgress = serverBaseProgress + (performance.now() - localStartTime);
+                        const drift = apiProgress - expectedLocalProgress;
+                        const absDrift = Math.abs(drift);
+
+                        if (absDrift > 1200) {
+                            serverBaseProgress = apiProgress;
+                            localStartTime = performance.now();
+                        } else if (absDrift > 150) {
+                            serverBaseProgress = expectedLocalProgress + drift * 0.35;
                             localStartTime = performance.now();
                         }
                     }
@@ -305,17 +345,18 @@
             }
         }
 
+        // Kontinuierlicher 60-FPS Fortschrittsbalken
         function tickProgress() {
             if (isPlaying && totalDurationMs > 0) {
                 const elapsed = performance.now() - localStartTime;
-                const current = Math.min(totalDurationMs, baseProgressMs + elapsed);
-                const percent = (current / totalDurationMs) * 100;
+                const current = Math.min(totalDurationMs, serverBaseProgress + elapsed);
+                const percent = Math.max(0, Math.min(100, (current / totalDurationMs) * 100));
                 progressEl.style.width = `${percent}%`;
             }
             requestAnimationFrame(tickProgress);
         }
 
-        setInterval(fetchNowPlaying, 4000);
+        setInterval(fetchNowPlaying, 3000);
         fetchNowPlaying();
         requestAnimationFrame(tickProgress);
     </script>
