@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="de" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>GAMINGPIG // SPATIAL HOLOGRAPHIC SOUND EXPERIENCE</title>
+    <link rel="icon" href="icon-192.png" type="image/png">
+    
+    <!-- Three.js für 3D Spatial Audio World & Lucent Particles -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <!-- GSAP für butterweiche Animations-Interpolation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700;900&family=JetBrains+Mono:wght@400;700;900&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            background-color: #010206;
+            color: #ffffff;
+            font-family: 'Space Grotesk', sans-serif;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #webgl-canvas {
+            position: fixed;
+            inset: 0;
+            z-index: 1;
+            outline: none;
+        }
+
+        /* Hologram Cyber Grid Overlay */
+        .holo-grid {
+            position: fixed;
+            inset: 0;
+            background-image: 
+                linear-gradient(rgba(59, 130, 246, 0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(59, 130, 246, 0.04) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            z-index: 2;
+            mask-image: radial-gradient(circle at center, black 40%, transparent 85%);
+            -webkit-mask-image: radial-gradient(circle at center, black 40%, transparent 85%);
+        }
+
+        /* Glass HUD Layers */
+        .hud-layer {
+            position: fixed;
+            inset: 0;
+            z-index: 10;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 24px;
+        }
+
+        .interactive {
+            pointer-events: auto;
+        }
+
+        .glass-panel {
+            background: rgba(6, 11, 25, 0.65);
+            backdrop-filter: blur(28px);
+            -webkit-backdrop-filter: blur(28px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            border-radius: 28px;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .glass-panel:hover {
+            border-color: rgba(59, 130, 246, 0.5);
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 30px rgba(59, 130, 246, 0.3);
+        }
+
+        /* Chromatic Title Glitch */
+        .neon-glow {
+            text-shadow: 0 0 20px rgba(59, 130, 246, 0.8), 0 0 40px rgba(139, 92, 246, 0.5);
+        }
+
+        /* Laser Sweep Ring */
+        @keyframes scanline {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(1000%); }
+        }
+
+        .scan-ray {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #00f2fe, #ff007f, transparent);
+            animation: scanline 4s linear infinite;
+            opacity: 0.5;
+        }
+
+        /* 3D Vinyl Hologram Plate */
+        .vinyl-ring {
+            box-shadow: 0 0 40px rgba(59, 130, 246, 0.35);
+            animation: spinVinyl 14s linear infinite;
+        }
+
+        @keyframes spinVinyl {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* Pulsing Audio Sphere Bars */
+        .eq-pill {
+            background: linear-gradient(180deg, #00f2fe, #7928ca, #ff007f);
+            border-radius: 9999px;
+            transition: height 0.08s ease;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 3D WebGL Canvas Layer -->
+    <canvas id="webgl-canvas"></canvas>
+
+    <!-- Sci-Fi Grid Overlay -->
+    <div class="holo-grid"></div>
+
+    <!-- Main Spatial HUD Overlay -->
+    <div class="hud-layer">
+        
+        <!-- Top Bar: Status & Telemetry -->
+        <header class="flex items-center justify-between w-full">
+            <div class="glass-panel interactive px-5 py-3 flex items-center gap-4">
+                <div class="relative flex items-center justify-center">
+                    <span id="pulse-dot" class="w-3 h-3 rounded-full bg-emerald-400 animate-ping absolute opacity-75"></span>
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 relative"></span>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <p class="text-[10px] font-mono tracking-widest text-emerald-400 font-bold uppercase">SPATIAL FEED // LIVE</p>
+                        <span class="text-[9px] px-1.5 py-0.2 bg-blue-500/20 text-blue-400 rounded border border-blue-500/30 font-mono">120 FPS</span>
+                    </div>
+                    <p id="user-tag" class="text-xs font-bold text-slate-300">USER: Gamingpig</p>
+                </div>
+            </div>
+
+            <!-- Visualizer Mode Selector -->
+            <div class="glass-panel interactive p-1.5 flex items-center gap-1">
+                <button onclick="setCameraView('front')" class="px-3 py-1.5 text-xs font-bold rounded-xl bg-blue-600/30 text-blue-400 border border-blue-500/40 hover:bg-blue-600/50 transition-all">Front Focus</button>
+                <button onclick="setCameraView('orbit')" class="px-3 py-1.5 text-xs font-bold rounded-xl bg-white/5 text-slate-300 hover:bg-white/10 transition-all">Free 3D Orbit</button>
+                <button onclick="setCameraView('top')" class="px-3 py-1.5 text-xs font-bold rounded-xl bg-white/5 text-slate-300 hover:bg-white/10 transition-all">God View</button>
+                <button onclick="toggleVisualizerTheme()" class="px-3 py-1.5 text-xs font-bold rounded-xl bg-pink-500/20 text-pink-400 border border-pink-500/30 hover:bg-pink-500/30 transition-all">Cyber Pulse ✨</button>
+            </div>
+        </header>
+
+        <!-- Center Floating Holographic Card (Desktop & Mobile) -->
+        <div class="w-full flex justify-center items-center my-auto pointer-events-none">
+            <div id="spatial-card" class="glass-panel interactive p-6 sm:p-8 max-w-xl w-full relative overflow-hidden text-center transform transition-transform duration-500">
+                <div class="scan-ray"></div>
+                
+                <!-- Floating Hologram Vinyl Center -->
+                <div class="relative w-36 h-36 sm:w-44 sm:h-44 mx-auto mb-6 flex items-center justify-center">
+                    <div class="absolute inset-0 rounded-full border-2 border-blue-500/30 animate-pulse"></div>
+                    <div class="absolute -inset-4 rounded-full border border-pink-500/20 vinyl-ring"></div>
+                    <div class="w-32 h-32 sm:w-40 sm:h-40 rounded-full overflow-hidden shadow-2xl border-2 border-white/20 relative z-10">
+                        <img id="holo-artwork" src="icon-192.png" alt="Cover" class="w-full h-full object-cover">
+                    </div>
+                </div>
+
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-[10px] font-mono uppercase tracking-widest text-cyan-400 mb-3">
+                    <span id="provider-badge">Spotify Live Matrix</span>
+                </div>
+
+                <h1 id="holo-title" class="text-2xl sm:text-4xl font-black tracking-tight text-white mb-2 leading-tight drop-shadow-lg truncate">
+                    Wird initialisiert...
+                </h1>
+                <p id="holo-artist" class="text-slate-400 text-sm sm:text-base font-bold mb-6 truncate">
+                    Gamingpig Spatial Studio
+                </p>
+
+                <!-- 3D Wave Audio Visualizer Bars -->
+                <div id="wave-bars-container" class="flex items-end justify-center gap-1.5 h-12 mb-6 px-4">
+                    <!-- 28 Dynamic Audio Pillars -->
+                </div>
+
+                <!-- Live Progress HUD -->
+                <div class="w-full bg-slate-900/80 rounded-2xl p-3 border border-slate-800 flex items-center justify-between gap-4 font-mono text-xs">
+                    <span id="time-current" class="text-cyan-400 font-bold">0:00</span>
+                    <div class="flex-1 h-2 bg-slate-800 rounded-full overflow-hidden relative">
+                        <div id="holo-progress-fill" class="h-full w-0 bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 rounded-full"></div>
+                    </div>
+                    <span id="time-total" class="text-slate-400 font-bold">0:00</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Controls Bar -->
+        <footer class="flex items-center justify-between w-full">
+            <div class="glass-panel interactive px-4 py-2 text-[11px] font-mono text-slate-400 flex items-center gap-3">
+                <span>🛰️ CAMERA DRAG: <strong class="text-white">Active</strong></span>
+                <span>•</span>
+                <span>PARTICLES: <strong class="text-cyan-400">12,000</strong></span>
+            </div>
+
+            <a href="index.html" class="glass-panel interactive px-6 py-2.5 text-xs font-bold text-white bg-blue-600/30 hover:bg-blue-600/60 border border-blue-500/40 rounded-2xl flex items-center gap-2 transition-all shadow-lg active:scale-95">
+                <span>← Zurück zum Haupt-Portfolio</span>
+            </a>
+        </footer>
+    </div>
+
+    <!-- Sound & 3D WebGL Engine -->
+    <script>
+        const API_URL = 'https://npc-api.aikins.xyz/v1/users/gamingpig/now';
+        const FALLBACK_ART = 'https://gamingpig.github.io/About-Gamingpig/og-v2.jpg';
+
+        // -------------------------------------------------------------
+        // 1. THREE.JS SPATIAL AUDIO SPHERE & 12,000 NEBULA PARTICLES
+        // -------------------------------------------------------------
+        const canvas = document.getElementById('webgl-canvas');
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x010206, 0.015);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 0, 18);
+
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        const controls = new THREE.OrbitControls(camera, canvas);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.maxDistance = 45;
+        controls.minDistance = 6;
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = 0.8;
+
+        // Dynamic 3D Particle Cloud
+        const particleCount = 12000;
+        const geometry = new THREE.BufferGeometry();
+        const positions = new Float32Array(particleCount * 3);
+        const colors = new Float32Array(particleCount * 3);
+
+        const colorPalette = [
+            new THREE.Color('#3b82f6'),
+            new THREE.Color('#8b5cf6'),
+            new THREE.Color('#ec4899'),
+            new THREE.Color('#00f2fe')
+        ];
+
+        for (let i = 0; i < particleCount; i++) {
+            const radius = 12 + Math.random() * 25;
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos((Math.random() * 2) - 1);
+
+            positions[i * 3] = radius * Math.sin(phi) * Math.cos(theta);
+            positions[i * 3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
+            positions[i * 3 + 2] = radius * Math.cos(phi);
+
+            const col = colorPalette[Math.floor(Math.random() * colorPalette.length)];
+            colors[i * 3] = col.r;
+            colors[i * 3 + 1] = col.g;
+            colors[i * 3 + 2] = col.b;
+        }
+
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+        const material = new THREE.PointsMaterial({
+            size: 0.12,
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.85,
+            blending: THREE.AdditiveBlending
+        });
+
+        const particleSystem = new THREE.Points(geometry, material);
+        scene.add(particleSystem);
+
+        // 3D Audio Frequency Torus Ring
+        const torusGeom = new THREE.TorusGeometry(8, 0.08, 16, 100);
+        const torusMat = new THREE.MeshBasicMaterial({ color: 0x00f2fe, wireframe: true, transparent: true, opacity: 0.3 });
+        const torus = new THREE.Mesh(torusGeom, torusMat);
+        scene.add(torus);
+
+        // Resize Handling
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // -------------------------------------------------------------
+        // 2. AUDIO WAVE PILLARS (DOM)
+        // -------------------------------------------------------------
+        const waveContainer = document.getElementById('wave-bars-container');
+        const totalBars = 28;
+        const bars = [];
+
+        for (let i = 0; i < totalBars; i++) {
+            const bar = document.createElement('div');
+            bar.className = 'w-1.5 sm:w-2 eq-pill';
+            bar.style.height = '15%';
+            waveContainer.appendChild(bar);
+            bars.push(bar);
+        }
+
+        // -------------------------------------------------------------
+        // 3. LIVE SPOTIFY TELEMETRY & ARTWORK ENGINE
+        // -------------------------------------------------------------
+        const titleEl = document.getElementById('holo-title');
+        const artistEl = document.getElementById('holo-artist');
+        const artworkEl = document.getElementById('holo-artwork');
+        const fillEl = document.getElementById('holo-progress-fill');
+        const timeCurEl = document.getElementById('time-current');
+        const timeTotEl = document.getElementById('time-total');
+        const providerBadge = document.getElementById('provider-badge');
+
+        let lastTrackKey = '';
+        let serverBaseMs = 0;
+        let localStart = performance.now();
+        let totalDuration = 0;
+        let isPlaying = false;
+        const cache = new Map();
+
+        function formatTime(ms) {
+            if (!ms || ms < 0) return '0:00';
+            const s = Math.floor(ms / 1000);
+            return `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
+        }
+
+        async function resolveCover(title, artist) {
+            const key = `${title}-${artist}`.toLowerCase();
+            if (cache.has(key)) return cache.get(key);
+
+            try {
+                const q = encodeURIComponent(`${artist} ${title}`);
+                const r = await fetch(`https://api.deezer.com/search?q=${q}&limit=1`);
+                const d = await r.json();
+                const cover = d?.data?.[0]?.album?.cover_xl || d?.data?.[0]?.album?.cover_big;
+                if (cover) {
+                    cache.set(key, cover);
+                    return cover;
+                }
+            } catch(e) {}
+
+            try {
+                const q = encodeURIComponent(`${artist} ${title}`);
+                const r = await fetch(`https://itunes.apple.com/search?term=${q}&media=music&entity=song&limit=1`);
+                const d = await r.json();
+                let art = d?.results?.[0]?.artworkUrl100;
+                if (art) {
+                    art = art.replace('100x100bb', '600x600bb');
+                    cache.set(key, art);
+                    return art;
+                }
+            } catch(e) {}
+
+            return FALLBACK_ART;
+        }
+
+        async function pollData() {
+            try {
+                const res = await fetch(API_URL, { cache: 'no-store' });
+                if (!res.ok) throw new Error();
+                const d = await res.json();
+
+                const st = d.status;
+                const tr = d.track || {};
+                const title = tr.title || tr.name;
+                const artist = tr.artist || '';
+                const dur = tr.duration_ms || 0;
+                const prog = tr.progress_ms || d.progress_ms || 0;
+
+                if (st === 'playing' && title && title !== 'Aktuell ist es ruhig...') {
+                    isPlaying = true;
+                    totalDuration = dur;
+                    timeTotEl.innerText = formatTime(dur);
+
+                    if (d.provider) {
+                        providerBadge.innerText = `${d.provider.toUpperCase()} // SPATIAL MATRIX`;
+                    }
+
+                    const key = `${title}-${artist}`;
+                    if (key !== lastTrackKey) {
+                        lastTrackKey = key;
+                        titleEl.innerText = title;
+                        artistEl.innerText = artist;
+
+                        serverBaseMs = prog;
+                        localStart = performance.now();
+
+                        resolveCover(title, artist).then(src => {
+                            if (artworkEl.src !== src) artworkEl.src = src;
+                        });
+
+                        // 3D Warp Transition Animation
+                        gsap.fromTo(particleSystem.rotation, { y: 0 }, { y: Math.PI * 2, duration: 2, ease: "power2.out" });
+                    } else {
+                        const exp = serverBaseMs + (performance.now() - localStart);
+                        const drift = prog - exp;
+                        if (Math.abs(drift) > 3000) {
+                            serverBaseMs = prog;
+                            localStart = performance.now();
+                        } else if (Math.abs(drift) > 200) {
+                            serverBaseMs = exp + drift * 0.35;
+                            localStart = performance.now();
+                        }
+                    }
+                } else {
+                    isPlaying = false;
+                    titleEl.innerText = 'Aktuell ist es ruhig...';
+                    artistEl.innerText = 'Gamingpig genießt die Stille';
+                    artworkEl.src = FALLBACK_ART;
+                    fillEl.style.width = '0%';
+                    timeCurEl.innerText = '0:00';
+                    timeTotEl.innerText = '0:00';
+                }
+            } catch(e) {}
+        }
+
+        // -------------------------------------------------------------
+        // 4. ANIMATION LOOP (60-120 FPS)
+        // -------------------------------------------------------------
+        let clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const elapsedTime = clock.getElapsedTime();
+            controls.update();
+
+            // Rotate 3D Spatial Particles
+            particleSystem.rotation.y = elapsedTime * 0.05;
+            particleSystem.rotation.x = Math.sin(elapsedTime * 0.03) * 0.2;
+            torus.rotation.x = elapsedTime * 0.2;
+            torus.rotation.y = elapsedTime * 0.3;
+
+            // Audio Waveform Simulator
+            if (isPlaying) {
+                const pos = particleSystem.geometry.attributes.position.array;
+                for (let i = 0; i < totalBars; i++) {
+                    const noise = Math.sin(elapsedTime * 8 + i * 0.5) * 0.5 + 0.5;
+                    const noise2 = Math.cos(elapsedTime * 12 + i * 0.8) * 0.3;
+                    const heightPercent = Math.max(10, Math.min(100, (noise + noise2) * 85));
+                    bars[i].style.height = `${heightPercent}%`;
+                }
+
+                // Progress Bar Tick
+                if (totalDuration > 0) {
+                    const currentMs = Math.min(totalDuration, serverBaseMs + (performance.now() - localStart));
+                    timeCurEl.innerText = formatTime(currentMs);
+                    const pct = Math.max(0, Math.min(100, (currentMs / totalDuration) * 100));
+                    fillEl.style.width = `${pct}%`;
+                }
+            } else {
+                for (let i = 0; i < totalBars; i++) {
+                    bars[i].style.height = '12%';
+                }
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        // -------------------------------------------------------------
+        // 5. CAMERA PRESETS & THEMES
+        // -------------------------------------------------------------
+        window.setCameraView = function(view) {
+            if (view === 'front') {
+                gsap.to(camera.position, { x: 0, y: 0, z: 18, duration: 1.5, ease: "power3.inOut" });
+                controls.autoRotate = false;
+            } else if (view === 'orbit') {
+                gsap.to(camera.position, { x: 14, y: 8, z: 20, duration: 1.5, ease: "power3.inOut" });
+                controls.autoRotate = true;
+                controls.autoRotateSpeed = 1.2;
+            } else if (view === 'top') {
+                gsap.to(camera.position, { x: 0, y: 28, z: 2, duration: 1.5, ease: "power3.inOut" });
+                controls.autoRotate = true;
+                controls.autoRotateSpeed = 0.5;
+            }
+        };
+
+        let isAltTheme = false;
+        window.toggleVisualizerTheme = function() {
+            isAltTheme = !isAltTheme;
+            const newColors = isAltTheme 
+                ? [new THREE.Color('#ff007f'), new THREE.Color('#00f2fe'), new THREE.Color('#ffe600')]
+                : [new THREE.Color('#3b82f6'), new THREE.Color('#8b5cf6'), new THREE.Color('#ec4899')];
+
+            const colors = particleSystem.geometry.attributes.color.array;
+            for (let i = 0; i < particleCount; i++) {
+                const c = newColors[Math.floor(Math.random() * newColors.length)];
+                colors[i * 3] = c.r;
+                colors[i * 3 + 1] = c.g;
+                colors[i * 3 + 2] = c.b;
+            }
+            particleSystem.geometry.attributes.color.needsUpdate = true;
+        };
+
+        // Start Systems
+        setInterval(pollData, 3000);
+        pollData();
+        animate();
+    </script>
+</body>
+</html>
