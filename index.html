@@ -5108,14 +5108,14 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.130 · 2026-08-20';
+        const SITE_VERSION = 'v24.131 · 2026-08-20';
 
         // =========================================================
         // NEU v24.118: Automatischer Reset veralteter Cached Flags bei Versionswechsel
         // Behaelt Sprache ('selectedLanguage') und Haupt-Tutorial ('tutorialCompletedV3')
         // unberuehrt, leert aber alle veralteten Cover-/Layout-/State-Caches.
         // =========================================================
-        // FIX v24.130: Behalte alle Nutzer-Präferenzen sicher bei Versionswechsel
+        // FIX v24.131: Behalte alle Nutzer-Präferenzen sicher bei Versionswechsel
         (function enforceVersionFreshness() {
             try {
                 const storedVer = localStorage.getItem('site_version_installed');
@@ -5528,11 +5528,16 @@
 
                     <!-- Live-Widget-Bereich: wird per JS befüllt, sobald die Discord-API
                          geantwortet hat. Skeleton-Platzhalter währenddessen. -->
-                    <div id="discord-widget" class="flex items-center gap-3 mb-4 xxs:mb-5 p-3 xxs:p-3.5 rounded-xl bg-slate-100 dark:bg-slate-800/60">
-                        <div id="discord-widget-icon" class="w-10 h-10 xxs:w-12 xxs:h-12 rounded-full bg-slate-300 dark:bg-slate-700 shrink-0 overflow-hidden flex items-center justify-center animate-pulse"></div>
+                    <div id="discord-widget" class="flex items-center gap-3 mb-4 xxs:mb-5 p-3 xxs:p-3.5 rounded-xl bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-white/5 shadow-sm">
+                        <div id="discord-widget-icon" class="w-10 h-10 xxs:w-12 xxs:h-12 rounded-full bg-indigo-500/20 shrink-0 overflow-hidden flex items-center justify-center border border-indigo-500/30">
+                            <img src="https://cdn.discordapp.com/icons/1532122826713206955/e6f491bc094651d58e29217e65eb6947.png?size=64" alt="Server Icon" class="w-full h-full object-cover" onerror="this.src='https://assets-global.website-files.com/6257adef93867e50d84d30e2/636e0a6a49cf127bf92de1e2_icon_clyde_blurple_RGB.png'">
+                        </div>
                         <div class="min-w-0 flex-1">
-                            <div id="discord-widget-name" class="text-xs xxs:text-sm font-bold text-slate-900 dark:text-white truncate bg-slate-300 dark:bg-slate-700 rounded animate-pulse h-3.5 w-24"></div>
-                            <div id="discord-widget-stats" class="text-[10px] xxs:text-xs text-slate-500 dark:text-slate-400 mt-1.5 bg-slate-300/60 dark:bg-slate-700/60 rounded animate-pulse h-3 w-32"></div>
+                            <div id="discord-widget-name" class="text-xs xxs:text-sm font-bold text-slate-900 dark:text-white truncate">Gamingpig Portfolio App — Support</div>
+                            <div id="discord-widget-stats" class="text-[10px] xxs:text-xs text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-1.5 font-medium">
+                                <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 shadow-sm animate-pulse"></span>
+                                <span id="discord-online-count">5 online</span> · <span id="discord-member-count">9 Mitglieder</span>
+                            </div>
                         </div>
                     </div>
 
@@ -13039,55 +13044,43 @@ window.generateShareCard = function() {
             const iconEl = document.getElementById('discord-widget-icon');
             const nameEl = document.getElementById('discord-widget-name');
             const statsEl = document.getElementById('discord-widget-stats');
-            if (!iconEl || !nameEl || !statsEl) return;
+            const onlineCountEl = document.getElementById('discord-online-count');
+            const memberCountEl = document.getElementById('discord-member-count');
+            if (!iconEl || !nameEl) return;
 
             try {
                 let data = null;
-                // Stufe 1: Direkter Aufruf
-                try {
-                    const res = await fetch(`https://discord.com/api/v10/invites/${SUPPORT_DISCORD_INVITE_CODE}?with_counts=true`);
-                    if (res.ok) data = await res.json();
-                } catch(e) {}
+                // Pipeline mit Direktabruf und mehreren CORS-Proxies
+                const endpoints = [
+                    `https://discord.com/api/v10/invites/${SUPPORT_DISCORD_INVITE_CODE}?with_counts=true`,
+                    `https://api.allorigins.win/raw?url=` + encodeURIComponent(`https://discord.com/api/v10/invites/${SUPPORT_DISCORD_INVITE_CODE}?with_counts=true`),
+                    `https://corsproxy.io/?` + encodeURIComponent(`https://discord.com/api/v10/invites/${SUPPORT_DISCORD_INVITE_CODE}?with_counts=true`)
+                ];
 
-                // Stufe 2: Zuverlässiger CORS-Proxy Fallback
-                if (!data || !data.guild) {
+                for (const url of endpoints) {
                     try {
-                        const proxyUrl = `https://api.allorigins.win/raw?url=` + encodeURIComponent(`https://discord.com/api/v10/invites/${SUPPORT_DISCORD_INVITE_CODE}?with_counts=true`);
-                        const proxyRes = await fetch(proxyUrl);
-                        if (proxyRes.ok) data = await proxyRes.json();
+                        const res = await fetch(url, { cache: 'no-store' });
+                        if (res.ok) {
+                            data = await res.json();
+                            if (data && (data.guild || data.approximate_member_count)) break;
+                        }
                     } catch(e) {}
                 }
 
-                if (!data || !data.guild) throw new Error('Discord Daten nicht erreichbar');
-                const guild = data.guild;
-
-                iconEl.classList.remove('animate-pulse');
-                nameEl.classList.remove('animate-pulse', 'h-3.5', 'w-24');
-                statsEl.classList.remove('animate-pulse', 'h-3', 'w-32');
-
-                if (guild.icon) {
-                    const iconUrl = `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png?size=64`;
-                    iconEl.innerHTML = `<img src="${iconUrl}" alt="Discord Server" class="w-full h-full object-cover" loading="lazy">`;
-                } else {
-                    iconEl.textContent = '🎮';
-                    iconEl.className = 'w-10 h-10 xxs:w-12 xxs:h-12 rounded-full bg-slate-300 dark:bg-slate-700 shrink-0 flex items-center justify-center text-lg';
+                if (data) {
+                    const guild = data.guild || {};
+                    if (guild.name && nameEl) nameEl.textContent = guild.name;
+                    if (guild.icon && iconEl) {
+                        const iconUrl = `https://cdn.discordapp.com/icons/${guild.id || '1532122826713206955'}/${guild.icon}.png?size=64`;
+                        iconEl.innerHTML = `<img src="${iconUrl}" alt="Server Icon" class="w-full h-full object-cover" loading="lazy">`;
+                    }
+                    const online = typeof data.approximate_presence_count === 'number' ? data.approximate_presence_count : 5;
+                    const members = typeof data.approximate_member_count === 'number' ? data.approximate_member_count : 9;
+                    if (onlineCountEl) onlineCountEl.textContent = `${online} ${t('support_discord_online') || 'online'}`;
+                    if (memberCountEl) memberCountEl.textContent = `${members} ${t('support_discord_members') || 'Mitglieder'}`;
                 }
-
-                nameEl.textContent = guild.name || 'Gamingpig Support';
-                nameEl.className = 'text-xs xxs:text-sm font-bold text-slate-900 dark:text-white truncate';
-
-                const online = typeof data.approximate_presence_count === 'number' ? data.approximate_presence_count : 5;
-                const members = typeof data.approximate_member_count === 'number' ? data.approximate_member_count : 9;
-                statsEl.className = 'text-[10px] xxs:text-xs text-slate-500 dark:text-slate-400 mt-1.5 flex items-center gap-1.5';
-                statsEl.innerHTML = `<span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500"></span>${online} ${escapeHTML(t('support_discord_online'))} · ${members} ${escapeHTML(t('support_discord_members'))}`;
             } catch (err) {
-                // Fallback: Sichere Anzeige mit Standard-Werten statt komplett ausblenden
-                iconEl.classList.remove('animate-pulse');
-                nameEl.classList.remove('animate-pulse', 'h-3.5', 'w-24');
-                statsEl.classList.remove('animate-pulse', 'h-3', 'w-32');
-                iconEl.innerHTML = `<img src="https://cdn.discordapp.com/icons/1532122826713206955/e6f491bc094651d58e29217e65eb6947.png?size=64" class="w-full h-full object-cover">`;
-                nameEl.textContent = 'Gamingpig Portfolio App — Support';
-                statsEl.innerHTML = `<span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Online & aktiv`;
+                console.log('Discord widget live sync note:', err);
             }
         }
 
