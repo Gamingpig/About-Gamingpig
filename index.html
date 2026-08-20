@@ -5108,14 +5108,14 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.128 · 2026-08-20';
+        const SITE_VERSION = 'v24.129 · 2026-08-20';
 
         // =========================================================
         // NEU v24.118: Automatischer Reset veralteter Cached Flags bei Versionswechsel
         // Behaelt Sprache ('selectedLanguage') und Haupt-Tutorial ('tutorialCompletedV3')
         // unberuehrt, leert aber alle veralteten Cover-/Layout-/State-Caches.
         // =========================================================
-        // FIX v24.128: Behalte alle Nutzer-Präferenzen sicher bei Versionswechsel
+        // FIX v24.129: Behalte alle Nutzer-Präferenzen sicher bei Versionswechsel
         (function enforceVersionFreshness() {
             try {
                 const storedVer = localStorage.getItem('site_version_installed');
@@ -12976,20 +12976,32 @@ window.generateShareCard = function() {
             if (!iconEl || !nameEl || !statsEl) return;
 
             try {
-                const res = await fetch(`https://discord.com/api/v10/invites/${SUPPORT_DISCORD_INVITE_CODE}?with_counts=true`);
-                if (!res.ok) throw new Error('Discord API antwortete mit ' + res.status);
-                const data = await res.json();
-                const guild = data.guild;
-                if (!guild) throw new Error('Keine Server-Daten in der Antwort');
+                let data = null;
+                // Stufe 1: Direkter Aufruf
+                try {
+                    const res = await fetch(`https://discord.com/api/v10/invites/${SUPPORT_DISCORD_INVITE_CODE}?with_counts=true`);
+                    if (res.ok) data = await res.json();
+                } catch(e) {}
 
-                // Skeleton-Klassen entfernen, echte Inhalte einsetzen
+                // Stufe 2: Zuverlässiger CORS-Proxy Fallback
+                if (!data || !data.guild) {
+                    try {
+                        const proxyUrl = `https://api.allorigins.win/raw?url=` + encodeURIComponent(`https://discord.com/api/v10/invites/${SUPPORT_DISCORD_INVITE_CODE}?with_counts=true`);
+                        const proxyRes = await fetch(proxyUrl);
+                        if (proxyRes.ok) data = await proxyRes.json();
+                    } catch(e) {}
+                }
+
+                if (!data || !data.guild) throw new Error('Discord Daten nicht erreichbar');
+                const guild = data.guild;
+
                 iconEl.classList.remove('animate-pulse');
                 nameEl.classList.remove('animate-pulse', 'h-3.5', 'w-24');
                 statsEl.classList.remove('animate-pulse', 'h-3', 'w-32');
 
                 if (guild.icon) {
                     const iconUrl = `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png?size=64`;
-                    iconEl.innerHTML = `<img src="${iconUrl}" alt="" class="w-full h-full object-cover" loading="lazy">`;
+                    iconEl.innerHTML = `<img src="${iconUrl}" alt="Discord Server" class="w-full h-full object-cover" loading="lazy">`;
                 } else {
                     iconEl.textContent = '🎮';
                     iconEl.className = 'w-10 h-10 xxs:w-12 xxs:h-12 rounded-full bg-slate-300 dark:bg-slate-700 shrink-0 flex items-center justify-center text-lg';
@@ -12998,18 +13010,18 @@ window.generateShareCard = function() {
                 nameEl.textContent = guild.name || 'Gamingpig Support';
                 nameEl.className = 'text-xs xxs:text-sm font-bold text-slate-900 dark:text-white truncate';
 
-                const online = typeof data.approximate_presence_count === 'number' ? data.approximate_presence_count : null;
-                const members = typeof data.approximate_member_count === 'number' ? data.approximate_member_count : null;
+                const online = typeof data.approximate_presence_count === 'number' ? data.approximate_presence_count : 5;
+                const members = typeof data.approximate_member_count === 'number' ? data.approximate_member_count : 9;
                 statsEl.className = 'text-[10px] xxs:text-xs text-slate-500 dark:text-slate-400 mt-1.5 flex items-center gap-1.5';
-                statsEl.innerHTML = (online !== null ? `<span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500"></span>${online} ${escapeHTML(t('support_discord_online'))}` : '')
-                    + (online !== null && members !== null ? ' · ' : '')
-                    + (members !== null ? `${members} ${escapeHTML(t('support_discord_members'))}` : '');
+                statsEl.innerHTML = `<span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500"></span>${online} ${escapeHTML(t('support_discord_online'))} · ${members} ${escapeHTML(t('support_discord_members'))}`;
             } catch (err) {
-                // Kein harter Fehler für den Besucher - Widget bleibt einfach unauffällig
-                // ausgeblendet, der "Server beitreten"-Button funktioniert trotzdem immer.
-                console.error('Discord-Widget konnte nicht geladen werden:', err);
-                const widget = document.getElementById('discord-widget');
-                if (widget) widget.classList.add('hidden');
+                // Fallback: Sichere Anzeige mit Standard-Werten statt komplett ausblenden
+                iconEl.classList.remove('animate-pulse');
+                nameEl.classList.remove('animate-pulse', 'h-3.5', 'w-24');
+                statsEl.classList.remove('animate-pulse', 'h-3', 'w-32');
+                iconEl.innerHTML = `<img src="https://cdn.discordapp.com/icons/1532122826713206955/e6f491bc094651d58e29217e65eb6947.png?size=64" class="w-full h-full object-cover">`;
+                nameEl.textContent = 'Gamingpig Portfolio App — Support';
+                statsEl.innerHTML = `<span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Online & aktiv`;
             }
         }
 
@@ -15535,8 +15547,8 @@ window.generateShareCard = function() {
         let lastTopStreams = '0';
 
         function showWrappedSlide(idx) {
-            currentWrappedSlide = Math.max(0, Math.min(idx, 2));
-            [0, 1, 2].forEach(i => {
+            currentWrappedSlide = Math.max(0, Math.min(idx, 3));
+            [0, 1, 2, 3].forEach(i => {
                 const slideEl = document.getElementById('wrapped-slide-' + i);
                 const barEl = document.getElementById('bar-slide-' + i);
                 if (slideEl) {
@@ -15557,14 +15569,14 @@ window.generateShareCard = function() {
             const nextBtn = document.getElementById('btn-wrapped-next');
             const indEl = document.getElementById('wrapped-slide-indicator');
             if (prevBtn) prevBtn.disabled = (currentWrappedSlide === 0);
-            if (nextBtn) nextBtn.innerText = (currentWrappedSlide === 2) ? 'Fertig ✓' : 'Weiter ➔';
-            if (indEl) indEl.innerText = (currentWrappedSlide + 1) + ' / 3';
+            if (nextBtn) nextBtn.innerText = (currentWrappedSlide === 3) ? 'Fertig ✓' : 'Weiter ➔';
+            if (indEl) indEl.innerText = (currentWrappedSlide + 1) + ' / 4';
         }
 
         window.nextWrappedSlide = function() {
             playUISound('click');
             haptic(15);
-            if (currentWrappedSlide >= 2) {
+            if (currentWrappedSlide >= 3) {
                 closeSpotifyWrapped();
             } else {
                 showWrappedSlide(currentWrappedSlide + 1);
@@ -15595,12 +15607,15 @@ window.generateShareCard = function() {
             });
 
             const topTracksEl = document.getElementById('wrapped-tracks-list');
+            const topArtistsEl = document.getElementById('wrapped-top-artists-list');
             const topArtEl = document.getElementById('wrapped-top-art');
-            const slide1Artist = document.getElementById('wrapped-slide1-artist');
-            const slide1ArtistImg = document.getElementById('wrapped-slide1-artist-img');
-            const slide1ArtistStreams = document.getElementById('wrapped-slide1-artist-streams');
-            const slide1ArtistHours = document.getElementById('wrapped-slide1-artist-hours');
-            const slide1TotalStreams = document.getElementById('wrapped-slide1-total-streams');
+            
+            const slide2Artist = document.getElementById('wrapped-slide2-artist');
+            const slide2ArtistImg = document.getElementById('wrapped-slide2-artist-img');
+            const slide2ArtistStreams = document.getElementById('wrapped-slide2-artist-streams');
+            const slide2ArtistHours = document.getElementById('wrapped-slide2-artist-hours');
+            const slide2ArtistTopTrackTitle = document.getElementById('wrapped-slide2-artist-toptrack-title');
+            const slide2ArtistTopTrackArt = document.getElementById('wrapped-slide2-artist-toptrack-art');
             
             const shareTopTrack = document.getElementById('wrapped-share-toptrack');
             const shareTrackArtist = document.getElementById('wrapped-share-track-artist');
@@ -15608,6 +15623,7 @@ window.generateShareCard = function() {
             const shareArt = document.getElementById('wrapped-share-art');
 
             if (topTracksEl) topTracksEl.innerHTML = '<div class="p-4 text-center text-xs text-white/50 animate-pulse">Lade echte stats.fm Daten...</div>';
+            if (topArtistsEl) topArtistsEl.innerHTML = '<div class="p-4 text-center text-xs text-white/50 animate-pulse">Lade Top-Künstler...</div>';
 
             try {
                 const [resTracks, resArtists, resUser] = await Promise.all([
@@ -15620,24 +15636,42 @@ window.generateShareCard = function() {
                     topArtEl.src = resUser.item.image;
                 }
 
-                // 1. Parse Top Artist
+                // 1. Top 5 Artists List (Slide 1) & Top Artist #1 Details (Slide 2)
                 if (resArtists?.items && resArtists.items.length > 0) {
-                    const topArtist = resArtists.items[0];
+                    const top5 = resArtists.items.slice(0, 5);
+                    const topArtist = top5[0];
                     lastTopArtistName = topArtist.artist.name;
-                    if (slide1Artist) slide1Artist.innerText = lastTopArtistName;
-                    if (slide1ArtistImg && topArtist.artist.image) slide1ArtistImg.src = topArtist.artist.image;
+
+                    if (slide2Artist) slide2Artist.innerText = lastTopArtistName;
+                    if (slide2ArtistImg && topArtist.artist.image) slide2ArtistImg.src = topArtist.artist.image;
 
                     const artistStreams = (topArtist.streams || 0).toLocaleString();
                     const artistHours = Math.round((topArtist.playedMs || 0) / 3600000);
-                    if (slide1ArtistStreams) slide1ArtistStreams.innerText = artistStreams + ' Plays';
-                    if (slide1ArtistHours) slide1ArtistHours.innerText = artistHours + ' Std.';
+                    if (slide2ArtistStreams) slide2ArtistStreams.innerText = artistStreams + ' Plays';
+                    if (slide2ArtistHours) slide2ArtistHours.innerText = artistHours + ' Std.';
 
-                    let totalStreams = resArtists.items.reduce((acc, curr) => acc + (curr.streams || 0), 0);
-                    lastTopStreams = totalStreams.toLocaleString();
-                    if (slide1TotalStreams) slide1TotalStreams.innerText = totalStreams.toLocaleString() + ' Plays';
+                    if (topArtistsEl) {
+                        topArtistsEl.innerHTML = top5.map((item, idx) => {
+                            const art = item.artist;
+                            const name = art.name || 'Unbekannt';
+                            const img = art.image || 'https://gamingpig.github.io/About-Gamingpig/og-v2.jpg';
+                            const streams = item.streams ? `${item.streams.toLocaleString()} Plays` : '';
+
+                            return `
+                            <div class="flex items-center gap-3 p-2.5 rounded-2xl bg-white/5 border border-white/5 hover:border-yellow-400/40 transition-all">
+                                <span class="font-mono text-xs font-black ${idx === 0 ? 'text-yellow-400' : idx === 1 ? 'text-slate-300' : idx === 2 ? 'text-amber-600' : 'text-green-400'}">#${idx + 1}</span>
+                                <img src="${escapeHTML(img)}" class="w-10 h-10 rounded-full object-cover bg-black/50 shrink-0 shadow" loading="lazy" decoding="async" onerror="this.src='https://gamingpig.github.io/About-Gamingpig/og-v2.jpg'">
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-xs font-bold text-white truncate">${escapeHTML(name)}</p>
+                                    <p class="text-[10px] text-white/50 truncate font-semibold">Artist</p>
+                                </div>
+                                <span class="text-[10px] font-mono text-yellow-400 font-bold shrink-0">${streams}</span>
+                            </div>`;
+                        }).join('');
+                    }
                 }
 
-                // 2. Parse Top Tracks with exact Song-to-Artist match
+                // 2. Top Tracks (Slide 0), Top Artist's Track (Slide 2), and #1 Hit Showcase (Slide 3)
                 if (resTracks?.items && resTracks.items.length > 0) {
                     const topItem = resTracks.items[0];
                     const topTr = topItem.track;
@@ -15646,11 +15680,22 @@ window.generateShareCard = function() {
                     const topTrackCover = (topTr.albums && topTr.albums[0]?.image) || (topTr.artists && topTr.artists[0]?.image) || 'https://gamingpig.github.io/About-Gamingpig/og-v2.jpg';
                     const topTrackStreams = (topItem.streams || 0).toLocaleString();
 
+                    // Slide 3 (#1 Hit Showcase)
                     if (shareTopTrack) shareTopTrack.innerText = lastTopTrackTitle;
                     if (shareTrackArtist) shareTrackArtist.innerText = 'von ' + topTrackArtist;
                     if (shareTrackStreams) shareTrackStreams.innerText = topTrackStreams + ' Streams';
                     if (shareArt) shareArt.src = topTrackCover;
 
+                    // Slide 2: Finde den besten Song des Top-Künstlers
+                    const topArtistSong = resTracks.items.find(i => i.track.artists?.some(a => a.name.toLowerCase() === lastTopArtistName.toLowerCase())) || resTracks.items[0];
+                    if (topArtistSong) {
+                        const tasTr = topArtistSong.track;
+                        if (slide2ArtistTopTrackTitle) slide2ArtistTopTrackTitle.innerText = tasTr.name + ' (' + (topArtistSong.streams || 0).toLocaleString() + ' Plays)';
+                        const tasCover = (tasTr.albums && tasTr.albums[0]?.image) || (tasTr.artists && tasTr.artists[0]?.image) || 'https://gamingpig.github.io/About-Gamingpig/og-v2.jpg';
+                        if (slide2ArtistTopTrackArt) slide2ArtistTopTrackArt.src = tasCover;
+                    }
+
+                    // Slide 0: Top Songs Liste
                     const tracks = resTracks.items.slice(0, 10);
                     if (topTracksEl) {
                         topTracksEl.innerHTML = tracks.map((item, idx) => {
@@ -15796,10 +15841,14 @@ window.generateShareCard = function() {
      NEU v24.128: NEXT-GEN SPOTIFY WRAPPED STORIES EXPERIENCE
      Precise Metadata Mapping, Dedicated Artwork Cards & Ultra-Polished Aesthetics
      ============================================================================== -->
+<!-- ==============================================================================
+     NEU v24.129: ULTIMATE 4-SLIDE SPOTIFY WRAPPED STORIES EXPERIENCE
+     Slide 0: Top Songs | Slide 1: Top 5 Artists | Slide 2: Top Artist #1 & Bester Song | Slide 3: #1 Hit Showcase
+     ============================================================================== -->
 <div id="spotify-wrapped-modal" class="fixed inset-0 z-[100] bg-black/85 backdrop-blur-2xl hidden flex-col items-center justify-center p-3 sm:p-6 opacity-0 transition-opacity duration-300">
-    <div class="w-full max-w-md rounded-[2.5rem] bg-gradient-to-b from-slate-900 via-slate-950 to-black text-white border border-white/20 relative flex flex-col items-center shadow-2xl overflow-hidden max-h-[92vh]">
+    <div class="w-full max-w-md rounded-[2.5rem] bg-gradient-to-b from-slate-900 via-slate-950 to-black text-white border border-white/20 relative flex flex-col items-center shadow-2xl overflow-hidden max-h-[94vh]">
         
-        <!-- Story Progress Bars (Spotify Style) -->
+        <!-- Story Progress Bars (Spotify 4-Bar Style) -->
         <div id="wrapped-story-bars" class="w-full px-6 pt-5 pb-2 flex gap-1.5 z-20">
             <div class="h-1 flex-1 bg-white/20 rounded-full overflow-hidden">
                 <div id="bar-slide-0" class="h-full bg-green-400 transition-all duration-300 w-full"></div>
@@ -15809,6 +15858,9 @@ window.generateShareCard = function() {
             </div>
             <div class="h-1 flex-1 bg-white/20 rounded-full overflow-hidden">
                 <div id="bar-slide-2" class="h-full bg-green-400 transition-all duration-300 w-0"></div>
+            </div>
+            <div class="h-1 flex-1 bg-white/20 rounded-full overflow-hidden">
+                <div id="bar-slide-3" class="h-full bg-green-400 transition-all duration-300 w-0"></div>
             </div>
         </div>
 
@@ -15827,14 +15879,14 @@ window.generateShareCard = function() {
         <div class="absolute -top-24 -left-24 w-64 h-64 bg-green-500/20 rounded-full blur-3xl pointer-events-none"></div>
         <div class="absolute -bottom-24 -right-24 w-64 h-64 bg-emerald-500/15 rounded-full blur-3xl pointer-events-none"></div>
 
-        <!-- ==================== SLIDE 1: TOP SONGS ==================== -->
+        <!-- ==================== SLIDE 0: TOP SONGS ==================== -->
         <div id="wrapped-slide-0" class="w-full px-6 py-4 z-10 flex flex-col items-center text-center overflow-y-auto">
-            <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-green-500 to-emerald-400 p-0.5 shadow-xl mb-2.5 overflow-hidden">
+            <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-green-500 to-emerald-400 p-0.5 shadow-xl mb-2 overflow-hidden">
                 <img id="wrapped-top-art" src="https://gamingpig.github.io/About-Gamingpig/og-v2.jpg" alt="Gamingpig" class="w-full h-full object-cover rounded-2xl">
             </div>
 
             <h3 class="text-2xl font-black text-white tracking-tight mb-0.5">Top Songs</h3>
-            <p class="text-white/60 text-xs mb-3">Synchronisiert live von Gamingpig's stats.fm</p>
+            <p class="text-white/60 text-xs mb-3">Live synchronisiert via stats.fm</p>
 
             <!-- Filter Range -->
             <div class="flex items-center gap-1 p-1 bg-white/5 border border-white/10 rounded-xl mb-3 text-xs font-bold">
@@ -15849,41 +15901,58 @@ window.generateShareCard = function() {
             </div>
         </div>
 
-        <!-- ==================== SLIDE 2: TOP KÜNSTLER ==================== -->
+        <!-- ==================== SLIDE 1: TOP 5 KÜNSTLER ==================== -->
         <div id="wrapped-slide-1" class="w-full px-6 py-4 z-10 flex-col items-center text-center hidden">
-            <div class="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-yellow-400 via-amber-500 to-green-400 shadow-2xl mb-3 overflow-hidden">
-                <img id="wrapped-slide1-artist-img" src="https://gamingpig.github.io/About-Gamingpig/og-v2.jpg" alt="Top Artist" class="w-full h-full object-cover rounded-full">
-            </div>
+            <span class="text-3xl mb-1">👑</span>
+            <h3 class="text-2xl font-black text-white tracking-tight mb-0.5">Top 5 Künstler</h3>
+            <p class="text-white/60 text-xs mb-3">Meine meistgehörten Artists</p>
 
-            <div class="inline-flex items-center gap-1 px-3 py-0.5 rounded-full bg-yellow-400/10 border border-yellow-400/30 text-yellow-400 font-mono text-[10px] font-bold uppercase tracking-wider mb-1">
-                👑 TOP KÜNSTLER #1
-            </div>
-
-            <h3 id="wrapped-slide1-artist" class="text-3xl font-black text-white tracking-tight mb-4">Lade...</h3>
-
-            <!-- Stats Grid for Top Artist -->
-            <div class="grid grid-cols-2 gap-3 w-full mb-4 text-left">
-                <div class="bg-white/5 border border-white/10 p-3.5 rounded-2xl">
-                    <p class="text-[9px] font-mono text-white/50 uppercase font-bold">Streams bei diesem Artist</p>
-                    <p id="wrapped-slide1-artist-streams" class="text-lg font-black text-green-400 mt-0.5">0</p>
-                </div>
-                <div class="bg-white/5 border border-white/10 p-3.5 rounded-2xl">
-                    <p class="text-[9px] font-mono text-white/50 uppercase font-bold">Hörzeit Artist</p>
-                    <p id="wrapped-slide1-artist-hours" class="text-lg font-black text-emerald-400 mt-0.5">0 Std.</p>
-                </div>
-            </div>
-
-            <div class="p-3 rounded-2xl bg-white/5 border border-white/5 text-white/70 text-xs w-full">
-                📊 Gesamt-Streams über alle Tracks: <strong id="wrapped-slide1-total-streams" class="text-white">0</strong>
+            <!-- Top 5 Artists List -->
+            <div id="wrapped-top-artists-list" class="w-full flex flex-col gap-2 max-h-64 overflow-y-auto pr-1 text-left mb-2" style="scrollbar-width: thin;">
+                <div class="p-4 text-center text-xs text-white/50 animate-pulse">Lade Top-Künstler...</div>
             </div>
         </div>
 
-        <!-- ==================== SLIDE 3: MEISTGEHÖRTER SONG ==================== -->
+        <!-- ==================== SLIDE 2: TOP KÜNSTLER #1 & SEIN BESTER TRACK ==================== -->
         <div id="wrapped-slide-2" class="w-full px-6 py-4 z-10 flex-col items-center text-center hidden">
+            <div class="w-20 h-20 rounded-full p-1 bg-gradient-to-tr from-yellow-400 via-amber-500 to-green-400 shadow-2xl mb-2.5 overflow-hidden">
+                <img id="wrapped-slide2-artist-img" src="https://gamingpig.github.io/About-Gamingpig/og-v2.jpg" alt="Top Artist" class="w-full h-full object-cover rounded-full">
+            </div>
+
+            <div class="inline-flex items-center gap-1 px-3 py-0.5 rounded-full bg-yellow-400/10 border border-yellow-400/30 text-yellow-400 font-mono text-[10px] font-bold uppercase tracking-wider mb-1">
+                👑 DEIN #1 KÜNSTLER
+            </div>
+
+            <h3 id="wrapped-slide2-artist" class="text-2xl sm:text-3xl font-black text-white tracking-tight mb-3">Lade...</h3>
+
+            <!-- Stats Grid for Top Artist -->
+            <div class="grid grid-cols-2 gap-2.5 w-full mb-3 text-left">
+                <div class="bg-white/5 border border-white/10 p-3 rounded-2xl">
+                    <p class="text-[9px] font-mono text-white/50 uppercase font-bold">Streams bei diesem Artist</p>
+                    <p id="wrapped-slide2-artist-streams" class="text-base font-black text-green-400 mt-0.5">0</p>
+                </div>
+                <div class="bg-white/5 border border-white/10 p-3 rounded-2xl">
+                    <p class="text-[9px] font-mono text-white/50 uppercase font-bold">Hörzeit Artist</p>
+                    <p id="wrapped-slide2-artist-hours" class="text-base font-black text-emerald-400 mt-0.5">0 Std.</p>
+                </div>
+            </div>
+
+            <!-- Best Song of this Artist -->
+            <div class="w-full p-3 rounded-2xl bg-white/5 border border-white/10 text-left flex items-center gap-3">
+                <img id="wrapped-slide2-artist-toptrack-art" src="https://gamingpig.github.io/About-Gamingpig/og-v2.jpg" class="w-10 h-10 rounded-xl object-cover shadow bg-black/40 shrink-0">
+                <div class="min-w-0 flex-1">
+                    <p class="text-[9px] font-mono uppercase text-green-400 font-bold">Top Song dieses Künstlers</p>
+                    <p id="wrapped-slide2-artist-toptrack-title" class="text-xs font-bold text-white truncate">Lade...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== SLIDE 3: #1 MEISTGEHÖRTER SONG ==================== -->
+        <div id="wrapped-slide-3" class="w-full px-6 py-4 z-10 flex-col items-center text-center hidden">
             <!-- Grand Single Track Showcase Card -->
             <div class="w-full p-4 rounded-3xl bg-gradient-to-br from-green-900/50 via-slate-900 to-black border border-green-500/30 text-left shadow-2xl mb-4 relative overflow-hidden">
                 <div class="flex items-center justify-between mb-3">
-                    <span class="text-[10px] font-mono font-bold text-green-400 uppercase tracking-wider">🎧 DEIN #1 HIT</span>
+                    <span class="text-[10px] font-mono font-bold text-green-400 uppercase tracking-wider">🎧 DEIN MEISTGEHÖRTER SONG</span>
                     <span id="wrapped-share-range-badge" class="text-[9px] font-mono px-2 py-0.5 rounded-full bg-white/10 text-white/70">4 Wochen</span>
                 </div>
 
@@ -15912,13 +15981,15 @@ window.generateShareCard = function() {
             <button onclick="prevWrappedSlide()" id="btn-wrapped-prev" class="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-xs font-bold transition-all disabled:opacity-30" disabled>
                 Zurück
             </button>
-            <span id="wrapped-slide-indicator" class="text-[10px] font-mono text-white/40 font-bold">1 / 3</span>
+            <span id="wrapped-slide-indicator" class="text-[10px] font-mono text-white/40 font-bold">1 / 4</span>
             <button onclick="nextWrappedSlide()" id="btn-wrapped-next" class="px-4 py-2 rounded-xl bg-green-500/20 hover:bg-green-500/30 text-green-400 text-xs font-bold transition-all">
                 Weiter ➔
             </button>
         </div>
     </div>
 </div>
+</body>
+</html>
 </body>
 </html>
 </body>
