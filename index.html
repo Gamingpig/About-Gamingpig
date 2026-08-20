@@ -15430,13 +15430,13 @@ window.generateShareCard = function() {
             } catch(e) {}
         }
 
-        function openSpotifyWrapped() {
+        window.openSpotifyWrapped = function() {
             playUISound('pop');
             haptic(20);
             const modal = document.getElementById('spotify-wrapped-modal');
             if (!modal) return;
 
-            const list = getRecentlyPlayed();
+            const list = (typeof getRecentlyPlayed === 'function') ? getRecentlyPlayed() : [];
             const topTracksEl = document.getElementById('wrapped-tracks-list');
             const totalTracksEl = document.getElementById('wrapped-stat-tracks');
             const topArtistEl = document.getElementById('wrapped-stat-artist');
@@ -15445,7 +15445,6 @@ window.generateShareCard = function() {
             if (totalTracksEl) totalTracksEl.innerText = list.length.toString();
 
             if (list.length > 0) {
-                // Berechne Top Artist
                 const artistCounts = {};
                 list.forEach(item => {
                     if (item.artist) artistCounts[item.artist] = (artistCounts[item.artist] || 0) + 1;
@@ -15466,32 +15465,46 @@ window.generateShareCard = function() {
                         </div>
                     `).join('');
                 }
+            } else {
+                if (topArtistEl) topArtistEl.innerText = (currentRawArtist || 'Gamingpig');
+                if (topArtEl && currentResolvedArtUrl) topArtEl.src = currentResolvedArtUrl;
+                if (topTracksEl && currentTrackTitle) {
+                    topTracksEl.innerHTML = `
+                        <div class="flex items-center gap-3 p-2 rounded-xl bg-white/5 border border-white/5">
+                            <span class="font-mono text-xs font-bold text-green-400">#1</span>
+                            <img src="${escapeHTML(currentResolvedArtUrl || 'https://gamingpig.github.io/About-Gamingpig/og-v2.jpg')}" class="w-8 h-8 rounded-lg object-cover bg-black/40">
+                            <div class="flex-1 min-w-0">
+                                <p class="text-xs font-bold text-white truncate">${escapeHTML(currentTrackTitle)}</p>
+                                <p class="text-[10px] text-white/50 truncate">${escapeHTML(currentRawArtist || 'Live')}</p>
+                            </div>
+                        </div>`;
+                }
             }
 
             modal.classList.remove('hidden');
             modal.classList.add('flex');
             setTimeout(() => { modal.classList.remove('opacity-0'); modal.classList.add('opacity-100'); }, 10);
-        }
+        };
 
-        function closeSpotifyWrapped() {
+        window.closeSpotifyWrapped = function() {
             playUISound('click');
             const modal = document.getElementById('spotify-wrapped-modal');
             if (!modal) return;
             modal.classList.remove('opacity-100');
             modal.classList.add('opacity-0');
             setTimeout(() => { modal.classList.remove('flex'); modal.classList.add('hidden'); }, 300);
-        }
+        };
 
-        function shareWrappedStats() {
+        window.shareWrappedStats = function() {
             playUISound('pop');
             haptic(30);
-            const list = getRecentlyPlayed();
-            const text = `🎁 Mein Gamingpig Music Wrapped:\n🎵 ${list.length} Tracks gehört\n🌐 Live mithören auf: https://gamingpig.github.io/About-Gamingpig/`;
+            const list = (typeof getRecentlyPlayed === 'function') ? getRecentlyPlayed() : [];
+            const text = `🎁 Mein Gamingpig Music Wrapped:\n🎵 ${Math.max(list.length, 1)} Tracks gehört\n🌐 Live mithören auf: https://gamingpig.github.io/About-Gamingpig/`;
             if (navigator.clipboard) {
                 navigator.clipboard.writeText(text);
                 showToast('✅ Wrapped-Statistik in die Zwischenablage kopiert!', 3000);
             }
-        }
+        };
 
         prewarmCoverCacheFromStorage(); // NEU v24.109: Cover der letzten 10 Songs sofort in Memory-Cache laden
             fetchMusicData();
