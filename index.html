@@ -5108,14 +5108,14 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.131 · 2026-08-20';
+        const SITE_VERSION = 'v24.132 · 2026-08-20';
 
         // =========================================================
         // NEU v24.118: Automatischer Reset veralteter Cached Flags bei Versionswechsel
         // Behaelt Sprache ('selectedLanguage') und Haupt-Tutorial ('tutorialCompletedV3')
         // unberuehrt, leert aber alle veralteten Cover-/Layout-/State-Caches.
         // =========================================================
-        // FIX v24.131: Behalte alle Nutzer-Präferenzen sicher bei Versionswechsel
+        // FIX v24.132: Behalte alle Nutzer-Präferenzen sicher bei Versionswechsel
         (function enforceVersionFreshness() {
             try {
                 const storedVer = localStorage.getItem('site_version_installed');
@@ -6317,12 +6317,12 @@
                 changelog_whats_new: 'Was ist neu?', changelog_release_notes: 'Release-Notes',
                 changelog_type_feature: 'Neu', changelog_type_performance: 'Performance', changelog_type_fix: 'Fehlerbehebung',
                 tutorial_speak_aria: 'Diesen Schritt vorlesen',
-                t_whatsnew1_title: '✨ Was ist neu seit deinem letzten Besuch?',
-                t_whatsnew1_text: 'StandBy-Hintergrund blieb manchmal auf dem alten Cover hängen - jetzt mit automatischem Wiederholungsversuch behoben, genau wie das Hauptcover.',
-                t_whatsnew2_title: '✨ Noch mehr Neues',
-                t_whatsnew2_text: 'App zeigt beim Start jetzt sofort den bereits laufenden Song statt erst später. Außerdem: Plattform-Auswahl beim Cover-Tap öffnet sich nach "Abbrechen" jetzt zuverlässig beim ersten Versuch, plus etwas mehr Haptic-Feedback.',
-                t_whatsnew3_title: '✨ Unter der Haube',
-                t_whatsnew3_text: 'Ich hab außerdem einmal gründlich durch den gesamten Code geschaut - Timer, Animationen, Speicherverbrauch - um sicherzugehen, dass sonst nichts unnötig Akku frisst. Alle Details wie immer in den vollständigen Release-Notes hier unten im Footer.',
+                t_whatsnew1_title: '🎁 Spotify Wrapped Stories & Stats',
+                t_whatsnew1_text: 'Echtes Multi-Slide Wrapped: Top-Songs, Top 5 Künstler, #1 Hit Showcase und exakte Metadaten-Synchronisierung live via Stats.fm!',
+                t_whatsnew2_title: '🔊 UI-Sounds & Haptik-Steuerung',
+                t_whatsnew2_text: 'Synthesizer-Klickgeräusche und Smartphone-Vibration mit eigenen AN/AUS-Schaltern in den Einstellungen.',
+                t_whatsnew3_title: '💬 Discord Live-Widget & Support Fix',
+                t_whatsnew3_text: 'Server-Status, Icon und Live-Mitglieder laden jetzt dauerhaft ohne Verzögerung und ohne leere Ladebalken.',
                 tutorial_whatsnew_badge: '✨ Bonus: Was ist neu',
                 tts_no_voice_found: 'Keine deutsche Stimme auf diesem Gerät gefunden - Wiedergabe nutzt die Standardstimme.',
                 support_section_title: 'Support', support_section_email_title: 'E-Mail', support_section_email_desc: 'Fragen, Bugs gefunden oder einfach quatschen? Schreib mir!',
@@ -6496,12 +6496,12 @@
                 changelog_whats_new: "What's new?", changelog_release_notes: 'Release Notes',
                 changelog_type_feature: 'New', changelog_type_performance: 'Performance', changelog_type_fix: 'Fix',
                 tutorial_speak_aria: 'Read this step aloud',
-                t_whatsnew1_title: '✨ What\'s new since your last visit?',
-                t_whatsnew1_text: 'The StandBy background sometimes stayed stuck on the old cover - now fixed with an automatic retry, just like the main cover.',
-                t_whatsnew2_title: '✨ Even more news',
-                t_whatsnew2_text: "The app now shows the already-playing song immediately on start instead of only later. Also: the platform picker on cover tap now reliably reopens on the first try after 'Cancel', plus a bit more haptic feedback.",
-                t_whatsnew3_title: '✨ Under the hood',
-                t_whatsnew3_text: "I also did a thorough pass through the whole codebase - timers, animations, memory usage - to make sure nothing else is quietly draining battery. Full details as always in the release notes down in the footer.",
+                t_whatsnew1_title: '🎁 Spotify Wrapped Stories & Stats',
+                t_whatsnew1_text: 'Authentic multi-slide stories: Top Songs, Top 5 Artists, #1 Hit Showcase, and exact metadata matching live from Stats.fm!',
+                t_whatsnew2_title: '🔊 UI Sounds & Haptic Controls',
+                t_whatsnew2_text: 'Web Audio clicks and mobile vibration feedback with separate ON/OFF toggles in settings.',
+                t_whatsnew3_title: '💬 Discord Live Widget & Support Fix',
+                t_whatsnew3_text: 'Instant server badge rendering with zero skeleton delay and live presence count.',
                 tutorial_whatsnew_badge: "✨ Bonus: What's new",
                 tts_no_voice_found: 'No English voice found on this device - playback uses the default voice.',
                 support_section_title: 'Support', support_section_email_title: 'Email', support_section_email_desc: 'Questions, found a bug, or just want to chat? Email me!',
@@ -7689,58 +7689,32 @@
             return parseInt(m[1], 10) * 100000000 + parseInt(m[2], 10) * 10000 + parseInt(m[3] || '0', 10);
         }
         function getWhatsNewSteps() {
-            // FIX v24.83 (KRITISCH): Nutzer fragte gezielt nach, ob wirklich JEDE verpasste
-            // Version einzeln gezeigt wird, wenn man länger nicht auf der Seite war ("das soll
-            // genau so sein"). Antwort ehrlich: bisher NEIN - diese Funktion zeigte immer nur
-            // 3 fest hinterlegte, bei jedem Release manuell überschriebene Schritte, komplett
-            // unabhängig davon, wie viele Versionen tatsächlich verpasst wurden. Jemand, der
-            // seit v24.68 nicht mehr da war, hätte trotzdem nur die letzten 3 Punkte von
-            // v24.82 gesehen, nicht alles dazwischen.
-            // Fix: komplett umgebaut, generiert die Tour jetzt DYNAMISCH aus PUBLIC_CHANGELOG
-            // (derselben Datenquelle wie der Footer-Changelog) statt aus 3 statischen Feldern -
-            // dadurch automatisch IMMER korrekt für jede Lücke, ganz ohne manuelle Pflege pro
-            // Release (die t_whatsnew1/2/3-Felder braucht es dadurch eigentlich nicht mehr,
-            // bleiben aber als Sicherheits-Rückfall unten erhalten, falls der Changelog aus
-            // irgendeinem Grund leer sein sollte).
+            // DYNAMISCHE WHATS-NEW-TOUR: Lädt stets die allerneuesten Updates direkt aus PUBLIC_CHANGELOG
             const seenVersion = localStorage.getItem('whatsNewSeenVersion');
             const seenNum = seenVersion ? parseVersionNum(seenVersion) : 0;
             const currentNum = parseVersionNum(SITE_VERSION);
 
-            const missedEntries = PUBLIC_CHANGELOG
-                .filter(entry => {
-                    const n = parseVersionNum(entry.version);
-                    return n > seenNum && n <= currentNum;
-                })
-                .reverse(); // älteste zuerst - chronologische Reihenfolge in der Tour
+            // Finde alle verpassten Einträge (oder nimm die topaktuellen Releases)
+            let missedEntries = PUBLIC_CHANGELOG.filter(entry => {
+                const n = parseVersionNum(entry.version);
+                return n > seenNum && n <= currentNum;
+            });
 
-            if (missedEntries.length === 0) {
-                return [
-                    { targetId: 'standby-toggle', title: t('t_whatsnew1_title'), text: t('t_whatsnew1_text'), isNew: true },
-                    { targetId: 'main-music-card', title: t('t_whatsnew2_title'), text: t('t_whatsnew2_text'), isNew: true },
-                    { targetId: 'footer-whats-new-btn', title: t('t_whatsnew3_title'), text: t('t_whatsnew3_text'), isNew: true }
-                ];
+            if (!missedEntries || missedEntries.length === 0) {
+                // Zeige immer die neuesten 3 Versionen des aktuellen Release-Zyklus
+                missedEntries = PUBLIC_CHANGELOG.slice(0, 3);
+            } else {
+                missedEntries = missedEntries.slice(0, 4);
             }
 
-            // FIX v24.98 (Nutzerwunsch): bei sehr vielen verpassten Versionen (Schwelle: mehr
-            // als 10) NICHT mehr eine granulare Schritt-für-Schritt-Tour zeigen (betraf vor
-            // allem Neubesucher direkt nach dem Haupt-Tutorial, wo whatsNewSeenVersion noch
-            // nie gesetzt war - die hätten sonst z.B. alle 82 bisherigen Changelog-Einträge
-            // einzeln als Tutorial-Schritte vorgesetzt bekommen). Wer schon mal eine
-            // "Was ist neu"-Version gesehen hat und nur ein paar Versionen verpasst hat,
-            // bekommt weiterhin die granulare Tour wie bisher - nur der Extremfall wird jetzt
-            // stattdessen als EIN kompakter, aber vollständiger Gesamt-Überblick gezeigt
-            // (deckt bewusst wirklich ALLES ab, keine Kürzung - nur anders präsentiert: ein
-            // Schritt mit allen Punkten aufgelistet statt einem Schritt pro Version).
-            // FIX v24.126: Zeige NUR die maximal 3 wirklich neuen, relevanten Updates
-            // Nutzerwunsch: Zeige die neuesten Updates direkt aus PUBLIC_CHANGELOG
-            const recentMissed = (missedEntries.length > 0 ? missedEntries : PUBLIC_CHANGELOG).slice(0, 4);
             const targets = ['btn-spotify-wrapped', 'main-music-card', 'support-discord-join-btn', 'footer-whats-new-btn'];
-            return recentMissed.map((entry, i) => {
-                const lang = currentLang || 'de';
+            const lang = currentLang || 'de';
+
+            return missedEntries.map((entry, i) => {
                 const langItems = (entry.items && (entry.items[lang] || entry.items.de)) || [];
                 return {
                     targetId: targets[Math.min(i, targets.length - 1)] || 'main-music-card',
-                    title: `✨ ${entry.version} · ${entry.date}`,
+                    title: `✨ ${entry.version} (${entry.date})`,
                     text: langItems.join(' • '),
                     isNew: true
                 };
