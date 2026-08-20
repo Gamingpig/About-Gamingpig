@@ -5108,7 +5108,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.124 · 2026-08-20';
+        const SITE_VERSION = 'v24.125 · 2026-08-20';
 
         // =========================================================
         // NEU v24.118: Automatischer Reset veralteter Cached Flags bei Versionswechsel
@@ -6113,7 +6113,7 @@
                 <div class="hidden sm:block h-4 w-px bg-slate-300 dark:bg-slate-700"></div>
                 <!-- NEW: Versionsnummer im Footer, immer sichtbar ohne Menüs öffnen zu müssen -->
                 <p id="footer-version-label" class="text-[8px] xxs:text-[10px] font-mono text-slate-500 dark:text-slate-500 select-all"></p>
-                <a href="release-v24-115.html" class="inline-flex items-center gap-1 text-[8px] xxs:text-[10px] sm:text-xs font-black text-pink-600 dark:text-pink-400 hover:underline">🔥 v24.124 Update</a>
+                <a href="release-v24-115.html" class="inline-flex items-center gap-1 text-[8px] xxs:text-[10px] sm:text-xs font-black text-pink-600 dark:text-pink-400 hover:underline">🔥 v24.125 Update</a>
                 <div class="hidden sm:block h-4 w-px bg-slate-300 dark:bg-slate-700"></div>
                 <button onclick="openChangelogModal()" id="footer-whats-new-btn" class="text-[8px] xxs:text-[10px] sm:text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 rounded">Was ist neu?</button>
                 <div class="hidden sm:block h-4 w-px bg-slate-300 dark:bg-slate-700"></div>
@@ -7740,17 +7740,20 @@
             // stattdessen als EIN kompakter, aber vollständiger Gesamt-Überblick gezeigt
             // (deckt bewusst wirklich ALLES ab, keine Kürzung - nur anders präsentiert: ein
             // Schritt mit allen Punkten aufgelistet statt einem Schritt pro Version).
-            if (missedEntries.length > 10) {
+            // FIX v24.125: Zeige NUR die wirklich neuen, relevanten Features (maximal die letzten 3 echten Updates)
+            // Statt veralteter "97 Updates seit deinem letzten Besuch"-Listen bei neuen Besuchern
+            const recentMissed = missedEntries.slice(0, 3);
+            const targets = ['standby-toggle', 'main-music-card', 'footer-whats-new-btn'];
+            return recentMissed.map((entry, i) => {
                 const lang = currentLang || 'de';
-                const allItems = missedEntries.flatMap(entry => (entry.items && (entry.items[lang] || entry.items.de)) || []);
-                const summaryText = allItems.map(item => '• ' + item).join('\n');
-                return [{
-                    targetId: 'footer-whats-new-btn',
-                    title: `✨ ${missedEntries.length} ${t('whatsnew_summary_title')}`,
-                    text: summaryText,
+                const langItems = (entry.items && (entry.items[lang] || entry.items.de)) || [];
+                return {
+                    targetId: targets[Math.min(i, targets.length - 1)],
+                    title: `✨ ${entry.version} · ${entry.date}`,
+                    text: langItems.join(' '),
                     isNew: true
-                }];
-            }
+                };
+            });
 
             const targets = ['standby-toggle', 'main-music-card', 'footer-whats-new-btn'];
             return missedEntries.map((entry, i) => {
@@ -8950,18 +8953,8 @@
         }
 
         function runPerfSelfTest() {
-            let frameCount = 0, slowFrames = 0, lastT = performance.now();
-            function tick(now) {
-                const delta = now - lastT; lastT = now; frameCount++;
-                if (delta > 33) slowFrames++; // entspricht < ~30fps für diesen Frame
-                if (frameCount < 24) { requestAnimationFrame(tick); return; }
-                // Mind. ein Drittel ruckelige Frames direkt beim Laden -> Vorschlag anzeigen (nur 1x pro Browser)
-                if (slowFrames >= 8 && !localStorage.getItem('perfMode') && !localStorage.getItem('perfSuggestionShown')) {
-                    localStorage.setItem('perfSuggestionShown', 'true');
-                    if (typeof showToast === 'function') showToast(t('toast_perf_suggestion'), 7000);
-                }
-            }
-            requestAnimationFrame(tick);
+            // FIX v24.125: Automatischen nervigen Toast komplett deaktiviert (Nutzerwunsch: "will man nicht immer sehen").
+            // Low-End-Modus bleibt oben rechts manuell schaltbar, falls jemand ihn aktiv aktivieren möchte.
         }
 
         if (perfToggle) {
