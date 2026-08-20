@@ -5108,7 +5108,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.121 · 2026-08-20';
+        const SITE_VERSION = 'v24.122 · 2026-08-20';
 
         // =========================================================
         // NEU v24.118: Automatischer Reset veralteter Cached Flags bei Versionswechsel
@@ -6109,7 +6109,7 @@
                 <div class="hidden sm:block h-4 w-px bg-slate-300 dark:bg-slate-700"></div>
                 <!-- NEW: Versionsnummer im Footer, immer sichtbar ohne Menüs öffnen zu müssen -->
                 <p id="footer-version-label" class="text-[8px] xxs:text-[10px] font-mono text-slate-500 dark:text-slate-500 select-all"></p>
-                <a href="release-v24-115.html" class="inline-flex items-center gap-1 text-[8px] xxs:text-[10px] sm:text-xs font-black text-pink-600 dark:text-pink-400 hover:underline">🔥 v24.121 Update</a>
+                <a href="release-v24-115.html" class="inline-flex items-center gap-1 text-[8px] xxs:text-[10px] sm:text-xs font-black text-pink-600 dark:text-pink-400 hover:underline">🔥 v24.122 Update</a>
                 <div class="hidden sm:block h-4 w-px bg-slate-300 dark:bg-slate-700"></div>
                 <button onclick="openChangelogModal()" id="footer-whats-new-btn" class="text-[8px] xxs:text-[10px] sm:text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 rounded">Was ist neu?</button>
                 <div class="hidden sm:block h-4 w-px bg-slate-300 dark:bg-slate-700"></div>
@@ -15334,20 +15334,45 @@ window.generateShareCard = function() {
         // Trigger 2: Konami Code (Oben, Oben, Unten, Unten, Links, Rechts, Links, Rechts, B, A)
         // Trigger 3: Command Palette "spatial"
         // =========================================================
-        let coverClickCount = 0;
-        let coverClickTimer = null;
-        const mainMediaBox = document.getElementById('media-container');
-        if (mainMediaBox) {
-            mainMediaBox.addEventListener('click', (e) => {
-                coverClickCount++;
-                clearTimeout(coverClickTimer);
-                if (coverClickCount >= 5) {
-                    coverClickCount = 0;
-                    haptic(50);
-                    showToast('🚀 HYPERSPACE WARP: Starte 3D Spatial Matrix...', 3000);
-                    setTimeout(() => { window.location.href = 'spatial-audio.html'; }, 1200);
+        // FIX v24.122: Trigger auf das obere "Gamingpig is Live / Offline" Badge gelegt,
+        // damit normales Antippen des Covers wie gewohnt das Streaming-Dienste-Menü öffnet!
+        let secretBadgeClickCount = 0;
+        let secretBadgeTimer = null;
+        const triggerEasterWarp = () => {
+            haptic(60);
+            showToast('🚀 HYPERSPACE WARP: 3D Spatial Matrix freigeschaltet!', 3000);
+            setTimeout(() => { window.location.href = 'spatial-audio.html'; }, 1000);
+        };
+
+        const musicHeaderTag = document.getElementById('music-header-tag');
+        if (musicHeaderTag) {
+            musicHeaderTag.style.cursor = 'pointer';
+            musicHeaderTag.addEventListener('click', (e) => {
+                e.stopPropagation();
+                secretBadgeClickCount++;
+                clearTimeout(secretBadgeTimer);
+                if (secretBadgeClickCount >= 5) {
+                    secretBadgeClickCount = 0;
+                    triggerEasterWarp();
                 } else {
-                    coverClickTimer = setTimeout(() => { coverClickCount = 0; }, 1500);
+                    secretBadgeTimer = setTimeout(() => { secretBadgeClickCount = 0; }, 1500);
+                }
+            });
+        }
+
+        // Auch auf die Dynamic Island (Doppelklick) als Bonus-Trigger
+        const diIsland = document.getElementById('dynamic-island');
+        if (diIsland) {
+            let diClickCount = 0;
+            let diTimer = null;
+            diIsland.addEventListener('click', () => {
+                diClickCount++;
+                clearTimeout(diTimer);
+                if (diClickCount >= 4) {
+                    diClickCount = 0;
+                    triggerEasterWarp();
+                } else {
+                    diTimer = setTimeout(() => { diClickCount = 0; }, 1200);
                 }
             });
         }
