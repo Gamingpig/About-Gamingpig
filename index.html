@@ -5108,7 +5108,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.120 · 2026-08-18';
+        const SITE_VERSION = 'v24.121 · 2026-08-20';
 
         // =========================================================
         // NEU v24.118: Automatischer Reset veralteter Cached Flags bei Versionswechsel
@@ -6109,7 +6109,7 @@
                 <div class="hidden sm:block h-4 w-px bg-slate-300 dark:bg-slate-700"></div>
                 <!-- NEW: Versionsnummer im Footer, immer sichtbar ohne Menüs öffnen zu müssen -->
                 <p id="footer-version-label" class="text-[8px] xxs:text-[10px] font-mono text-slate-500 dark:text-slate-500 select-all"></p>
-                <a href="release-v24-115.html" class="inline-flex items-center gap-1 text-[8px] xxs:text-[10px] sm:text-xs font-black text-pink-600 dark:text-pink-400 hover:underline">🔥 v24.120 Update</a>
+                <a href="release-v24-115.html" class="inline-flex items-center gap-1 text-[8px] xxs:text-[10px] sm:text-xs font-black text-pink-600 dark:text-pink-400 hover:underline">🔥 v24.121 Update</a>
                 <div class="hidden sm:block h-4 w-px bg-slate-300 dark:bg-slate-700"></div>
                 <button onclick="openChangelogModal()" id="footer-whats-new-btn" class="text-[8px] xxs:text-[10px] sm:text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 rounded">Was ist neu?</button>
                 <div class="hidden sm:block h-4 w-px bg-slate-300 dark:bg-slate-700"></div>
@@ -15328,7 +15328,46 @@ window.generateShareCard = function() {
             // Sekunden Verzögerung für etwas, das mit dem eigentlichen Musik-Status gar nichts
             // zu tun hat. fetchMusicData() läuft jetzt sofort und unabhängig, Zeit-Sync
             // parallel im Hintergrund statt blockierend davor.
-            prewarmCoverCacheFromStorage(); // NEU v24.109: Cover der letzten 10 Songs sofort in Memory-Cache laden
+            // =========================================================
+        // NEU v24.121: SECRET EASTER EGG -> 3D SPATIAL AUDIO MATRIX
+        // Trigger 1: 5-fach Klick auf das Album-Cover im Dashboard
+        // Trigger 2: Konami Code (Oben, Oben, Unten, Unten, Links, Rechts, Links, Rechts, B, A)
+        // Trigger 3: Command Palette "spatial"
+        // =========================================================
+        let coverClickCount = 0;
+        let coverClickTimer = null;
+        const mainMediaBox = document.getElementById('media-container');
+        if (mainMediaBox) {
+            mainMediaBox.addEventListener('click', (e) => {
+                coverClickCount++;
+                clearTimeout(coverClickTimer);
+                if (coverClickCount >= 5) {
+                    coverClickCount = 0;
+                    haptic(50);
+                    showToast('🚀 HYPERSPACE WARP: Starte 3D Spatial Matrix...', 3000);
+                    setTimeout(() => { window.location.href = 'spatial-audio.html'; }, 1200);
+                } else {
+                    coverClickTimer = setTimeout(() => { coverClickCount = 0; }, 1500);
+                }
+            });
+        }
+
+        const konamiSequence = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
+        let konamiIndex = 0;
+        document.addEventListener('keydown', (e) => {
+            if (e.key === konamiSequence[konamiIndex] || e.key.toLowerCase() === konamiSequence[konamiIndex]) {
+                konamiIndex++;
+                if (konamiIndex === konamiSequence.length) {
+                    konamiIndex = 0;
+                    showToast('🌌 SECRET UNLOCKED: 3D Spatial Audio Experience!', 3500);
+                    setTimeout(() => { window.location.href = 'spatial-audio.html'; }, 1000);
+                }
+            } else {
+                konamiIndex = 0;
+            }
+        });
+
+        prewarmCoverCacheFromStorage(); // NEU v24.109: Cover der letzten 10 Songs sofort in Memory-Cache laden
             fetchMusicData();
             syncWorldwideTime();
             setInterval(syncWorldwideTime, 600000);
