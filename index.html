@@ -5108,33 +5108,18 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.125 · 2026-08-20';
+        const SITE_VERSION = 'v24.126 · 2026-08-20';
 
         // =========================================================
         // NEU v24.118: Automatischer Reset veralteter Cached Flags bei Versionswechsel
         // Behaelt Sprache ('selectedLanguage') und Haupt-Tutorial ('tutorialCompletedV3')
         // unberuehrt, leert aber alle veralteten Cover-/Layout-/State-Caches.
         // =========================================================
+        // FIX v24.126: Behalte alle Nutzer-Präferenzen sicher bei Versionswechsel
         (function enforceVersionFreshness() {
             try {
                 const storedVer = localStorage.getItem('site_version_installed');
                 if (storedVer !== SITE_VERSION) {
-                    const preservedLang = localStorage.getItem('selectedLanguage');
-                    const preservedTutorial = localStorage.getItem('tutorialCompletedV3');
-                    
-                    const keysToRemove = [];
-                    for (let i = 0; i < localStorage.length; i++) {
-                        const k = localStorage.key(i);
-                        if (k && k !== 'selectedLanguage' && k !== 'tutorialCompletedV3') {
-                            keysToRemove.push(k);
-                        }
-                    }
-                    keysToRemove.forEach(k => {
-                        try { localStorage.removeItem(k); } catch (e) {}
-                    });
-                    
-                    if (preservedLang) localStorage.setItem('selectedLanguage', preservedLang);
-                    if (preservedTutorial) localStorage.setItem('tutorialCompletedV3', preservedTutorial);
                     localStorage.setItem('site_version_installed', SITE_VERSION);
                 }
             } catch (e) {}
@@ -6113,7 +6098,7 @@
                 <div class="hidden sm:block h-4 w-px bg-slate-300 dark:bg-slate-700"></div>
                 <!-- NEW: Versionsnummer im Footer, immer sichtbar ohne Menüs öffnen zu müssen -->
                 <p id="footer-version-label" class="text-[8px] xxs:text-[10px] font-mono text-slate-500 dark:text-slate-500 select-all"></p>
-                <a href="release-v24-115.html" class="inline-flex items-center gap-1 text-[8px] xxs:text-[10px] sm:text-xs font-black text-pink-600 dark:text-pink-400 hover:underline">🔥 v24.125 Update</a>
+                <a href="release-v24-115.html" class="inline-flex items-center gap-1 text-[8px] xxs:text-[10px] sm:text-xs font-black text-pink-600 dark:text-pink-400 hover:underline">🔥 v24.126 Update</a>
                 <div class="hidden sm:block h-4 w-px bg-slate-300 dark:bg-slate-700"></div>
                 <button onclick="openChangelogModal()" id="footer-whats-new-btn" class="text-[8px] xxs:text-[10px] sm:text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 rounded">Was ist neu?</button>
                 <div class="hidden sm:block h-4 w-px bg-slate-300 dark:bg-slate-700"></div>
@@ -7740,23 +7725,10 @@
             // stattdessen als EIN kompakter, aber vollständiger Gesamt-Überblick gezeigt
             // (deckt bewusst wirklich ALLES ab, keine Kürzung - nur anders präsentiert: ein
             // Schritt mit allen Punkten aufgelistet statt einem Schritt pro Version).
-            // FIX v24.125: Zeige NUR die wirklich neuen, relevanten Features (maximal die letzten 3 echten Updates)
-            // Statt veralteter "97 Updates seit deinem letzten Besuch"-Listen bei neuen Besuchern
+            // FIX v24.126: Zeige NUR die maximal 3 wirklich neuen, relevanten Updates
             const recentMissed = missedEntries.slice(0, 3);
             const targets = ['standby-toggle', 'main-music-card', 'footer-whats-new-btn'];
             return recentMissed.map((entry, i) => {
-                const lang = currentLang || 'de';
-                const langItems = (entry.items && (entry.items[lang] || entry.items.de)) || [];
-                return {
-                    targetId: targets[Math.min(i, targets.length - 1)],
-                    title: `✨ ${entry.version} · ${entry.date}`,
-                    text: langItems.join(' '),
-                    isNew: true
-                };
-            });
-
-            const targets = ['standby-toggle', 'main-music-card', 'footer-whats-new-btn'];
-            return missedEntries.map((entry, i) => {
                 const lang = currentLang || 'de';
                 const langItems = (entry.items && (entry.items[lang] || entry.items.de)) || [];
                 return {
