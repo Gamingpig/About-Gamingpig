@@ -9699,10 +9699,25 @@
         // selben Ordner (siehe <head> und Upload-Anleitung) - nötig, damit Chrome die
         // Seite überhaupt als installierbar erkennt und "App installieren" anbietet.
         if ('serviceWorker' in navigator) {
+            let isRefreshing = false;
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (isRefreshing) return;
+                isRefreshing = true;
+                console.log('[SW] Neuer Service Worker aktiv – lade Seite neu');
+                window.location.reload();
+            });
+
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js').catch((err) => {
-                    console.warn('Service Worker Registrierung fehlgeschlagen (PWA-Installation evtl. nicht möglich):', err);
-                });
+                navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
+                    .then((reg) => {
+                        // Prüfe beim Laden direkt auf Updates
+                        if (reg) {
+                            reg.update().catch(() => {});
+                        }
+                    })
+                    .catch((err) => {
+                        console.warn('Service Worker Registrierung fehlgeschlagen (PWA-Installation evtl. nicht möglich):', err);
+                    });
             });
         }
 

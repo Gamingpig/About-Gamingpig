@@ -817,6 +817,21 @@
       btn.textContent = '🔊';
     }
   }
+
+  // Service Worker Update-Registration
+  if ('serviceWorker' in navigator) {
+    let isRefreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (isRefreshing) return;
+      isRefreshing = true;
+      window.location.reload();
+    });
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
+        .then((reg) => { if (reg) reg.update().catch(() => {}); })
+        .catch(() => {});
+    });
+  }
 </script>
 </body>
 </html>

@@ -1,51 +1,129 @@
-// Minimaler Service Worker - Zweck: die Seite als installierbare PWA qualifizieren.
-// Chrome verlangt einen registrierten Service Worker mit Fetch-Handler, bevor
-// beforeinstallprompt überhaupt ausgelöst wird ("Zum Startbildschirm hinzufügen").
-//
-// v4: CACHE_NAME erneut hochgezählt, damit hartnäckig gecachte alte
-// Versionen beim nächsten Aufruf zuverlässig gelöscht und durch die aktuelle Version
-// ersetzt werden. Diesen Wert bei jedem größeren Update mit erhöhen - das ist der
-// zuverlässigste Weg, um sicherzustellen, dass alle Geräte (v.a. iPhone mit "Zum
-// Home-Bildschirm hinzugefügt") wirklich die neueste Version bekommen.
-const CACHE_NAME = "gamingpig-portfolio-v120";
-const PRECACHE_URLS = ["./", "./privacy.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./og-v2.jpg"];
-const CACHEABLE_DESTINATIONS = new Set(["document", "style", "script", "image", "manifest"]);
+// ==============================================================================
+// Gamingpig Portfolio PWA Service Worker (v24.132)
+// Robust Update- & Cache-Strategie:
+// - HTML / Navigation: ECHTES Network-First mit Offline-Fallback
+// - Statische Assets (Bilder, Icons, Manifest): Stale-While-Revalidate mit Cache-Fallback
+// - Live APIs & Externe Dienste: Network-Only (niemals veraltete Musikdaten)
+// - Sofortige Übernahme: self.skipWaiting() & clients.claim()
+// ==============================================================================
 
+const SW_VERSION = "24.132.1";
+const CACHE_NAME = `gamingpig-cache-v${SW_VERSION}`;
+const CACHE_PREFIX = "gamingpig-cache-";
+
+// Wichtige Offline-Kerndateien
+const PRECACHE_URLS = [
+    "./",
+    "./index.html",
+    "./release-v24-115.html",
+    "./privacy.html",
+    "./manifest.json",
+    "./icon-192.png",
+    "./icon-512.png",
+    "./og-v2.jpg"
+];
+
+// Sofortige Installation ohne Warten
 self.addEventListener("install", (event) => {
     self.skipWaiting();
     event.waitUntil(
-        caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS)).catch(() => {})
+        caches.open(CACHE_NAME).then((cache) => {
+            return cache.addAll(PRECACHE_URLS);
+        }).catch((err) => {
+            console.warn("[SW] Precaching Fehler (nicht kritisch):", err);
+        })
     );
 });
 
+// Aktivierung: Alte Gamingpig-Caches gezielt löschen und Clients sofort binden
 self.addEventListener("activate", (event) => {
     event.waitUntil(
-        caches.keys().then((keys) =>
-            Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
-        ).then(() => self.clients.claim())
+        caches.keys().then((keys) => {
+            return Promise.all(
+                keys.map((key) => {
+                    // Lösche alte Versionen dieses Portfolios, fremde Caches nicht anfassen
+                    if (key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME) {
+                        console.log("[SW] Lösche veralteten Cache:", key);
+                        return caches.delete(key);
+                    }
+                    if (key.startsWith("gamingpig-portfolio-")) {
+                        console.log("[SW] Lösche alten Legacy-Cache:", key);
+                        return caches.delete(key);
+                    }
+                    return Promise.resolve();
+                })
+            );
+        }).then(() => {
+            return self.clients.claim();
+        })
     );
 });
 
-// Network-first mit Cache-Fallback, damit die Seite auch offline zumindest lädt.
-// {cache: "no-store"} zwingt den Browser, wirklich über das Netzwerk zu gehen,
-// statt eine evtl. gecachte HTTP-Antwort zu verwenden.
-self.addEventListener("fetch", (event) => {
-    if (event.request.method !== "GET") return;
-    const requestUrl = new URL(event.request.url);
-    if (requestUrl.origin !== self.location.origin) return;
-    if (!CACHEABLE_DESTINATIONS.has(event.request.destination)) return;
+// Nachrichten-Listener (z. B. für manuelles skipWaiting)
+self.addEventListener("message", (event) => {
+    if (event.data && event.data.type === "SKIP_WAITING") {
+        self.skipWaiting();
+    }
+});
 
+// Intelligenter Fetch-Handler
+self.addEventListener("fetch", (event) => {
+    // Nur GET-Anfragen behandeln
+    if (event.request.method !== "GET") return;
+
+    const url = new URL(event.request.url);
+    const isSameOrigin = (url.origin === self.location.origin);
+    const isNavigation = (event.request.mode === "navigate" || event.request.destination === "document");
+
+    // 1. Live APIs, Musik-Streams & externe Ressourcen (Spotify, stats.fm, Discord, Apple, etc.)
+    // -> IMMER direkt aus dem Netzwerk, niemals aus altem statischen Cache
+    if (!isSameOrigin || url.pathname.includes("/api/") || url.searchParams.has("api")) {
+        return; // Direkt dem Browser-Netzwerk überlassen
+    }
+
+    // 2. HTML-Dokumente & Navigationen: ECHTES NETWORK-FIRST
+    // Holt bei bestehender Verbindung IMMER die aktuelle HTML-Version vom Server
+    if (isNavigation) {
+        event.respondWith(
+            fetch(event.request, { cache: "no-cache" })
+                .then((networkResponse) => {
+                    if (networkResponse && networkResponse.ok && networkResponse.type === "basic") {
+                        const responseToCache = networkResponse.clone();
+                        caches.open(CACHE_NAME).then((cache) => {
+                            cache.put(event.request, responseToCache);
+                        }).catch(() => {});
+                    }
+                    return networkResponse;
+                })
+                .catch(() => {
+                    // Offline-Fallback: Gecachte Version der angeforderten Seite oder Startseite
+                    return caches.match(event.request).then((cachedResponse) => {
+                        return cachedResponse || caches.match("./index.html") || caches.match("./");
+                    });
+                })
+        );
+        return;
+    }
+
+    // 3. Statische Assets (Bilder, Icons, Manifest): STALE-WHILE-REVALIDATE
+    // Schnelles Laden aus Cache + Revalidierung im Hintergrund
     event.respondWith(
-        fetch(event.request, { cache: "no-store" })
-            .then((response) => {
-                if (response.ok && response.type === "basic") {
-                    const copy = response.clone();
-                    caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy)).catch(() => {});
-                }
-                return response;
-            })
-            .catch(() => caches.match(event.request).then((cached) =>
-                cached || (event.request.mode === "navigate" ? caches.match("./") : undefined)
-            ))
+        caches.match(event.request).then((cachedResponse) => {
+            const fetchPromise = fetch(event.request)
+                .then((networkResponse) => {
+                    if (networkResponse && networkResponse.ok && networkResponse.type === "basic") {
+                        const responseToCache = networkResponse.clone();
+                        caches.open(CACHE_NAME).then((cache) => {
+                            cache.put(event.request, responseToCache);
+                        }).catch(() => {});
+                    }
+                    return networkResponse;
+                })
+                .catch(() => {
+                    return null;
+                });
+
+            return cachedResponse || fetchPromise;
+        })
     );
 });
