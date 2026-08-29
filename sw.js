@@ -49,10 +49,14 @@ self.addEventListener("activate", (event) => {
     );
 });
 
-// Nachrichten-Listener (z. B. für manuelles skipWaiting)
+// Nachrichten-Listener (z. B. für manuelles skipWaiting & Live-Benachrichtigungen)
 self.addEventListener("message", (event) => {
     if (event.data && event.data.type === "SKIP_WAITING") {
         self.skipWaiting();
+    } else if (event.data && event.data.type === "SHOW_MUSIC_NOTIFICATION") {
+        if (self.registration && self.registration.showNotification) {
+            self.registration.showNotification(event.data.title, event.data.options);
+        }
     }
 });
 

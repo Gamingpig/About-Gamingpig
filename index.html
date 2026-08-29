@@ -8928,6 +8928,45 @@
                    Notification.permission === 'granted';
         }
 
+        let bgWorker = null;
+        function initBackgroundWorker() {
+            if (bgWorker) return;
+            try {
+                const blobCode = `
+                    let timer = null;
+                    self.onmessage = function(e) {
+                        if (e.data === 'START') {
+                            if (!timer) {
+                                timer = setInterval(function() { self.postMessage('TICK'); }, 10000);
+                            }
+                        } else if (e.data === 'STOP') {
+                            if (timer) { clearInterval(timer); timer = null; }
+                        }
+                    };
+                `;
+                const blob = new Blob([blobCode], { type: 'application/javascript' });
+                bgWorker = new Worker(URL.createObjectURL(blob));
+                bgWorker.onmessage = function(e) {
+                    if (e.data === 'TICK') {
+                        if (document.hidden && isMusicNotificationsEnabled()) {
+                            fetchMusicData();
+                        }
+                    }
+                };
+                if (isMusicNotificationsEnabled()) {
+                    bgWorker.postMessage('START');
+                }
+            } catch (err) {
+                console.warn('Background worker konnte nicht gestartet werden:', err);
+            }
+        }
+
+        // Tracking für verlängerte Pausen (Nutzerwunsch: nur benachrichtigen bei längerer Pause)
+        let lastPlaybackStopTime = 0;
+        let pauseNotifTimer = null;
+        let hasNotifiedPauseForCurrentStop = false;
+        const PROLONGED_PAUSE_THRESHOLD_MS = 15000; // 15 Sekunden Pause
+
         async function dispatchMusicNotification(type, title, artist, coverUrl) {
             if (!isMusicNotificationsEnabled()) return;
             if (!title || title === 'Keine Wiedergabe' || title === 'Aktuell ist es ruhig...') return;
@@ -8967,7 +9006,19 @@
                 }
             };
 
-            // 1. Prioritize Service Worker showNotification for background & mobile reliability
+            // 1. Prioritize Service Worker controller message (works in background & standalone PWA)
+            if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+                try {
+                    navigator.serviceWorker.controller.postMessage({
+                        type: 'SHOW_MUSIC_NOTIFICATION',
+                        title: notifTitle,
+                        options: options
+                    });
+                    return;
+                } catch (e) {}
+            }
+
+            // 2. Service Worker showNotification fallback
             if ('serviceWorker' in navigator) {
                 try {
                     const reg = await navigator.serviceWorker.ready;
@@ -8978,7 +9029,7 @@
                 } catch (e) {}
             }
 
-            // 2. Fallback to standard window Notification
+            // 3. Fallback to standard window Notification
             if ('Notification' in window && Notification.permission === 'granted') {
                 try {
                     new Notification(notifTitle, options);
@@ -9016,14 +9067,12 @@
             updateNotificationPermissionButtonLabel();
 
             if (next) {
+                initBackgroundWorker();
+                if (bgWorker) bgWorker.postMessage('START');
                 if (typeof showToast === 'function') showToast(t('toast_music_notif_enabled') || '🎵 Live-Musik-Benachrichtigungen aktiviert!', 3500);
-                const title = document.getElementById('track-title')?.innerText;
-                const artist = document.getElementById('track-artist')?.innerText;
-                const cover = currentResolvedArtUrl || null;
-                if (title && title !== 'Keine Wiedergabe' && title !== 'Aktuell ist es ruhig...') {
-                    dispatchMusicNotification('now_playing', title, artist, cover);
-                }
             } else {
+                if (bgWorker) bgWorker.postMessage('STOP');
+                if (pauseNotifTimer) { clearTimeout(pauseNotifTimer); pauseNotifTimer = null; }
                 if (typeof showToast === 'function') showToast(t('toast_music_notif_disabled') || '🔕 Live-Musik-Benachrichtigungen deaktiviert.', 3000);
             }
         };
@@ -15316,11 +15365,20 @@ window.generateShareCard = function() {
                 if (consecutiveEmptyPolls < 3) {
                     return;
                 }
-                if (trackIsPlaying && !isFirstLoad) {
+                if (trackIsPlaying) {
                     const prevTitle = mTitle ? mTitle.innerText : '';
                     const prevArtist = mArtist ? mArtist.innerText : '';
-                    if (prevTitle && prevTitle !== 'Aktuell ist es ruhig...' && prevTitle !== 'Keine Wiedergabe') {
-                        dispatchMusicNotification('paused', prevTitle, prevArtist, currentResolvedArtUrl);
+                    const prevArt = currentResolvedArtUrl;
+                    lastPlaybackStopTime = Date.now();
+                    hasNotifiedPauseForCurrentStop = false;
+                    if (!pauseNotifTimer && !isFirstLoad && prevTitle && prevTitle !== 'Aktuell ist es ruhig...' && prevTitle !== 'Keine Wiedergabe') {
+                        pauseNotifTimer = setTimeout(() => {
+                            pauseNotifTimer = null;
+                            if (!trackIsPlaying && !hasNotifiedPauseForCurrentStop) {
+                                hasNotifiedPauseForCurrentStop = true;
+                                dispatchMusicNotification('paused', prevTitle, prevArtist, prevArt);
+                            }
+                        }, PROLONGED_PAUSE_THRESHOLD_MS);
                     }
                 }
                 trackIsPlaying = false;
@@ -15595,10 +15653,18 @@ window.generateShareCard = function() {
 
                 if (isNewTrack) {
                     addToRecentlyPlayed(trackTitle, rawArtist, finalArtUrl);
-                    if (!isFirstLoad && isPlaying) {
-                        triggerDynamicIsland(trackTitle, rawArtist, finalArtUrl);
-                        haptic(10);
-                        dispatchMusicNotification('now_playing', trackTitle, rawArtist, finalArtUrl);
+                    if (isPlaying) {
+                        if (!isFirstLoad) {
+                            triggerDynamicIsland(trackTitle, rawArtist, finalArtUrl);
+                            haptic(10);
+                            const wasProlongedPause = (lastPlaybackStopTime > 0 && (Date.now() - lastPlaybackStopTime >= PROLONGED_PAUSE_THRESHOLD_MS)) || hasNotifiedPauseForCurrentStop;
+                            if (wasProlongedPause) {
+                                dispatchMusicNotification('resumed', trackTitle, rawArtist, finalArtUrl);
+                            }
+                        }
+                        if (pauseNotifTimer) { clearTimeout(pauseNotifTimer); pauseNotifTimer = null; }
+                        lastPlaybackStopTime = 0;
+                        hasNotifiedPauseForCurrentStop = false;
                     }
                     totalMs = trackDuration;
                     if (timeTotalEl) timeTotalEl.innerText = formatTime(totalMs);
@@ -15616,8 +15682,14 @@ window.generateShareCard = function() {
                     if (!trackIsPlaying && isPlaying) {
                         trackIsPlaying = true;
                         if (!isFirstLoad) {
-                            dispatchMusicNotification('resumed', trackTitle, rawArtist, finalArtUrl);
+                            const wasProlongedPause = (lastPlaybackStopTime > 0 && (Date.now() - lastPlaybackStopTime >= PROLONGED_PAUSE_THRESHOLD_MS)) || hasNotifiedPauseForCurrentStop;
+                            if (wasProlongedPause) {
+                                dispatchMusicNotification('resumed', trackTitle, rawArtist, finalArtUrl);
+                            }
                         }
+                        if (pauseNotifTimer) { clearTimeout(pauseNotifTimer); pauseNotifTimer = null; }
+                        lastPlaybackStopTime = 0;
+                        hasNotifiedPauseForCurrentStop = false;
                         updateWakeLockForPlaybackState();
                         serverBaseProgress = apiProgress + addedDelay;
                         localStartTime = performance.now();
@@ -15625,8 +15697,19 @@ window.generateShareCard = function() {
                         syncLyricsUI(true, true);
                     } else if (trackIsPlaying && !isPlaying) {
                         trackIsPlaying = false;
-                        if (!isFirstLoad) {
-                            dispatchMusicNotification('paused', trackTitle, rawArtist, finalArtUrl);
+                        lastPlaybackStopTime = Date.now();
+                        hasNotifiedPauseForCurrentStop = false;
+                        if (!pauseNotifTimer && !isFirstLoad) {
+                            const curT = trackTitle;
+                            const curA = rawArtist;
+                            const curArt = finalArtUrl;
+                            pauseNotifTimer = setTimeout(() => {
+                                pauseNotifTimer = null;
+                                if (!trackIsPlaying && !hasNotifiedPauseForCurrentStop) {
+                                    hasNotifiedPauseForCurrentStop = true;
+                                    dispatchMusicNotification('paused', curT, curA, curArt);
+                                }
+                            }, PROLONGED_PAUSE_THRESHOLD_MS);
                         }
                         updateWakeLockForPlaybackState();
                         stopProgressTracking();
@@ -15767,9 +15850,10 @@ window.generateShareCard = function() {
         let musicPollTimer = null;
         function scheduleNextMusicPoll() {
             if (musicPollTimer) clearTimeout(musicPollTimer);
-            const delay = trackIsPlaying ? 5000 : 15000;
+            const isBg = document.hidden;
+            const delay = isBg ? (isMusicNotificationsEnabled() ? 10000 : 30000) : (trackIsPlaying ? 5000 : 15000);
             musicPollTimer = setTimeout(() => {
-                if (!shouldPauseBackgroundWork()) {
+                if (!document.hidden || isMusicNotificationsEnabled()) {
                     fetchMusicData().finally(() => {
                         scheduleNextMusicPoll();
                     });
@@ -16407,6 +16491,7 @@ window.generateShareCard = function() {
         })();
         updateNotificationPermissionButtonLabel(); // NEU v24.77: initialen Zustand beim Laden setzen
         updateMusicNotificationsButtonLabel();
+        if (isMusicNotificationsEnabled()) initBackgroundWorker();
         loadDiscordWidget();
         // NEW: Beim Laden nur einmalig statisch vorrendern (Menü ist ja noch geschlossen) -
         // die eigentliche Dauerschleife startet erst, wenn das Menü tatsächlich geöffnet
