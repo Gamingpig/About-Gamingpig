@@ -5189,8 +5189,9 @@
 
     <!-- NEW: Dynamic Island 2.0 -->
     <!-- NEW: Sprachauswahl (wie Android/iOS Einrichtungsassistent), nur beim ersten Besuch -->
-    <div id="language-picker-overlay" class="hidden">
-        <div id="language-picker-box">
+    <div id="language-picker-overlay" class="hidden" onclick="if(event.target===this)closeLanguagePicker()">
+        <div id="language-picker-box" class="relative">
+            <button onclick="closeLanguagePicker()" id="lang-picker-close-btn" class="absolute -top-3 -right-2 sm:-top-4 sm:-right-4 w-9 h-9 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white/80 hover:text-white transition-all text-sm font-bold border border-white/10 shadow-lg active:scale-95 z-20" aria-label="Schließen / Close">✕</button>
             <div id="lang-picker-titles">
                 <p>Wähle deine Sprache</p>
                 <p>Choose your language</p>
@@ -7433,7 +7434,18 @@
                 </button>`).join('');
         }
 
-        window.openLanguagePicker = function() {
+        window.closeLanguagePicker = function() {
+            const overlay = document.getElementById('language-picker-overlay');
+            if (!overlay) return;
+            overlay.classList.remove('lp-active');
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+            }, 300);
+        };
+
+        window.openLanguagePicker = function(isManual = false) {
+            window._manualLangChange = isManual;
+            renderLanguagePicker();
             const overlay = document.getElementById('language-picker-overlay');
             if (!overlay) return;
             overlay.classList.remove('hidden');
@@ -7443,17 +7455,18 @@
 
         window.selectLanguage = function(code) {
             if (typeof haptic === 'function') haptic(10);
-            applyLanguage(code);
-            const overlay = document.getElementById('language-picker-overlay');
-            if (overlay) {
-                overlay.classList.remove('lp-active');
-                setTimeout(() => overlay.classList.add('hidden'), 550);
+            try {
+                applyLanguage(code);
+            } catch (e) {
+                console.error('applyLanguage error:', e);
             }
+            window.closeLanguagePicker();
             // NEW: Bugfix - Tutorial-Autostart darf erst NACH der Sprachauswahl kommen,
             // nie gleichzeitig (siehe Kommentar bei der alten if-Abfrage weiter unten).
-            if (!localStorage.getItem('tutorialCompletedV3')) {
-                setTimeout(startTutorial, 700);
+            if (!localStorage.getItem('tutorialCompletedV3') && !window._manualLangChange) {
+                setTimeout(startTutorial, 500);
             }
+            window._manualLangChange = false;
         };
 
         // Aktualisiert alle übersetzbaren Bedienelemente auf der Seite. Persönliche
