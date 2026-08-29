@@ -15573,16 +15573,20 @@ window.generateShareCard = function() {
                         if (capturedTrackKey === lastResolvedTrackKey) {
                             currentResolvedArtUrl = resolved;
                             updateAllCoverVisuals(resolved);
+                            extractDominantColor(resolved);
+                            syncStandByTrackInfo(trackTitle, rawArtist, resolved, false, trackIsPlaying);
+                            if (trackIsPlaying) showIslandPersistent(trackTitle, rawArtist, resolved);
                         }
                     }
-                });
+                }).catch(() => {});
             }
 
             // ── Progress-Extraktion und Dedup-Check ─────────────────────────────────
             let currentApiProgress = data.progress_ms !== undefined ? data.progress_ms : (data.track && data.track.progress_ms) || 0;
 
             // Auf keinen Fall bei erstem Laden abbrechen (fehlendes Cover immer durchlassen)
-            if (currentApiProgress === lastSeenProgressMs && trackIsPlaying === isPlaying && !isNewTrack && currentResolvedArtUrl) {
+            const isPausedNow = Boolean(data && data.status === "paused");
+            if (currentApiProgress === lastSeenProgressMs && trackIsPlaying === isPlaying && !isNewTrack && currentResolvedArtUrl && !isPausedNow) {
                 return;
             }
             lastSeenProgressMs = currentApiProgress;
