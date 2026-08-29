@@ -788,30 +788,79 @@
     return chunks;
   }
 
-  function speakChunk(text, lang) {
-    return new Promise(resolve => {
-      const spokenText = (lang && lang.startsWith('de'))
-        ? text.replace(/\bGamingpig\b/gi, 'Gaming Pigg')
-        : text;
-      const u = new SpeechSynthesisUtterance(spokenText);
-      u.lang = lang;
-      u.onend = resolve;
-      u.onerror = resolve;
-      speechSynthesis.speak(u);
-    });
+  let privacyQueue = [];
+  let privacyChunkIdx = 0;
+  let activePrivacyUtterance = null;
+
+  function stopPrivacySpeech() {
+    privacySpeaking = false;
+    privacyQueue = [];
+    privacyChunkIdx = 0;
+    if (activePrivacyUtterance) {
+      activePrivacyUtterance.onend = null;
+      activePrivacyUtterance.onerror = null;
+      activePrivacyUtterance = null;
+    }
+    if ('speechSynthesis' in window) {
+      speechSynthesis.cancel();
+    }
+    const btn = document.getElementById('privacy-speak-btn');
+    if (btn) btn.textContent = '🔊';
   }
 
-  async function togglePrivacySpeak() {
+  function playNextPrivacyChunk() {
+    if (!privacySpeaking) return;
+    if (privacyChunkIdx >= privacyQueue.length) {
+      stopPrivacySpeech();
+      return;
+    }
+
+    const chunk = privacyQueue[privacyChunkIdx];
+    privacyChunkIdx++;
+
+    const currentLang = document.documentElement.getAttribute('lang') || 'de';
+    const langCode = PRIVACY_LANG_BCP47[currentLang] || 'de-DE';
+    const spokenText = (langCode && langCode.startsWith('de'))
+      ? chunk.replace(/\bGamingpig\b/gi, 'Gaming Pigg')
+      : chunk;
+
+    const u = new SpeechSynthesisUtterance(spokenText);
+    u.lang = langCode;
+    u.rate = 1.02;
+    u.pitch = 1.0;
+    u.volume = 1.0;
+
+    activePrivacyUtterance = u;
+
+    u.onend = () => {
+      if (!privacySpeaking) return;
+      if (activePrivacyUtterance === u) activePrivacyUtterance = null;
+      playNextPrivacyChunk();
+    };
+
+    u.onerror = () => {
+      if (!privacySpeaking) return;
+      if (activePrivacyUtterance === u) activePrivacyUtterance = null;
+      playNextPrivacyChunk();
+    };
+
+    if (speechSynthesis.paused) {
+      speechSynthesis.resume();
+    }
+    speechSynthesis.speak(u);
+  }
+
+  function togglePrivacySpeak() {
     const btn = document.getElementById('privacy-speak-btn');
     if (privacySpeaking || speechSynthesis.speaking || speechSynthesis.pending) {
-      privacySpeaking = false;
-      speechSynthesis.cancel();
-      btn.textContent = '🔊';
+      stopPrivacySpeech();
       return;
     }
 
     const activeBlock = Array.from(document.querySelectorAll('.lang-block')).find(b => b.style.display === 'block');
     if (!activeBlock) return;
+
+    stopPrivacySpeech();
 
     const currentLang = document.documentElement.getAttribute('lang') || 'de';
     const text = activeBlock.innerText;
@@ -819,16 +868,11 @@
     if (chunks.length === 0) return;
 
     privacySpeaking = true;
-    btn.textContent = '⏹️';
-    try {
-      for (const chunk of chunks) {
-        if (!privacySpeaking) break;
-        await speakChunk(chunk, PRIVACY_LANG_BCP47[currentLang] || 'de-DE');
-      }
-    } finally {
-      privacySpeaking = false;
-      btn.textContent = '🔊';
-    }
+    privacyQueue = chunks;
+    privacyChunkIdx = 0;
+    if (btn) btn.textContent = '⏹️';
+
+    playNextPrivacyChunk();
   }
 
   // Service Worker Update-Registration

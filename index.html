@@ -9340,12 +9340,37 @@
             });
         }
 
-        // Sammelt den reinen Bio-Text und liest ihn vor.
+        // Sammelt den reinen Bio-Text und liest ihn mit dynamischer Begrüßung vor.
         window.speakBio = function(btnEl) {
-            const p1 = document.getElementById('header-intro-p1');
-            const p2 = document.getElementById('header-intro-p2');
-            const text = [p1, p2].filter(Boolean).map(el => el.innerText).join('. ');
-            ttsSpeak(text, btnEl);
+            const lang = currentLang || 'de';
+            const now = new Date();
+            const hours = now.getHours();
+            let greeting = 'Hallo';
+            if (hours >= 5 && hours < 12) greeting = 'Guten Morgen';
+            else if (hours >= 12 && hours < 18) greeting = 'Guten Tag';
+            else if (hours >= 18 && hours < 22) greeting = 'Guten Abend';
+            else greeting = 'Gute Nacht';
+
+            const p1 = document.getElementById('header-intro-p1')?.innerText || '';
+            const p2 = document.getElementById('header-intro-p2')?.innerText || '';
+
+            if (lang === 'de') {
+                const intros = [
+                    `${greeting}! Willkommen auf meinem interaktiven Portfolio. Hier ist meine Kurzvorstellung:`,
+                    `Moin moin! Schön dass du da bist. Gamingpig am Start:`,
+                    `Hey! Herzlich willkommen im Gamingpig Cockpit. Kurz zu mir:`
+                ];
+                ttsSpeak(`${pickRandom(intros)} ${p1} ${p2}`, btnEl);
+            } else if (lang === 'en') {
+                const intros = [
+                    `Hello and welcome to my interactive portfolio! Here's a brief intro:`,
+                    `Hey there! Gamingpig here. Let me introduce myself:`,
+                    `Welcome to my developer hub! Here is my story:`
+                ];
+                ttsSpeak(`${pickRandom(intros)} ${p1} ${p2}`, btnEl);
+            } else {
+                ttsSpeak(`${p1} ${p2}`, btnEl);
+            }
         };
 
         // Liest den aktuell sichtbaren Songtext vor (die bereits geparsten Zeilen), oder bei
@@ -9500,53 +9525,100 @@
         }
 
         // Liest die Release-Notes vor.
-        // FIX v24.58: items ist jetzt ein Objekt pro Sprache statt eines einzelnen Arrays -
-        // passende Sprache anhand von currentLang auswählen, mit Deutsch als Rückfall.
         window.speakChangelog = function() {
             const btnEl = document.getElementById('btn-speak-changelog');
             const lang = currentLang || 'de';
-            const text = PUBLIC_CHANGELOG.map(entry => {
-                const items = entry.items[lang] || entry.items.de;
-                return `${entry.version}, ${entry.date}. ${items.join('. ')}`;
-            }).join('. ');
-            ttsSpeak(text, btnEl);
+            const latest = PUBLIC_CHANGELOG[0];
+            const latestItems = (latest?.items[lang] || latest?.items.de || []).join('. ');
+
+            if (lang === 'de') {
+                const intros = [
+                    `Hier ist das offizielle Release-Radar von Gamingpig für ${latest?.version || 'die neueste Version'}! Die wichtigsten Neuerungen auf einen Blick:`,
+                    `Update-Briefing für ${latest?.version || 'v24'} geladen:`,
+                    `Frisch aus der Entwickler-Schmiede für ${latest?.version || 'das aktuelle Release'}:`
+                ];
+                ttsSpeak(`${pickRandom(intros)} ${latestItems}`, btnEl);
+            } else if (lang === 'en') {
+                const intros = [
+                    `Here is the official Gamingpig release radar for ${latest?.version || 'the latest update'}! Highlights at a glance:`,
+                    `Update briefing for ${latest?.version || 'the latest release'} loaded:`
+                ];
+                ttsSpeak(`${pickRandom(intros)} ${latestItems}`, btnEl);
+            } else {
+                const text = PUBLIC_CHANGELOG.map(entry => {
+                    const items = entry.items[lang] || entry.items.de;
+                    return `${entry.version}, ${entry.date}. ${items.join('. ')}`;
+                }).join('. ');
+                ttsSpeak(text, btnEl);
+            }
         };
 
-        // Liest JEDE interaktive Karte vor (Status, Hintergrund, Kontakt usw.) - generisch,
-        // da alle Karten dasselbe openModal()-Template mit Titel+Text nutzen.
-        // NEU v24.46: Liest Titel + Teaser DIREKT von der Karte vor, ohne dass das Modal
-        // erst geöffnet werden muss - wichtig für Nutzer, die viele Karten schnell
-        // überfliegen wollen, ohne jede einzeln aufklappen zu müssen. Kein btnEl-Parameter
-        // nötig (die Karten selbst sind keine Buttons mit Text-Fallback), daher wird hier
-        // kein ttsSetButtonState-Label-Toggle gemacht - nur gestartet/gestoppt.
-        // NEU v24.46: Liest den kompletten Support-Bereich vor (Titel + beide Beschreibungen).
-        // NEU v24.47: Liest Titel + Künstler des aktuell laufenden (oder zuletzt gespielten)
-        // Songs vor - direkt im Dashboard, unabhängig von der Lyrics-Ansicht.
         window.speakTrackInfo = function(btnEl) {
-            const titleEl = document.getElementById('track-title');
-            const artistEl = document.getElementById('track-artist');
-            const text = [titleEl, artistEl].filter(Boolean).map(el => el.innerText).join('. ');
-            ttsSpeak(text, btnEl);
+            window.speakNowPlaying(btnEl);
         };
 
+        // Support-Bereich mit dynamischer Begrüßung
         window.speakSupportSection = function(btnEl) {
-            const titleEl = document.getElementById('support-section-title');
-            const emailTitleEl = document.getElementById('support-email-title');
-            const emailDescEl = document.getElementById('support-email-desc');
-            const discordTitleEl = document.getElementById('support-discord-title');
-            const discordDescEl = document.getElementById('support-discord-desc');
-            const text = [titleEl, emailTitleEl, emailDescEl, discordTitleEl, discordDescEl]
-                .filter(Boolean).map(el => el.innerText).join('. ');
-            ttsSpeak(text, btnEl);
+            const lang = currentLang || 'de';
+            const onlineCount = document.getElementById('discord-online-count')?.innerText || 'einige Mitglieder';
+            if (lang === 'de') {
+                const text = `Du hast eine Frage, einen Bug gefunden oder willst einfach quatschen? Schreib mir direkt eine E-Mail an gamingpig.support@gmail.com oder tritt unserem offiziellen Discord-Server bei. Dort sind gerade ${onlineCount} online und ich antworte meistens am schnellsten. Beide Buttons findest du direkt hier auf der Karte!`;
+                ttsSpeak(text, btnEl);
+            } else if (lang === 'en') {
+                const text = `Got questions, discovered a bug, or just want to chat? Reach out directly via email at gamingpig.support@gmail.com or join our official Discord server where ${onlineCount} are currently online. Both action buttons are right below!`;
+                ttsSpeak(text, btnEl);
+            } else {
+                const titleEl = document.getElementById('support-section-title');
+                const emailTitleEl = document.getElementById('support-email-title');
+                const emailDescEl = document.getElementById('support-email-desc');
+                const discordTitleEl = document.getElementById('support-discord-title');
+                const discordDescEl = document.getElementById('support-discord-desc');
+                const text = [titleEl, emailTitleEl, emailDescEl, discordTitleEl, discordDescEl]
+                    .filter(Boolean).map(el => el.innerText).join('. ');
+                ttsSpeak(text, btnEl);
+            }
         };
 
-        // NEU v24.47: Liest den aktuell gespielten Songtitel + Künstler direkt im
-        // Musik-Dashboard vor, ohne dass die Lyrics-Ansicht geöffnet werden muss.
+        // Liest den aktuell gespielten Songtitel + Künstler dynamisch und cool vor
         window.speakNowPlaying = function(btnEl) {
-            const titleEl = document.getElementById('track-title');
-            const artistEl = document.getElementById('track-artist');
-            const text = [titleEl, artistEl].filter(Boolean).map(el => el.innerText).join('. ');
-            ttsSpeak(text, btnEl);
+            const lang = currentLang || 'de';
+            const npCard = document.getElementById('standby-nowplaying');
+            const isIdle = npCard ? npCard.classList.contains('standby-idle') : true;
+            const songTitle = document.getElementById('track-title')?.innerText || '';
+            const songArtist = document.getElementById('track-artist')?.innerText || '';
+            const isPlaying = !isIdle && songTitle && songTitle !== 'Keine Wiedergabe' && songTitle !== 'Aktuell ist es ruhig...';
+
+            if (lang === 'de') {
+                if (isPlaying) {
+                    const phrases = [
+                        `Aktuell läuft im Live-Player: "${songTitle}" von ${songArtist}. Cover-Engine und Stream-Sync laufen auf Hochtouren!`,
+                        `Jetzt live auf den Speakern: "${songTitle}" von ${songArtist}. Beat-Sync und Audio-Pipeline sind scharf geschaltet!`,
+                        `Dein aktueller Track: "${songTitle}" von ${songArtist}. Lehn dich zurück und genieß den Vibe.`
+                    ];
+                    ttsSpeak(pickRandom(phrases), btnEl);
+                } else {
+                    const idlePhrases = [
+                        `Im Musik-Hub ist es gerade ruhig. Entspannter Zen-Modus aktiv – wähl einen Track über die Tastatur oder Command Palette!`,
+                        `Aktuell läuft kein Song. Der Player kühlt im energiesparenden Zen-State ab.`,
+                        `Keine Musikwiedergabe aktiv. Reine Stille für maximalen Hyperfokus.`
+                    ];
+                    ttsSpeak(pickRandom(idlePhrases), btnEl);
+                }
+            } else if (lang === 'en') {
+                if (isPlaying) {
+                    const phrases = [
+                        `Currently playing live: "${songTitle}" by ${songArtist}. Streaming pipeline and cover decoders running at 100%!`,
+                        `Now streaming: "${songTitle}" by ${songArtist}. Enjoy the beat!`,
+                        `Soundtrack check: "${songTitle}" by ${songArtist}. Live telemetry active.`
+                    ];
+                    ttsSpeak(pickRandom(phrases), btnEl);
+                } else {
+                    ttsSpeak(`The music dashboard is currently resting in peaceful Zen mode. No audio playing right now.`, btnEl);
+                }
+            } else {
+                const text = [songTitle, songArtist].filter(Boolean).join('. ');
+                ttsSpeak(text, btnEl);
+            }
         };
 
         function pickRandom(arr) {
@@ -9722,12 +9794,55 @@
         }
 
         window.speakCardFace = function(key) {
+            if (typeof haptic === 'function') haptic(20);
             if (key === 'status') {
-                if (typeof haptic === 'function') haptic(25);
                 const dynamicText = getDynamicStatusSpeech();
                 ttsSpeak(dynamicText, null);
                 return;
             }
+
+            const lang = currentLang || 'de';
+            if (lang === 'de') {
+                const cardDescriptions = {
+                    background: [
+                        "Hintergrund-Check: Mein Werdegang als Fachinformatiker für Systemintegration, meine Leidenschaft für Homelab-Server, Linux und wie alles angefangen hat.",
+                        "Über mich: Wie ich vom Zocken und Tüfteln zur professionellen IT-Systemintegration und Software-Entwicklung gekommen bin."
+                    ],
+                    freizeit: [
+                        "Off-Duty Modus: Wenn ich nicht gerade Code schreibe oder Server baue, findest du mich beim Gaming, Mountainbiken oder Chillen mit guter Musik.",
+                        "Freizeit-Radar: Meine Hobbys abseits des Terminals – Gaming, MTB-Action und Musik."
+                    ],
+                    menschen: [
+                        "Crew & Wegbegleiter: Die wichtigsten Menschen, Freunde, Familie und Unterstützer in meinem Leben.",
+                        "Team-Radar: Ein Dankeschön an die Menschen, die mich tagtäglich motivieren und inspirieren."
+                    ],
+                    techstack: [
+                        "Technologie-Arsenal: Linux, Docker, Proxmox, Python, JavaScript, Tailwind, Bash und moderne Cloud-Infrastruktur – Werkzeuge, mit denen ich Systeme erschaffe.",
+                        "Tech Stack Deep Dive: Mein tägliches Toolkit für Server, Web-Apps, Automatisierung und Netzwerke."
+                    ],
+                    setup: [
+                        "Hardware-Cockpit: Mein Multi-Monitor-Arbeitsplatz, High-End Workstation, Peripherie und das eigene Homelab-Server-Rack.",
+                        "Setup-Inspektion: Die Hardware hinter den Kulissen – vom Desktop bis zum Heimserver."
+                    ],
+                    labor: [
+                        "Das Gamingpig Labor: Experimentelle Features, Prototypen, PWA-Technik, WebAssembly und geheime Next-Gen-Module.",
+                        "Forschungsabteilung: Wo neue Ideen, Web-APIs und Performance-Optimierungen getestet werden."
+                    ],
+                    contact: [
+                        "Direktverbindung: So erreichst du mich am schnellsten für spannende Projekte, Kooperationen oder IT-Fachsimpelei.",
+                        "Kontakt-Kanal: Schreib mir per Mail oder Discord – ich freue mich auf den Austausch!"
+                    ],
+                    support: [
+                        "Support-Zentrale: Direkte Hilfe per E-Mail und unser Live-Discord-Server.",
+                        "Hilfe & Support: Trete der Community bei oder sende mir eine direkte Nachricht."
+                    ]
+                };
+                if (cardDescriptions[key]) {
+                    ttsSpeak(pickRandom(cardDescriptions[key]), null);
+                    return;
+                }
+            }
+
             const titleEl = document.getElementById('card-title-' + key);
             const teaserEl = document.getElementById('card-teaser-' + key);
             const text = [titleEl, teaserEl].filter(Boolean).map(el => el.innerText).join('. ');
