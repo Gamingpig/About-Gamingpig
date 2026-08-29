@@ -10318,10 +10318,24 @@
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
                     .then((reg) => {
-                        // Prüfe beim Laden direkt auf Updates
-                        if (reg) {
-                            reg.update().catch(() => {});
-                        }
+                        // Sofort auf Updates prüfen
+                        if (reg) reg.update().catch(() => {});
+
+                        // Wenn ein neuer SW wartet: sofort aktivieren
+                        const applyUpdate = (worker) => {
+                            if (!worker) return;
+                            worker.postMessage({ type: 'SKIP_WAITING' });
+                        };
+                        if (reg.waiting) applyUpdate(reg.waiting);
+                        reg.addEventListener('updatefound', () => {
+                            const newWorker = reg.installing;
+                            if (!newWorker) return;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    applyUpdate(newWorker);
+                                }
+                            });
+                        });
                     })
                     .catch((err) => {
                         console.warn('Service Worker Registrierung fehlgeschlagen (PWA-Installation evtl. nicht möglich):', err);
