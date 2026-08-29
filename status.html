@@ -285,7 +285,7 @@
                     </div>
                     <div class="flex items-center justify-between text-[10px] font-mono text-slate-400 border-t border-white/5 pt-2 mt-1">
                         <span>Status: <strong class="text-emerald-300" id="ping-pwa">Aktiv</strong></span>
-                        <span id="type-pwa">v24.132.1</span>
+                        <span id="type-pwa">v24.132.4</span>
                     </div>
                 </div>
 
@@ -804,6 +804,15 @@
             const spinner = document.getElementById('refresh-spinner');
             if (spinner) spinner.classList.add('spin-slow');
 
+            // Show immediate loading feedback for latencies
+            ['spotify', 'statsfm', 'lyrics', 'cover', 'discord', 'network'].forEach(id => {
+                const el = document.getElementById('ping-' + id);
+                if (el && (!lastDiagnosticResults[id] || !lastDiagnosticResults[id].duration)) {
+                    el.innerText = 'Messe...';
+                    el.className = 'text-blue-400 animate-pulse font-mono font-bold';
+                }
+            });
+
             const now = new Date();
             const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
             const lastCheckedEl = document.getElementById('last-checked-time');
@@ -1250,16 +1259,23 @@
             runDiagnostics();
         });
 
-        document.addEventListener('DOMContentLoaded', () => {
+        function initStatusPage() {
             const selectEl = document.getElementById('lang-select');
             if (selectEl) selectEl.value = currentLang;
             applyTranslations(currentLang);
+            updatePushUI();
             runDiagnostics();
 
             setInterval(() => {
                 runDiagnostics();
-            }, 60000);
-        });
+            }, 45000);
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initStatusPage);
+        } else {
+            initStatusPage();
+        }
     </script>
 </body>
 </html>
