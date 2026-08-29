@@ -586,20 +586,100 @@
 
         // --- Read Aloud (TTS) Engine ---
         window.isSpeaking = false;
+        window._activeUtterance = null;
+        let ttsSessionId = 0;
+
+        const TTS_LANG_MAP = {
+            de: 'de-DE',
+            en: 'en-US',
+            es: 'es-ES',
+            fr: 'fr-FR',
+            pt: 'pt-BR',
+            tr: 'tr-TR'
+        };
+
+        function splitIntoSpeechChunks(text, maxLen = 160) {
+            if (!text) return [];
+            const cleanText = text.replace(/[*_#`~]/g, '').replace(/\s+/g, ' ').trim();
+            const sentences = cleanText.split(/(?<=[.!?])\s+/);
+            const chunks = [];
+            for (const sentence of sentences) {
+                if (sentence.length <= maxLen) {
+                    if (sentence.trim()) chunks.push(sentence.trim());
+                    continue;
+                }
+                let rest = sentence;
+                while (rest.length > maxLen) {
+                    let cut = rest.lastIndexOf(' ', maxLen);
+                    if (cut <= 0) cut = maxLen;
+                    chunks.push(rest.slice(0, cut).trim());
+                    rest = rest.slice(cut).trim();
+                }
+                if (rest && rest.trim()) chunks.push(rest.trim());
+            }
+            return chunks;
+        }
+
+        function speakChunk(text, langCode, currentSession) {
+            return new Promise(resolve => {
+                if (!window.isSpeaking || ttsSessionId !== currentSession) return resolve();
+                if (!('speechSynthesis' in window)) return resolve();
+
+                const spokenText = (langCode && langCode.startsWith('de'))
+                    ? text.replace(/\bGamingpig\b/gi, 'Gaming Pigg')
+                    : text;
+
+                const u = new SpeechSynthesisUtterance(spokenText);
+                u.lang = langCode;
+                u.rate = 1.02;
+                u.pitch = 1.0;
+
+                try {
+                    const voices = window.speechSynthesis.getVoices() || [];
+                    const prefix = (langCode || '').split('-')[0].toLowerCase();
+                    const matchedVoice = voices.find(v => v.lang && v.lang.toLowerCase().startsWith(prefix));
+                    if (matchedVoice) u.voice = matchedVoice;
+                } catch (e) {}
+
+                let finished = false;
+                const done = () => {
+                    if (finished) return;
+                    finished = true;
+                    if (window._activeUtterance === u) window._activeUtterance = null;
+                    resolve();
+                };
+
+                u.onend = done;
+                u.onerror = done;
+
+                const safeTimeout = Math.max(3000, spokenText.length * 120);
+                setTimeout(done, safeTimeout);
+
+                window._activeUtterance = u;
+                if (window.speechSynthesis.paused) {
+                    window.speechSynthesis.resume();
+                }
+                window.speechSynthesis.speak(u);
+            });
+        }
 
         function stopSpeech() {
+            ttsSessionId++;
+            window.isSpeaking = false;
+            window._activeUtterance = null;
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
             }
-            window.isSpeaking = false;
             const btn = document.getElementById('tts-toggle-btn');
             if (btn) btn.classList.remove('tts-active');
             const t = TRANSLATIONS[currentLang] || TRANSLATIONS.de;
-            document.getElementById('tts-label').innerText = t.tts_read;
-            document.getElementById('tts-icon').innerText = '🔊';
+            const label = document.getElementById('tts-label');
+            const icon = document.getElementById('tts-icon');
+            if (label) label.innerText = t.tts_read;
+            if (icon) icon.innerText = '🔊';
         }
 
-        function toggleReadAloud() {
+        async function toggleReadAloud() {
             if (!('speechSynthesis' in window)) {
                 alert("Speech Synthesis is not supported in this browser.");
                 return;
@@ -610,42 +690,46 @@
                 return;
             }
 
-            window.speechSynthesis.cancel();
-            const t = TRANSLATIONS[currentLang] || TRANSLATIONS.de;
+            stopSpeech();
 
-            const textToRead = `
-                ${t.hero_badge}. 
-                ${t.hero_sub}. 
-                ${t.card_wrapped_title}. ${t.card_wrapped_text}. 
-                ${t.card1_title}. ${t.card1_text}. 
-                ${t.card2_title}. ${t.card2_text}. 
-                ${t.card_standby_title}. ${t.card_standby_text}. 
-                ${t.card4_title}. ${t.card4_text}.
-            `;
-
-            const utterance = new SpeechSynthesisUtterance(textToRead);
-            utterance.lang = currentLang === 'de' ? 'de-DE' :
-                             currentLang === 'en' ? 'en-US' :
-                             currentLang === 'es' ? 'es-ES' :
-                             currentLang === 'fr' ? 'fr-FR' :
-                             currentLang === 'pt' ? 'pt-BR' : 'tr-TR';
-            utterance.rate = 1.05;
-            utterance.pitch = 1.0;
-
-            const voices = window.speechSynthesis.getVoices();
-            const matchedVoice = voices.find(v => v.lang.startsWith(currentLang));
-            if (matchedVoice) utterance.voice = matchedVoice;
-
-            utterance.onend = () => stopSpeech();
-            utterance.onerror = () => stopSpeech();
-
+            const mySession = ++ttsSessionId;
             window.isSpeaking = true;
+
+            const t = TRANSLATIONS[currentLang] || TRANSLATIONS.de;
             const btn = document.getElementById('tts-toggle-btn');
             if (btn) btn.classList.add('tts-active');
-            document.getElementById('tts-label').innerText = t.tts_stop;
-            document.getElementById('tts-icon').innerText = '⏹️';
+            const label = document.getElementById('tts-label');
+            const icon = document.getElementById('tts-icon');
+            if (label) label.innerText = t.tts_stop;
+            if (icon) icon.innerText = '⏹️';
 
-            window.speechSynthesis.speak(utterance);
+            const parts = [
+                t.hero_badge,
+                t.hero_sub,
+                t.card_wrapped_title ? `${t.card_wrapped_title}. ${t.card_wrapped_text}` : '',
+                t.card1_title ? `${t.card1_title}. ${t.card1_text}` : '',
+                t.card2_title ? `${t.card2_title}. ${t.card2_text}` : '',
+                t.card3_title ? `${t.card3_title}. ${t.card3_text}` : '',
+                t.card_standby_title ? `${t.card_standby_title}. ${t.card_standby_text}` : '',
+                t.card4_title ? `${t.card4_title}. ${t.card4_text}` : ''
+            ].filter(Boolean);
+
+            const fullText = parts.join('. ');
+            const chunks = splitIntoSpeechChunks(fullText);
+            const langCode = TTS_LANG_MAP[currentLang || 'de'] || 'de-DE';
+
+            try {
+                for (const chunk of chunks) {
+                    if (!window.isSpeaking || ttsSessionId !== mySession) break;
+                    await speakChunk(chunk, langCode, mySession);
+                }
+            } catch (err) {
+                console.error("Read-aloud error:", err);
+            } finally {
+                if (ttsSessionId === mySession) {
+                    stopSpeech();
+                }
+            }
         }
 
         // Init language on load
