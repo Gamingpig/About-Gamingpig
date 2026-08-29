@@ -553,7 +553,11 @@
             window.isSpeaking = false;
             ttsQueue = [];
             ttsCurrentIndex = 0;
-            window._activeUtterance = null;
+            if (window._activeUtterance) {
+                window._activeUtterance.onend = null;
+                window._activeUtterance.onerror = null;
+                window._activeUtterance = null;
+            }
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
             }
@@ -590,11 +594,13 @@
             window._activeUtterance = u;
 
             u.onend = () => {
+                if (!window.isSpeaking) return;
                 if (window._activeUtterance === u) window._activeUtterance = null;
                 playNextChunk();
             };
 
             u.onerror = () => {
+                if (!window.isSpeaking) return;
                 if (window._activeUtterance === u) window._activeUtterance = null;
                 playNextChunk();
             };

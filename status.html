@@ -1369,11 +1369,16 @@
         }
 
         function stopSpeech() {
+            activeSpeakingMode = null;
+            if (window._ttsUtterances && window._ttsUtterances.length > 0) {
+                window._ttsUtterances.forEach(u => {
+                    if (u) { u.onend = null; u.onerror = null; }
+                });
+            }
+            window._ttsUtterances = [];
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
             }
-            window._ttsUtterances = [];
-            activeSpeakingMode = null;
 
             // Reset Main Status TTS Button
             const btn = document.getElementById('tts-toggle-btn');
@@ -1394,6 +1399,11 @@
             if (helpLbl) helpLbl.innerText = t('tts_help_read');
             const helpIcn = document.getElementById('tts-help-icon');
             if (helpIcn) helpIcn.innerText = '🔊';
+        }
+
+        function pickStatusRandom(arr) {
+            if (!arr || arr.length === 0) return '';
+            return arr[Math.floor(Math.random() * arr.length)];
         }
 
         function generateIntelligentBriefing(lang) {
@@ -1422,7 +1432,12 @@
 
             if (lang === 'de') {
                 if (isAllOk) {
-                    return `Gamingpig Telemetrie-Assistent initialisiert. Live-Systemdiagnose: Alle sechs Kern-Dienste und Schnittstellen arbeiten mit optimaler Performance. Der Spotify Live-Player, stats.fm, Songtexte und unsere vierstufige Cover-Pipeline laufen mit blitzschneller Reaktionszeit von ${spotifyLatency}. Die Netzwerk-Latenz beträgt ${networkPing}. Sämtliche Systeme sind nominal und einsatzbereit.`;
+                    const variations = [
+                        `Gamingpig Telemetrie-Assistent initialisiert. Live-Systemdiagnose: Alle sechs Kern-Dienste und Schnittstellen arbeiten mit optimaler Performance. Der Spotify Live-Player, stats.fm, Songtexte und unsere vierstufige Cover-Pipeline laufen mit blitzschneller Reaktionszeit von ${spotifyLatency}. Die Netzwerk-Latenz beträgt ${networkPing}. Sämtliche Systeme sind nominal und einsatzbereit.`,
+                        `System-Check vollständig. Alle 6 Module laufen auf Hochtouren mit 0% Paketverlust. Spotify-Sync und Cover-Resolver antworten in rasanten ${spotifyLatency}. Telemetrie-Status: 100% stabil.`,
+                        `Cockpit-Telemetrie online. Keine Anomalien festgestellt. Die Schnittstellen zu Spotify, Discord und CDNs liefern Spitzenwerte. Alle Systeme sind scharf geschaltet.`
+                    ];
+                    return pickStatusRandom(variations);
                 } else if (offlineServices.length > 0) {
                     return `Achtung, Störungsmeldung im System. Aktuell sind ${onlineCount} von sechs Diensten betriebsbereit. Folgende Endpunkte antworten derzeit nicht: ${offlineServices.join(', ')}. Sofort-Hilfen und Fehlerbehebungen stehen unten auf dieser Seite bereit.`;
                 } else {
@@ -1430,7 +1445,11 @@
                 }
             } else if (lang === 'en') {
                 if (isAllOk) {
-                    return `Gamingpig Telemetry Assistant online. System diagnostics complete: All six core infrastructure services are operating at peak performance. Spotify live player, stats.fm stories, synchronized lyrics, and multi-CDN cover pipelines are responding with ultra-low latency of ${spotifyLatency}. All systems nominal and fully operational.`;
+                    const variations = [
+                        `Gamingpig Telemetry Assistant online. System diagnostics complete: All six core infrastructure services are operating at peak performance. Spotify live player, stats.fm stories, synchronized lyrics, and multi-CDN cover pipelines are responding with ultra-low latency of ${spotifyLatency}. All systems nominal and fully operational.`,
+                        `Diagnostic scan clear. All 6 services firing on all cylinders with latency of ${spotifyLatency}. Network health is optimal. Zero issues detected.`
+                    ];
+                    return pickStatusRandom(variations);
                 } else if (offlineServices.length > 0) {
                     return `Attention, system alert detected. Currently ${onlineCount} of six services are active. The following endpoints are temporarily unreachable: ${offlineServices.join(', ')}. Please review the instant troubleshooting guides below.`;
                 } else {
@@ -1514,6 +1533,7 @@
             let chunkIdx = 0;
 
             function playNextStatusChunk() {
+                if (!activeSpeakingMode) return;
                 if (chunkIdx >= sentences.length) {
                     stopSpeech();
                     if (onEndCallback) onEndCallback();
@@ -1535,10 +1555,12 @@
                 if (matchingVoice) u.voice = matchingVoice;
 
                 u.onend = () => {
+                    if (!activeSpeakingMode) return;
                     playNextStatusChunk();
                 };
 
                 u.onerror = () => {
+                    if (!activeSpeakingMode) return;
                     playNextStatusChunk();
                 };
 

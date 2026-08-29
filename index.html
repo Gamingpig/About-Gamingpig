@@ -9549,6 +9549,11 @@
             ttsSpeak(text, btnEl);
         };
 
+        function pickRandom(arr) {
+            if (!arr || arr.length === 0) return '';
+            return arr[Math.floor(Math.random() * arr.length)];
+        }
+
         function getDynamicStatusSpeech() {
             const lang = currentLang || 'de';
             const now = new Date();
@@ -9574,15 +9579,32 @@
             else greeting = 'Gute Nacht';
 
             if (lang === 'de') {
-                let text = `${greeting}! Es ist ${timeStr} Uhr. Hier ist dein intelligenter Live-Status für Gamingpig: `;
-                if (isPlaying) {
-                    text += `Im Live-Player läuft aktuell "${songTitle}" von ${songArtist}. Cover-Engine, Stream-Sync und Animationen sind aktiv. `;
-                } else {
-                    text += `Im Musik-Hub ist es gerade ruhig im entspannten Zen-Modus. `;
-                }
-                text += `Auf dem offiziellen Discord-Server sind aktuell ${onlineCount} bei ${memberCount}. `;
-                text += `Alle Web-Systeme, PWA-Caches und Schnittstellen arbeiten nominal mit 100% Performance.`;
-                return text;
+                const intros = [
+                    `${greeting}! System-Check um ${timeStr} Uhr. Hier ist dein frischer Live-Status für Gamingpig:`,
+                    `Yo! Zeitstempel: ${timeStr} Uhr. Telemetrie-Assistent meldet sich mit den neuesten Daten:`,
+                    `Moin! Status-Protokoll um ${timeStr} Uhr initialisiert. Schnall dich an:`,
+                    `Gamingpig Matrix-Cockpit um ${timeStr} Uhr aktiv. Vibe-Check läuft:`
+                ];
+                const musicPhrases = isPlaying ? [
+                    `Im Live-Hub hämmert gerade "${songTitle}" von ${songArtist}. Cover-Engine auf Anschlag, Beat-Sync läuft auf 100%.`,
+                    `Aktueller Soundtrack deines Besuchs: "${songTitle}" von ${songArtist}. Volle Musik-Power aktiv.`,
+                    `Im Hintergrund pumpt "${songTitle}" von ${songArtist} durch die Speaker. HD-Artwork aufgelöst, Lyrics synchronisiert.`
+                ] : [
+                    `Im Musik-Deck herrscht gerade pure Ruhe – entspannter Zen-Modus zum Fokussieren.`,
+                    `Aktuell läuft kein Song. Zeit für pure Konzentration oder starte gleich einen Track über die Command Palette.`,
+                    `Im Musik-Hub ist chilliger Leerlauf im Zen-State.`
+                ];
+                const discordPhrases = [
+                    `Auf unserem offiziellen Discord-Server sind aktuell ${onlineCount} am Start.`,
+                    `Community-Radar meldet ${onlineCount} auf Discord.`,
+                    `Im Discord-HQ treiben sich gerade ${onlineCount} bei ${memberCount} rum.`
+                ];
+                const systemPhrases = [
+                    `Alle 16.000 Zeilen Code, Caches und APIs laufen absolut butterweich mit 0% Lag.`,
+                    `Homelab-Server schnurren, PWA-Service-Worker ist scharf geschaltet und die FPS-Rate ist stabil.`,
+                    `Keine Bugs in Sicht, Server sind kühl und die Performance ist auf Anschlag.`
+                ];
+                return `${pickRandom(intros)} ${pickRandom(musicPhrases)} ${pickRandom(discordPhrases)} ${pickRandom(systemPhrases)}`;
             } else if (lang === 'en') {
                 let enGreeting = 'Hello';
                 if (hours >= 5 && hours < 12) enGreeting = 'Good morning';
@@ -9590,51 +9612,111 @@
                 else if (hours >= 18 && hours < 22) enGreeting = 'Good evening';
                 else enGreeting = 'Good night';
 
-                let text = `${enGreeting}! It is ${timeStr}. Here is your live telemetry briefing for Gamingpig: `;
-                if (isPlaying) {
-                    text += `Currently streaming live: "${songTitle}" by ${songArtist}. Cover pipeline and visualizer engines are running at full speed. `;
-                } else {
-                    text += `The music dashboard is currently resting in peaceful Zen mode. `;
-                }
-                text += `On the official Discord server, ${onlineCount} are active out of ${memberCount}. `;
-                text += `All systems, service workers, and APIs are 100% nominal and healthy.`;
-                return text;
+                const intros = [
+                    `${enGreeting}! Telemetry scan at ${timeStr}. Here is your live Gamingpig status briefing:`,
+                    `Yo! Timestamp: ${timeStr}. Matrix assistant reporting in with live telemetry:`,
+                    `Hey there! Live diagnostic check at ${timeStr}. Let's see what's happening:`
+                ];
+                const musicPhrases = isPlaying ? [
+                    `Currently bumping through the speakers: "${songTitle}" by ${songArtist}. Cover decoders and stream telemetry running at full speed.`,
+                    `Live music feed active: "${songTitle}" by ${songArtist}. Soundwaves synchronized, vibe is 100%.`
+                ] : [
+                    `The music dashboard is currently resting in a peaceful Zen mode.`,
+                    `No audio track playing right now. Pure focus mode active.`
+                ];
+                const discordPhrases = [
+                    `Over on Discord, ${onlineCount} are currently active in the server.`,
+                    `Community radar shows ${onlineCount} hanging out on the Discord hub.`
+                ];
+                const systemPhrases = [
+                    `All 16,000 lines of code, service workers, and APIs are running buttery smooth with zero lag.`,
+                    `All systems 100% nominal, latency is ultra-low, and everything is firing on all cylinders.`
+                ];
+                return `${pickRandom(intros)} ${pickRandom(musicPhrases)} ${pickRandom(discordPhrases)} ${pickRandom(systemPhrases)}`;
             } else if (lang === 'es') {
-                let text = `¡Hola! Son las ${timeStr}. Informe de estado en vivo de Gamingpig: `;
-                if (isPlaying) {
-                    text += `Reproduciendo en vivo: "${songTitle}" de ${songArtist}. `;
-                } else {
-                    text += `El reproductor está en modo Zen reposado. `;
-                }
-                text += `En el servidor de Discord hay ${onlineCount}. Todos los sistemas y APIs funcionan al 100% con rendimiento óptimo.`;
-                return text;
+                const intros = [
+                    `¡Hola! Son las ${timeStr}. Informe de telemetría en vivo de Gamingpig:`,
+                    `¡Buenas! Hora del sistema: ${timeStr}. Estado en tiempo real:`
+                ];
+                const musicPhrases = isPlaying ? [
+                    `Sonando ahora mismo: "${songTitle}" de ${songArtist}. Pipeline de carátulas y audio al 100%.`,
+                    `Música en directo: "${songTitle}" de ${songArtist}.`
+                ] : [
+                    `El reproductor está en modo Zen tranquilo.`,
+                    `Sin música por ahora, pura concentración.`
+                ];
+                const discordPhrases = [
+                    `En Discord hay ${onlineCount} activos.`,
+                    `La comunidad tiene ${onlineCount} conectados en Discord.`
+                ];
+                const systemPhrases = [
+                    `Todas las APIs, Service Workers y 16.000 líneas de código funcionan con fluidez total y cero latencia.`,
+                    `Sistemas al 100% nominales y servidores estables.`
+                ];
+                return `${pickRandom(intros)} ${pickRandom(musicPhrases)} ${pickRandom(discordPhrases)} ${pickRandom(systemPhrases)}`;
             } else if (lang === 'fr') {
-                let text = `Bonjour ! Il est ${timeStr}. Rapport d'état en direct de Gamingpig : `;
-                if (isPlaying) {
-                    text += `En cours de lecture : "${songTitle}" par ${songArtist}. `;
-                } else {
-                    text += `Le lecteur est en mode Zen relaxant. `;
-                }
-                text += `Sur le serveur Discord, ${onlineCount} sont connectés. Tous les systèmes et services fonctionnent à 100%.`;
-                return text;
+                const intros = [
+                    `Bonjour ! Il est ${timeStr}. Diagnostic en direct pour Gamingpig :`,
+                    `Salut ! Point système à ${timeStr}. Voici les métriques en temps réel :`
+                ];
+                const musicPhrases = isPlaying ? [
+                    `Morceau en cours : "${songTitle}" par ${songArtist}. Moteur de pochettes et synchronisation au maximum.`,
+                    `En direct dans les haut-parleurs : "${songTitle}" par ${songArtist}.`
+                ] : [
+                    `Le lecteur est en mode Zen reposant.`,
+                    `Pas de musique en ce moment, concentration maximale.`
+                ];
+                const discordPhrases = [
+                    `Sur Discord, ${onlineCount} sont actuellement connectés.`,
+                    `Le serveur Discord compte ${onlineCount} actifs.`
+                ];
+                const systemPhrases = [
+                    `Toutes les 16 000 lignes de code, caches et APIs tournent avec une fluidité absolue.`,
+                    `Systèmes 100% opérationnels, latence minimale.`
+                ];
+                return `${pickRandom(intros)} ${pickRandom(musicPhrases)} ${pickRandom(discordPhrases)} ${pickRandom(systemPhrases)}`;
             } else if (lang === 'pt') {
-                let text = `Olá! São ${timeStr}. Relatório de status em tempo real do Gamingpig: `;
-                if (isPlaying) {
-                    text += `Tocando agora: "${songTitle}" de ${songArtist}. `;
-                } else {
-                    text += `O reprodutor está em modo Zen tranquilo. `;
-                }
-                text += `No servidor do Discord, ${onlineCount} estão conectados. Todos os sistemas e APIs estão operando com 100% de estabilidade.`;
-                return text;
+                const intros = [
+                    `Olá! São ${timeStr}. Relatório de telemetria em tempo real do Gamingpig:`,
+                    `Fala aí! Horário: ${timeStr}. Status ao vivo:`
+                ];
+                const musicPhrases = isPlaying ? [
+                    `Tocando agora a todo vapor: "${songTitle}" de ${songArtist}. Decodificador de capas e stream a 100%.`,
+                    `Na caixa de som agora: "${songTitle}" de ${songArtist}.`
+                ] : [
+                    `O reprodutor está em modo Zen relaxante.`,
+                    `Sem música no momento, foco total.`
+                ];
+                const discordPhrases = [
+                    `No Discord temos ${onlineCount} conectados.`,
+                    `Comunidade com ${onlineCount} ativos no servidor Discord.`
+                ];
+                const systemPhrases = [
+                    `Todas as 16.000 linhas de código e APIs operando perfeitamente sem engasgos.`,
+                    `Sistemas 100% estáveis e nominais.`
+                ];
+                return `${pickRandom(intros)} ${pickRandom(musicPhrases)} ${pickRandom(discordPhrases)} ${pickRandom(systemPhrases)}`;
             } else if (lang === 'tr') {
-                let text = `Merhaba! Saat ${timeStr}. Gamingpig canlı durum brifingi: `;
-                if (isPlaying) {
-                    text += `Şu anda çalan parça: ${songArtist} tarafından seslendirilen "${songTitle}". `;
-                } else {
-                    text += `Müzik çalar şu anda huzurlu Zen modunda. `;
-                }
-                text += `Discord sunucusunda ${onlineCount} aktif. Tüm sistemler ve altyapı %100 hızla sorunsuz çalışıyor.`;
-                return text;
+                const intros = [
+                    `Merhaba! Saat ${timeStr}. Gamingpig canlı telemetri durum raporu:`,
+                    `Selam! Sistem saati: ${timeStr}. Canlı veriler hazır:`
+                ];
+                const musicPhrases = isPlaying ? [
+                    `Şu an çalan bomba parça: ${songArtist} - "${songTitle}". Kapak motoru ve akış tam gaz devrede.`,
+                    `Canlı müzik yayını: ${songArtist} tarafından seslendirilen "${songTitle}".`
+                ] : [
+                    `Müzik çalar şu anda huzurlu ve sessiz Zen modunda.`,
+                    `Şu an çalan şarkı yok, tam odaklanma modu açık.`
+                ];
+                const discordPhrases = [
+                    `Discord sunucumuzda şu an ${onlineCount} aktif.`,
+                    `Topluluk radarında Discord üzerinde ${onlineCount} görünüyor.`
+                ];
+                const systemPhrases = [
+                    `16.000 satır kod, Service Worker ve tüm API'lar sıfır gecikmeyle yağ gibi akıyor.`,
+                    `Tüm sistemler %100 nominal ve hazır durumda.`
+                ];
+                return `${pickRandom(intros)} ${pickRandom(musicPhrases)} ${pickRandom(discordPhrases)} ${pickRandom(systemPhrases)}`;
             }
             return `Status: ${timeStr}. Alle Systeme nominal.`;
         }
