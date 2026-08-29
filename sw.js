@@ -7,7 +7,7 @@
 // - Sofortige Übernahme: self.skipWaiting() & clients.claim()
 // ==============================================================================
 
-const SW_VERSION = "24.132.9";
+const SW_VERSION = "24.133.0";
 const CACHE_NAME = `gamingpig-cache-v${SW_VERSION}`;
 const CACHE_PREFIX = "gamingpig-cache-";
 
@@ -16,6 +16,7 @@ const PRECACHE_URLS = [
     "./",
     "./index.html",
     "./status.html",
+    "./push-admin.html",
     "./release-v24-115.html",
     "./privacy.html",
     "./manifest.json",

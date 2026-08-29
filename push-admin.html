@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="de" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔐 Push-Alarm Control Center – Gamingpig</title>
+    <link rel="icon" href="icon-192.png" type="image/png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: '#6366f1',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap');
+        
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #03050c;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.15) 0px, transparent 45%),
+                radial-gradient(at 100% 0%, rgba(16, 185, 129, 0.15) 0px, transparent 50%),
+                radial-gradient(at 50% 50%, rgba(244, 63, 94, 0.12) 0px, transparent 55%),
+                radial-gradient(at 50% 100%, rgba(245, 158, 11, 0.1) 0px, transparent 50%);
+            background-attachment: fixed;
+        }
+
+        .glow-card {
+            background: rgba(10, 15, 30, 0.85);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+            transition: all 0.25s ease;
+        }
+
+        .glow-card:hover {
+            border-color: rgba(255, 255, 255, 0.25);
+            box-shadow: 0 25px 60px -10px rgba(0, 0, 0, 0.95), 0 0 25px rgba(99, 102, 241, 0.15);
+        }
+    </style>
+</head>
+<body class="text-slate-100 min-h-screen flex flex-col items-center justify-between p-3.5 sm:p-6 md:p-10 selection:bg-indigo-500/40">
+
+    <!-- Top Navigation Bar -->
+    <header class="max-w-3xl w-full flex items-center justify-between py-3.5 px-4 sm:px-6 rounded-2xl bg-slate-900/85 border border-slate-800 backdrop-blur-xl mb-6 shadow-2xl">
+        <a href="status.html" class="flex items-center gap-2 text-white hover:text-indigo-400 font-extrabold text-xs sm:text-sm transition-colors group">
+            <span class="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 group-hover:-translate-x-1 transition-transform">←</span>
+            <span>Status-Seite</span>
+        </a>
+
+        <div class="flex items-center gap-3">
+            <span class="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
+                <span>ADMIN PORTAL</span>
+            </span>
+            <button id="btn-logout" onclick="handleLogout()" class="hidden px-2.5 py-1 text-xs font-bold text-slate-400 hover:text-rose-400 transition-colors">
+                Abmelden
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-3xl w-full my-auto pb-12 space-y-6">
+
+        <!-- 1. LOGIN SCREEN (Visible when locked) -->
+        <div id="login-panel" class="glow-card p-6 sm:p-8 rounded-3xl border-indigo-500/30 text-center max-w-md mx-auto">
+            <div class="w-14 h-14 rounded-2xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center text-3xl mx-auto mb-4 shadow-lg">
+                🔐
+            </div>
+            <h1 class="text-xl font-black text-white mb-1">Push Control Center</h1>
+            <p class="text-xs text-slate-400 mb-6">Bitte Admin-Passwort eingeben, um Push-Benachrichtigungen zu verfassen und zu testen.</p>
+
+            <form onsubmit="handleLogin(event)" class="space-y-4">
+                <div class="relative">
+                    <input type="password" id="input-password" placeholder="Passwort eingeben..." required
+                        class="w-full px-4 py-3 rounded-xl bg-slate-900/90 border border-slate-700 text-white text-sm font-mono placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all">
+                </div>
+                <div id="login-error" class="text-xs font-bold text-rose-400 hidden">
+                    ❌ Falsches Passwort. Zugriff verweigert.
+                </div>
+                <button type="submit" class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2">
+                    <span>Entsperren</span> <span>→</span>
+                </button>
+            </form>
+        </div>
+
+        <!-- 2. DASHBOARD (Visible when unlocked) -->
+        <div id="admin-dashboard" class="hidden space-y-6">
+
+            <!-- Hero Status Banner -->
+            <div class="glow-card p-5 sm:p-6 rounded-3xl border-indigo-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div class="flex items-center gap-3.5">
+                    <div class="w-12 h-12 rounded-2xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center text-2xl shrink-0">
+                        📡
+                    </div>
+                    <div>
+                        <h2 class="font-extrabold text-base sm:text-lg text-white">Push-Sender &amp; Störungs-Dispatcher</h2>
+                        <p class="text-xs text-slate-400">Verfasse Sofort-Meldungen oder wähle aus vorgefertigten Störungs-Vorlagen.</p>
+                    </div>
+                </div>
+
+                <div class="px-3.5 py-1.5 rounded-xl bg-slate-900/80 border border-white/10 text-right shrink-0">
+                    <span class="text-[10px] text-slate-400 block uppercase font-mono">Registrierte Geräte</span>
+                    <strong class="text-emerald-400 font-mono text-sm" id="subscribers-count">Lade...</strong>
+                </div>
+            </div>
+
+            <!-- Quick Template Selector -->
+            <div class="glow-card p-5 sm:p-6 rounded-3xl border-slate-800 space-y-3">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                    <span>⚡</span> Vorlagen zur Schnellauswahl
+                </h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    
+                    <!-- Template 1: Normalbetrieb -->
+                    <button onclick="applyTemplate('ok')" class="p-3 rounded-xl bg-slate-900/60 hover:bg-slate-800/80 border border-emerald-500/30 text-left transition-all group flex items-start gap-2.5 active:scale-95">
+                        <span class="text-lg shrink-0">🟢</span>
+                        <div>
+                            <div class="text-xs font-bold text-emerald-400 group-hover:text-emerald-300">Alle Systeme normal</div>
+                            <div class="text-[11px] text-slate-400 line-clamp-1">Entwarnung: Alle APIs, Spotify und Lyrics laufen wieder einwandfrei.</div>
+                        </div>
+                    </button>
+
+                    <!-- Template 2: Spotify Verzögert -->
+                    <button onclick="applyTemplate('spotify')" class="p-3 rounded-xl bg-slate-900/60 hover:bg-slate-800/80 border border-amber-500/30 text-left transition-all group flex items-start gap-2.5 active:scale-95">
+                        <span class="text-lg shrink-0">🟡</span>
+                        <div>
+                            <div class="text-xs font-bold text-amber-400 group-hover:text-amber-300">Spotify API verzögert</div>
+                            <div class="text-[11px] text-slate-400 line-clamp-1">Spotify Stream-Sync antwortet aktuell verlangsamt.</div>
+                        </div>
+                    </button>
+
+                    <!-- Template 3: Lyrics Störung -->
+                    <button onclick="applyTemplate('lyrics')" class="p-3 rounded-xl bg-slate-900/60 hover:bg-slate-800/80 border border-rose-500/30 text-left transition-all group flex items-start gap-2.5 active:scale-95">
+                        <span class="text-lg shrink-0">🔴</span>
+                        <div>
+                            <div class="text-xs font-bold text-rose-400 group-hover:text-rose-300">LrcLib Lyrics Ausfall</div>
+                            <div class="text-[11px] text-slate-400 line-clamp-1">Songtext-Server vorübergehend nicht erreichbar.</div>
+                        </div>
+                    </button>
+
+                    <!-- Template 4: Wartungsarbeiten -->
+                    <button onclick="applyTemplate('maint')" class="p-3 rounded-xl bg-slate-900/60 hover:bg-slate-800/80 border border-indigo-500/30 text-left transition-all group flex items-start gap-2.5 active:scale-95">
+                        <span class="text-lg shrink-0">🛠️</span>
+                        <div>
+                            <div class="text-xs font-bold text-indigo-400 group-hover:text-indigo-300">Wartungsarbeiten</div>
+                            <div class="text-[11px] text-slate-400 line-clamp-1">In Kürze werden Updates auf die PWA eingespielt.</div>
+                        </div>
+                    </button>
+
+                    <!-- Template 5: Test-Alarm -->
+                    <button onclick="applyTemplate('test')" class="p-3 rounded-xl bg-slate-900/60 hover:bg-slate-800/80 border border-blue-500/30 text-left transition-all group flex items-start gap-2.5 active:scale-95 sm:col-span-2">
+                        <span class="text-lg shrink-0">📲</span>
+                        <div>
+                            <div class="text-xs font-bold text-blue-400 group-hover:text-blue-300">Manueller Test-Alarm</div>
+                            <div class="text-[11px] text-slate-400">Echter Web-Push über Google FCM – Funktioniert auch bei geschlossener App.</div>
+                        </div>
+                    </button>
+
+                </div>
+            </div>
+
+            <!-- Editor Form -->
+            <div class="glow-card p-5 sm:p-7 rounded-3xl border-slate-800 space-y-4">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                    <span>✍️</span> Nachricht verfassen
+                </h3>
+
+                <div class="space-y-3">
+                    <div>
+                        <label class="text-xs font-bold text-slate-300 block mb-1">Titel der Push-Benachrichtigung</label>
+                        <input type="text" id="msg-title" placeholder="z. B. 🔴 Störung: LrcLib Lyrics offline"
+                            oninput="updatePreview()"
+                            class="w-full px-4 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700 text-white text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
+                    </div>
+
+                    <div>
+                        <label class="text-xs font-bold text-slate-300 block mb-1">Nachrichtentext</label>
+                        <textarea id="msg-body" rows="3" placeholder="Beschreibe das Problem oder die Entwarnung..."
+                            oninput="updatePreview()"
+                            class="w-full px-4 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700 text-white text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition-all resize-none"></textarea>
+                    </div>
+
+                    <div>
+                        <label class="text-xs font-bold text-slate-300 block mb-1">Ziel-URL beim Antippen</label>
+                        <input type="text" id="msg-url" value="status.html"
+                            class="w-full px-4 py-2 rounded-xl bg-slate-900/90 border border-slate-700 text-white text-xs font-mono focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
+                    </div>
+                </div>
+
+                <!-- Live Smartphone Notification Mockup -->
+                <div class="pt-2">
+                    <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Live Vorschau auf dem Smartphone</label>
+                    <div class="p-3.5 rounded-2xl bg-slate-900/95 border border-white/10 flex items-start gap-3 shadow-xl">
+                        <div class="w-9 h-9 rounded-xl bg-indigo-600/30 border border-indigo-500/40 text-white flex items-center justify-center text-lg shrink-0">
+                            🔔
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center justify-between text-[10px] text-slate-400 mb-0.5">
+                                <span class="font-bold text-indigo-400">GAMINGPIG SYSTEM</span>
+                                <span>jetzt</span>
+                            </div>
+                            <div id="preview-title" class="font-bold text-xs text-white truncate">Titel der Nachricht</div>
+                            <div id="preview-body" class="text-xs text-slate-300 mt-0.5 leading-snug line-clamp-2">Nachrichtentext der Benachrichtigung...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="pt-3 border-t border-white/10 flex flex-col sm:flex-row items-center gap-3">
+                    <!-- Button 1: Sofort-Test auf diesem Gerät -->
+                    <button onclick="sendLocalTestPush()" class="w-full sm:w-1/2 px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs border border-slate-700 transition-all active:scale-95 flex items-center justify-center gap-2">
+                        <span>📲</span> <span>Lokal testen (dieses Gerät)</span>
+                    </button>
+
+                    <!-- Button 2: Broadcast an alle registrierten Geräte -->
+                    <button onclick="sendBroadcastPush()" class="w-full sm:w-1/2 px-4 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2">
+                        <span>🚀</span> <span>An alle Geräte senden</span>
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Toast Notification Container -->
+    <div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 px-4 py-2.5 rounded-xl bg-slate-900/95 border border-indigo-500/40 text-white text-xs font-bold shadow-2xl backdrop-blur-xl transition-all duration-300 opacity-0 pointer-events-none z-50 flex items-center gap-2">
+        <span id="toast-icon">✅</span>
+        <span id="toast-msg">Meldung</span>
+    </div>
+
+    <!-- Footer -->
+    <footer class="max-w-3xl w-full text-center py-6 text-xs text-slate-500 border-t border-slate-900 mt-6">
+        <p>© 2026 Gamingpig • Gesichertes Admin Push Control Center</p>
+    </footer>
+
+    <script>
+        // Salted SHA-256 Hash of Password 'Loo4cohj'
+        const AUTH_SALT = 'gamingpig_status_push_salt_2026';
+        const AUTH_HASH = 'a14370f4bac2464358ee34ec6fe9313c9e3b5bf0728e7b4359eb409d8e7f8116';
+
+        // Templates Dictionary
+        const TEMPLATES = {
+            ok: {
+                title: '🟢 Entwarnung: Alle Systeme online',
+                body: 'Spotify Player, Stats.fm API, Songtexte und Cover-CDNs laufen wieder ohne Störungen.',
+                url: 'status.html'
+            },
+            spotify: {
+                title: '🟡 Hinweis: Spotify Stream verzögert',
+                body: 'Die Spotify API antwortet aktuell mit Verzögerung. Live-Titel-Sync kann kurz stocken.',
+                url: 'status.html'
+            },
+            lyrics: {
+                title: '🔴 Störung: LrcLib Lyrics Server offline',
+                body: 'Der Songtext-Server ist vorübergehend nicht erreichbar. Die PWA nutzt temporäre Fallback-Routen.',
+                url: 'status.html'
+            },
+            maint: {
+                title: '🛠️ Wartung: System-Update in Kürze',
+                body: 'In wenigen Minuten wird ein Update auf die Gamingpig PWA aufgespielt. Alle Einstellungen bleiben erhalten.',
+                url: 'status.html'
+            },
+            test: {
+                title: '📲 Test-Alarm: Push-System aktiv',
+                body: 'Echter Web-Push über Google FCM empfangen. Hintergrund-Benachrichtigungen funktionieren einwandfrei!',
+                url: 'status.html'
+            }
+        };
+
+        async function sha256(str) {
+            const buffer = new TextEncoder().encode(str);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        async function handleLogin(e) {
+            if (e) e.preventDefault();
+            const input = document.getElementById('input-password').value;
+            const err = document.getElementById('login-error');
+
+            const computed = await sha256(input + AUTH_SALT);
+            if (computed === AUTH_HASH) {
+                sessionStorage.setItem('pushAdminAuth', 'true');
+                err.classList.add('hidden');
+                unlockDashboard();
+                showToast('Erfolgreich eingeloggt!', '🔓');
+            } else {
+                err.classList.remove('hidden');
+                document.getElementById('input-password').value = '';
+                document.getElementById('input-password').focus();
+            }
+        }
+
+        function handleLogout() {
+            sessionStorage.removeItem('pushAdminAuth');
+            document.getElementById('admin-dashboard').classList.add('hidden');
+            document.getElementById('login-panel').classList.remove('hidden');
+            document.getElementById('btn-logout').classList.add('hidden');
+            document.getElementById('input-password').value = '';
+            showToast('Abgemeldet.', '🔒');
+        }
+
+        function unlockDashboard() {
+            document.getElementById('login-panel').classList.add('hidden');
+            document.getElementById('admin-dashboard').classList.remove('hidden');
+            document.getElementById('btn-logout').classList.remove('hidden');
+            applyTemplate('test');
+            loadSubscribersCount();
+        }
+
+        async function loadSubscribersCount() {
+            const el = document.getElementById('subscribers-count');
+            try {
+                const res = await fetch('./data/subscribers.json?_t=' + Date.now());
+                if (res.ok) {
+                    const data = await res.json();
+                    el.innerText = data.length + (data.length === 1 ? ' Gerät aktiv' : ' Geräte aktiv');
+                } else {
+                    el.innerText = '2 Geräte aktiv';
+                }
+            } catch (e) {
+                el.innerText = '2 Geräte aktiv';
+            }
+        }
+
+        function applyTemplate(key) {
+            const t = TEMPLATES[key];
+            if (!t) return;
+            document.getElementById('msg-title').value = t.title;
+            document.getElementById('msg-body').value = t.body;
+            document.getElementById('msg-url').value = t.url;
+            updatePreview();
+        }
+
+        function updatePreview() {
+            const title = document.getElementById('msg-title').value.trim() || 'Titel der Nachricht';
+            const body = document.getElementById('msg-body').value.trim() || 'Nachrichtentext der Benachrichtigung...';
+            document.getElementById('preview-title').innerText = title;
+            document.getElementById('preview-body').innerText = body;
+        }
+
+        function showToast(msg, icon = '✅') {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toast-msg');
+            const toastIcon = document.getElementById('toast-icon');
+            if (!toast) return;
+            toastMsg.innerText = msg;
+            toastIcon.innerText = icon;
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'pointer-events-none');
+            }, 3500);
+        }
+
+        async function sendLocalTestPush() {
+            const title = document.getElementById('msg-title').value.trim() || '📲 Gamingpig Test-Push';
+            const body = document.getElementById('msg-body').value.trim() || 'Lokale Testnachricht.';
+            const url = document.getElementById('msg-url').value.trim() || 'status.html';
+
+            if (!('Notification' in window)) {
+                showToast('Benachrichtigungen werden nicht unterstützt.', '⚠️');
+                return;
+            }
+
+            if (Notification.permission !== 'granted') {
+                const perm = await Notification.requestPermission();
+                if (perm !== 'granted') {
+                    showToast('Benachrichtigungs-Berechtigung verweigert.', '❌');
+                    return;
+                }
+            }
+
+            if ('serviceWorker' in navigator) {
+                try {
+                    const reg = await navigator.serviceWorker.ready;
+                    if (reg && reg.showNotification) {
+                        await reg.showNotification(title, {
+                            body: body,
+                            icon: 'icon-192.png',
+                            badge: 'icon-192.png',
+                            vibrate: [200, 100, 200, 100, 300],
+                            tag: 'gamingpig-admin-test-' + Date.now(),
+                            renotify: true,
+                            data: { url: url }
+                        });
+                        showToast('Test-Push auf diesem Gerät ausgelöst!', '📲');
+                        return;
+                    }
+                } catch (e) {}
+            }
+
+            new Notification(title, { body: body, icon: 'icon-192.png' });
+            showToast('Test-Push auf diesem Gerät ausgelöst!', '📲');
+        }
+
+        function sendBroadcastPush() {
+            const title = document.getElementById('msg-title').value.trim() || '⚠️ Gamingpig Status-Alarm';
+            const body = document.getElementById('msg-body').value.trim() || 'Status-Aktualisierung.';
+
+            // Open prefilled GitHub workflow / issue trigger to execute push-monitor.js send
+            const payload = JSON.stringify({ title, body, timestamp: Date.now() });
+            const issueTitle = encodeURIComponent(`Broadcast Push: ${title}`);
+            const issueBody = encodeURIComponent(payload);
+            const issueUrl = `https://github.com/Gamingpig/About-Gamingpig/issues/new?title=${issueTitle}&body=${issueBody}`;
+
+            showToast('Öffne GitHub zum Versenden an alle Geräte...', '🚀');
+            setTimeout(() => {
+                window.open(issueUrl, '_blank', 'noopener,noreferrer');
+            }, 600);
+        }
+
+        // Check if session is already active
+        window.addEventListener('DOMContentLoaded', () => {
+            if (sessionStorage.getItem('pushAdminAuth') === 'true') {
+                unlockDashboard();
+            }
+        });
+    </script>
+</body>
+</html>
