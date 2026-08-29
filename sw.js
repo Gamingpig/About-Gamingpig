@@ -7,7 +7,7 @@
 // - Sofortige Übernahme: self.skipWaiting() & clients.claim()
 // ==============================================================================
 
-const SW_VERSION = "24.133.9";
+const SW_VERSION = "24.134.0";
 const CACHE_NAME = `gamingpig-cache-v${SW_VERSION}`;
 const CACHE_PREFIX = "gamingpig-cache-";
 
@@ -25,39 +25,27 @@ const PRECACHE_URLS = [
     "./og-v2.jpg"
 ];
 
-// Sofortige Installation ohne Warten
+// Installation: Precache der wichtigsten Core-Dateien & sofortige Aktivierung
 self.addEventListener("install", (event) => {
-    self.skipWaiting();
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
             return cache.addAll(PRECACHE_URLS);
-        }).catch((err) => {
-            console.warn("[SW] Precaching Fehler (nicht kritisch):", err);
-        })
+        }).then(() => self.skipWaiting())
     );
 });
 
-// Aktivierung: Alte Gamingpig-Caches gezielt löschen und Clients sofort binden
+// Aktivierung: Alte Caches sofort löschen und Clients beanspruchen
 self.addEventListener("activate", (event) => {
     event.waitUntil(
         caches.keys().then((keys) => {
             return Promise.all(
                 keys.map((key) => {
-                    // Lösche alte Versionen dieses Portfolios, fremde Caches nicht anfassen
                     if (key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME) {
-                        console.log("[SW] Lösche veralteten Cache:", key);
                         return caches.delete(key);
                     }
-                    if (key.startsWith("gamingpig-portfolio-")) {
-                        console.log("[SW] Lösche alten Legacy-Cache:", key);
-                        return caches.delete(key);
-                    }
-                    return Promise.resolve();
                 })
             );
-        }).then(() => {
-            return self.clients.claim();
-        })
+        }).then(() => self.clients.claim())
     );
 });
 
@@ -69,16 +57,27 @@ self.addEventListener("message", (event) => {
 });
 
 
-// Benachrichtigungs-Klick-Handler (öffnet oder fokussiert die Status-Seite)
+// Benachrichtigungs-Klick-Handler (öffnet oder fokussiert die Ziel-Seite)
 self.addEventListener("notificationclick", (event) => {
     event.notification.close();
-    const targetUrl = (event.notification.data && event.notification.data.url) ? event.notification.data.url : "./status.html";
+    const notifData = event.notification.data || {};
+    const targetUrl = notifData.url ? notifData.url : "./status.html";
+    const isMusicEvent = notifData.type === 'music_event' || targetUrl.includes('#music');
 
     event.waitUntil(
         clients.matchAll({ type: "window", includeUncontrolled: true }).then((windowClients) => {
             for (const client of windowClients) {
-                if (client.url.includes("status.html") && "focus" in client) {
-                    return client.focus();
+                if (isMusicEvent) {
+                    if ((client.url.includes("index.html") || client.url.endsWith("/") || client.url.includes("#music")) && "focus" in client) {
+                        if ("navigate" in client && !client.url.includes("#music")) {
+                            client.navigate("./#music");
+                        }
+                        return client.focus();
+                    }
+                } else {
+                    if (client.url.includes("status.html") && "focus" in client) {
+                        return client.focus();
+                    }
                 }
             }
             if (clients.openWindow) {
