@@ -1230,14 +1230,13 @@
         // ========================================================= //
         // Text to Speech (TTS)                                      //
         // ========================================================= //
+        window._ttsUtterances = [];
+
         function stopSpeech() {
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
             }
-            if (window._ttsKeepAlive) {
-                clearInterval(window._ttsKeepAlive);
-                window._ttsKeepAlive = null;
-            }
+            window._ttsUtterances = [];
             isSpeaking = false;
             const btn = document.getElementById('tts-toggle-btn');
             if (btn) btn.classList.remove('bg-emerald-600', 'text-white');
@@ -1292,11 +1291,15 @@
             const langMap = { de: 'de-DE', en: 'en-US', es: 'es-ES', fr: 'fr-FR', pt: 'pt-BR', tr: 'tr-TR' };
             const targetLang = langMap[currentLang] || 'de-DE';
 
-            // Split into sentences / manageable chunks so mobile engines don't choke
-            const sentences = textToRead.split(/(?<=[.!?])\s+/).filter(s => s.trim().length > 0);
+            // Split into clean sentence chunks
+            const sentences = textToRead
+                .split(/(?<=[.!?])\s+/)
+                .map(s => s.trim())
+                .filter(s => s.length > 0);
+
             if (sentences.length === 0) return;
 
-            // Mark speaking
+            // Mark speaking UI
             isSpeaking = true;
             const btn = document.getElementById('tts-toggle-btn');
             if (btn) btn.classList.add('bg-emerald-600', 'text-white');
@@ -1305,68 +1308,38 @@
             const icn = document.getElementById('tts-icon');
             if (icn) icn.innerText = '⏹️';
 
-            let curIndex = 0;
             const voices = window.speechSynthesis.getVoices() || [];
             const langPrefix = targetLang.split('-')[0];
             const matchingVoice = voices.find(v => v.lang === targetLang) ||
                                   voices.find(v => v.lang && v.lang.startsWith(langPrefix));
 
-            function speakNext() {
-                if (!isSpeaking || curIndex >= sentences.length) {
-                    stopSpeech();
-                    return;
+            // Queue all utterances cleanly in native queue
+            window._ttsUtterances = [];
+            const total = sentences.length;
+
+            sentences.forEach((chunk, index) => {
+                const u = new SpeechSynthesisUtterance(chunk);
+                u.lang = targetLang;
+                u.rate = 1.0;
+                u.pitch = 1.0;
+                u.volume = 1.0;
+                if (matchingVoice) u.voice = matchingVoice;
+
+                if (index === total - 1) {
+                    u.onend = () => {
+                        stopSpeech();
+                    };
                 }
 
-                const chunk = sentences[curIndex++];
-                const utterance = new SpeechSynthesisUtterance(chunk);
-                utterance.lang = targetLang;
-                utterance.rate = 1.0;
-                utterance.pitch = 1.0;
-                utterance.volume = 1.0;
-                if (matchingVoice) utterance.voice = matchingVoice;
-
-                let resolved = false;
-                const onDone = () => {
-                    if (resolved) return;
-                    resolved = true;
-                    if (isSpeaking) speakNext();
-                };
-
-                utterance.onend = onDone;
-                utterance.onerror = (e) => {
-                    if (e.error !== 'interrupted' && e.error !== 'canceled') {
-                        onDone();
-                    } else {
+                u.onerror = (e) => {
+                    if (index === total - 1) {
                         stopSpeech();
                     }
                 };
 
-                // Watchdog timeout in case onend drops on mobile
-                const maxWait = Math.max(3000, chunk.length * 180);
-                setTimeout(() => {
-                    if (!resolved && isSpeaking) {
-                        onDone();
-                    }
-                }, maxWait);
-
-                window._activeTtsUtterance = utterance;
-                window.speechSynthesis.speak(utterance);
-            }
-
-            // Android keepalive
-            if (window._ttsKeepAlive) clearInterval(window._ttsKeepAlive);
-            window._ttsKeepAlive = setInterval(() => {
-                if (!window.speechSynthesis.speaking) {
-                    clearInterval(window._ttsKeepAlive);
-                    window._ttsKeepAlive = null;
-                    return;
-                }
-                window.speechSynthesis.pause();
-                window.speechSynthesis.resume();
-            }, 10000);
-
-            // Start speaking FIRST chunk SYNCHRONOUSLY inside user click handler!
-            speakNext();
+                window._ttsUtterances.push(u);
+                window.speechSynthesis.speak(u);
+            });
         }
 
 

@@ -9233,38 +9233,9 @@
 
         let ttsQueueActive = false;
 
-        function speakChunkAndWait(text, voice) {
-            return new Promise(resolve => {
-                if (typeof speechSynthesis === 'undefined') return resolve();
-                const u = new SpeechSynthesisUtterance(text);
-                if (voice) u.voice = voice;
-                u.lang = TTS_LANG_BCP47[currentLang || 'de'] || 'de-DE';
-                u.rate = 1.0;
-                u.pitch = 1.0;
-                u.volume = 1.0;
+        window._ttsUtterances = [];
 
-                let finished = false;
-                const done = () => {
-                    if (finished) return;
-                    finished = true;
-                    resolve();
-                };
-
-                u.onend = done;
-                u.onerror = (e) => {
-                    done();
-                };
-
-                // Watchdog: In case mobile browser drops onend event
-                const maxWait = Math.max(3000, text.length * 180);
-                setTimeout(done, maxWait);
-
-                window._activeTtsUtterance = u;
-                speechSynthesis.speak(u);
-            });
-        }
-
-        async function ttsSpeak(text, btnEl) {
+        function ttsSpeak(text, btnEl) {
             if (!text || !text.trim()) return;
 
             if (typeof speechSynthesis === 'undefined') {
@@ -9275,12 +9246,12 @@
             if (ttsQueueActive) {
                 ttsQueueActive = false;
                 speechSynthesis.cancel();
-                if (window._ttsKeepAlive) { clearInterval(window._ttsKeepAlive); window._ttsKeepAlive = null; }
+                window._ttsUtterances = [];
                 ttsSetButtonState(btnEl, 'idle');
                 return;
             }
 
-            // Reset any stuck speech state from previous operations
+            // Reset any stuck speech state
             speechSynthesis.cancel();
             if (speechSynthesis.paused) {
                 speechSynthesis.resume();
@@ -9292,29 +9263,36 @@
 
             ttsQueueActive = true;
             ttsSetButtonState(btnEl, 'speaking');
+            window._ttsUtterances = [];
+            const total = chunks.length;
 
-            // Android Chrome 14s freeze prevention
-            if (window._ttsKeepAlive) clearInterval(window._ttsKeepAlive);
-            window._ttsKeepAlive = setInterval(() => {
-                if (!speechSynthesis.speaking) {
-                    clearInterval(window._ttsKeepAlive);
-                    window._ttsKeepAlive = null;
-                    return;
-                }
-                speechSynthesis.pause();
-                speechSynthesis.resume();
-            }, 10000);
+            chunks.forEach((chunk, index) => {
+                const u = new SpeechSynthesisUtterance(chunk);
+                if (voice) u.voice = voice;
+                u.lang = TTS_LANG_BCP47[currentLang || 'de'] || 'de-DE';
+                u.rate = 1.0;
+                u.pitch = 1.0;
+                u.volume = 1.0;
 
-            try {
-                for (const chunk of chunks) {
-                    if (!ttsQueueActive) break;
-                    await speakChunkAndWait(chunk, voice);
+                if (index === total - 1) {
+                    u.onend = () => {
+                        ttsQueueActive = false;
+                        window._ttsUtterances = [];
+                        ttsSetButtonState(btnEl, 'idle');
+                    };
                 }
-            } finally {
-                ttsQueueActive = false;
-                if (window._ttsKeepAlive) { clearInterval(window._ttsKeepAlive); window._ttsKeepAlive = null; }
-                ttsSetButtonState(btnEl, 'idle');
-            }
+
+                u.onerror = (e) => {
+                    if (index === total - 1) {
+                        ttsQueueActive = false;
+                        window._ttsUtterances = [];
+                        ttsSetButtonState(btnEl, 'idle');
+                    }
+                };
+
+                window._ttsUtterances.push(u);
+                speechSynthesis.speak(u);
+            });
         }
 
         // Sammelt den reinen Bio-Text und liest ihn vor.
