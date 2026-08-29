@@ -15217,8 +15217,12 @@ window.generateShareCard = function() {
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) {
                 stopProgressTracking();
-            } else if (trackIsPlaying) {
-                startProgressTracking();
+            } else {
+                // Sofort API-Poll beim Zurückkommen in den Vordergrund
+                fetchMusicData().then(() => {
+                    scheduleNextMusicPoll();
+                });
+                if (trackIsPlaying) startProgressTracking();
             }
         });
 
