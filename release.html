@@ -514,7 +514,9 @@
 
         // --- Read Aloud (TTS) Engine ---
         window.isSpeaking = false;
-        window._ttsUtterances = [];
+        window._activeUtterance = null;
+        let ttsQueue = [];
+        let ttsCurrentIndex = 0;
 
         const TTS_LANG_MAP = {
             de: 'de-DE',
@@ -525,7 +527,7 @@
             tr: 'tr-TR'
         };
 
-        function splitIntoSpeechChunks(text, maxLen = 160) {
+        function splitIntoSpeechChunks(text, maxLen = 140) {
             if (!text) return [];
             const cleanText = text.replace(/[*_#`~]/g, '').replace(/\s+/g, ' ').trim();
             const sentences = cleanText.split(/(?<=[.!?])\s+/);
@@ -549,7 +551,9 @@
 
         function stopSpeech() {
             window.isSpeaking = false;
-            window._ttsUtterances = [];
+            ttsQueue = [];
+            ttsCurrentIndex = 0;
+            window._activeUtterance = null;
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
             }
@@ -560,6 +564,45 @@
             const icon = document.getElementById('tts-icon');
             if (label) label.innerText = t.tts_read;
             if (icon) icon.innerText = '🔊';
+        }
+
+        function playNextChunk() {
+            if (!window.isSpeaking) return;
+            if (ttsCurrentIndex >= ttsQueue.length) {
+                stopSpeech();
+                return;
+            }
+
+            const chunk = ttsQueue[ttsCurrentIndex];
+            ttsCurrentIndex++;
+
+            const langCode = TTS_LANG_MAP[currentLang || 'de'] || 'de-DE';
+            const spokenText = (langCode && langCode.startsWith('de'))
+                ? chunk.replace(/\bGamingpig\b/gi, 'Gaming Pigg')
+                : chunk;
+
+            const u = new SpeechSynthesisUtterance(spokenText);
+            u.lang = langCode;
+            u.rate = 1.0;
+            u.pitch = 1.0;
+            u.volume = 1.0;
+
+            window._activeUtterance = u;
+
+            u.onend = () => {
+                if (window._activeUtterance === u) window._activeUtterance = null;
+                playNextChunk();
+            };
+
+            u.onerror = () => {
+                if (window._activeUtterance === u) window._activeUtterance = null;
+                playNextChunk();
+            };
+
+            if (window.speechSynthesis.paused) {
+                window.speechSynthesis.resume();
+            }
+            window.speechSynthesis.speak(u);
         }
 
         function toggleReadAloud() {
@@ -573,9 +616,11 @@
                 return;
             }
 
-            window.speechSynthesis.cancel();
-            if (window.speechSynthesis.paused) {
-                window.speechSynthesis.resume();
+            window.isSpeaking = false;
+            ttsQueue = [];
+            ttsCurrentIndex = 0;
+            if ('speechSynthesis' in window && window.speechSynthesis.speaking) {
+                window.speechSynthesis.cancel();
             }
 
             const t = TRANSLATIONS[currentLang] || TRANSLATIONS.de;
@@ -594,7 +639,8 @@
             if (chunks.length === 0) return;
 
             window.isSpeaking = true;
-            window._ttsUtterances = [];
+            ttsQueue = chunks;
+            ttsCurrentIndex = 0;
 
             const btn = document.getElementById('tts-toggle-btn');
             if (btn) btn.classList.add('tts-active');
@@ -603,35 +649,7 @@
             if (label) label.innerText = t.tts_stop;
             if (icon) icon.innerText = '⏹️';
 
-            const langCode = TTS_LANG_MAP[currentLang || 'de'] || 'de-DE';
-            let matchedVoice = null;
-            try {
-                const voices = window.speechSynthesis.getVoices() || [];
-                const prefix = (langCode || '').split('-')[0].toLowerCase();
-                matchedVoice = voices.find(v => v.lang && v.lang.toLowerCase().startsWith(prefix));
-            } catch (e) {}
-
-            const total = chunks.length;
-            chunks.forEach((chunk, index) => {
-                const spokenText = (langCode && langCode.startsWith('de'))
-                    ? chunk.replace(/\bGamingpig\b/gi, 'Gaming Pigg')
-                    : chunk;
-
-                const u = new SpeechSynthesisUtterance(spokenText);
-                u.lang = langCode;
-                u.rate = 1.0;
-                u.pitch = 1.0;
-                u.volume = 1.0;
-                if (matchedVoice) u.voice = matchedVoice;
-
-                if (index === total - 1) {
-                    u.onend = () => stopSpeech();
-                    u.onerror = () => stopSpeech();
-                }
-
-                window._ttsUtterances.push(u);
-                window.speechSynthesis.speak(u);
-            });
+            playNextChunk();
         }
 
         // Init language on load
