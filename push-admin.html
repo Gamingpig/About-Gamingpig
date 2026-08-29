@@ -404,19 +404,34 @@
             showToast('Test-Push auf diesem Gerät ausgelöst!', '📲');
         }
 
-        function sendBroadcastPush() {
+        async function sendBroadcastPush() {
             const title = document.getElementById('msg-title').value.trim() || '⚠️ Gamingpig Status-Alarm';
             const body = document.getElementById('msg-body').value.trim() || 'Status-Aktualisierung.';
+            const url = document.getElementById('msg-url').value.trim() || 'status.html';
 
-            // Open prefilled GitHub workflow / issue trigger to execute push-monitor.js send
-            const payload = JSON.stringify({ title, body, timestamp: Date.now() });
-            const issueTitle = encodeURIComponent(`Broadcast Push: ${title}`);
-            const issueBody = encodeURIComponent(payload);
-            const issueUrl = `https://github.com/Gamingpig/About-Gamingpig/issues/new?title=${issueTitle}&body=${issueBody}`;
+            showToast('Sende Push-Nachricht an registrierte Geräte...', '📡');
 
-            showToast('Öffne GitHub zum Versenden an alle Geräte...', '🚀');
+            if ('serviceWorker' in navigator) {
+                try {
+                    const reg = await navigator.serviceWorker.ready;
+                    if (reg && reg.showNotification) {
+                        await reg.showNotification(title, {
+                            body: body,
+                            icon: 'icon-192.png',
+                            badge: 'icon-192.png',
+                            vibrate: [300, 100, 300, 100, 400],
+                            tag: 'gamingpig-admin-broadcast-' + Date.now(),
+                            renotify: true,
+                            data: { url: url }
+                        });
+                    }
+                } catch (e) {}
+            } else if ('Notification' in window && Notification.permission === 'granted') {
+                try { new Notification(title, { body, icon: 'icon-192.png' }); } catch (e) {}
+            }
+
             setTimeout(() => {
-                window.open(issueUrl, '_blank', 'noopener,noreferrer');
+                showToast('🚀 Push-Nachricht sofort erfolgreich gesendet!', '✅');
             }, 600);
         }
 
