@@ -831,27 +831,29 @@
                 status: isOnline ? 'Online' : 'Offline'
             };
 
-            // 2. stats.fm API check
+            // 2. stats.fm API check (404=no current song is valid, not a server error)
             const statsRes = await pingEndpoint('https://api.stats.fm/v1/users/gamingpig/streams/current');
-            lastDiagnosticResults.statsfm = statsRes;
+            const statsfmOk = statsRes.ok || (statsRes.status && statsRes.status < 500);
+            lastDiagnosticResults.statsfm = { ...statsRes, ok: statsfmOk };
 
-            // 3. Spotify live stream
+            // 3. Spotify live stream (online if stats.fm API is reachable)
             lastDiagnosticResults.spotify = {
-                ok: statsRes.ok,
+                ok: statsfmOk,
                 duration: statsRes.duration,
-                status: statsRes.ok ? 'Synced' : 'Degraded'
+                status: statsfmOk ? 'Reachable' : 'Degraded'
             };
 
             // 4. LrcLib Lyrics Provider
             const lyricsRes = await pingEndpoint('https://lrclib.net/api/get?track_name=test&artist_name=test');
             lastDiagnosticResults.lyrics = lyricsRes;
 
-            // 5. Album Artwork CDNs
+            // 5. Album Artwork CDNs (any HTTP response including 404 = CDN is reachable)
             const coverRes = await pingEndpoint('https://is1-ssl.mzstatic.com/image/thumb/Music/v4/00/00/00/000000.jpg/100x100bb.jpg');
+            const coverOk = coverRes.ok || (coverRes.status && coverRes.status > 0 && coverRes.status < 600 && coverRes.status !== 0);
             lastDiagnosticResults.cover = {
-                ok: coverRes.ok,
+                ok: coverOk,
                 duration: coverRes.duration,
-                status: coverRes.ok ? 'Operational' : 'Slow'
+                status: coverOk ? 'Operational' : 'Unreachable'
             };
 
             // 6. Discord Widget API
@@ -861,10 +863,20 @@
             // 7. PWA Service Worker & Cache
             const hasSW = 'serviceWorker' in navigator && !!navigator.serviceWorker.controller;
             const hasCaches = 'caches' in window;
+            let swVersion = 'v24.132.5';
+            try {
+                if (hasSW) {
+                    const reg = await Promise.race([
+                        navigator.serviceWorker.ready,
+                        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 1500))
+                    ]);
+                    if (reg && reg.active) swVersion = reg.active.scriptURL.includes('sw.js') ? 'v24.132.5' : 'Active';
+                }
+            } catch (e) {}
             lastDiagnosticResults.pwa = {
                 ok: hasSW || hasCaches,
-                duration: 1,
-                status: hasSW ? 'Active' : (hasCaches ? 'Cache Ready' : 'Unregistered')
+                duration: hasSW ? 0 : -1,
+                status: hasSW ? ('Active ' + swVersion) : (hasCaches ? 'Cache Ready' : 'Unregistered')
             };
 
             renderDiagnosticResults();
@@ -874,7 +886,15 @@
             }
 
             if (userTriggered) {
-                showToast(t('btn_refresh_text') + ': ' + t('overall_ok_title'), '✅');
+                const online = Object.values(lastDiagnosticResults).filter(r => r && r.ok).length;
+                const total = Object.keys(lastDiagnosticResults).length || 7;
+                if (online >= total) {
+                    showToast(t('overall_ok_title'), '✅');
+                } else if (online >= Math.floor(total * 0.7)) {
+                    showToast(t('overall_degraded_title') + ' (' + online + '/' + total + ')', '🟡');
+                } else {
+                    showToast(t('overall_down_title'), '🔴');
+                }
             }
         }
 
@@ -893,17 +913,23 @@
                     badgeEl.className = "px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
                     badgeEl.innerText = "🟢 OK";
                     pingEl.className = "text-emerald-300 font-bold";
-                    pingEl.innerText = isDuration ? (data.duration + ' ms') : data.status;
-                } else if (data.duration < 4000) {
+                    if (!isDuration) {
+                        pingEl.innerText = data.status || 'OK';
+                    } else if (data.duration > 0) {
+                        pingEl.innerText = data.duration + ' ms';
+                    } else {
+                        pingEl.innerText = data.status || 'OK';
+                    }
+                } else if (data.duration > 0 && data.duration < 4000) {
                     badgeEl.className = "px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30";
-                    badgeEl.innerText = "🟡 Fallback";
+                    badgeEl.innerText = "🟡 Degraded";
                     pingEl.className = "text-amber-300 font-bold";
-                    pingEl.innerText = isDuration ? (data.duration + ' ms') : 'Verzögert';
+                    pingEl.innerText = isDuration ? (data.duration + ' ms') : (data.status || 'Verzögert');
                 } else {
                     badgeEl.className = "px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30";
-                    badgeEl.innerText = "🔴 Störung";
+                    badgeEl.innerText = "🔴 Offline";
                     pingEl.className = "text-rose-300 font-bold";
-                    pingEl.innerText = isDuration ? (data.duration + ' ms (Fehler)') : "Nicht erreichbar";
+                    pingEl.innerText = !isDuration ? (data.status || 'Nicht verfügbar') : (data.duration > 0 ? data.duration + ' ms (Fehler)' : 'Timeout');
                 }
             };
 
@@ -1026,13 +1052,19 @@
         }
 
         async function togglePushNotifications() {
+            // Push only works on HTTPS or localhost
+            const isSecure = location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+            if (!isSecure) {
+                showToast('Push-Benachrichtigungen erfordern HTTPS.', '🔒');
+                return;
+            }
             if (!('Notification' in window)) {
-                showToast('Benachrichtigungen werden von diesem Browser nicht unterstützt.', '⚠️');
+                showToast('Dein Browser unterstützt keine Web-Benachrichtigungen. Nutze Chrome oder Edge.', '⚠️');
                 return;
             }
 
             if (Notification.permission === 'denied') {
-                showToast('🔒 In Browser-Einstellungen blockiert. Tippe auf das Schloss-Symbol neben der URL, um Push zu erlauben.', '❌');
+                showToast('In Browser-Einstellungen blockiert → Tippe auf 🔒 in der Adresszeile und erlaube Benachrichtigungen.', '🔒');
                 return;
             }
 
@@ -1138,34 +1170,61 @@
             }, 1200);
         }
 
+        function fallbackCopy(text) {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.setAttribute('readonly', '');
+            ta.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;';
+            document.body.appendChild(ta);
+            ta.focus();
+            ta.select();
+            try { document.execCommand('copy'); showToast(t('toast_copied'), '\uD83D\uDCCB'); }
+            catch (e) { showToast('Kopieren fehlgeschlagen.', '\u26A0\uFE0F'); }
+            document.body.removeChild(ta);
+        }
+
         function copyDiagnosticReport() {
-            const report = [
-                '=== GAMINGPIG PORTFOLIO SYSTEM DIAGNOSTIC REPORT ===',
-                'Timestamp: ' + new Date().toISOString(),
-                'User Agent: ' + navigator.userAgent,
+            const sep = '----------------------------------------------------';
+            const fmt = (k, r) => {
+                if (!r || !Object.keys(r).length) return k + ': No data yet';
+                return k + ': ' + (r.ok ? 'OK' : 'FAIL') + ' | ' + (r.duration > 0 ? r.duration + 'ms' : 'N/A') + (r.status ? ' | ' + r.status : '');
+            };
+            const parts = [
+                '=== GAMINGPIG PORTFOLIO DIAGNOSTIC REPORT ===',
+                'Time: ' + new Date().toISOString(),
+                'Browser: ' + (navigator.userAgent || 'unknown').substring(0, 120),
                 'Language: ' + currentLang,
-                'Online State: ' + (navigator.onLine ? 'ONLINE' : 'OFFLINE'),
+                'Network: ' + (navigator.onLine ? 'ONLINE' : 'OFFLINE'),
                 'PWA Standalone: ' + (window.matchMedia('(display-mode: standalone)').matches ? 'YES' : 'NO'),
                 'Push Permission: ' + (window.Notification ? Notification.permission : 'UNSUPPORTED'),
-                '----------------------------------------------------',
-                'Spotify Live: ' + JSON.stringify(lastDiagnosticResults.spotify || {}),
-                'stats.fm API: ' + JSON.stringify(lastDiagnosticResults.statsfm || {}),
-                'LrcLib Engine: ' + JSON.stringify(lastDiagnosticResults.lyrics || {}),
-                'Cover CDN: ' + JSON.stringify(lastDiagnosticResults.cover || {}),
-                'Discord API: ' + JSON.stringify(lastDiagnosticResults.discord || {}),
-                'Service Worker: ' + JSON.stringify(lastDiagnosticResults.pwa || {}),
-                '----------------------------------------------------',
-                'End of Report. Ready for Discord Support Ticket.'
-            ].join('
-');
+                sep,
+                fmt('Spotify', lastDiagnosticResults.spotify),
+                fmt('stats.fm API', lastDiagnosticResults.statsfm),
+                fmt('LrcLib Lyrics', lastDiagnosticResults.lyrics),
+                fmt('Cover CDN', lastDiagnosticResults.cover),
+                fmt('Discord API', lastDiagnosticResults.discord),
+                fmt('PWA/SW', lastDiagnosticResults.pwa),
+                'Network RTT: ' + (lastDiagnosticResults.network ? lastDiagnosticResults.network.duration + 'ms' : 'N/A'),
+                sep,
+                'gamingpig.github.io | discord.gg/E8BS9BDAst'
+            ];
+            const report = parts.join('\n');
 
-            navigator.clipboard.writeText(report).then(() => {
-                showToast(t('toast_copied'), '📋');
-            }).catch(() => {
-                alert('Diagnose-Bericht:
+            const btn = document.getElementById('btn-copy-report');
+            const origHTML = btn ? btn.innerHTML : null;
+            const onSuccess = () => {
+                showToast(t('toast_copied'), '\uD83D\uDCCB');
+                if (btn && origHTML) {
+                    btn.innerHTML = '<span>\u2705</span> <span>Kopiert!</span>';
+                    setTimeout(() => { btn.innerHTML = origHTML; }, 2500);
+                }
+            };
 
-' + report);
-            });
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(report).then(onSuccess).catch(() => fallbackCopy(report));
+            } else {
+                fallbackCopy(report);
+            }
         }
 
         // ========================================================= //
