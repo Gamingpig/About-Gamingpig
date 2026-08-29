@@ -7,7 +7,7 @@
 // - Sofortige Übernahme: self.skipWaiting() & clients.claim()
 // ==============================================================================
 
-const SW_VERSION = "24.134.0";
+const SW_VERSION = "24.135.0";
 const CACHE_NAME = `gamingpig-cache-v${SW_VERSION}`;
 const CACHE_PREFIX = "gamingpig-cache-";
 
@@ -55,7 +55,9 @@ self.addEventListener("message", (event) => {
         self.skipWaiting();
     } else if (event.data && event.data.type === "SHOW_MUSIC_NOTIFICATION") {
         if (self.registration && self.registration.showNotification) {
-            self.registration.showNotification(event.data.title, event.data.options);
+            event.waitUntil(
+                self.registration.showNotification(event.data.title, event.data.options)
+            );
         }
     }
 });

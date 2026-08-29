@@ -8891,6 +8891,22 @@
         // Schutz) - kein Fehler, kein Absturz, einfach gar kein Dialog, die Erlaubnis bleibt
         // für immer auf "default" stehen. Dieser Button hier ist direkt an onclick gekoppelt
         // und zeigt den echten System-Dialog dadurch zuverlässig.
+        function requestNotificationPermissionSafe() {
+            return new Promise((resolve) => {
+                if (typeof Notification === 'undefined') return resolve('unsupported');
+                try {
+                    const result = Notification.requestPermission((perm) => {
+                        resolve(perm || Notification.permission);
+                    });
+                    if (result && typeof result.then === 'function') {
+                        result.then(resolve).catch(() => resolve(Notification.permission));
+                    }
+                } catch (e) {
+                    resolve(Notification.permission || 'denied');
+                }
+            });
+        }
+
         function updateNotificationPermissionButtonLabel() {
             const btn = document.getElementById('btn-notification-permission');
             if (!btn) return;
@@ -8914,9 +8930,9 @@
                 btn.disabled = true;
                 return;
             }
-            const isEnabled = localStorage.getItem('gamingpig_music_notifications') === 'true' && Notification.permission === 'granted';
+            const isEnabled = isMusicNotificationsEnabled();
             if (lbl) {
-                lbl.textContent = t('settings_music_notifications') + ': ' + (isEnabled ? t('notifications_on') : 'AUS');
+                lbl.textContent = t('settings_music_notifications') + ': ' + (isEnabled ? t('on_label') : t('off_label'));
             }
             btn.classList.toggle('text-teal-400', isEnabled);
             btn.classList.toggle('text-slate-400', !isEnabled);
@@ -8937,7 +8953,7 @@
                     self.onmessage = function(e) {
                         if (e.data === 'START') {
                             if (!timer) {
-                                timer = setInterval(function() { self.postMessage('TICK'); }, 10000);
+                                timer = setInterval(function() { self.postMessage('TICK'); }, 5000);
                             }
                         } else if (e.data === 'STOP') {
                             if (timer) { clearInterval(timer); timer = null; }
@@ -8965,11 +8981,14 @@
         let lastPlaybackStopTime = 0;
         let pauseNotifTimer = null;
         let hasNotifiedPauseForCurrentStop = false;
-        const PROLONGED_PAUSE_THRESHOLD_MS = 15000; // 15 Sekunden Pause
+        let lastPausedTrackTitle = '';
+        let lastPausedArtist = '';
+        let lastPausedArtUrl = '';
+        const PROLONGED_PAUSE_THRESHOLD_MS = 10000; // 10 Sekunden Pause
 
         async function dispatchMusicNotification(type, title, artist, coverUrl) {
             if (!isMusicNotificationsEnabled()) return;
-            if (!title || title === 'Keine Wiedergabe' || title === 'Aktuell ist es ruhig...') return;
+            if (!title) return;
 
             let notifTitle = '';
             let notifBody = '';
@@ -9006,7 +9025,18 @@
                 }
             };
 
-            // 1. Prioritize Service Worker controller message (works in background & standalone PWA)
+            // 1. Service Worker showNotification (Best for background / mobile)
+            if ('serviceWorker' in navigator) {
+                try {
+                    const reg = await navigator.serviceWorker.ready;
+                    if (reg && reg.showNotification) {
+                        await reg.showNotification(notifTitle, options);
+                        return;
+                    }
+                } catch (e) {}
+            }
+
+            // 2. Service Worker controller postMessage
             if (navigator.serviceWorker && navigator.serviceWorker.controller) {
                 try {
                     navigator.serviceWorker.controller.postMessage({
@@ -9018,18 +9048,7 @@
                 } catch (e) {}
             }
 
-            // 2. Service Worker showNotification fallback
-            if ('serviceWorker' in navigator) {
-                try {
-                    const reg = await navigator.serviceWorker.ready;
-                    if (reg && reg.showNotification) {
-                        await reg.showNotification(notifTitle, options);
-                        return;
-                    }
-                } catch (e) {}
-            }
-
-            // 3. Fallback to standard window Notification
+            // 3. Native Window Notification fallback
             if ('Notification' in window && Notification.permission === 'granted') {
                 try {
                     new Notification(notifTitle, options);
@@ -9050,14 +9069,12 @@
             }
 
             if (Notification.permission !== 'granted') {
-                try {
-                    const perm = await Notification.requestPermission();
-                    if (perm !== 'granted') {
-                        updateMusicNotificationsButtonLabel();
-                        updateNotificationPermissionButtonLabel();
-                        return;
-                    }
-                } catch (e) {}
+                const perm = await requestNotificationPermissionSafe();
+                if (perm !== 'granted') {
+                    updateMusicNotificationsButtonLabel();
+                    updateNotificationPermissionButtonLabel();
+                    return;
+                }
             }
 
             const current = localStorage.getItem('gamingpig_music_notifications') === 'true';
@@ -9070,6 +9087,15 @@
                 initBackgroundWorker();
                 if (bgWorker) bgWorker.postMessage('START');
                 if (typeof showToast === 'function') showToast(t('toast_music_notif_enabled') || '🎵 Live-Musik-Benachrichtigungen aktiviert!', 3500);
+                
+                const curT = document.getElementById('track-title')?.innerText;
+                const curA = document.getElementById('track-artist')?.innerText;
+                const curArt = currentResolvedArtUrl || null;
+                if (curT && curT !== 'Keine Wiedergabe' && curT !== 'Aktuell ist es ruhig...') {
+                    dispatchMusicNotification('now_playing', curT, curA, curArt);
+                } else {
+                    dispatchMusicNotification('test', '🎵 Live-Musik-Benachrichtigungen aktiv', 'Du erhältst Meldungen bei Pausen und beim Fortsetzen.', 'icon-192.png');
+                }
             } else {
                 if (bgWorker) bgWorker.postMessage('STOP');
                 if (pauseNotifTimer) { clearTimeout(pauseNotifTimer); pauseNotifTimer = null; }
@@ -9084,7 +9110,7 @@
                 if (typeof showToast === 'function') showToast(t('notifications_denied_hint'), 6000);
                 return;
             }
-            try { await Notification.requestPermission(); } catch (e) {}
+            await requestNotificationPermissionSafe();
             updateNotificationPermissionButtonLabel();
             updateMusicNotificationsButtonLabel();
             if (Notification.permission === 'granted' && typeof showToast === 'function') {
@@ -15362,16 +15388,14 @@ window.generateShareCard = function() {
             // Wenn pausiert oder kein Track → sofort Offline-/Ruhe-Zustand.
             if (!hasTrack || !isPlaying) {
                 consecutiveEmptyPolls++;
-                if (consecutiveEmptyPolls < 3) {
-                    return;
-                }
                 if (trackIsPlaying) {
                     const prevTitle = mTitle ? mTitle.innerText : '';
                     const prevArtist = mArtist ? mArtist.innerText : '';
                     const prevArt = currentResolvedArtUrl;
                     lastPlaybackStopTime = Date.now();
                     hasNotifiedPauseForCurrentStop = false;
-                    if (!pauseNotifTimer && !isFirstLoad && prevTitle && prevTitle !== 'Aktuell ist es ruhig...' && prevTitle !== 'Keine Wiedergabe') {
+                    if (pauseNotifTimer) clearTimeout(pauseNotifTimer);
+                    if (!isFirstLoad && prevTitle && prevTitle !== 'Aktuell ist es ruhig...' && prevTitle !== 'Keine Wiedergabe') {
                         pauseNotifTimer = setTimeout(() => {
                             pauseNotifTimer = null;
                             if (!trackIsPlaying && !hasNotifiedPauseForCurrentStop) {
@@ -15382,6 +15406,9 @@ window.generateShareCard = function() {
                     }
                 }
                 trackIsPlaying = false;
+                if (consecutiveEmptyPolls < 3) {
+                    return;
+                }
                 stopProgressTracking();
                 if (!offlineTimeout) {
                     offlineTimeout = setTimeout(() => {
