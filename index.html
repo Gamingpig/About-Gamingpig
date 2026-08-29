@@ -6408,6 +6408,9 @@
                 aria_lyrics_close: 'Lyrics schließen',
                 aria_lyrics_show: 'Lyrics anzeigen',
                 status_offline: 'Gamingpig is Offline',
+                status_listening: 'Gamingpig is listening to',
+                status_paused: 'Gamingpig hat pausiert',
+                status_paused_short: 'Pausiert',
                 status_zen_mode: 'Zen Mode',
                 mini_dashboard_minimized: 'Dashboard minimiert',
                 status_offline_short: 'Offline',
@@ -6587,6 +6590,9 @@
                 aria_lyrics_close: 'Close lyrics',
                 aria_lyrics_show: 'Show lyrics',
                 status_offline: 'Gamingpig is Offline',
+                status_listening: 'Gamingpig is listening to',
+                status_paused: 'Gamingpig paused',
+                status_paused_short: 'Paused',
                 status_zen_mode: 'Zen Mode',
                 mini_dashboard_minimized: 'Dashboard minimized',
                 status_offline_short: 'Offline',
@@ -6797,6 +6803,9 @@
                 aria_lyrics_close: 'Cerrar letra',
                 aria_lyrics_show: 'Mostrar letra',
                 status_offline: 'Gamingpig está desconectado',
+                status_listening: 'Gamingpig is listening to',
+                status_paused: 'Gamingpig ha pausado',
+                status_paused_short: 'En pausa',
                 status_zen_mode: 'Modo Zen',
                 mini_dashboard_minimized: 'Panel minimizado',
                 status_offline_short: 'Desconectado',
@@ -6990,6 +6999,9 @@
                 aria_lyrics_close: 'Fermer les paroles',
                 aria_lyrics_show: 'Afficher les paroles',
                 status_offline: 'Gamingpig est hors ligne',
+                status_listening: 'Gamingpig is listening to',
+                status_paused: 'Gamingpig est en pause',
+                status_paused_short: 'En pause',
                 status_zen_mode: 'Mode Zen',
                 mini_dashboard_minimized: 'Tableau de bord réduit',
                 status_offline_short: 'Hors ligne',
@@ -7183,6 +7195,9 @@
                 aria_lyrics_close: 'Fechar letra',
                 aria_lyrics_show: 'Mostrar letra',
                 status_offline: 'Gamingpig está offline',
+                status_listening: 'Gamingpig is listening to',
+                status_paused: 'Gamingpig pausou',
+                status_paused_short: 'Pausado',
                 status_zen_mode: 'Modo Zen',
                 mini_dashboard_minimized: 'Painel minimizado',
                 status_offline_short: 'Offline',
@@ -7376,6 +7391,9 @@
                 aria_lyrics_close: 'Şarkı sözlerini kapat',
                 aria_lyrics_show: 'Şarkı sözlerini göster',
                 status_offline: 'Gamingpig Çevrimdışı',
+                status_listening: 'Gamingpig is listening to',
+                status_paused: 'Gamingpig duraklattı',
+                status_paused_short: 'Duraklatıldı',
                 status_zen_mode: 'Zen Modu',
                 mini_dashboard_minimized: 'Panel küçültüldü',
                 status_offline_short: 'Çevrimdışı',
@@ -15382,11 +15400,11 @@ window.generateShareCard = function() {
             
         function updateMusicUI(data, dynamicLatency = 50) {
             const hasTrack = data && data.track && Boolean(data.track.title || data.track.name);
-            const isPlaying = data && data.status === "playing";
+            const isPlaying = Boolean(data && data.status === "playing");
+            const isPaused = Boolean(data && data.status === "paused");
 
-            // Entweder läuft was oder es ist Ruhe — Pause gibt es nicht.
-            // Wenn pausiert oder kein Track → sofort Offline-/Ruhe-Zustand.
-            if (!hasTrack || !isPlaying) {
+            // ── FALL 1: Komplett Offline / Keine Daten ──────────────────────
+            if (!hasTrack) {
                 consecutiveEmptyPolls++;
                 if (trackIsPlaying) {
                     const prevTitle = mTitle ? mTitle.innerText : '';
@@ -15406,16 +15424,18 @@ window.generateShareCard = function() {
                     }
                 }
                 trackIsPlaying = false;
+                stopProgressTracking();
+
                 if (consecutiveEmptyPolls < 3) {
                     return;
                 }
-                stopProgressTracking();
+
                 if (!offlineTimeout) {
                     offlineTimeout = setTimeout(() => {
                         if (mainMusicCard) {
                             mainMusicCard.classList.add('offline');
                             mainMusicCard.classList.remove('playing', 'paused');
-                            if(mainMusicCard.classList.contains('lyrics-open')) toggleLyrics(false);
+                            if (mainMusicCard.classList.contains('lyrics-open')) toggleLyrics(false);
                         }
                         if (mTitle) mTitle.innerText = "Aktuell ist es ruhig...";
                         if (mArtist) mArtist.innerText = "Genieße die Stille";
@@ -15432,7 +15452,7 @@ window.generateShareCard = function() {
                 return;
             }
 
-            // Ab hier: Song läuft wirklich.
+            // ── FALL 2: Track vorhanden (entweder playing oder paused) ────────
             consecutiveEmptyPolls = 0;
 
             if (offlineTimeout) {
@@ -15440,14 +15460,25 @@ window.generateShareCard = function() {
                 offlineTimeout = null;
             }
 
-            if (mainMusicCard) {
-                mainMusicCard.classList.remove('offline', 'paused');
-                mainMusicCard.classList.add('playing');
+            // Header, Status-Dot und Karten-Klasse nach Zustand setzen
+            if (isPlaying) {
+                if (mainMusicCard) {
+                    mainMusicCard.classList.remove('offline', 'paused');
+                    mainMusicCard.classList.add('playing');
+                }
+                if (mHeader) mHeader.innerText = t('status_listening') || "Gamingpig is listening to";
+                if (mDot) mDot.className = "h-1 w-1 xxs:h-1.5 xxs:w-1.5 xs:h-2 xs:w-2 rounded-full bg-green-500 active-dot";
+                if (audioVisualizer) audioVisualizer.classList.remove('opacity-0');
+            } else {
+                if (mainMusicCard) {
+                    mainMusicCard.classList.remove('offline', 'playing');
+                    mainMusicCard.classList.add('paused');
+                }
+                if (mHeader) mHeader.innerText = t('status_paused') || "Gamingpig hat pausiert";
+                if (mDot) mDot.className = "h-1 w-1 xxs:h-1.5 xxs:w-1.5 xs:h-2 xs:w-2 rounded-full bg-amber-500";
+                if (audioVisualizer) audioVisualizer.classList.add('opacity-0');
             }
 
-            if (mHeader) mHeader.innerText = "Gamingpig is listening to";
-            if (mDot) mDot.className = "h-1 w-1 xxs:h-1.5 xxs:w-1.5 xs:h-2 xs:w-2 rounded-full bg-green-500 active-dot";
-            
             const rawArtist = (data.track && data.track.artist) || "Unknown";
             const cleanArtist = rawArtist.replace(/\s*•\s*From Smart Shuffle/gi, '').trim();
             const trackTitle = (data.track && data.track.title) || "";
@@ -15455,7 +15486,7 @@ window.generateShareCard = function() {
             const newTrackId = trackTitle + "-" + cleanArtist;
             const isNewTrack = (newTrackId !== currentTrackId);
             const isFirstLoad = (currentTrackId === "");
-            currentTrackId = newTrackId; // FIX: update so same song never re-triggers fetchExternalLyrics
+            currentTrackId = newTrackId;
 
             currentTrackTitle = trackTitle;
             currentRawArtist = cleanArtist;
@@ -15467,18 +15498,18 @@ window.generateShareCard = function() {
                 if (isDashboardOpen) {
                     miniStatus.innerText = cleanArtist ? `${cleanArtist} · ${t('mini_click_to_close')}` : t('mini_click_to_close');
                 } else {
-                    miniStatus.innerText = cleanArtist;
+                    miniStatus.innerText = isPlaying ? cleanArtist : (cleanArtist ? `${cleanArtist} (${t('status_paused_short') || 'Pausiert'})` : (t('status_paused_short') || 'Pausiert'));
                 }
             }
             if (miniIconBg) {
-                miniIconBg.className = 'w-8 h-8 xxs:w-10 xxs:h-10 sm:w-12 sm:h-12 shrink-0 rounded-lg xxs:rounded-xl flex items-center justify-center transition-colors bg-green-500/10 text-green-500 animate-pulse';
+                miniIconBg.className = isPlaying
+                    ? 'w-8 h-8 xxs:w-10 xxs:h-10 sm:w-12 sm:h-12 shrink-0 rounded-lg xxs:rounded-xl flex items-center justify-center transition-colors bg-green-500/10 text-green-500 animate-pulse'
+                    : 'w-8 h-8 xxs:w-10 xxs:h-10 sm:w-12 sm:h-12 shrink-0 rounded-lg xxs:rounded-xl flex items-center justify-center transition-colors bg-amber-500/10 text-amber-500';
             }
 
             renderMusicServicePicker(data);
 
             // ── Alle Platform-Links vorab extrahieren ────────────────────────────────
-            // WICHTIG: muss VOR dem proaktiven findBestArtworkFallback-Aufruf stehen,
-            // damit mainSpotifyUrl und platformLinks dort schon gesetzt sind.
             let mainSpotifyUrl = (data.track && (data.track.url || data.track.track_url)) || null;
             if (!mainSpotifyUrl && data.track && data.track.uri && data.track.uri.startsWith('spotify:')) {
                 const uriParts = data.track.uri.split(':');
@@ -15493,8 +15524,6 @@ window.generateShareCard = function() {
                 mainSpotifyUrl = data.track.external_urls.spotify;
             }
 
-            // Alle verfügbaren Apple-Music-Links in einem Objekt zusammenfassen
-            // damit extractAppleId alle Quellen durchsuchen kann
             const platformLinks = data.track ? {
                 ...(data.track.platform_links || {}),
                 track_url: data.track.track_url || null
@@ -15512,8 +15541,6 @@ window.generateShareCard = function() {
 
             const updateAllCoverVisuals = (srcUrl) => {
                 if (!srcUrl) srcUrl = fallbackImg;
-                // FIX v24.120: Flackern bei periodischen API-Polls verhindern.
-                // Nur neu zuweisen/re-rendern, wenn sich die Bild-URL tatsächlich geändert hat!
                 const currentSrc = mArtwork ? mArtwork.getAttribute('src') : null;
                 if (mArtwork && currentSrc !== srcUrl) {
                     mArtwork.src = srcUrl;
@@ -15532,8 +15559,6 @@ window.generateShareCard = function() {
                 }
             };
 
-            // Proaktive Cover-Auflösung: sofort starten wenn für den aktuellen Track noch kein Cover
-            // aufgelöst wurde (auch beim Erstaufruf) oder die Proxy-URL kaputt ist.
             if (!currentResolvedArtUrl || isBrokenNpcProxy) {
                 const capturedTrackKey = trackKey;
                 findBestArtworkFallback(
@@ -15548,48 +15573,25 @@ window.generateShareCard = function() {
                         if (capturedTrackKey === lastResolvedTrackKey) {
                             currentResolvedArtUrl = resolved;
                             updateAllCoverVisuals(resolved);
-                            extractDominantColor(resolved);
-                            syncStandByTrackInfo(trackTitle, rawArtist, resolved, false, trackIsPlaying);
-                            if (trackIsPlaying) showIslandPersistent(trackTitle, rawArtist, resolved);
                         }
                     }
-                }).catch(() => {});
+                });
             }
-            // ── Progress-Extraktion und Dedup-Check ─────────────────────────────────
-            let currentApiProgress = data.progress_ms !== undefined ? data.progress_ms : (data.track && data.track.progress_ms) || 0;
 
-            // Auf keinen Fall bei erstem Laden abbrechen (fehlendes Cover immer durchlassen)
-            if (currentApiProgress === lastSeenProgressMs && trackIsPlaying === isPlaying && !isNewTrack && currentResolvedArtUrl) {
-                return;
-            }
-            lastSeenProgressMs = currentApiProgress;
-
-            let apiProgress = currentApiProgress;
-            if (isPlaying) {
-                let dataAge = 0;
-                let serverTimestamp = data.timestamp || data.updated_at || data.fetched_at || (data.track && data.track.timestamp);
-
-                if (serverTimestamp) {
-                    let st = typeof serverTimestamp === 'number'
-                        ? (serverTimestamp < 20000000000 ? serverTimestamp * 1000 : serverTimestamp)
-                        : new Date(serverTimestamp).getTime();
-
-                    let trueNow = getTrueDateNow();
-                    let rawAge = trueNow - st;
-
-                    let maxAllowedAge = (data.track && data.track.duration_ms) ? data.track.duration_ms : 600000;
-
-                    if (rawAge >= 0 && rawAge <= maxAllowedAge) {
-                        dataAge = rawAge;
-                    } else {
-                        dataAge = 0;
-                    }
-                } else {
-                    dataAge = 0;
+            // ── Alterskorrektur für apiProgress ──────────────────────────────────
+            let dataAge = 0;
+            let st = data.track && data.track.timestamp ? data.track.timestamp : null;
+            if (isPlaying && st) {
+                let trueNow = getTrueDateNow();
+                let rawAge = trueNow - st;
+                let maxAllowedAge = (data.track && data.track.duration_ms) ? data.track.duration_ms : 600000;
+                if (rawAge >= 0 && rawAge <= maxAllowedAge) {
+                    dataAge = rawAge;
                 }
-
-                apiProgress += dataAge + dynamicLatency;
             }
+
+            let apiProgress = (data.track && data.track.progress_ms) || 0;
+            apiProgress += dataAge + dynamicLatency;
 
             const trackDuration = (data.track && data.track.duration_ms) || data.duration_ms || 0;
             if (trackDuration && apiProgress > trackDuration) {
@@ -15742,6 +15744,10 @@ window.generateShareCard = function() {
                         stopProgressTracking();
                         currentMs = apiProgress + addedDelay;
                         syncLyricsUI(true, true);
+                    } else if (!trackIsPlaying && !isPlaying) {
+                        // Still paused: keep progress frozen at API value
+                        currentMs = apiProgress;
+                        updateProgressUI();
                     } else {
                         let expectedLocalProgress = serverBaseProgress + (performance.now() - localStartTime);
                         let drift = (apiProgress + addedDelay) - expectedLocalProgress;
