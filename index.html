@@ -4443,31 +4443,34 @@
         /* ========================================================= */
         #language-picker-overlay {
             position: fixed; inset: 0; z-index: 1000; background: #05060a;
-            display: flex; align-items: center; justify-content: center; padding: 24px;
+            display: flex; align-items: center; justify-content: center; padding: 16px;
+            overflow-y: auto; -webkit-overflow-scrolling: touch;
             opacity: 0; transition: opacity 0.5s ease;
         }
         #language-picker-overlay.lp-active { opacity: 1; }
         #language-picker-overlay.hidden { display: none; }
         #language-picker-box {
-            width: min(92vw, 460px); text-align: center;
+            width: min(94vw, 460px); text-align: center; margin: auto; max-height: 96vh;
+            display: flex; flex-direction: column; justify-content: center;
             transform: translateY(14px); opacity: 0; transition: transform 0.6s var(--apple-bounce) 0.1s, opacity 0.5s ease 0.1s;
         }
         #language-picker-overlay.lp-active #language-picker-box { transform: translateY(0); opacity: 1; }
-        #lang-picker-titles { margin-bottom: 32px; }
+        #lang-picker-titles { margin-bottom: 20px; }
         #lang-picker-titles p {
-            color: rgba(255,255,255,0.9); font-weight: 800; font-size: clamp(1.1rem, 4.2vw, 1.6rem);
-            line-height: 1.5; margin: 0;
+            color: rgba(255,255,255,0.95); font-weight: 800; font-size: clamp(1rem, 3.8vw, 1.4rem);
+            line-height: 1.35; margin: 0 0 2px 0;
         }
-        #lang-picker-titles p:not(:first-child) { color: rgba(255,255,255,0.35); font-size: clamp(0.85rem, 3vw, 1.05rem); font-weight: 700; }
-        #lang-picker-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        #lang-picker-titles p:not(:first-child) { color: rgba(255,255,255,0.4); font-size: clamp(0.78rem, 2.7vw, 0.95rem); font-weight: 600; }
+        #lang-picker-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; width: 100%; }
         .lang-picker-btn {
-            display: flex; flex-direction: column; align-items: center; gap: 8px;
-            background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14);
-            border-radius: 18px; padding: 18px 10px; cursor: pointer; color: #fff;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+            background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.16);
+            border-radius: 16px; padding: 14px 8px; cursor: pointer; color: #fff;
+            min-height: 70px;
             transition: transform 0.2s var(--apple-bounce), background 0.2s ease, border-color 0.2s ease;
         }
-        .lang-picker-btn:hover, .lang-picker-btn:active { background: rgba(59,130,246,0.18); border-color: rgba(59,130,246,0.5); transform: translateY(-2px) scale(1.02); }
-        .lang-picker-btn .lang-flag { font-size: 32px; line-height: 1; }
+        .lang-picker-btn:hover, .lang-picker-btn:active { background: rgba(59,130,246,0.22); border-color: rgba(59,130,246,0.6); transform: translateY(-2px) scale(1.02); }
+        .lang-picker-btn .lang-flag { font-size: 30px; line-height: 1; }
         .lang-picker-btn .lang-name { font-size: 13px; font-weight: 700; }
         body.low-end #language-picker-box, body.low-end .lang-picker-btn { transition: none !important; }
         @keyframes di-idle-pulse {
@@ -5196,7 +5199,32 @@
                 <p>Escolha seu idioma</p>
                 <p>Dilini seç</p>
             </div>
-            <div id="lang-picker-grid"></div>
+            <div id="lang-picker-grid">
+                <button class="lang-picker-btn" onclick="selectLanguage('de')">
+                    <span class="lang-flag">🇩🇪</span>
+                    <span class="lang-name">Deutsch</span>
+                </button>
+                <button class="lang-picker-btn" onclick="selectLanguage('en')">
+                    <span class="lang-flag">🇬🇧</span>
+                    <span class="lang-name">English</span>
+                </button>
+                <button class="lang-picker-btn" onclick="selectLanguage('es')">
+                    <span class="lang-flag">🇪🇸</span>
+                    <span class="lang-name">Español</span>
+                </button>
+                <button class="lang-picker-btn" onclick="selectLanguage('fr')">
+                    <span class="lang-flag">🇫🇷</span>
+                    <span class="lang-name">Français</span>
+                </button>
+                <button class="lang-picker-btn" onclick="selectLanguage('pt')">
+                    <span class="lang-flag">🇧🇷</span>
+                    <span class="lang-name">Português</span>
+                </button>
+                <button class="lang-picker-btn" onclick="selectLanguage('tr')">
+                    <span class="lang-flag">🇹🇷</span>
+                    <span class="lang-name">Türkçe</span>
+                </button>
+            </div>
         </div>
     </div>
 
