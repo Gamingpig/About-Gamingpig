@@ -312,12 +312,18 @@
 
         <!-- Troubleshooting & Self-Service Help -->
         <section class="glow-card p-5 sm:p-7 rounded-2xl sm:rounded-3xl border-slate-800">
-            <div class="flex items-center gap-2.5 mb-4">
-                <span class="text-2xl">💡</span>
-                <div>
-                    <h3 id="help-title" class="font-black text-base sm:text-lg text-white">Sofort-Hilfe & Troubleshooting</h3>
-                    <p id="help-subtitle" class="text-xs text-slate-400">Schnelle Lösungen für bekannte Phänomene – ohne Wartezeit auf den Support.</p>
+            <div class="flex items-center justify-between gap-2.5 mb-4 flex-wrap">
+                <div class="flex items-center gap-2.5">
+                    <span class="text-2xl">💡</span>
+                    <div>
+                        <h3 id="help-title" class="font-black text-base sm:text-lg text-white">Sofort-Hilfe & Troubleshooting</h3>
+                        <p id="help-subtitle" class="text-xs text-slate-400">Schnelle Lösungen für bekannte Phänomene – ohne Wartezeit auf den Support.</p>
+                    </div>
                 </div>
+                <button id="tts-help-btn" onclick="toggleReadAloudHelp()" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer">
+                    <span id="tts-help-icon">🔊</span>
+                    <span id="tts-help-label">Hilfe vorlesen</span>
+                </button>
             </div>
 
             <div class="space-y-3 text-xs text-slate-300">
@@ -414,6 +420,8 @@
                 nav_back: "Hauptseite",
                 tts_read: "Vorlesen",
                 tts_stop: "Stopp",
+                tts_help_read: "Hilfe vorlesen",
+                tts_help_stop: "Stopp",
                 badge_title: "LIVE-TELEMETRIE & SYSTEMGESUNDHEIT",
                 hero_title: "System-Status & Störungsmelder",
                 hero_subtitle: "Echtzeit-Überwachung aller APIs, Musik-Streams, Lyrics-Server und Pipelines. Hier siehst du sofort, ob ein Dienst gestört ist, und erhältst direkte Troubleshooting-Lösungen.",
@@ -469,6 +477,8 @@
                 nav_back: "Main Page",
                 tts_read: "Read Aloud",
                 tts_stop: "Stop",
+                tts_help_read: "Read Help",
+                tts_help_stop: "Stop",
                 badge_title: "LIVE TELEMETRY & SYSTEM HEALTH",
                 hero_title: "System Status & Incident Monitor",
                 hero_subtitle: "Real-time monitoring of all APIs, music streams, lyrics engines, and pipelines. Instantly see degraded services with immediate troubleshooting tips.",
@@ -524,6 +534,8 @@
                 nav_back: "Página Principal",
                 tts_read: "Leer en voz alta",
                 tts_stop: "Parar",
+                tts_help_read: "Leer ayuda",
+                tts_help_stop: "Parar",
                 badge_title: "TELEMETRÍA EN VIVO Y ESTADO DEL SISTEMA",
                 hero_title: "Estado del Sistema y Monitor de Fallos",
                 hero_subtitle: "Monitoreo en tiempo real de APIs, streaming de música, letras y servidores. Consulta el estado de los servicios y soluciones rápidas.",
@@ -579,6 +591,8 @@
                 nav_back: "Page Principale",
                 tts_read: "Lecture vocale",
                 tts_stop: "Arrêter",
+                tts_help_read: "Lire l'aide",
+                tts_help_stop: "Arrêter",
                 badge_title: "TÉLÉMÉTRIE EN DIRECT ET SANTÉ SYSTÈME",
                 hero_title: "État du Système & Diagnostic",
                 hero_subtitle: "Surveillance en temps réel de toutes les API, du streaming, des paroles et des serveurs avec solutions de dépannage instantanées.",
@@ -634,6 +648,8 @@
                 nav_back: "Página Principal",
                 tts_read: "Ler em voz alta",
                 tts_stop: "Parar",
+                tts_help_read: "Ler ajuda",
+                tts_help_stop: "Parar",
                 badge_title: "TELEMETRIA AO VIVO E ESTADO DO SISTEMA",
                 hero_title: "Status do Sistema e Monitor de Falhas",
                 hero_subtitle: "Monitoramento em tempo real de APIs, streaming de música e letras com dicas de auto-resolução.",
@@ -689,6 +705,8 @@
                 nav_back: "Ana Sayfa",
                 tts_read: "Sesli Oku",
                 tts_stop: "Durdur",
+                tts_help_read: "Yardımı Oku",
+                tts_help_stop: "Durdur",
                 badge_title: "CANLI TELEMETRİ VE SİSTEM SAĞLIĞI",
                 hero_title: "Sistem Durumu ve Arıza Takibi",
                 hero_subtitle: "Tüm API'lerin, müzik akışlarının ve şarkı sözü sunucularının gerçek zamanlı canlı teşhisi.",
@@ -743,7 +761,7 @@
         };
 
         let currentLang = localStorage.getItem('selectedLanguage') || 'de';
-        let isSpeaking = false;
+        let activeSpeakingMode = null; // 'status' | 'help' | null
         let lastDiagnosticResults = {};
 
         function t(key) {
@@ -775,7 +793,10 @@
             });
 
             const ttsLabel = document.getElementById('tts-label');
-            if (ttsLabel) ttsLabel.innerText = isSpeaking ? t('tts_stop') : t('tts_read');
+            if (ttsLabel) ttsLabel.innerText = (activeSpeakingMode === 'status') ? t('tts_stop') : t('tts_read');
+
+            const ttsHelpLabel = document.getElementById('tts-help-label');
+            if (ttsHelpLabel) ttsHelpLabel.innerText = (activeSpeakingMode === 'help') ? t('tts_help_stop') : t('tts_help_read');
 
             updatePushUI();
             updateOverallUI();
@@ -1322,22 +1343,57 @@
         }
 
         // ========================================================= //
-        // Text to Speech (TTS)                                      //
+        // Text to Speech (TTS) Assistant Engine                     //
         // ========================================================= //
         window._ttsUtterances = [];
+
+        function getBestVoice(targetLang) {
+            if (!('speechSynthesis' in window)) return null;
+            const voices = window.speechSynthesis.getVoices() || [];
+            const langPrefix = targetLang.split('-')[0];
+            
+            // 1. Try high-definition neural, natural, premium, google, siri, or enhanced voices
+            let v = voices.find(voice => voice.lang === targetLang && /natural|neural|premium|google|siri|enhanced|pro/i.test(voice.name));
+            if (v) return v;
+            
+            // 2. Try language prefix with high-definition keywords
+            v = voices.find(voice => voice.lang && voice.lang.startsWith(langPrefix) && /natural|neural|premium|google|siri|enhanced|pro/i.test(voice.name));
+            if (v) return v;
+
+            // 3. Exact target language match
+            v = voices.find(voice => voice.lang === targetLang);
+            if (v) return v;
+
+            // 4. Prefix fallback match
+            return voices.find(voice => voice.lang && voice.lang.startsWith(langPrefix)) || null;
+        }
 
         function stopSpeech() {
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
             }
             window._ttsUtterances = [];
-            isSpeaking = false;
+            activeSpeakingMode = null;
+
+            // Reset Main Status TTS Button
             const btn = document.getElementById('tts-toggle-btn');
-            if (btn) btn.classList.remove('bg-emerald-600', 'text-white');
+            if (btn) {
+                btn.classList.remove('bg-emerald-600', 'text-white', 'ring-2', 'ring-emerald-400', 'animate-pulse');
+            }
             const lbl = document.getElementById('tts-label');
             if (lbl) lbl.innerText = t('tts_read');
             const icn = document.getElementById('tts-icon');
             if (icn) icn.innerText = '🔊';
+
+            // Reset Help TTS Button
+            const helpBtn = document.getElementById('tts-help-btn');
+            if (helpBtn) {
+                helpBtn.classList.remove('bg-amber-500', '!text-slate-950', 'ring-2', 'ring-amber-400', 'animate-pulse');
+            }
+            const helpLbl = document.getElementById('tts-help-label');
+            if (helpLbl) helpLbl.innerText = t('tts_help_read');
+            const helpIcn = document.getElementById('tts-help-icon');
+            if (helpIcn) helpIcn.innerText = '🔊';
         }
 
         function generateIntelligentBriefing(lang) {
@@ -1356,66 +1412,78 @@
                 } else if (r && r.status === 'down') {
                     offlineServices.push(t(`service_${s}_name`));
                 } else {
-                    onlineCount++; // default operational
+                    onlineCount++;
                 }
             });
 
             const isAllOk = (offlineServices.length === 0 && degradedServices.length === 0);
             const spotifyLatency = (results.spotify && results.spotify.duration) ? `${results.spotify.duration} Millisekunden` : 'optimal';
-            const lyricsLatency = (results.lyrics && results.lyrics.duration) ? `${results.lyrics.duration} Millisekunden` : 'optimal';
+            const networkPing = (results.network && results.network.duration) ? `${results.network.duration} Millisekunden` : 'stabil';
 
             if (lang === 'de') {
                 if (isAllOk) {
-                    return `Live Systemstatus-Bericht für das Gamingpig Portfolio: Alle sechs Kern-Dienste und APIs arbeiten aktuell im einwandfreien Normalbetrieb. Der Spotify Live-Stream, stats.fm, Songtexte und Cover-CDNs sind ohne Einschränkungen erreichbar. Die Reaktionszeiten liegen mit ${spotifyLatency} im optimalen Bereich. Es liegen derzeit keine Störungen oder Ausfälle vor.`;
+                    return `Gamingpig Telemetrie-Assistent initialisiert. Live-Systemdiagnose: Alle sechs Kern-Dienste und Schnittstellen arbeiten mit optimaler Performance. Der Spotify Live-Player, stats.fm, Songtexte und unsere vierstufige Cover-Pipeline laufen mit blitzschneller Reaktionszeit von ${spotifyLatency}. Die Netzwerk-Latenz beträgt ${networkPing}. Sämtliche Systeme sind nominal und einsatzbereit.`;
                 } else if (offlineServices.length > 0) {
-                    return `Achtung, Systemmeldung: Es wurden Dienst-Ausfälle festgestellt. Aktuell sind ${onlineCount} von sechs Diensten erreichbar. Folgende Schnittstellen antworten derzeit nicht: ${offlineServices.join(', ')}. Sofort-Hilfen und Fehlerbehebungen findest du unten auf dieser Seite.`;
+                    return `Achtung, Störungsmeldung im System. Aktuell sind ${onlineCount} von sechs Diensten betriebsbereit. Folgende Endpunkte antworten derzeit nicht: ${offlineServices.join(', ')}. Sofort-Hilfen und Fehlerbehebungen stehen unten auf dieser Seite bereit.`;
                 } else {
-                    return `Hinweis zum Systemstatus: Mindestens ein Dienst antwortet verzögert oder nutzt alternative Fallback-Routen: ${degradedServices.join(', ')}. Das Portfolio bleibt weiterhin voll funktionsfähig.`;
+                    return `Systemhinweis: Erhöhte Latenz oder Ausweichrouten festgestellt bei: ${degradedServices.join(', ')}. Das Portfolio bleibt über alternative Fallbacks uneingeschränkt nutzbar.`;
                 }
             } else if (lang === 'en') {
                 if (isAllOk) {
-                    return `System health report for the Gamingpig Portfolio: All six core services and APIs are fully operational. Spotify live streaming, stats.fm, synchronized lyrics, and cover delivery pipelines are responding normally with low latency. No incidents or performance issues detected.`;
+                    return `Gamingpig Telemetry Assistant online. System diagnostics complete: All six core infrastructure services are operating at peak performance. Spotify live player, stats.fm stories, synchronized lyrics, and multi-CDN cover pipelines are responding with ultra-low latency of ${spotifyLatency}. All systems nominal and fully operational.`;
                 } else if (offlineServices.length > 0) {
-                    return `Warning, system alert: Outages detected. Currently ${onlineCount} of six services are operational. The following services are unreachable: ${offlineServices.join(', ')}. Please refer to the troubleshooting section below.`;
+                    return `Attention, system alert detected. Currently ${onlineCount} of six services are active. The following endpoints are temporarily unreachable: ${offlineServices.join(', ')}. Please review the instant troubleshooting guides below.`;
                 } else {
-                    return `System advisory: Degraded performance detected on: ${degradedServices.join(', ')}. Core portfolio functionality remains available via automated fallback routes.`;
+                    return `System advisory: Minor latency or fallback routing observed on: ${degradedServices.join(', ')}. All core portfolio functions remain operational.`;
                 }
             } else if (lang === 'es') {
                 if (isAllOk) {
-                    return `Informe de telemetría de Gamingpig: Todos los seis servicios principales y APIs están completamente operativos. Spotify, stats.fm, letras sincronizadas y CDNs responden con total normalidad y rapidez. No hay incidencias activas.`;
+                    return `Asistente de telemetría Gamingpig activo. Diagnóstico del sistema: Los seis servicios y APIs principales funcionan con rendimiento óptimo. El reproductor de Spotify, stats.fm, letras sincronizadas y CDNs responden sin demora. Todos los sistemas nominales.`;
                 } else {
-                    return `Aviso del sistema: Se han detectado incidencias en el sistema. ${onlineCount} de seis servicios están funcionando normalmente. Consulta las opciones de diagnóstico en la página.`;
+                    return `Alerta del sistema: Se han detectado fallos. ${onlineCount} de seis servicios están funcionando. Consulta las opciones de diagnóstico a continuación.`;
                 }
             } else if (lang === 'fr') {
                 if (isAllOk) {
-                    return `Rapport d'état du système Gamingpig: Les six services principaux et interfaces API fonctionnent parfaitement. Le streaming Spotify, les statistiques, les paroles synchronisées et les pochettes répondent sans aucun délai. Aucun incident détecté.`;
+                    return `Assistant de télémétrie Gamingpig en ligne. Diagnostic terminé : Les six services principaux fonctionnent avec une performance optimale. Le lecteur Spotify, les statistiques, les paroles synchronisées et les serveurs CDN répondent instantanément. Tous les systèmes sont opérationnels.`;
                 } else {
-                    return `Alerte système: Des perturbations ont été détectées. ${onlineCount} services sur six sont en ligne. Consultez les conseils de dépannage ci-dessous.`;
+                    return `Alerte système : Des anomalies ont été détectées. ${onlineCount} services sur six sont actifs. Consultez la section d'aide ci-dessous.`;
                 }
             } else if (lang === 'pt') {
                 if (isAllOk) {
-                    return `Relatório de status do Gamingpig Portfolio: Todos os seis serviços principais e APIs estão operando normalmente. Spotify, stats.fm, letras de música e CDNs respondem perfeitamente sem atrasos. Nenhum problema detectado.`;
+                    return `Assistente de telemetria Gamingpig online. Diagnóstico do sistema: Todos os seis serviços essenciais estão operando em velocidade máxima. O player do Spotify, stats.fm, letras sincronizadas e CDNs de capas respondem sem atrasos. Todos os sistemas estão nominais.`;
                 } else {
-                    return `Aviso do sistema: Foi detectada uma oscilação nos serviços. ${onlineCount} de seis serviços estão operacionais. Verifique as soluções de autoajuda abaixo.`;
+                    return `Alerta de sistema: Oscilação detectada. ${onlineCount} de seis serviços estão operacionais. Consulte as soluções de autoajuda abaixo.`;
                 }
             } else if (lang === 'tr') {
                 if (isAllOk) {
-                    return `Gamingpig Portfolyosu Sistem Durum Raporu: Altı ana servisin ve API'nin tümü sorunsuz çalışıyor. Spotify canlı yayını, stats.fm, şarkı sözü motoru ve kapak CDN'leri gecikmesiz yanıt veriyor. Herhangi bir arıza bulunmamaktadır.`;
+                    return `Gamingpig Telemetri Asistanı devrede. Sistem teşhisi tamamlandı: Altı ana servisin ve API altyapısının tümü en yüksek hızda çalışıyor. Spotify canlı çalar, stats.fm, senkronize şarkı sözleri ve kapak CDN hatları gecikmesiz yanıt veriyor. Tüm sistemler aktif ve sorunsuz.`;
                 } else {
-                    return `Sistem uyarısı: Bazı servislerde kesinti tespit edildi. Altı servisten ${onlineCount} tanesi çalışıyor. Ayrıntılar için aşağıdaki sorun giderme bölümünü inceleyebilirsiniz.`;
+                    return `Sistem uyarısı: Kesinti tespit edildi. Altı servisten ${onlineCount} tanesi çalışıyor. Ayrıntılar için aşağıdaki sorun giderme kılavuzunu inceleyebilirsiniz.`;
                 }
             }
             return `Systemstatus: ${onlineCount} Dienste online.`;
         }
 
-        function toggleReadAloud() {
+        function generateIntelligentHelpBriefing(lang) {
+            if (lang === 'de') {
+                return `Hier ist der Sofort-Hilfe-Assistent für das Gamingpig Portfolio. Erstens, zu den Songtexten: Sollten bei bestimmten Tracks keine Lyrics geladen werden, liegt das an fehlenden Datenbank-Einträgen bei Instrumental-Stücken, DJ-Sets oder brandneuen Releases. Sobald ein regulärer Track startet, blendet das Dashboard die Texte automatisch wieder ein. Zweitens, zum Albumcover: Das Portfolio fragt vier unabhängige CDNs parallel mit automatischem Race-Condition-Schutz ab, um stets die höchste Bildqualität zu garantieren. Drittens, zum Discord-Widget: Strenge Werbeblocker können die Anzeige sperren. Unser Server ist jederzeit direkt über discord.gg/E8BS9BDAst erreichbar. Viertens, zum Cache: Falls die Seite nach einem Update alte Inhalte anzeigt, kannst du den Anwendungs-Cache jederzeit mit dem gelben Button mit einem Klick leeren.`;
+            } else if (lang === 'en') {
+                return `Here is the instant troubleshooting assistant for the Gamingpig Portfolio. Number one, missing lyrics: If lyrics do not show for specific tracks, it indicates absent database records for instrumental tracks, mix sets, or brand-new releases. Lyrics will re-appear automatically when a recognized song plays. Number two, album artwork: The portfolio queries four independent CDNs in parallel with race-condition protection to guarantee crisp high-definition artwork. Number three, Discord widget: Strict ad blockers may block Discord API requests. You can join the server directly via discord.gg/E8BS9BDAst. Number four, cache reset: If outdated assets persist after an update, tap the yellow button to immediately purge the Service Worker and reload.`;
+            } else if (lang === 'es') {
+                return `Aquí tienes el asistente de resolución inmediata de Gamingpig Portfolio. Primero, letras de canciones: si un tema no muestra letra, se debe a la ausencia de sincronización en bases públicas en instrumentales o novedades. Aparecerán automáticamente con el siguiente tema. Segundo, portadas de álbum: consultamos cuatro CDNs en paralelo con protección inteligente para asegurar la carátula original. Tercero, widget de Discord: si los bloqueadores impiden ver los datos, entra directamente en discord.gg/E8BS9BDAst. Cuarto, borrado de caché: pulsa el botón amarillo para limpiar el Service Worker al instante.`;
+            } else if (lang === 'fr') {
+                return `Voici l'assistant d'aide rapide du Portfolio Gamingpig. Premièrement, les paroles : l'absence de paroles est normale pour les morceaux instrumentaux ou très récents. Elles réapparaîtront automatiquement dès le prochain morceau reconnu. Deuxièmement, les pochettes d'albums : quatre serveurs CDN indépendants sont interrogés en parallèle pour un affichage optimal. Troisièmement, le widget Discord : si un bloqueur filtre la requête, rejoignez directement le serveur via discord.gg/E8BS9BDAst. Quatrièmement, le cache : cliquez sur le bouton jaune pour réinitialiser le Service Worker.`;
+            } else if (lang === 'pt') {
+                return `Aqui está o assistente de autoajuda do Gamingpig Portfolio. Primeiro, letras: faixas instrumentais ou lançamentos recentes podem não ter letras em bancos públicos. Elas ressurgem automaticamente na próxima faixa. Segundo, capas de álbuns: quatro CDNs são consultados em paralelo com proteção inteligente. Terceiro, widget do Discord: se bloqueadores impedirem o contador, entre diretamente pelo link discord.gg/E8BS9BDAst. Quarto, limpeza de cache: toque no botão amarelo para limpar o Service Worker e recarregar.`;
+            } else if (lang === 'tr') {
+                return `Gamingpig Portfolyosu anında yardım ve sorun giderme asistanı. Birincisi, şarkı sözleri: Enstrümantal veya yeni parçalarda açık veritabanlarında söz kaydı bulunmayabilir. Tanınan bir parça çaldığında sözler kendiliğinden açılır. İkincisi, albüm kapakları: Sistem dört bağımsız CDN'i paralel sorgulayarak en net kapağı getirir. Üçüncüsü, Discord penceresi: Reklam engelleyiciler istekleri kısıtlarsa discord.gg/E8BS9BDAst adresinden doğrudan katılabilirsiniz. Dördüncüsü, önbellek temizleme: Sarı butona basarak Service Worker önbelleğini tek tıkla sıfırlayabilirsiniz.`;
+            }
+            return `Sofort-Hilfe und Troubleshooting bereit.`;
+        }
+
+        function executeSpeechQueue(textToRead, onStartCallback, onEndCallback) {
             if (!('speechSynthesis' in window)) {
                 showToast('Sprachausgabe wird von diesem Browser nicht unterstützt.', '⚠️');
-                return;
-            }
-
-            if (isSpeaking) {
-                stopSpeech();
                 return;
             }
 
@@ -1425,9 +1493,6 @@
                 window.speechSynthesis.resume();
             }
 
-            // Generate intelligent context-aware speech briefing
-            const textToRead = generateIntelligentBriefing(currentLang);
-
             if (!textToRead) {
                 showToast('Kein Text zum Vorlesen gefunden.', '⚠️');
                 return;
@@ -1436,7 +1501,7 @@
             const langMap = { de: 'de-DE', en: 'en-US', es: 'es-ES', fr: 'fr-FR', pt: 'pt-BR', tr: 'tr-TR' };
             const targetLang = langMap[currentLang] || 'de-DE';
 
-            // Split into clean sentence chunks
+            // Split into clean sentence chunks for fluid, non-cutting playback
             const sentences = textToRead
                 .split(/(?<=[.!?])\s+/)
                 .map(s => s.trim())
@@ -1444,28 +1509,16 @@
 
             if (sentences.length === 0) return;
 
-            // Mark speaking UI
-            isSpeaking = true;
-            const btn = document.getElementById('tts-toggle-btn');
-            if (btn) btn.classList.add('bg-emerald-600', 'text-white');
-            const lbl = document.getElementById('tts-label');
-            if (lbl) lbl.innerText = t('tts_stop');
-            const icn = document.getElementById('tts-icon');
-            if (icn) icn.innerText = '⏹️';
+            onStartCallback();
 
-            const voices = window.speechSynthesis.getVoices() || [];
-            const langPrefix = targetLang.split('-')[0];
-            const matchingVoice = voices.find(v => v.lang === targetLang) ||
-                                  voices.find(v => v.lang && v.lang.startsWith(langPrefix));
-
-            // Queue all utterances cleanly in native queue
+            const matchingVoice = getBestVoice(targetLang);
             window._ttsUtterances = [];
             const total = sentences.length;
 
             sentences.forEach((chunk, index) => {
                 const u = new SpeechSynthesisUtterance(chunk);
                 u.lang = targetLang;
-                u.rate = 1.0;
+                u.rate = 1.02;
                 u.pitch = 1.0;
                 u.volume = 1.0;
                 if (matchingVoice) u.voice = matchingVoice;
@@ -1473,17 +1526,63 @@
                 if (index === total - 1) {
                     u.onend = () => {
                         stopSpeech();
+                        if (onEndCallback) onEndCallback();
                     };
                 }
 
                 u.onerror = (e) => {
                     if (index === total - 1) {
                         stopSpeech();
+                        if (onEndCallback) onEndCallback();
                     }
                 };
 
                 window._ttsUtterances.push(u);
                 window.speechSynthesis.speak(u);
+            });
+        }
+
+        function toggleReadAloud() {
+            if (activeSpeakingMode === 'status') {
+                stopSpeech();
+                return;
+            }
+
+            stopSpeech();
+            const textToRead = generateIntelligentBriefing(currentLang);
+
+            executeSpeechQueue(textToRead, () => {
+                activeSpeakingMode = 'status';
+                const btn = document.getElementById('tts-toggle-btn');
+                if (btn) {
+                    btn.classList.add('bg-emerald-600', 'text-white', 'ring-2', 'ring-emerald-400', 'animate-pulse');
+                }
+                const lbl = document.getElementById('tts-label');
+                if (lbl) lbl.innerText = t('tts_stop');
+                const icn = document.getElementById('tts-icon');
+                if (icn) icn.innerText = '⏹️';
+            });
+        }
+
+        function toggleReadAloudHelp() {
+            if (activeSpeakingMode === 'help') {
+                stopSpeech();
+                return;
+            }
+
+            stopSpeech();
+            const textToRead = generateIntelligentHelpBriefing(currentLang);
+
+            executeSpeechQueue(textToRead, () => {
+                activeSpeakingMode = 'help';
+                const btn = document.getElementById('tts-help-btn');
+                if (btn) {
+                    btn.classList.add('bg-amber-500', '!text-slate-950', 'ring-2', 'ring-amber-400', 'animate-pulse');
+                }
+                const lbl = document.getElementById('tts-help-label');
+                if (lbl) lbl.innerText = t('tts_help_stop');
+                const icn = document.getElementById('tts-help-icon');
+                if (icn) icn.innerText = '⏹️';
             });
         }
 
