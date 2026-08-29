@@ -388,8 +388,13 @@
             const body = document.getElementById('msg-body').value.trim() || 'Lokale Testnachricht.';
             const url = document.getElementById('msg-url').value.trim() || 'status.html';
 
-            if (!('Notification' in window)) {
-                showToast('Benachrichtigungen werden nicht unterstützt.', '⚠️');
+            if (typeof Notification === 'undefined') {
+                const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+                if (isIOS) {
+                    showToast('Auf iOS: Erst auf Teilen 📤 → "Zum Home-Bildschirm" tippen.', '📲');
+                } else {
+                    showToast('Benachrichtigungen werden nicht unterstützt.', '⚠️');
+                }
                 return;
             }
 
@@ -446,7 +451,7 @@
                         });
                     }
                 } catch (e) {}
-            } else if ('Notification' in window && Notification.permission === 'granted') {
+            } else if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
                 try { new Notification(title, { body, icon: 'icon-192.png' }); } catch (e) {}
             }
 
@@ -471,8 +476,13 @@
         }
 
         async function getAndCopyMyToken() {
-            if (!('serviceWorker' in navigator)) {
-                showToast('Service Worker wird nicht unterstützt.', '⚠️');
+            if (typeof Notification === 'undefined' || !('serviceWorker' in navigator)) {
+                const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+                if (isIOS) {
+                    showToast('Auf iOS: Tippe auf Teilen 📤 → "Zum Home-Bildschirm"!', '📲');
+                } else {
+                    showToast('Service Worker / Push wird nicht unterstützt.', '⚠️');
+                }
                 return;
             }
             try {
