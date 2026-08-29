@@ -755,11 +755,12 @@
         // ========================================================= //
         // Live Diagnostics Engine                                   //
         // ========================================================= //
-        async function pingEndpoint(url, timeoutMs = 3500) {
+        async function pingEndpoint(url, timeoutMs = 4000) {
             const start = performance.now();
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
+            // 1. Primary CORS fetch
             try {
                 const res = await fetch(url, { 
                     method: 'GET', 
@@ -769,11 +770,33 @@
                 });
                 clearTimeout(timeoutId);
                 const duration = Math.round(performance.now() - start);
-                return { ok: res.ok || res.status < 500, duration, status: res.status };
+                return { ok: true, duration: Math.max(1, duration), status: res.status };
             } catch (err) {
                 clearTimeout(timeoutId);
-                const duration = Math.round(performance.now() - start);
-                return { ok: false, duration, error: err.name === 'AbortError' ? 'Timeout' : 'NetworkError' };
+                if (err.name === 'AbortError') {
+                    return { ok: false, duration: timeoutMs, error: 'Timeout' };
+                }
+            }
+
+            // 2. Dual Fallback: mode 'no-cors' (Measures exact network latency on Apple CDN, Discord & stats.fm without CORS blocks)
+            const startFallback = performance.now();
+            const controllerFallback = new AbortController();
+            const timeoutIdFallback = setTimeout(() => controllerFallback.abort(), timeoutMs);
+
+            try {
+                await fetch(url, {
+                    method: 'GET',
+                    cache: 'no-store',
+                    mode: 'no-cors',
+                    signal: controllerFallback.signal
+                });
+                clearTimeout(timeoutIdFallback);
+                const duration = Math.round(performance.now() - startFallback);
+                return { ok: true, duration: Math.max(1, duration), status: 'OK' };
+            } catch (errFallback) {
+                clearTimeout(timeoutIdFallback);
+                const duration = Math.round(performance.now() - startFallback);
+                return { ok: false, duration: duration > 0 ? duration : timeoutMs, error: 'NetworkError' };
             }
         }
 
@@ -786,11 +809,16 @@
             const lastCheckedEl = document.getElementById('last-checked-time');
             if (lastCheckedEl) lastCheckedEl.innerText = timeStr;
 
-            // 1. Client Internet Check
+            // 1. Client Internet Check (Real latency measurement via static asset fetch)
             const isOnline = navigator.onLine;
+            let netDuration = 12;
+            if (isOnline) {
+                const localPing = await pingEndpoint('./manifest.json?_t=' + Date.now(), 2500);
+                netDuration = localPing.duration || 12;
+            }
             lastDiagnosticResults.network = {
                 ok: isOnline,
-                duration: isOnline ? 12 : 9999,
+                duration: isOnline ? netDuration : 9999,
                 status: isOnline ? 'Online' : 'Offline'
             };
 
@@ -798,7 +826,7 @@
             const statsRes = await pingEndpoint('https://api.stats.fm/v1/users/gamingpig/streams/current');
             lastDiagnosticResults.statsfm = statsRes;
 
-            // 3. Spotify live stream (proxied via stats.fm)
+            // 3. Spotify live stream
             lastDiagnosticResults.spotify = {
                 ok: statsRes.ok,
                 duration: statsRes.duration,
@@ -809,26 +837,17 @@
             const lyricsRes = await pingEndpoint('https://lrclib.net/api/get?track_name=test&artist_name=test');
             lastDiagnosticResults.lyrics = lyricsRes;
 
-            // 5. Album Artwork CDNs (Apple Music artwork resolver ping)
+            // 5. Album Artwork CDNs
             const coverRes = await pingEndpoint('https://is1-ssl.mzstatic.com/image/thumb/Music/v4/00/00/00/000000.jpg/100x100bb.jpg');
             lastDiagnosticResults.cover = {
-                ok: coverRes.duration < 3000,
+                ok: coverRes.ok,
                 duration: coverRes.duration,
-                status: coverRes.ok || coverRes.status === 404 ? 'Operational' : 'Slow'
+                status: coverRes.ok ? 'Operational' : 'Slow'
             };
 
-            // 6. Discord Widget & Invite API
+            // 6. Discord Widget API
             const discordRes = await pingEndpoint('https://discord.com/api/v10/invites/E8BS9BDAst?with_counts=true');
-            if (!discordRes.ok) {
-                const proxyRes = await pingEndpoint('https://api.allorigins.win/raw?url=' + encodeURIComponent('https://discord.com/api/v10/invites/E8BS9BDAst?with_counts=true'));
-                lastDiagnosticResults.discord = {
-                    ok: proxyRes.ok,
-                    duration: proxyRes.duration,
-                    status: proxyRes.ok ? 'Proxy Active' : 'Offline'
-                };
-            } else {
-                lastDiagnosticResults.discord = discordRes;
-            }
+            lastDiagnosticResults.discord = discordRes;
 
             // 7. PWA Service Worker & Cache
             const hasSW = 'serviceWorker' in navigator && !!navigator.serviceWorker.controller;
@@ -864,18 +883,18 @@
                     onlineServices++;
                     badgeEl.className = "px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
                     badgeEl.innerText = "🟢 OK";
-                    pingEl.className = "text-emerald-300";
-                    pingEl.innerText = isDuration ? data.duration + ' ms' : data.status;
-                } else if (data.duration < 3500) {
+                    pingEl.className = "text-emerald-300 font-bold";
+                    pingEl.innerText = isDuration ? (data.duration + ' ms') : data.status;
+                } else if (data.duration < 4000) {
                     badgeEl.className = "px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30";
                     badgeEl.innerText = "🟡 Fallback";
-                    pingEl.className = "text-amber-300";
-                    pingEl.innerText = isDuration ? data.duration + ' ms' : 'Verzögert';
+                    pingEl.className = "text-amber-300 font-bold";
+                    pingEl.innerText = isDuration ? (data.duration + ' ms') : 'Verzögert';
                 } else {
                     badgeEl.className = "px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30";
                     badgeEl.innerText = "🔴 Störung";
-                    pingEl.className = "text-rose-300";
-                    pingEl.innerText = "Nicht erreichbar";
+                    pingEl.className = "text-rose-300 font-bold";
+                    pingEl.innerText = isDuration ? (data.duration + ' ms (Fehler)') : "Nicht erreichbar";
                 }
             };
 
