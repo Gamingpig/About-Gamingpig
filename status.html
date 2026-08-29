@@ -1516,7 +1516,12 @@
             const total = sentences.length;
 
             sentences.forEach((chunk, index) => {
-                const u = new SpeechSynthesisUtterance(chunk);
+                // German TTS phonetic fix: prevent "Gamingpich" by changing final "pig" to "Pigg" in German speech
+                const spokenText = targetLang.startsWith('de')
+                    ? chunk.replace(/\bGamingpig\b/gi, 'Gaming Pigg')
+                    : chunk;
+
+                const u = new SpeechSynthesisUtterance(spokenText);
                 u.lang = targetLang;
                 u.rate = 1.02;
                 u.pitch = 1.0;
