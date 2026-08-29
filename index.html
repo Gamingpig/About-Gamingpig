@@ -10318,24 +10318,10 @@
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
                     .then((reg) => {
-                        // Sofort auf Updates prüfen
-                        if (reg) reg.update().catch(() => {});
-
-                        // Wenn ein neuer SW wartet: sofort aktivieren
-                        const applyUpdate = (worker) => {
-                            if (!worker) return;
-                            worker.postMessage({ type: 'SKIP_WAITING' });
-                        };
-                        if (reg.waiting) applyUpdate(reg.waiting);
-                        reg.addEventListener('updatefound', () => {
-                            const newWorker = reg.installing;
-                            if (!newWorker) return;
-                            newWorker.addEventListener('statechange', () => {
-                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                    applyUpdate(newWorker);
-                                }
-                            });
-                        });
+                        // Prüfe beim Laden direkt auf Updates
+                        if (reg) {
+                            reg.update().catch(() => {});
+                        }
                     })
                     .catch((err) => {
                         console.warn('Service Worker Registrierung fehlgeschlagen (PWA-Installation evtl. nicht möglich):', err);
@@ -15217,12 +15203,8 @@ window.generateShareCard = function() {
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) {
                 stopProgressTracking();
-            } else {
-                // Sofort API-Poll beim Zurückkommen in den Vordergrund
-                fetchMusicData().then(() => {
-                    scheduleNextMusicPoll();
-                });
-                if (trackIsPlaying) startProgressTracking();
+            } else if (trackIsPlaying) {
+                startProgressTracking();
             }
         });
 
@@ -15424,10 +15406,10 @@ window.generateShareCard = function() {
                     }
                 }
                 trackIsPlaying = false;
-                stopProgressTracking();
                 if (consecutiveEmptyPolls < 3) {
                     return;
                 }
+                stopProgressTracking();
                 if (!offlineTimeout) {
                     offlineTimeout = setTimeout(() => {
                         if (mainMusicCard) {
