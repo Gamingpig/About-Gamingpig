@@ -223,8 +223,28 @@
 
                     <!-- Button 2: Broadcast an alle registrierten Geräte -->
                     <button onclick="sendBroadcastPush()" class="w-full sm:w-1/2 px-4 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2">
-                        <span>🚀</span> <span>An alle Geräte senden</span>
+                        <span>🚀</span> <span>Sofort-Push senden</span>
                     </button>
+                </div>
+            </div>
+
+            <!-- Device Token & Broadcast Triggers -->
+            <div class="glow-card p-5 sm:p-6 rounded-3xl border-slate-800 space-y-3">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                    <span>📱</span> Drittes Gerät (z. B. iPhone) hinzufügen / GitHub Broadcast
+                </h3>
+                <p class="text-xs text-slate-400">
+                    Öffne diese Seite auf deinem iPhone (PWA) und tippe auf Token kopieren, um es hinzuzufügen. Über GitHub Actions kannst du Push an alle geschlossenen Handys triggern.
+                </p>
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                    <button onclick="getAndCopyMyToken()" class="w-full sm:w-1/2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs border border-slate-700 transition-all active:scale-95 flex items-center justify-center gap-2">
+                        <span>📋</span> <span>Geräte-Token kopieren</span>
+                    </button>
+                    <a href="https://github.com/Gamingpig/About-Gamingpig/actions/workflows/push-monitor.yml" target="_blank" rel="noopener" class="w-full sm:w-1/2 px-4 py-2.5 rounded-xl bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 font-bold text-xs border border-indigo-500/40 transition-all text-center flex items-center justify-center gap-2">
+                        <span>🚀</span> <span>GitHub Push-Trigger →</span>
+                    </a>
+                </div>
+                <div id="token-box" class="hidden mt-2 p-3 rounded-xl bg-slate-950 border border-white/10 text-[11px] font-mono text-slate-300 break-all select-all">
                 </div>
             </div>
 
@@ -433,6 +453,58 @@
             setTimeout(() => {
                 showToast('🚀 Push-Nachricht sofort erfolgreich gesendet!', '✅');
             }, 600);
+        }
+
+        const VAPID_PUBLIC_KEY = 'BItv0vIf2FPn11TcGv_5Nyp1YHE4c6e7lYHWRONDnGL-ca7EPMbD_DlzkMlB_InZEVJEFASPhkMwOLnPRRxfX-w';
+
+        function urlB64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding)
+                .replace(/\-/g, '+')
+                .replace(/_/g, '/');
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+            for (let i = 0; i < rawData.length; ++i) {
+                outputArray[i] = rawData.charCodeAt(i);
+            }
+            return outputArray;
+        }
+
+        async function getAndCopyMyToken() {
+            if (!('serviceWorker' in navigator)) {
+                showToast('Service Worker wird nicht unterstützt.', '⚠️');
+                return;
+            }
+            try {
+                if (Notification.permission !== 'granted') {
+                    const perm = await Notification.requestPermission();
+                    if (perm !== 'granted') {
+                        showToast('Benachrichtigungen nicht erlaubt.', '❌');
+                        return;
+                    }
+                }
+                const reg = await navigator.serviceWorker.ready;
+                let sub = await reg.pushManager.getSubscription();
+                if (!sub) {
+                    sub = await reg.pushManager.subscribe({
+                        userVisibleOnly: true,
+                        applicationServerKey: urlB64ToUint8Array(VAPID_PUBLIC_KEY)
+                    });
+                }
+                const subStr = JSON.stringify(sub.toJSON());
+                const box = document.getElementById('token-box');
+                if (box) {
+                    box.innerText = subStr;
+                    box.classList.remove('hidden');
+                }
+                navigator.clipboard.writeText(subStr).then(() => {
+                    showToast('Token in Zwischenablage kopiert!', '📋');
+                }).catch(() => {
+                    showToast('Token generiert (unten sichtbar)', '📋');
+                });
+            } catch (e) {
+                showToast('Fehler: ' + (e.message || 'Konnte nicht abrufen'), '⚠️');
+            }
         }
 
         // Check if session is already active
