@@ -6124,8 +6124,6 @@
                 <button onclick="openChangelogModal()" id="footer-whats-new-btn" class="font-bold text-blue-400 hover:text-blue-300 hover:underline transition-colors">Was ist neu?</button>
                 <span class="text-white/20 select-none">•</span>
                 <a href="privacy.html" class="font-bold text-blue-400 hover:text-blue-300 hover:underline transition-colors">Datenschutz</a>
-                <span class="text-white/20 select-none">•</span>
-                <a href="status.html" id="footer-status-link" class="font-bold text-emerald-400 hover:text-emerald-300 hover:underline transition-colors flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>Status &amp; Störungen</a>
             </div>
         </footer>
     </main>
@@ -7539,7 +7537,6 @@
             setText('support-status-title', t('support_section_status_title'));
             setText('support-status-desc', t('support_section_status_desc'));
             setText('support-status-btn', t('support_section_status_btn'));
-            setText('footer-status-link', t('footer_status'));
             // FIX: Wake-Lock-Button-Label muss bei Sprachwechsel den ECHTEN Zustand
             // widerspiegeln, nicht einen festen Text - siehe Begründung bei syncWakeLockButtonLabel.
             const wakeLockBtn = document.getElementById('btn-toggle-wakelock');
@@ -9242,8 +9239,27 @@
                 const u = new SpeechSynthesisUtterance(text);
                 if (voice) u.voice = voice;
                 u.lang = TTS_LANG_BCP47[currentLang || 'de'] || 'de-DE';
-                u.onend = resolve;
-                u.onerror = resolve;
+                u.rate = 1.0;
+                u.pitch = 1.0;
+                u.volume = 1.0;
+
+                let finished = false;
+                const done = () => {
+                    if (finished) return;
+                    finished = true;
+                    resolve();
+                };
+
+                u.onend = done;
+                u.onerror = (e) => {
+                    done();
+                };
+
+                // Watchdog: In case mobile browser drops onend event
+                const maxWait = Math.max(3000, text.length * 180);
+                setTimeout(done, maxWait);
+
+                window._activeTtsUtterance = u;
                 speechSynthesis.speak(u);
             });
         }
@@ -9251,23 +9267,44 @@
         async function ttsSpeak(text, btnEl) {
             if (!text || !text.trim()) return;
 
-            if (ttsQueueActive || (typeof speechSynthesis !== 'undefined' && (speechSynthesis.speaking || speechSynthesis.pending))) {
+            if (typeof speechSynthesis === 'undefined') {
+                if (typeof showToast === 'function') showToast('Sprachausgabe nicht unterstützt.', '⚠️');
+                return;
+            }
+
+            if (ttsQueueActive) {
                 ttsQueueActive = false;
-                if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel();
+                speechSynthesis.cancel();
+                if (window._ttsKeepAlive) { clearInterval(window._ttsKeepAlive); window._ttsKeepAlive = null; }
                 ttsSetButtonState(btnEl, 'idle');
                 return;
             }
 
-            const voice = ttsPickVoice();
-            if (!voice && typeof showToast === 'function') {
-                showToast(t('tts_no_voice_found'));
+            // Reset any stuck speech state from previous operations
+            speechSynthesis.cancel();
+            if (speechSynthesis.paused) {
+                speechSynthesis.resume();
             }
 
+            const voice = ttsPickVoice();
             const chunks = splitIntoSpeechChunks(text.trim());
             if (chunks.length === 0) return;
 
             ttsQueueActive = true;
             ttsSetButtonState(btnEl, 'speaking');
+
+            // Android Chrome 14s freeze prevention
+            if (window._ttsKeepAlive) clearInterval(window._ttsKeepAlive);
+            window._ttsKeepAlive = setInterval(() => {
+                if (!speechSynthesis.speaking) {
+                    clearInterval(window._ttsKeepAlive);
+                    window._ttsKeepAlive = null;
+                    return;
+                }
+                speechSynthesis.pause();
+                speechSynthesis.resume();
+            }, 10000);
+
             try {
                 for (const chunk of chunks) {
                     if (!ttsQueueActive) break;
@@ -9275,6 +9312,7 @@
                 }
             } finally {
                 ttsQueueActive = false;
+                if (window._ttsKeepAlive) { clearInterval(window._ttsKeepAlive); window._ttsKeepAlive = null; }
                 ttsSetButtonState(btnEl, 'idle');
             }
         }
@@ -9297,22 +9335,45 @@
 
         function speakUtteranceAndWait(text, voice, rate) {
             return new Promise(resolve => {
+                if (typeof speechSynthesis === 'undefined') return resolve();
                 const u = new SpeechSynthesisUtterance(text);
                 if (voice) u.voice = voice;
                 u.lang = TTS_LANG_BCP47[currentLang || 'de'] || 'de-DE';
-                u.rate = rate || 1;
-                u.onend = resolve;
-                u.onerror = resolve;
+                u.rate = rate || 1.0;
+                u.pitch = 1.0;
+                u.volume = 1.0;
+
+                let finished = false;
+                const done = () => {
+                    if (finished) return;
+                    finished = true;
+                    resolve();
+                };
+
+                u.onend = done;
+                u.onerror = done;
+
+                const maxWait = Math.max(2500, text.length * 180);
+                setTimeout(done, maxWait);
+
+                window._activeTtsUtterance = u;
                 speechSynthesis.speak(u);
             });
         }
 
         window.speakLyrics = function(btnEl) {
-            if (ttsSyncedPlaybackActive || speechSynthesis.speaking || speechSynthesis.pending) {
+            if (ttsSyncedPlaybackActive || ttsQueueActive) {
                 ttsSyncedPlaybackActive = false;
-                speechSynthesis.cancel();
+                ttsQueueActive = false;
+                if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel();
+                if (window._ttsKeepAlive) { clearInterval(window._ttsKeepAlive); window._ttsKeepAlive = null; }
                 ttsSetButtonState(btnEl, 'idle');
                 return;
+            }
+
+            if (typeof speechSynthesis !== 'undefined') {
+                speechSynthesis.cancel();
+                if (speechSynthesis.paused) speechSynthesis.resume();
             }
 
             if (!parsedLyrics || parsedLyrics.length === 0) {

@@ -1234,6 +1234,10 @@
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
             }
+            if (window._ttsKeepAlive) {
+                clearInterval(window._ttsKeepAlive);
+                window._ttsKeepAlive = null;
+            }
             isSpeaking = false;
             const btn = document.getElementById('tts-toggle-btn');
             if (btn) btn.classList.remove('bg-emerald-600', 'text-white');
@@ -1245,7 +1249,7 @@
 
         function toggleReadAloud() {
             if (!('speechSynthesis' in window)) {
-                alert('Sprachausgabe wird von diesem Browser nicht unterstützt.');
+                showToast('Sprachausgabe wird von diesem Browser nicht unterstützt.', '⚠️');
                 return;
             }
 
@@ -1254,30 +1258,45 @@
                 return;
             }
 
+            // Immediately reset any stuck state
             window.speechSynthesis.cancel();
+            if (window.speechSynthesis.paused) {
+                window.speechSynthesis.resume();
+            }
 
-            const textToRead = [
-                document.getElementById('hero-title')?.innerText || '',
-                document.getElementById('overall-status-text')?.innerText || '',
-                document.getElementById('overall-subtext')?.innerText || '',
-                document.getElementById('help-title')?.innerText || '',
-                document.getElementById('tip1-title')?.innerText || '',
-                document.getElementById('tip1-desc')?.innerText || '',
-                document.getElementById('tip2-title')?.innerText || '',
-                document.getElementById('tip2-desc')?.innerText || ''
-            ].join('. ');
+            // Build text from visible page content
+            const sections = [
+                document.getElementById('hero-title'),
+                document.getElementById('overall-status-text'),
+                document.getElementById('overall-subtext'),
+                document.getElementById('services-online-counter'),
+                document.getElementById('help-title'),
+                document.getElementById('help-subtitle'),
+                document.getElementById('tip1-title'),
+                document.getElementById('tip1-desc'),
+                document.getElementById('tip2-title'),
+                document.getElementById('tip2-desc'),
+                document.getElementById('tip3-title'),
+                document.getElementById('tip3-desc'),
+            ];
+            const textToRead = sections
+                .map(el => (el && el.innerText) ? el.innerText.trim() : '')
+                .filter(Boolean)
+                .join('. ');
 
-            const utterance = new SpeechSynthesisUtterance(textToRead);
-            utterance.lang = currentLang === 'de' ? 'de-DE' :
-                             currentLang === 'en' ? 'en-US' :
-                             currentLang === 'es' ? 'es-ES' :
-                             currentLang === 'fr' ? 'fr-FR' :
-                             currentLang === 'pt' ? 'pt-BR' : 'tr-TR';
-            utterance.rate = 1.05;
+            if (!textToRead) {
+                showToast('Kein Text zum Vorlesen gefunden.', '⚠️');
+                return;
+            }
 
-            utterance.onend = () => stopSpeech();
-            utterance.onerror = () => stopSpeech();
+            const langMap = { de: 'de-DE', en: 'en-US', es: 'es-ES', fr: 'fr-FR', pt: 'pt-BR', tr: 'tr-TR' };
+            const targetLang = langMap[currentLang] || 'de-DE';
 
+            // Split into sentences / manageable chunks so mobile engines don't choke
+            const sentences = textToRead.split(/(?<=[.!?])\s+/).filter(s => s.trim().length > 0);
+            if (sentences.length === 0) return;
+
+            // Mark speaking
             isSpeaking = true;
             const btn = document.getElementById('tts-toggle-btn');
             if (btn) btn.classList.add('bg-emerald-600', 'text-white');
@@ -1286,8 +1305,70 @@
             const icn = document.getElementById('tts-icon');
             if (icn) icn.innerText = '⏹️';
 
-            window.speechSynthesis.speak(utterance);
+            let curIndex = 0;
+            const voices = window.speechSynthesis.getVoices() || [];
+            const langPrefix = targetLang.split('-')[0];
+            const matchingVoice = voices.find(v => v.lang === targetLang) ||
+                                  voices.find(v => v.lang && v.lang.startsWith(langPrefix));
+
+            function speakNext() {
+                if (!isSpeaking || curIndex >= sentences.length) {
+                    stopSpeech();
+                    return;
+                }
+
+                const chunk = sentences[curIndex++];
+                const utterance = new SpeechSynthesisUtterance(chunk);
+                utterance.lang = targetLang;
+                utterance.rate = 1.0;
+                utterance.pitch = 1.0;
+                utterance.volume = 1.0;
+                if (matchingVoice) utterance.voice = matchingVoice;
+
+                let resolved = false;
+                const onDone = () => {
+                    if (resolved) return;
+                    resolved = true;
+                    if (isSpeaking) speakNext();
+                };
+
+                utterance.onend = onDone;
+                utterance.onerror = (e) => {
+                    if (e.error !== 'interrupted' && e.error !== 'canceled') {
+                        onDone();
+                    } else {
+                        stopSpeech();
+                    }
+                };
+
+                // Watchdog timeout in case onend drops on mobile
+                const maxWait = Math.max(3000, chunk.length * 180);
+                setTimeout(() => {
+                    if (!resolved && isSpeaking) {
+                        onDone();
+                    }
+                }, maxWait);
+
+                window._activeTtsUtterance = utterance;
+                window.speechSynthesis.speak(utterance);
+            }
+
+            // Android keepalive
+            if (window._ttsKeepAlive) clearInterval(window._ttsKeepAlive);
+            window._ttsKeepAlive = setInterval(() => {
+                if (!window.speechSynthesis.speaking) {
+                    clearInterval(window._ttsKeepAlive);
+                    window._ttsKeepAlive = null;
+                    return;
+                }
+                window.speechSynthesis.pause();
+                window.speechSynthesis.resume();
+            }, 10000);
+
+            // Start speaking FIRST chunk SYNCHRONOUSLY inside user click handler!
+            speakNext();
         }
+
 
         // ========================================================= //
         // Service Worker & Startup Listeners                        //
