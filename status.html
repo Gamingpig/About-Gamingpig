@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="de" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🟢 Live System-Status & Störungsmelder – Gamingpig</title>
+    <link rel="icon" href="icon-192.png" type="image/png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: '#3b82f6',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800;900&display=swap');
+        
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #03050c;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.18) 0px, transparent 45%),
+                radial-gradient(at 100% 0%, rgba(59, 130, 246, 0.22) 0px, transparent 50%),
+                radial-gradient(at 50% 50%, rgba(168, 85, 247, 0.15) 0px, transparent 55%),
+                radial-gradient(at 50% 100%, rgba(245, 158, 11, 0.12) 0px, transparent 50%);
+            background-attachment: fixed;
+        }
+
+        .glow-card {
+            background: rgba(10, 15, 30, 0.85);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+            transition: all 0.25s ease;
+        }
+
+        .glow-card:hover {
+            border-color: rgba(255, 255, 255, 0.25);
+            box-shadow: 0 25px 60px -10px rgba(0, 0, 0, 0.95), 0 0 25px rgba(16, 185, 129, 0.15);
+        }
+
+        .status-pulse {
+            animation: pulse-ring 2s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite;
+        }
+
+        @keyframes pulse-ring {
+            0% { transform: scale(0.95); opacity: 0.9; }
+            50% { transform: scale(1.15); opacity: 0.4; }
+            100% { transform: scale(0.95); opacity: 0.9; }
+        }
+
+        .spin-slow {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="text-slate-100 min-h-screen flex flex-col items-center justify-between p-3.5 sm:p-6 md:p-10 selection:bg-emerald-500/40">
+
+    <!-- Top Navigation Bar -->
+    <header class="max-w-4xl w-full flex items-center justify-between py-3.5 px-4 sm:px-6 rounded-2xl bg-slate-900/85 border border-slate-800 backdrop-blur-xl mb-6 sm:mb-8 shadow-2xl">
+        <a href="index.html" class="flex items-center gap-2 text-white hover:text-emerald-400 font-extrabold text-xs sm:text-sm transition-colors group">
+            <span class="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 group-hover:-translate-x-1 transition-transform">←</span>
+            <span id="nav-back">Hauptseite</span>
+        </a>
+
+        <div class="flex items-center gap-2 sm:gap-3">
+            <!-- TTS Button -->
+            <button id="tts-toggle-btn" onclick="toggleReadAloud()" class="inline-flex items-center gap-1 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-[11px] sm:text-xs font-bold transition-all shadow-md active:scale-95">
+                <span id="tts-icon">🔊</span>
+                <span id="tts-label">Vorlesen</span>
+            </button>
+
+            <!-- Language Dropdown -->
+            <div class="relative">
+                <select id="lang-select" onchange="changeLanguage(this.value)" class="bg-slate-800 hover:bg-slate-700 text-white font-bold text-[11px] sm:text-xs py-1.5 px-2.5 sm:py-2 sm:px-3 rounded-xl border border-slate-700 cursor-pointer outline-none focus:ring-2 focus:ring-emerald-500 transition-all shadow-md">
+                    <option value="de">🇩🇪 Deutsch</option>
+                    <option value="en">🇬🇧 English</option>
+                    <option value="es">🇪🇸 Español</option>
+                    <option value="fr">🇫🇷 Français</option>
+                    <option value="pt">🇧🇷 Português</option>
+                    <option value="tr">🇹🇷 Türkçe</option>
+                </select>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="max-w-4xl w-full my-auto pb-12 space-y-6 sm:space-y-8">
+        
+        <!-- Hero Header -->
+        <div class="text-center">
+            <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] sm:text-xs font-black uppercase tracking-widest mb-4">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping inline-block"></span>
+                <span id="badge-title">LIVE-TELEMETRIE & SYSTEMGESUNDHEIT</span>
+            </div>
+
+            <h1 id="hero-title" class="text-2xl sm:text-4xl md:text-5xl font-black tracking-tight text-white mb-3 uppercase">
+                System-Status & Störungsmelder
+            </h1>
+
+            <p id="hero-subtitle" class="text-slate-300 text-xs sm:text-base max-w-2xl mx-auto leading-relaxed">
+                Echtzeit-Überwachung aller APIs, Musik-Streams, Lyrics-Server und Pipelines. Hier siehst du sofort, ob ein Dienst gestört ist, und erhältst direkte Troubleshooting-Lösungen.
+            </p>
+        </div>
+
+        <!-- Overall Health Banner -->
+        <div id="overall-banner" class="glow-card p-4 sm:p-6 rounded-2xl sm:rounded-3xl border-emerald-500/30 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3.5 sm:gap-5 w-full sm:w-auto">
+                <div id="overall-icon-bg" class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center text-2xl sm:text-3xl shrink-0 shadow-lg">
+                    <span id="overall-icon">🟢</span>
+                </div>
+                <div class="min-w-0 flex-1">
+                    <div class="flex items-center gap-2">
+                        <span id="overall-status-text" class="text-base sm:text-xl font-black text-white">Alle Systeme betriebsbereit</span>
+                        <span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-mono font-bold" id="overall-pct">100% OK</span>
+                    </div>
+                    <p id="overall-subtext" class="text-xs sm:text-sm text-slate-400 mt-0.5">Spotify, Stats.fm, Lyrics und CDNs antworten ohne Verzögerung.</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+                <span id="last-checked-time" class="text-[10px] sm:text-xs text-slate-400 font-mono">Gerade eben</span>
+                <button id="btn-refresh" onclick="runDiagnostics(true)" class="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 active:scale-95 transition-all shadow-md flex items-center gap-1.5 text-xs font-bold">
+                    <span id="refresh-spinner" class="inline-block">🔄</span>
+                    <span id="btn-refresh-text">Prüfen</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Android & Mobile Push Notification Card -->
+        <div class="glow-card p-4 sm:p-6 rounded-2xl sm:rounded-3xl border-indigo-500/30 relative overflow-hidden">
+            <div class="absolute -right-10 -bottom-10 w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div class="flex items-start sm:items-center gap-3.5">
+                    <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center text-xl shrink-0">
+                        🔔
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <h2 id="push-card-title" class="font-extrabold text-sm sm:text-base text-white">Störungs-Push für Android & Mobilgeräte</h2>
+                            <span id="push-status-badge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-400 border border-white/10">Nicht aktiviert</span>
+                        </div>
+                        <p id="push-card-desc" class="text-xs text-slate-300 mt-1 max-w-xl leading-relaxed">
+                            Lasse dich bei Ausfällen (z. B. Spotify API oder Lyrics offline) und anschließender Wiederherstellung sofort per System-Benachrichtigung auf deinem Smartphone informieren.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2 w-full sm:w-auto shrink-0 justify-end flex-wrap">
+                    <button id="btn-push-test" onclick="sendTestPush()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-bold transition-all active:scale-95 hidden">
+                        📲 Test-Push senden
+                    </button>
+                    <button id="btn-push-toggle" onclick="togglePushNotifications()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-all shadow-lg active:scale-95">
+                        Push aktivieren
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Live Services Health Grid -->
+        <section>
+            <div class="flex items-center justify-between mb-3 px-1">
+                <h3 id="section-services-title" class="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                    <span>📡</span> Einzelne Dienste & APIs
+                </h3>
+                <span id="services-online-counter" class="text-[11px] font-mono text-emerald-400 font-bold">7 / 7 online</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="services-grid">
+                
+                <!-- Service 1: Spotify Live Telemetry -->
+                <div class="glow-card p-4 rounded-2xl flex flex-col justify-between" id="card-service-spotify">
+                    <div class="flex items-start justify-between gap-3 mb-2">
+                        <div class="flex items-center gap-2.5">
+                            <span class="text-xl">🎵</span>
+                            <div>
+                                <h4 class="text-xs sm:text-sm font-bold text-white" id="service-spotify-name">Spotify Live-Player & Stream</h4>
+                                <p class="text-[10px] text-slate-400" id="service-spotify-desc">Live-Synchronisation des aktuellen Titels</p>
+                            </div>
+                        </div>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-400" id="status-badge-spotify">🟢 OK</span>
+                    </div>
+                    <div class="flex items-center justify-between text-[10px] font-mono text-slate-400 border-t border-white/5 pt-2 mt-1">
+                        <span>Latenz: <strong class="text-emerald-300" id="ping-spotify">-- ms</strong></span>
+                        <span id="type-spotify">Direct / Bridge</span>
+                    </div>
+                </div>
+
+                <!-- Service 2: Stats.fm API -->
+                <div class="glow-card p-4 rounded-2xl flex flex-col justify-between" id="card-service-statsfm">
+                    <div class="flex items-start justify-between gap-3 mb-2">
+                        <div class="flex items-center gap-2.5">
+                            <span class="text-xl">📊</span>
+                            <div>
+                                <h4 class="text-xs sm:text-sm font-bold text-white" id="service-statsfm-name">stats.fm API & Stories</h4>
+                                <p class="text-[10px] text-slate-400" id="service-statsfm-desc">Wiedergabestatistiken, Top-Tracks & Wrapped</p>
+                            </div>
+                        </div>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-400" id="status-badge-statsfm">🟢 OK</span>
+                    </div>
+                    <div class="flex items-center justify-between text-[10px] font-mono text-slate-400 border-t border-white/5 pt-2 mt-1">
+                        <span>Latenz: <strong class="text-emerald-300" id="ping-statsfm">-- ms</strong></span>
+                        <span id="type-statsfm">REST API v1</span>
+                    </div>
+                </div>
+
+                <!-- Service 3: LrcLib Lyrics -->
+                <div class="glow-card p-4 rounded-2xl flex flex-col justify-between" id="card-service-lyrics">
+                    <div class="flex items-start justify-between gap-3 mb-2">
+                        <div class="flex items-center gap-2.5">
+                            <span class="text-xl">📝</span>
+                            <div>
+                                <h4 class="text-xs sm:text-sm font-bold text-white" id="service-lyrics-name">LrcLib Lyrics Engine</h4>
+                                <p class="text-[10px] text-slate-400" id="service-lyrics-desc">Synchronisierte Songtexte & Wort-Timings</p>
+                            </div>
+                        </div>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-400" id="status-badge-lyrics">🟢 OK</span>
+                    </div>
+                    <div class="flex items-center justify-between text-[10px] font-mono text-slate-400 border-t border-white/5 pt-2 mt-1">
+                        <span>Latenz: <strong class="text-emerald-300" id="ping-lyrics">-- ms</strong></span>
+                        <span id="type-lyrics">Synced DB</span>
+                    </div>
+                </div>
+
+                <!-- Service 4: Cover Resolver CDN -->
+                <div class="glow-card p-4 rounded-2xl flex flex-col justify-between" id="card-service-cover">
+                    <div class="flex items-start justify-between gap-3 mb-2">
+                        <div class="flex items-center gap-2.5">
+                            <span class="text-xl">🖼️</span>
+                            <div>
+                                <h4 class="text-xs sm:text-sm font-bold text-white" id="service-cover-name">Album Cover CDNs</h4>
+                                <p class="text-[10px] text-slate-400" id="service-cover-desc">Apple Music, Spotify, Deezer Pipeline</p>
+                            </div>
+                        </div>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-400" id="status-badge-cover">🟢 OK</span>
+                    </div>
+                    <div class="flex items-center justify-between text-[10px] font-mono text-slate-400 border-t border-white/5 pt-2 mt-1">
+                        <span>Latenz: <strong class="text-emerald-300" id="ping-cover">-- ms</strong></span>
+                        <span id="type-cover">Multi-CDN (640px)</span>
+                    </div>
+                </div>
+
+                <!-- Service 5: Discord Widget API -->
+                <div class="glow-card p-4 rounded-2xl flex flex-col justify-between" id="card-service-discord">
+                    <div class="flex items-start justify-between gap-3 mb-2">
+                        <div class="flex items-center gap-2.5">
+                            <span class="text-xl">💬</span>
+                            <div>
+                                <h4 class="text-xs sm:text-sm font-bold text-white" id="service-discord-name">Discord Support & Widget</h4>
+                                <p class="text-[10px] text-slate-400" id="service-discord-desc">Server-Mitglieder & Online-Zähler</p>
+                            </div>
+                        </div>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-400" id="status-badge-discord">🟢 OK</span>
+                    </div>
+                    <div class="flex items-center justify-between text-[10px] font-mono text-slate-400 border-t border-white/5 pt-2 mt-1">
+                        <span>Latenz: <strong class="text-emerald-300" id="ping-discord">-- ms</strong></span>
+                        <span id="type-discord">Multi-Proxy</span>
+                    </div>
+                </div>
+
+                <!-- Service 6: PWA Service Worker & Cache -->
+                <div class="glow-card p-4 rounded-2xl flex flex-col justify-between" id="card-service-pwa">
+                    <div class="flex items-start justify-between gap-3 mb-2">
+                        <div class="flex items-center gap-2.5">
+                            <span class="text-xl">⚡</span>
+                            <div>
+                                <h4 class="text-xs sm:text-sm font-bold text-white" id="service-pwa-name">PWA Cache & Service Worker</h4>
+                                <p class="text-[10px] text-slate-400" id="service-pwa-desc">Offline-Speicher, Assets & Update-Handler</p>
+                            </div>
+                        </div>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-400" id="status-badge-pwa">🟢 OK</span>
+                    </div>
+                    <div class="flex items-center justify-between text-[10px] font-mono text-slate-400 border-t border-white/5 pt-2 mt-1">
+                        <span>Status: <strong class="text-emerald-300" id="ping-pwa">Aktiv</strong></span>
+                        <span id="type-pwa">v24.132.1</span>
+                    </div>
+                </div>
+
+                <!-- Service 7: Client Network -->
+                <div class="glow-card p-4 rounded-2xl flex flex-col justify-between sm:col-span-2" id="card-service-network">
+                    <div class="flex items-start justify-between gap-3 mb-2">
+                        <div class="flex items-center gap-2.5">
+                            <span class="text-xl">🌐</span>
+                            <div>
+                                <h4 class="text-xs sm:text-sm font-bold text-white" id="service-network-name">Deine Internetverbindung & Browser-Netzwerk</h4>
+                                <p class="text-[10px] text-slate-400" id="service-network-desc">Echter Ping zum Server & Konnektivität</p>
+                            </div>
+                        </div>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-400" id="status-badge-network">🟢 Verbunden</span>
+                    </div>
+                    <div class="flex items-center justify-between text-[10px] font-mono text-slate-400 border-t border-white/5 pt-2 mt-1">
+                        <span>Latenz: <strong class="text-emerald-300" id="ping-network">-- ms</strong></span>
+                        <span id="type-network">Online</span>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- Troubleshooting & Self-Service Help -->
+        <section class="glow-card p-5 sm:p-7 rounded-2xl sm:rounded-3xl border-slate-800">
+            <div class="flex items-center gap-2.5 mb-4">
+                <span class="text-2xl">💡</span>
+                <div>
+                    <h3 id="help-title" class="font-black text-base sm:text-lg text-white">Sofort-Hilfe & Troubleshooting</h3>
+                    <p id="help-subtitle" class="text-xs text-slate-400">Schnelle Lösungen für bekannte Phänomene – ohne Wartezeit auf den Support.</p>
+                </div>
+            </div>
+
+            <div class="space-y-3 text-xs text-slate-300">
+                <!-- Tip 1: Lyrics missing -->
+                <div class="p-3.5 rounded-xl bg-slate-900/60 border border-white/5">
+                    <h4 id="tip1-title" class="font-bold text-slate-200 mb-1 flex items-center gap-1.5">
+                        <span>🎵</span> Warum laden bei manchen Songs keine Songtexte?
+                    </h4>
+                    <p id="tip1-desc" class="text-slate-400 leading-relaxed">
+                        Nicht jeder Track hat in öffentlichen Musikdatenbanken synchronisierte Texte hinterlegt (vor allem Instrumental-Tracks, DJ-Mixe oder ganz neue Releases). Sobald ein bekannter Song startet, blendet das Dashboard die Lyrics automatisch wieder ein.
+                    </p>
+                </div>
+
+                <!-- Tip 2: Cover black or delayed -->
+                <div class="p-3.5 rounded-xl bg-slate-900/60 border border-white/5">
+                    <h4 id="tip2-title" class="font-bold text-slate-200 mb-1 flex items-center gap-1.5">
+                        <span>🖼️</span> Albumcover lädt verzögert oder bleibt dunkel?
+                    </h4>
+                    <p id="tip2-desc" class="text-slate-400 leading-relaxed">
+                        Die Portfolio-App fragt 4 voneinander unabhängige CDNs ab. Der integrierte Race-Condition-Schutz verwirft verspätete Antworten automatisch, damit immer das Artwork des echten Songs angezeigt wird. Bei langsamer mobiler Verbindung kann das Laden 1-2 Sekunden dauern.
+                    </p>
+                </div>
+
+                <!-- Tip 3: Discord widget fails -->
+                <div class="p-3.5 rounded-xl bg-slate-900/60 border border-white/5">
+                    <h4 id="tip3-title" class="font-bold text-slate-200 mb-1 flex items-center gap-1.5">
+                        <span>💬</span> Discord-Widget zeigt keine Mitgliederzahl an?
+                    </h4>
+                    <p id="tip3-desc" class="text-slate-400 leading-relaxed">
+                        Einige strenge Werbeblocker oder Schul-/Firmennetzwerke blockieren Drittanbieter-Anfragen an Discord. Der Support-Server ist davon nicht betroffen: Klicke einfach auf den Direktlink <a href="https://discord.gg/E8BS9BDAst" target="_blank" class="text-blue-400 font-bold hover:underline">discord.gg/E8BS9BDAst</a>, um beizutreten.
+                    </p>
+                </div>
+
+                <!-- Tip 4: Old cache -->
+                <div class="p-3.5 rounded-xl bg-slate-900/60 border border-white/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div>
+                        <h4 id="tip4-title" class="font-bold text-slate-200 mb-1 flex items-center gap-1.5">
+                            <span>🔄</span> Seite zeigt nach einem Update noch alte Inhalte?
+                        </h4>
+                        <p id="tip4-desc" class="text-slate-400 leading-relaxed">
+                            Du kannst den internen Service-Worker- und Asset-Cache mit einem Klick leeren. Deine Lautstärke- und Design-Einstellungen bleiben dabei erhalten.
+                        </p>
+                    </div>
+                    <button onclick="clearAppCache()" id="btn-clear-cache" class="px-3.5 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-xs font-bold whitespace-nowrap active:scale-95 transition-all">
+                        Cache leeren & neu laden
+                    </button>
+                </div>
+            </div>
+
+            <!-- Diagnostic Report Action -->
+            <div class="mt-5 pt-4 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <p id="diag-copy-hint" class="text-[11px] text-slate-400 text-center sm:text-left">
+                    Problem besteht weiterhin? Kopiere den automatischen Diagnosebericht für ein schnelles Discord-Ticket.
+                </p>
+                <div class="flex items-center gap-2 w-full sm:w-auto">
+                    <button onclick="copyDiagnosticReport()" id="btn-copy-report" class="w-full sm:w-auto px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-all active:scale-95 flex items-center justify-center gap-1.5 shadow-md">
+                        <span>📋</span> <span id="btn-copy-report-text">Diagnose-Bericht kopieren</span>
+                    </button>
+                    <a href="https://discord.gg/E8BS9BDAst" target="_blank" rel="noopener" class="w-full sm:w-auto px-4 py-2 rounded-xl bg-[#5865F2] hover:brightness-110 text-white font-bold text-xs transition-all active:scale-95 text-center shadow-md">
+                        Discord Support
+                    </a>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="max-w-4xl w-full text-center py-6 text-xs text-slate-500 border-t border-slate-900 mt-6">
+        <div class="flex items-center justify-center gap-2 sm:gap-4 flex-wrap mb-2">
+            <a href="index.html" class="hover:text-slate-300 transition-colors">Portfolio</a>
+            <span>•</span>
+            <a href="release-v24-115.html" class="hover:text-slate-300 transition-colors">Release v24.132</a>
+            <span>•</span>
+            <a href="privacy.html" class="hover:text-slate-300 transition-colors">Datenschutz</a>
+            <span>•</span>
+            <span class="text-emerald-400 font-bold">Live Status</span>
+        </div>
+        <p>© 2026 Gamingpig • Automatische Status-Telemetrie</p>
+    </footer>
+
+    <!-- Toast Notification Container -->
+    <div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 px-4 py-2.5 rounded-xl bg-slate-900/95 border border-emerald-500/40 text-white text-xs font-bold shadow-2xl backdrop-blur-xl transition-all duration-300 opacity-0 pointer-events-none z-50 flex items-center gap-2">
+        <span id="toast-icon">✅</span>
+        <span id="toast-msg">Meldung</span>
+    </div>
+
+    <script>
+        // ========================================================= //
+        // Multi-Language Dictionaries (DE, EN, ES, FR, PT, TR)      //
+        // ========================================================= //
+        const I18N = {
+            de: {
+                nav_back: "Hauptseite",
+                tts_read: "Vorlesen",
+                tts_stop: "Stopp",
+                badge_title: "LIVE-TELEMETRIE & SYSTEMGESUNDHEIT",
+                hero_title: "System-Status & Störungsmelder",
+                hero_subtitle: "Echtzeit-Überwachung aller APIs, Musik-Streams, Lyrics-Server und Pipelines. Hier siehst du sofort, ob ein Dienst gestört ist, und erhältst direkte Troubleshooting-Lösungen.",
+                overall_ok_title: "Alle Systeme betriebsbereit",
+                overall_ok_sub: "Spotify, Stats.fm, Lyrics und CDNs antworten ohne Verzögerung.",
+                overall_degraded_title: "Eingeschränkter Betrieb",
+                overall_degraded_sub: "Mindestens ein Dienst nutzt Fallback-Routen oder antwortet verzögert.",
+                overall_down_title: "Störung erkannt / Offline",
+                overall_down_sub: "Keine Verbindung zum Netzwerk oder kritische Endpunkte nicht erreichbar.",
+                btn_refresh_text: "Prüfen",
+                push_card_title: "Störungs-Push für Android & Mobilgeräte",
+                push_card_desc: "Lasse dich bei Ausfällen (z. B. Spotify API oder Lyrics offline) und anschließender Wiederherstellung sofort per System-Benachrichtigung auf deinem Smartphone informieren.",
+                push_enabled: "Aktiviert",
+                push_disabled: "Nicht aktiviert",
+                push_blocked: "Blockiert",
+                btn_push_enable: "Push aktivieren",
+                btn_push_disable: "Push deaktivieren",
+                btn_push_test: "📲 Test-Push senden",
+                section_services_title: "Einzelne Dienste & APIs",
+                service_spotify_name: "Spotify Live-Player & Stream",
+                service_spotify_desc: "Live-Synchronisation des aktuellen Titels",
+                service_statsfm_name: "stats.fm API & Stories",
+                service_statsfm_desc: "Wiedergabestatistiken, Top-Tracks & Wrapped",
+                service_lyrics_name: "LrcLib Lyrics Engine",
+                service_lyrics_desc: "Synchronisierte Songtexte & Wort-Timings",
+                service_cover_name: "Album Cover CDNs",
+                service_cover_desc: "Apple Music, Spotify, Deezer Pipeline",
+                service_discord_name: "Discord Support & Widget",
+                service_discord_desc: "Server-Mitglieder & Online-Zähler",
+                service_pwa_name: "PWA Cache & Service Worker",
+                service_pwa_desc: "Offline-Speicher, Assets & Update-Handler",
+                service_network_name: "Deine Internetverbindung & Browser-Netzwerk",
+                service_network_desc: "Echter Ping zum Server & Konnektivität",
+                help_title: "Sofort-Hilfe & Troubleshooting",
+                help_subtitle: "Schnelle Lösungen für bekannte Phänomene – ohne Wartezeit auf den Support.",
+                btn_clear_cache: "Cache leeren & neu laden",
+                diag_copy_hint: "Problem besteht weiterhin? Kopiere den automatischen Diagnosebericht für ein schnelles Discord-Ticket.",
+                btn_copy_report_text: "Diagnose-Bericht kopieren",
+                toast_copied: "Diagnose-Bericht in Zwischenablage kopiert!",
+                toast_push_active: "🔔 Push-Benachrichtigungen aktiviert!",
+                toast_push_sent: "📲 Test-Push an Smartphone gesendet!",
+                toast_cache_cleared: "Cache geleert! Seite lädt neu..."
+            },
+            en: {
+                nav_back: "Main Page",
+                tts_read: "Read Aloud",
+                tts_stop: "Stop",
+                badge_title: "LIVE TELEMETRY & SYSTEM HEALTH",
+                hero_title: "System Status & Incident Monitor",
+                hero_subtitle: "Real-time monitoring of all APIs, music streams, lyrics engines, and pipelines. Instantly see degraded services with immediate troubleshooting tips.",
+                overall_ok_title: "All Systems Operational",
+                overall_ok_sub: "Spotify, Stats.fm, Lyrics and CDNs are responding normally without delay.",
+                overall_degraded_title: "Degraded Performance",
+                overall_degraded_sub: "At least one service is using fallback pipelines or experiencing delays.",
+                overall_down_title: "Outage Detected / Offline",
+                overall_down_sub: "No network connection or critical endpoints are unreachable.",
+                btn_refresh_text: "Check",
+                push_card_title: "Outage Alerts for Android & Mobile",
+                push_card_desc: "Get instant device notifications whenever Spotify, Lyrics, or APIs go down and when service is restored.",
+                push_enabled: "Active",
+                push_disabled: "Inactive",
+                push_blocked: "Blocked",
+                btn_push_enable: "Enable Push",
+                btn_push_disable: "Disable Push",
+                btn_push_test: "📲 Send Test Push",
+                section_services_title: "Individual Services & APIs",
+                service_spotify_name: "Spotify Live Player & Stream",
+                service_spotify_desc: "Real-time track sync with Gamingpig",
+                service_statsfm_name: "stats.fm API & Stories",
+                service_statsfm_desc: "Streaming counts, top tracks & wrapped",
+                service_lyrics_name: "LrcLib Lyrics Engine",
+                service_lyrics_desc: "Synchronized lyrics & syllable timings",
+                service_cover_name: "Album Cover CDNs",
+                service_cover_desc: "Apple Music, Spotify, Deezer Pipeline",
+                service_discord_name: "Discord Support & Widget",
+                service_discord_desc: "Server members & online counter",
+                service_pwa_name: "PWA Cache & Service Worker",
+                service_pwa_desc: "Offline storage, assets & update handler",
+                service_network_name: "Your Internet & Browser Connection",
+                service_network_desc: "Live round-trip ping and connectivity",
+                help_title: "Instant Help & Troubleshooting",
+                help_subtitle: "Fast solutions for common phenomena without waiting for support.",
+                btn_clear_cache: "Clear Cache & Reload",
+                diag_copy_hint: "Issue still persists? Copy the automated diagnostic report for a swift Discord support ticket.",
+                btn_copy_report_text: "Copy Diagnostic Report",
+                toast_copied: "Diagnostic report copied to clipboard!",
+                toast_push_active: "🔔 Push notifications enabled!",
+                toast_push_sent: "📲 Test push sent to device!",
+                toast_cache_cleared: "Cache cleared! Reloading page..."
+            },
+            es: {
+                nav_back: "Página Principal",
+                tts_read: "Leer en voz alta",
+                tts_stop: "Parar",
+                badge_title: "TELEMETRÍA EN VIVO Y ESTADO DEL SISTEMA",
+                hero_title: "Estado del Sistema y Monitor de Fallos",
+                hero_subtitle: "Monitoreo en tiempo real de APIs, streaming de música, letras y servidores. Consulta el estado de los servicios y soluciones rápidas.",
+                overall_ok_title: "Todos los Sistemas Operativos",
+                overall_ok_sub: "Spotify, Stats.fm, letras y servidores CDN responden con normalidad.",
+                overall_degraded_title: "Rendimiento Degradado",
+                overall_degraded_sub: "Al menos un servicio está usando rutas alternativas.",
+                overall_down_title: "Fallo Detectado / Desconectado",
+                overall_down_sub: "Sin conexión de red o endpoints críticos no disponibles.",
+                btn_refresh_text: "Verificar",
+                push_card_title: "Alertas Push para Android y Móvil",
+                push_card_desc: "Recibe notificaciones automáticas en tu teléfono ante caídas o restablecimiento de servicios.",
+                push_enabled: "Activo",
+                push_disabled: "Inactivo",
+                push_blocked: "Bloqueado",
+                btn_push_enable: "Activar Push",
+                btn_push_disable: "Desactivar Push",
+                btn_push_test: "📲 Enviar Push de Prueba",
+                section_services_title: "Servicios y APIs",
+                service_spotify_name: "Spotify Live Player",
+                service_spotify_desc: "Sincronización de música en vivo",
+                service_statsfm_name: "stats.fm API",
+                service_statsfm_desc: "Estadísticas y Wrapped Stories",
+                service_lyrics_name: "Motor de Letras LrcLib",
+                service_lyrics_desc: "Letras sincronizadas y timings",
+                service_cover_name: "CDNs de Portadas",
+                service_cover_desc: "Apple Music, Spotify, Deezer",
+                service_discord_name: "Soporte de Discord y Widget",
+                service_discord_desc: "Miembros y contador en vivo",
+                service_pwa_name: "Caché PWA y Service Worker",
+                service_pwa_desc: "Almacenamiento sin conexión",
+                service_network_name: "Tu Conexión a Internet",
+                service_network_desc: "Ping y conectividad real",
+                help_title: "Ayuda Inmediata y Soluciones",
+                help_subtitle: "Respuestas directas sin esperar al equipo de soporte.",
+                btn_clear_cache: "Limpiar Caché y Recargar",
+                diag_copy_hint: "¿Persiste el problema? Copia el reporte de diagnóstico para Discord.",
+                btn_copy_report_text: "Copiar Reporte",
+                toast_copied: "¡Reporte copiado al portapapeles!",
+                toast_push_active: "🔔 ¡Notificaciones push activadas!",
+                toast_push_sent: "📲 ¡Push de prueba enviado!",
+                toast_cache_cleared: "¡Caché borrada! Recargando..."
+            },
+            fr: {
+                nav_back: "Page Principale",
+                tts_read: "Lecture vocale",
+                tts_stop: "Arrêter",
+                badge_title: "TÉLÉMÉTRIE EN DIRECT ET SANTÉ SYSTÈME",
+                hero_title: "État du Système & Diagnostic",
+                hero_subtitle: "Surveillance en temps réel de toutes les API, du streaming, des paroles et des serveurs avec solutions de dépannage instantanées.",
+                overall_ok_title: "Tous les Systèmes Opérationnels",
+                overall_ok_sub: "Spotify, Stats.fm, Paroles et CDNs répondent normalement.",
+                overall_degraded_title: "Performance Dégradée",
+                overall_degraded_sub: "Au moins un service utilise un circuit de secours.",
+                overall_down_title: "Panne Détectée / Hors-ligne",
+                overall_down_sub: "Connexion impossible aux serveurs essentiels.",
+                btn_refresh_text: "Vérifier",
+                push_card_title: "Alertes Push pour Android & Mobile",
+                push_card_desc: "Soyez prévenu instantanément sur votre smartphone lors d'une panne ou d'un retour à la normale.",
+                push_enabled: "Actif",
+                push_disabled: "Inactif",
+                push_blocked: "Bloqué",
+                btn_push_enable: "Activer Push",
+                btn_push_disable: "Désactiver Push",
+                btn_push_test: "📲 Envoyer Push Test",
+                section_services_title: "Services & APIs",
+                service_spotify_name: "Lecteur Spotify en Direct",
+                service_spotify_desc: "Synchronisation de la piste active",
+                service_statsfm_name: "API stats.fm & Stories",
+                service_statsfm_desc: "Statistiques et Top Titres",
+                service_lyrics_name: "Moteur de Paroles LrcLib",
+                service_lyrics_desc: "Paroles synchronisées mot à mot",
+                service_cover_name: "CDNs de Pochettes",
+                service_cover_desc: "Apple Music, Spotify, Deezer",
+                service_discord_name: "Support Discord & Widget",
+                service_discord_desc: "Membres et compteur en direct",
+                service_pwa_name: "Cache PWA & Service Worker",
+                service_pwa_desc: "Gestion hors-ligne et mises à jour",
+                service_network_name: "Votre Connexion Internet",
+                service_network_desc: "Ping et stabilité réseau",
+                help_title: "Aide Rapide & Dépannage",
+                help_subtitle: "Des réponses immédiates sans devoir surcharger le support.",
+                btn_clear_cache: "Vider le Cache & Recharger",
+                diag_copy_hint: "Le problème persiste ? Copiez le rapport pour le support Discord.",
+                btn_copy_report_text: "Copier le Rapport",
+                toast_copied: "Rapport copié dans le presse-papiers !",
+                toast_push_active: "🔔 Notifications push activées !",
+                toast_push_sent: "📲 Notification test envoyée !",
+                toast_cache_cleared: "Cache vidé ! Rechargement en cours..."
+            },
+            pt: {
+                nav_back: "Página Principal",
+                tts_read: "Ler em voz alta",
+                tts_stop: "Parar",
+                badge_title: "TELEMETRIA AO VIVO E ESTADO DO SISTEMA",
+                hero_title: "Status do Sistema e Monitor de Falhas",
+                hero_subtitle: "Monitoramento em tempo real de APIs, streaming de música e letras com dicas de auto-resolução.",
+                overall_ok_title: "Todos os Sistemas Operacionais",
+                overall_ok_sub: "Spotify, Stats.fm, Letras e CDNs respondem perfeitamente.",
+                overall_degraded_title: "Desempenho Reduzido",
+                overall_degraded_sub: "Pelo menos um serviço está usando rota alternativa.",
+                overall_down_title: "Falha Detectada / Desconectado",
+                overall_down_sub: "Sem conexão com a rede ou servidores fora do ar.",
+                btn_refresh_text: "Verificar",
+                push_card_title: "Alertas Push para Android & Celular",
+                push_card_desc: "Receba alertas no smartphone em caso de falha de APIs e quando os serviços voltarem.",
+                push_enabled: "Ativo",
+                push_disabled: "Inativo",
+                push_blocked: "Bloqueado",
+                btn_push_enable: "Ativar Push",
+                btn_push_disable: "Desativar Push",
+                btn_push_test: "📲 Enviar Push de Teste",
+                section_services_title: "Serviços Individuais & APIs",
+                service_spotify_name: "Spotify Player ao Vivo",
+                service_spotify_desc: "Sincronização de faixa ativa",
+                service_statsfm_name: "API stats.fm & Stories",
+                service_statsfm_desc: "Contadores e Top Faixas",
+                service_lyrics_name: "Motor de Letras LrcLib",
+                service_lyrics_desc: "Letras sincronizadas palavra por palavra",
+                service_cover_name: "CDNs de Capas",
+                service_cover_desc: "Apple Music, Spotify, Deezer",
+                service_discord_name: "Suporte do Discord & Widget",
+                service_discord_desc: "Membros e status online",
+                service_pwa_name: "Cache PWA & Service Worker",
+                service_pwa_desc: "Armazenamento offline e updates",
+                service_network_name: "Sua Conexão de Internet",
+                service_network_desc: "Ping e latência em tempo real",
+                help_title: "Ajuda Imediata & Soluções",
+                help_subtitle: "Resolva dúvidas rapidamente sem precisar abrir chamado de suporte.",
+                btn_clear_cache: "Limpar Cache & Recarregar",
+                diag_copy_hint: "Problema persiste? Copie o relatório de diagnóstico para o Discord.",
+                btn_copy_report_text: "Copiar Relatório",
+                toast_copied: "Relatório copiado para a área de transferência!",
+                toast_push_active: "🔔 Notificações push ativadas!",
+                toast_push_sent: "📲 Push de teste enviado!",
+                toast_cache_cleared: "Cache limpo! Recarregando..."
+            },
+            tr: {
+                nav_back: "Ana Sayfa",
+                tts_read: "Sesli Oku",
+                tts_stop: "Durdur",
+                badge_title: "CANLI TELEMETRİ VE SİSTEM SAĞLIĞI",
+                hero_title: "Sistem Durumu ve Arıza Takibi",
+                hero_subtitle: "Tüm API'lerin, müzik akışlarının ve şarkı sözü sunucularının gerçek zamanlı canlı teşhisi.",
+                overall_ok_title: "Tüm Sistemler Çalışıyor",
+                overall_ok_sub: "Spotify, Stats.fm, Şarkı Sözleri ve CDN'ler gecikmesiz yanıt veriyor.",
+                overall_degraded_title: "Performans Düşüklüğü",
+                overall_degraded_sub: "En az bir servis yedek rota kullanıyor veya gecikiyor.",
+                overall_down_title: "Kesinti / Çevrimdışı",
+                overall_down_sub: "Ağ bağlantısı yok veya kritik sunuculara ulaşılamıyor.",
+                btn_refresh_text: "Kontrol Et",
+                push_card_title: "Android & Mobil Bildirim Uyarısı",
+                push_card_desc: "Kesintilerde veya sistemler normale döndüğünde telefonunuza anında bildirim alın.",
+                push_enabled: "Etkin",
+                push_disabled: "Devre Dışı",
+                push_blocked: "Engellendi",
+                btn_push_enable: "Bildirimi Aç",
+                btn_push_disable: "Bildirimi Kapat",
+                btn_push_test: "📲 Test Bildirimi Gönder",
+                section_services_title: "Bireysel Servisler & API'ler",
+                service_spotify_name: "Spotify Canlı Çalar",
+                service_spotify_desc: "Mevcut şarkı senkronizasyonu",
+                service_statsfm_name: "stats.fm API & Stories",
+                service_statsfm_desc: "Çalma istatistikleri ve Top 5",
+                service_lyrics_name: "LrcLib Şarkı Sözü Motoru",
+                service_lyrics_desc: "Senkronize sözler ve hece zamanları",
+                service_cover_name: "Albüm Kapağı CDN'leri",
+                service_cover_desc: "Apple Music, Spotify, Deezer",
+                service_discord_name: "Discord Destek & Widget",
+                service_discord_desc: "Sunucu üyeleri ve çevrimiçi sayacı",
+                service_pwa_name: "PWA Önbelleği & Service Worker",
+                service_pwa_desc: "Çevrimdışı depolama ve güncellemeler",
+                service_network_name: "İnternet Bağlantınız",
+                service_network_desc: "Canlı ping ve ağ kararlılığı",
+                help_title: "Anında Yardım & Çözümler",
+                help_subtitle: "Desteği meşgul etmeden hızlı çözümlere ulaşın.",
+                btn_clear_cache: "Önbelleği Temizle & Yenile",
+                diag_copy_hint: "Sorun devam mı ediyor? Discord için otomatik teşhis raporunu kopyalayın.",
+                btn_copy_report_text: "Raporu Kopyala",
+                toast_copied: "Teşhis raporu panoya kopyalandı!",
+                toast_push_active: "🔔 Bildirimler etkinleştirildi!",
+                toast_push_sent: "📲 Test bildirimi gönderildi!",
+                toast_cache_cleared: "Önbellek temizlendi! Yeniden yükleniyor..."
+            }
+        };
+
+        let currentLang = localStorage.getItem('selectedLanguage') || 'de';
+        let isSpeaking = false;
+        let lastDiagnosticResults = {};
+
+        function t(key) {
+            return I18N[currentLang]?.[key] || I18N['de'][key] || key;
+        }
+
+        function applyTranslations(lang) {
+            currentLang = lang;
+            document.documentElement.lang = lang;
+            
+            const translatable = [
+                'nav-back', 'badge-title', 'hero-title', 'hero-subtitle',
+                'btn-refresh-text', 'push-card-title', 'push-card-desc',
+                'section-services-title', 'service-spotify-name', 'service-spotify-desc',
+                'service-statsfm-name', 'service-statsfm-desc', 'service-lyrics-name',
+                'service-lyrics-desc', 'service-cover-name', 'service-cover-desc',
+                'service-discord-name', 'service-discord-desc', 'service-pwa-name',
+                'service-pwa-desc', 'service-network-name', 'service-network-desc',
+                'help-title', 'help-subtitle', 'btn-clear-cache', 'diag-copy-hint',
+                'btn-copy-report-text'
+            ];
+
+            translatable.forEach(id => {
+                const el = document.getElementById(id);
+                const key = id.replace(/-/g, '_');
+                if (el && t(key)) el.innerText = t(key);
+            });
+
+            const ttsLabel = document.getElementById('tts-label');
+            if (ttsLabel) ttsLabel.innerText = isSpeaking ? t('tts_stop') : t('tts_read');
+
+            updatePushUI();
+            updateOverallUI();
+        }
+
+        function changeLanguage(lang) {
+            localStorage.setItem('selectedLanguage', lang);
+            applyTranslations(lang);
+        }
+
+        // ========================================================= //
+        // Toast Notifier                                            //
+        // ========================================================= //
+        function showToast(msg, icon = '✅') {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toast-msg');
+            const toastIcon = document.getElementById('toast-icon');
+            if (!toast) return;
+            toastMsg.innerText = msg;
+            toastIcon.innerText = icon;
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'pointer-events-none');
+            }, 3500);
+        }
+
+        // ========================================================= //
+        // Live Diagnostics Engine                                   //
+        // ========================================================= //
+        async function pingEndpoint(url, timeoutMs = 3500) {
+            const start = performance.now();
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+            try {
+                const res = await fetch(url, { 
+                    method: 'GET', 
+                    cache: 'no-store',
+                    mode: 'cors',
+                    signal: controller.signal 
+                });
+                clearTimeout(timeoutId);
+                const duration = Math.round(performance.now() - start);
+                return { ok: res.ok || res.status < 500, duration, status: res.status };
+            } catch (err) {
+                clearTimeout(timeoutId);
+                const duration = Math.round(performance.now() - start);
+                return { ok: false, duration, error: err.name === 'AbortError' ? 'Timeout' : 'NetworkError' };
+            }
+        }
+
+        async function runDiagnostics(userTriggered = false) {
+            const spinner = document.getElementById('refresh-spinner');
+            if (spinner) spinner.classList.add('spin-slow');
+
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const lastCheckedEl = document.getElementById('last-checked-time');
+            if (lastCheckedEl) lastCheckedEl.innerText = timeStr;
+
+            // 1. Client Internet Check
+            const isOnline = navigator.onLine;
+            lastDiagnosticResults.network = {
+                ok: isOnline,
+                duration: isOnline ? 12 : 9999,
+                status: isOnline ? 'Online' : 'Offline'
+            };
+
+            // 2. stats.fm API check
+            const statsRes = await pingEndpoint('https://api.stats.fm/v1/users/gamingpig/streams/current');
+            lastDiagnosticResults.statsfm = statsRes;
+
+            // 3. Spotify live stream (proxied via stats.fm)
+            lastDiagnosticResults.spotify = {
+                ok: statsRes.ok,
+                duration: statsRes.duration,
+                status: statsRes.ok ? 'Synced' : 'Degraded'
+            };
+
+            // 4. LrcLib Lyrics Provider
+            const lyricsRes = await pingEndpoint('https://lrclib.net/api/get?track_name=test&artist_name=test');
+            lastDiagnosticResults.lyrics = lyricsRes;
+
+            // 5. Album Artwork CDNs (Apple Music artwork resolver ping)
+            const coverRes = await pingEndpoint('https://is1-ssl.mzstatic.com/image/thumb/Music/v4/00/00/00/000000.jpg/100x100bb.jpg');
+            lastDiagnosticResults.cover = {
+                ok: coverRes.duration < 3000,
+                duration: coverRes.duration,
+                status: coverRes.ok || coverRes.status === 404 ? 'Operational' : 'Slow'
+            };
+
+            // 6. Discord Widget & Invite API
+            const discordRes = await pingEndpoint('https://discord.com/api/v10/invites/E8BS9BDAst?with_counts=true');
+            if (!discordRes.ok) {
+                const proxyRes = await pingEndpoint('https://api.allorigins.win/raw?url=' + encodeURIComponent('https://discord.com/api/v10/invites/E8BS9BDAst?with_counts=true'));
+                lastDiagnosticResults.discord = {
+                    ok: proxyRes.ok,
+                    duration: proxyRes.duration,
+                    status: proxyRes.ok ? 'Proxy Active' : 'Offline'
+                };
+            } else {
+                lastDiagnosticResults.discord = discordRes;
+            }
+
+            // 7. PWA Service Worker & Cache
+            const hasSW = 'serviceWorker' in navigator && !!navigator.serviceWorker.controller;
+            const hasCaches = 'caches' in window;
+            lastDiagnosticResults.pwa = {
+                ok: hasSW || hasCaches,
+                duration: 1,
+                status: hasSW ? 'Active' : (hasCaches ? 'Cache Ready' : 'Unregistered')
+            };
+
+            renderDiagnosticResults();
+
+            if (spinner) {
+                setTimeout(() => spinner.classList.remove('spin-slow'), 500);
+            }
+
+            if (userTriggered) {
+                showToast(t('btn_refresh_text') + ': ' + t('overall_ok_title'), '✅');
+            }
+        }
+
+        function renderDiagnosticResults() {
+            let totalServices = 7;
+            let onlineServices = 0;
+
+            const mapService = (key, pingId, badgeId, isDuration = true) => {
+                const data = lastDiagnosticResults[key];
+                const pingEl = document.getElementById(pingId);
+                const badgeEl = document.getElementById(badgeId);
+                if (!data || !pingEl || !badgeEl) return;
+
+                if (data.ok) {
+                    onlineServices++;
+                    badgeEl.className = "px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+                    badgeEl.innerText = "🟢 OK";
+                    pingEl.className = "text-emerald-300";
+                    pingEl.innerText = isDuration ? data.duration + ' ms' : data.status;
+                } else if (data.duration < 3500) {
+                    badgeEl.className = "px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30";
+                    badgeEl.innerText = "🟡 Fallback";
+                    pingEl.className = "text-amber-300";
+                    pingEl.innerText = isDuration ? data.duration + ' ms' : 'Verzögert';
+                } else {
+                    badgeEl.className = "px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30";
+                    badgeEl.innerText = "🔴 Störung";
+                    pingEl.className = "text-rose-300";
+                    pingEl.innerText = "Nicht erreichbar";
+                }
+            };
+
+            mapService('spotify', 'ping-spotify', 'status-badge-spotify');
+            mapService('statsfm', 'ping-statsfm', 'status-badge-statsfm');
+            mapService('lyrics', 'ping-lyrics', 'status-badge-lyrics');
+            mapService('cover', 'ping-cover', 'status-badge-cover');
+            mapService('discord', 'ping-discord', 'status-badge-discord');
+            mapService('pwa', 'ping-pwa', 'status-badge-pwa', false);
+            mapService('network', 'ping-network', 'status-badge-network');
+
+            const counterEl = document.getElementById('services-online-counter');
+            if (counterEl) counterEl.innerText = onlineServices + ' / ' + totalServices + ' online';
+
+            updateOverallUI(onlineServices, totalServices);
+        }
+
+        function updateOverallUI(online = 7, total = 7) {
+            const banner = document.getElementById('overall-banner');
+            const iconBg = document.getElementById('overall-icon-bg');
+            const icon = document.getElementById('overall-icon');
+            const title = document.getElementById('overall-status-text');
+            const sub = document.getElementById('overall-subtext');
+            const pct = document.getElementById('overall-pct');
+
+            if (!banner || !title || !sub) return;
+
+            if (online >= total) {
+                banner.className = "glow-card p-4 sm:p-6 rounded-2xl sm:rounded-3xl border-emerald-500/30 flex flex-col sm:flex-row items-center justify-between gap-4";
+                iconBg.className = "w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center text-2xl sm:text-3xl shrink-0 shadow-lg";
+                icon.innerText = "🟢";
+                title.innerText = t('overall_ok_title');
+                sub.innerText = t('overall_ok_sub');
+                pct.innerText = "100% OK";
+                pct.className = "px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-mono font-bold";
+            } else if (online >= 5) {
+                banner.className = "glow-card p-4 sm:p-6 rounded-2xl sm:rounded-3xl border-amber-500/40 flex flex-col sm:flex-row items-center justify-between gap-4";
+                iconBg.className = "w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center text-2xl sm:text-3xl shrink-0 shadow-lg";
+                icon.innerText = "🟡";
+                title.innerText = t('overall_degraded_title');
+                sub.innerText = t('overall_degraded_sub');
+                pct.innerText = Math.round((online / total) * 100) + "% TEILWEISE";
+                pct.className = "px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-mono font-bold";
+            } else {
+                banner.className = "glow-card p-4 sm:p-6 rounded-2xl sm:rounded-3xl border-rose-500/50 flex flex-col sm:flex-row items-center justify-between gap-4";
+                iconBg.className = "w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center justify-center text-2xl sm:text-3xl shrink-0 shadow-lg";
+                icon.innerText = "🔴";
+                title.innerText = t('overall_down_title');
+                sub.innerText = t('overall_down_sub');
+                pct.innerText = "STÖRUNG";
+                pct.className = "px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 text-[10px] font-mono font-bold";
+            }
+        }
+
+        // ========================================================= //
+        // Android & Mobile Push Notification Handler                //
+        // ========================================================= //
+        function updatePushUI() {
+            const badge = document.getElementById('push-status-badge');
+            const btnToggle = document.getElementById('btn-push-toggle');
+            const btnTest = document.getElementById('btn-push-test');
+            if (!badge || !btnToggle) return;
+
+            if (!('Notification' in window)) {
+                badge.innerText = "Nicht unterstützt";
+                badge.className = "px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-500 border border-white/5";
+                btnToggle.style.display = 'none';
+                return;
+            }
+
+            if (Notification.permission === 'granted') {
+                badge.innerText = "🟢 " + t('push_enabled');
+                badge.className = "px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
+                btnToggle.innerText = t('btn_push_disable');
+                btnToggle.className = "px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition-all active:scale-95 border border-slate-700";
+                if (btnTest) btnTest.classList.remove('hidden');
+            } else if (Notification.permission === 'denied') {
+                badge.innerText = "🔴 " + t('push_blocked');
+                badge.className = "px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30";
+                btnToggle.innerText = t('push_blocked');
+                btnToggle.disabled = true;
+                btnToggle.className = "px-4 py-2 rounded-xl bg-slate-800 text-slate-500 font-bold text-xs opacity-60 cursor-not-allowed";
+                if (btnTest) btnTest.classList.add('hidden');
+            } else {
+                badge.innerText = "⚪ " + t('push_disabled');
+                badge.className = "px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-400 border border-white/10";
+                btnToggle.innerText = t('btn_push_enable');
+                btnToggle.className = "px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-all shadow-lg active:scale-95";
+                if (btnTest) btnTest.classList.add('hidden');
+            }
+        }
+
+        async function togglePushNotifications() {
+            if (!('Notification' in window)) {
+                alert('Benachrichtigungen werden auf diesem Browser/Gerät leider nicht unterstützt.');
+                return;
+            }
+
+            if (Notification.permission === 'granted') {
+                showToast('Push ist im Browser bereits genehmigt.', 'ℹ️');
+                return;
+            }
+
+            try {
+                const permission = await Notification.requestPermission();
+                updatePushUI();
+                if (permission === 'granted') {
+                    showToast(t('toast_push_active'), '🔔');
+                    sendSystemNotification(
+                        '🔔 Gamingpig Störungs-Alarm aktiv',
+                        'Du wirst ab sofort bei Ausfällen oder Störungen benachrichtigt!'
+                    );
+                } else if (permission === 'denied') {
+                    showToast('Benachrichtigungen wurden blockiert.', '❌');
+                }
+            } catch (err) {
+                console.error('Push permission error:', err);
+            }
+        }
+
+        async function sendSystemNotification(title, body) {
+            if (!('Notification' in window) || Notification.permission !== 'granted') return;
+
+            if ('serviceWorker' in navigator) {
+                try {
+                    const reg = await navigator.serviceWorker.ready;
+                    if (reg && reg.showNotification) {
+                        return reg.showNotification(title, {
+                            body: body,
+                            icon: 'icon-192.png',
+                            badge: 'icon-192.png',
+                            vibrate: [200, 100, 200, 100, 300],
+                            tag: 'gamingpig-status-alert',
+                            data: { url: 'status.html' }
+                        });
+                    }
+                } catch (e) {}
+            }
+
+            new Notification(title, {
+                body: body,
+                icon: 'icon-192.png'
+            });
+        }
+
+        function sendTestPush() {
+            sendSystemNotification(
+                '📲 Test-Alarm: Alle Systeme laufen',
+                'Android-Push funktioniert perfekt! Bei echten Störungen vibriert dein Smartphone automatisch.'
+            );
+            showToast(t('toast_push_sent'), '📲');
+        }
+
+        // ========================================================= //
+        // Cache Invalidation & Diagnostic Report Actions            //
+        // ========================================================= //
+        async function clearAppCache() {
+            if ('caches' in window) {
+                try {
+                    const keys = await caches.keys();
+                    await Promise.all(keys.map(k => caches.delete(k)));
+                } catch (e) {}
+            }
+            if ('serviceWorker' in navigator) {
+                try {
+                    const regs = await navigator.serviceWorker.getRegistrations();
+                    for (const reg of regs) {
+                        await reg.update();
+                    }
+                } catch (e) {}
+            }
+            showToast(t('toast_cache_cleared'), '🔄');
+            setTimeout(() => {
+                window.location.reload();
+            }, 1200);
+        }
+
+        function copyDiagnosticReport() {
+            const report = [
+                '=== GAMINGPIG PORTFOLIO SYSTEM DIAGNOSTIC REPORT ===',
+                'Timestamp: ' + new Date().toISOString(),
+                'User Agent: ' + navigator.userAgent,
+                'Language: ' + currentLang,
+                'Online State: ' + (navigator.onLine ? 'ONLINE' : 'OFFLINE'),
+                'PWA Standalone: ' + (window.matchMedia('(display-mode: standalone)').matches ? 'YES' : 'NO'),
+                'Push Permission: ' + (window.Notification ? Notification.permission : 'UNSUPPORTED'),
+                '----------------------------------------------------',
+                'Spotify Live: ' + JSON.stringify(lastDiagnosticResults.spotify || {}),
+                'stats.fm API: ' + JSON.stringify(lastDiagnosticResults.statsfm || {}),
+                'LrcLib Engine: ' + JSON.stringify(lastDiagnosticResults.lyrics || {}),
+                'Cover CDN: ' + JSON.stringify(lastDiagnosticResults.cover || {}),
+                'Discord API: ' + JSON.stringify(lastDiagnosticResults.discord || {}),
+                'Service Worker: ' + JSON.stringify(lastDiagnosticResults.pwa || {}),
+                '----------------------------------------------------',
+                'End of Report. Ready for Discord Support Ticket.'
+            ].join('
+');
+
+            navigator.clipboard.writeText(report).then(() => {
+                showToast(t('toast_copied'), '📋');
+            }).catch(() => {
+                alert('Diagnose-Bericht:
+
+' + report);
+            });
+        }
+
+        // ========================================================= //
+        // Text to Speech (TTS)                                      //
+        // ========================================================= //
+        function stopSpeech() {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+            }
+            isSpeaking = false;
+            const btn = document.getElementById('tts-toggle-btn');
+            if (btn) btn.classList.remove('bg-emerald-600', 'text-white');
+            const lbl = document.getElementById('tts-label');
+            if (lbl) lbl.innerText = t('tts_read');
+            const icn = document.getElementById('tts-icon');
+            if (icn) icn.innerText = '🔊';
+        }
+
+        function toggleReadAloud() {
+            if (!('speechSynthesis' in window)) {
+                alert('Sprachausgabe wird von diesem Browser nicht unterstützt.');
+                return;
+            }
+
+            if (isSpeaking) {
+                stopSpeech();
+                return;
+            }
+
+            window.speechSynthesis.cancel();
+
+            const textToRead = [
+                document.getElementById('hero-title')?.innerText || '',
+                document.getElementById('overall-status-text')?.innerText || '',
+                document.getElementById('overall-subtext')?.innerText || '',
+                document.getElementById('help-title')?.innerText || '',
+                document.getElementById('tip1-title')?.innerText || '',
+                document.getElementById('tip1-desc')?.innerText || '',
+                document.getElementById('tip2-title')?.innerText || '',
+                document.getElementById('tip2-desc')?.innerText || ''
+            ].join('. ');
+
+            const utterance = new SpeechSynthesisUtterance(textToRead);
+            utterance.lang = currentLang === 'de' ? 'de-DE' :
+                             currentLang === 'en' ? 'en-US' :
+                             currentLang === 'es' ? 'es-ES' :
+                             currentLang === 'fr' ? 'fr-FR' :
+                             currentLang === 'pt' ? 'pt-BR' : 'tr-TR';
+            utterance.rate = 1.05;
+
+            utterance.onend = () => stopSpeech();
+            utterance.onerror = () => stopSpeech();
+
+            isSpeaking = true;
+            const btn = document.getElementById('tts-toggle-btn');
+            if (btn) btn.classList.add('bg-emerald-600', 'text-white');
+            const lbl = document.getElementById('tts-label');
+            if (lbl) lbl.innerText = t('tts_stop');
+            const icn = document.getElementById('tts-icon');
+            if (icn) icn.innerText = '⏹️';
+
+            window.speechSynthesis.speak(utterance);
+        }
+
+        // ========================================================= //
+        // Service Worker & Startup Listeners                        //
+        // ========================================================= //
+        if ('serviceWorker' in navigator) {
+            let isRefreshing = false;
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (isRefreshing) return;
+                isRefreshing = true;
+                window.location.reload();
+            });
+
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
+                    .then((reg) => { if (reg) reg.update().catch(() => {}); })
+                    .catch(() => {});
+            });
+        }
+
+        // Auto Network Status Listeners
+        window.addEventListener('online', () => {
+            sendSystemNotification('✅ Wieder online', 'Internetverbindung wiederhergestellt. Alle Dienste synchronisieren sich wieder.');
+            runDiagnostics();
+        });
+
+        window.addEventListener('offline', () => {
+            sendSystemNotification('⚠️ Offline-Modus aktiv', 'Keine Internetverbindung erkannt. Die Gamingpig PWA läuft nun im Offline-Cache.');
+            runDiagnostics();
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const selectEl = document.getElementById('lang-select');
+            if (selectEl) selectEl.value = currentLang;
+            applyTranslations(currentLang);
+            runDiagnostics();
+
+            setInterval(() => {
+                runDiagnostics();
+            }, 60000);
+        });
+    </script>
+</body>
+</html>

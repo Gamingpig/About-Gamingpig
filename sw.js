@@ -7,7 +7,7 @@
 // - Sofortige Übernahme: self.skipWaiting() & clients.claim()
 // ==============================================================================
 
-const SW_VERSION = "24.132.1";
+const SW_VERSION = "24.132.2";
 const CACHE_NAME = `gamingpig-cache-v${SW_VERSION}`;
 const CACHE_PREFIX = "gamingpig-cache-";
 
@@ -15,6 +15,7 @@ const CACHE_PREFIX = "gamingpig-cache-";
 const PRECACHE_URLS = [
     "./",
     "./index.html",
+    "./status.html",
     "./release-v24-115.html",
     "./privacy.html",
     "./manifest.json",
@@ -64,6 +65,51 @@ self.addEventListener("message", (event) => {
     if (event.data && event.data.type === "SKIP_WAITING") {
         self.skipWaiting();
     }
+});
+
+
+// Benachrichtigungs-Klick-Handler (öffnet oder fokussiert die Status-Seite)
+self.addEventListener("notificationclick", (event) => {
+    event.notification.close();
+    const targetUrl = (event.notification.data && event.notification.data.url) ? event.notification.data.url : "./status.html";
+
+    event.waitUntil(
+        clients.matchAll({ type: "window", includeUncontrolled: true }).then((windowClients) => {
+            for (const client of windowClients) {
+                if (client.url.includes("status.html") && "focus" in client) {
+                    return client.focus();
+                }
+            }
+            if (clients.openWindow) {
+                return clients.openWindow(targetUrl);
+            }
+        })
+    );
+});
+
+// Web Push Event Handler für Android / Web Push
+self.addEventListener("push", (event) => {
+    let data = {
+        title: "⚠️ Gamingpig System-Status",
+        body: "Status-Änderung bei Spotify, Lyrics oder Server-Verbindung festgestellt.",
+        url: "./status.html"
+    };
+    if (event.data) {
+        try {
+            data = event.data.json();
+        } catch (e) {
+            data.body = event.data.text();
+        }
+    }
+    const options = {
+        body: data.body,
+        icon: "icon-192.png",
+        badge: "icon-192.png",
+        vibrate: [200, 100, 200, 100, 300],
+        tag: "gamingpig-status-alert",
+        data: { url: data.url || "./status.html" }
+    };
+    event.waitUntil(self.registration.showNotification(data.title, options));
 });
 
 // Intelligenter Fetch-Handler
