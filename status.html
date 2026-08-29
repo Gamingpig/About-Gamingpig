@@ -1487,10 +1487,9 @@
                 return;
             }
 
-            // Immediately reset any stuck state
-            window.speechSynthesis.cancel();
-            if (window.speechSynthesis.paused) {
-                window.speechSynthesis.resume();
+            window._ttsUtterances = [];
+            if ('speechSynthesis' in window && window.speechSynthesis.speaking) {
+                window.speechSynthesis.cancel();
             }
 
             if (!textToRead) {
@@ -1512,11 +1511,18 @@
             onStartCallback();
 
             const matchingVoice = getBestVoice(targetLang);
-            window._ttsUtterances = [];
-            const total = sentences.length;
+            let chunkIdx = 0;
 
-            sentences.forEach((chunk, index) => {
-                // German TTS phonetic fix: prevent "Gamingpich" by changing final "pig" to "Pigg" in German speech
+            function playNextStatusChunk() {
+                if (chunkIdx >= sentences.length) {
+                    stopSpeech();
+                    if (onEndCallback) onEndCallback();
+                    return;
+                }
+
+                const chunk = sentences[chunkIdx];
+                chunkIdx++;
+
                 const spokenText = targetLang.startsWith('de')
                     ? chunk.replace(/\bGamingpig\b/gi, 'Gaming Pigg')
                     : chunk;
@@ -1528,23 +1534,22 @@
                 u.volume = 1.0;
                 if (matchingVoice) u.voice = matchingVoice;
 
-                if (index === total - 1) {
-                    u.onend = () => {
-                        stopSpeech();
-                        if (onEndCallback) onEndCallback();
-                    };
-                }
-
-                u.onerror = (e) => {
-                    if (index === total - 1) {
-                        stopSpeech();
-                        if (onEndCallback) onEndCallback();
-                    }
+                u.onend = () => {
+                    playNextStatusChunk();
                 };
 
-                window._ttsUtterances.push(u);
+                u.onerror = () => {
+                    playNextStatusChunk();
+                };
+
+                window._ttsUtterances = [u];
+                if (window.speechSynthesis.paused) {
+                    window.speechSynthesis.resume();
+                }
                 window.speechSynthesis.speak(u);
-            });
+            }
+
+            playNextStatusChunk();
         }
 
         function toggleReadAloud() {
