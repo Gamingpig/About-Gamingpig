@@ -204,18 +204,11 @@ async function checkEndpoints() {
 async function main() {
     const mode = process.argv[2] || 'check';
 
-    if (mode === 'send') {
-        const title = process.argv[3] || '📲 GitHub Test-Alarm';
-        const body = process.argv[4] || 'Echter Web-Push über GitHub Actions erfolgreich empfangen!';
-        console.log(`Triggering manual push: "${title}" - "${body}"`);
-        await sendPushToAll({ title, body });
-        return;
-    }
-
-    if (mode === 'custom' || mode === 'maintenance') {
-        const title = process.argv[3] || '⚠️ Wartungsarbeiten – Gamingpig';
-        const body = process.argv[4] || 'Neue Updates und Optimierungen werden gerade eingespielt.';
-        console.log(`Sending custom push: "${title}" - "${body}"`);
+    if (mode === 'send' || mode === 'custom' || mode === 'broadcast' || mode === 'manual-push' || mode === 'maintenance') {
+        const title = process.argv[3] || process.env.PUSH_TITLE || '⚠️ Gamingpig Status-Alarm';
+        const body = process.argv[4] || process.env.PUSH_BODY || 'Status-Aktualisierung.';
+        const targetUrl = process.argv[5] || process.env.PUSH_URL || 'https://gamingpig.github.io/About-Gamingpig/status.html';
+        console.log(`Triggering broadcast push [mode: ${mode}]: "${title}" - "${body}" -> ${targetUrl}`);
         await sendPushToAll({
             title: title,
             body: body,
@@ -227,7 +220,7 @@ async function main() {
                 pt: { title: title, body: body },
                 tr: { title: title, body: body }
             },
-            url: 'https://gamingpig.github.io/About-Gamingpig/status.html'
+            url: targetUrl
         });
         return;
     }
@@ -347,6 +340,36 @@ async function main() {
             process.exit(1);
         }
         return;
+    }
+
+    // 0. Check for pending manual broadcast push from admin panel
+    const PENDING_FILE = path.join(__dirname, '..', 'data', 'pending_push.json');
+    if (fs.existsSync(PENDING_FILE)) {
+        try {
+            const pendingData = JSON.parse(fs.readFileSync(PENDING_FILE, 'utf8') || '{}');
+            if (pendingData && pendingData.pending === true) {
+                console.log(`🚀 Found pending manual broadcast push: "${pendingData.title}" - "${pendingData.body}"`);
+                await sendPushToAll({
+                    title: pendingData.title || '⚠️ Gamingpig Status-Alarm',
+                    body: pendingData.body || 'Status-Aktualisierung.',
+                    translations: pendingData.translations || {
+                        de: { title: pendingData.title, body: pendingData.body },
+                        en: { title: pendingData.title, body: pendingData.body },
+                        es: { title: pendingData.title, body: pendingData.body },
+                        fr: { title: pendingData.title, body: pendingData.body },
+                        pt: { title: pendingData.title, body: pendingData.body },
+                        tr: { title: pendingData.title, body: pendingData.body }
+                    },
+                    url: pendingData.url || 'https://gamingpig.github.io/About-Gamingpig/status.html'
+                });
+                pendingData.pending = false;
+                pendingData.deliveredAt = Date.now();
+                fs.writeFileSync(PENDING_FILE, JSON.stringify(pendingData, null, 2), 'utf8');
+                console.log('✅ Pending manual broadcast marked as delivered.');
+            }
+        } catch (e) {
+            console.warn('Could not process pending push:', e.message);
+        }
     }
 
     // Default: Check mode with state-aware deduplication and recovery push

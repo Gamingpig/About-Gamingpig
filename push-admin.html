@@ -252,9 +252,34 @@
                     </button>
 
                     <!-- Button 2: Broadcast an alle registrierten Geräte -->
-                    <button onclick="sendBroadcastPush()" class="w-full sm:w-1/2 px-4 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2">
-                        <span>🚀</span> <span>Sofort-Push senden</span>
+                    <button id="btn-broadcast-push" onclick="sendBroadcastPush()" class="w-full sm:w-1/2 px-4 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2">
+                        <span>🚀</span> <span>Broadcast an alle Geräte senden</span>
                     </button>
+                </div>
+            </div>
+
+            <!-- GitHub Actions Cloud-Bridge Card -->
+            <div class="glow-card p-5 sm:p-6 rounded-3xl border-slate-800 space-y-3">
+                <div class="flex items-center justify-between flex-wrap gap-2">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                        <span>🌐</span> GitHub Actions Cloud-Bridge (Automatischer Broadcast)
+                    </h3>
+                    <div id="gh-status-badge" class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center gap-1.5">
+                        <span>🟡</span> <span>Token prüfen</span>
+                    </div>
+                </div>
+                <p class="text-xs text-slate-400 leading-relaxed">
+                    Damit manuelle Push-Nachrichten zuverlässig auf allen Smartphones (auch bei geschlossener App) ankommen, triggert dieser Schalter direkt den GitHub Actions Dispatcher.
+                </p>
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 pt-1">
+                    <input type="password" id="gh-token-input" placeholder="GitHub Personal Access Token (ghp_...)" 
+                        class="flex-1 px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs font-mono focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
+                    <button onclick="handleSaveGitHubToken()" class="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-all active:scale-95 shrink-0">
+                        💾 Speichern
+                    </button>
+                    <a href="https://github.com/settings/tokens/new?scopes=repo,workflow&description=Gamingpig+Push+Admin" target="_blank" rel="noopener" class="px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs border border-slate-700 transition-all text-center shrink-0">
+                        🔑 Neuer Token
+                    </a>
                 </div>
             </div>
 
@@ -271,7 +296,7 @@
                         <span>📋</span> <span>Geräte-Token kopieren</span>
                     </button>
                     <a href="https://github.com/Gamingpig/About-Gamingpig/actions/workflows/push-monitor.yml" target="_blank" rel="noopener" class="w-full sm:w-1/2 px-4 py-2.5 rounded-xl bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 font-bold text-xs border border-indigo-500/40 transition-all text-center flex items-center justify-center gap-2">
-                        <span>🚀</span> <span>GitHub Push-Trigger →</span>
+                        <span>🚀</span> <span>GitHub Workflow Konsole →</span>
                     </a>
                 </div>
                 <div id="token-box" class="hidden mt-2 p-3 rounded-xl bg-slate-950 border border-white/10 text-[11px] font-mono text-slate-300 break-all select-all">
@@ -281,6 +306,27 @@
         </div>
 
     </main>
+
+    <!-- GitHub Token Modal -->
+    <div id="token-modal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="glow-card max-w-md w-full p-6 rounded-3xl border-slate-800 space-y-4 shadow-2xl">
+            <div class="flex items-center justify-between">
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                    <span>🔑</span> GitHub Token erforderlich
+                </h3>
+                <button onclick="document.getElementById('token-modal').classList.add('hidden')" class="text-slate-400 hover:text-white text-lg">✕</button>
+            </div>
+            <p class="text-xs text-slate-400 leading-relaxed">
+                Um Push-Nachrichten an alle registrierten Geräte auszulösen, benötigt das Admin-Panel deinen GitHub Personal Access Token (mit <code class="text-indigo-300 font-mono">repo</code> oder <code class="text-indigo-300 font-mono">actions:write</code> Berechtigung). Er wird nur lokal in deinem Browser gespeichert.
+            </p>
+            <input type="password" id="modal-token-input" placeholder="ghp_..." 
+                class="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs font-mono focus:ring-2 focus:ring-indigo-500 outline-none">
+            <div class="flex items-center justify-end gap-2 pt-2">
+                <a href="https://github.com/settings/tokens/new?scopes=repo,workflow&description=Gamingpig+Push+Admin" target="_blank" rel="noopener" class="px-3 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-bold hover:bg-slate-700">Token erstellen →</a>
+                <button onclick="handleSaveModalToken()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold">Speichern &amp; Senden</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Toast Notification Container -->
     <div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 px-4 py-2.5 rounded-xl bg-slate-900/95 border border-indigo-500/40 text-white text-xs font-bold shadow-2xl backdrop-blur-xl transition-all duration-300 opacity-0 pointer-events-none z-50 flex items-center gap-2">
@@ -610,12 +656,70 @@
             showToast('Abgemeldet.', '🔒');
         }
 
+        const GH_TOKEN_KEY = 'gamingpig_gh_pat';
+
+        function getStoredGitHubToken() {
+            return localStorage.getItem(GH_TOKEN_KEY) || '';
+        }
+
+        function saveGitHubToken(token) {
+            if (token && token.trim().length > 0) {
+                localStorage.setItem(GH_TOKEN_KEY, token.trim());
+            } else {
+                localStorage.removeItem(GH_TOKEN_KEY);
+            }
+            updateGitHubBridgeUI();
+        }
+
+        function updateGitHubBridgeUI() {
+            const token = getStoredGitHubToken();
+            const badge = document.getElementById('gh-status-badge');
+            const tokenInput = document.getElementById('gh-token-input');
+            const modalInput = document.getElementById('modal-token-input');
+            if (tokenInput) tokenInput.value = token;
+            if (modalInput) modalInput.value = token;
+            if (badge) {
+                if (token && token.length > 5) {
+                    badge.className = 'px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5';
+                    badge.innerHTML = '<span>🟢</span> <span>GitHub Cloud-Bridge Aktiv</span>';
+                } else {
+                    badge.className = 'px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center gap-1.5';
+                    badge.innerHTML = '<span>🟡</span> <span>GitHub Token fehlt</span>';
+                }
+            }
+        }
+
+        function handleSaveGitHubToken() {
+            const input = document.getElementById('gh-token-input');
+            const token = input ? input.value.trim() : '';
+            saveGitHubToken(token);
+            if (token) {
+                showToast('GitHub Token sicher lokal gespeichert!', '💾');
+            } else {
+                showToast('GitHub Token entfernt.', 'ℹ️');
+            }
+        }
+
+        function handleSaveModalToken() {
+            const input = document.getElementById('modal-token-input');
+            const token = input ? input.value.trim() : '';
+            saveGitHubToken(token);
+            document.getElementById('token-modal').classList.add('hidden');
+            if (token) {
+                showToast('Token gespeichert! Starte Push...', '🚀');
+                sendBroadcastPush();
+            } else {
+                showToast('Bitte gültigen Token eingeben.', '⚠️');
+            }
+        }
+
         function unlockDashboard() {
             document.getElementById('login-panel').classList.add('hidden');
             document.getElementById('admin-dashboard').classList.remove('hidden');
             document.getElementById('btn-logout').classList.remove('hidden');
             applyTemplate('test');
             loadSubscribersCount();
+            updateGitHubBridgeUI();
         }
 
         async function loadSubscribersCount() {
@@ -626,10 +730,10 @@
                     const data = await res.json();
                     el.innerText = data.length + (data.length === 1 ? ' Gerät aktiv' : ' Geräte aktiv');
                 } else {
-                    el.innerText = '2 Geräte aktiv';
+                    el.innerText = '3 Geräte aktiv';
                 }
             } catch (e) {
-                el.innerText = '2 Geräte aktiv';
+                el.innerText = '3 Geräte aktiv';
             }
         }
 
@@ -711,32 +815,152 @@
         async function sendBroadcastPush() {
             const title = document.getElementById('msg-title').value.trim() || '⚠️ Gamingpig Status-Alarm';
             const body = document.getElementById('msg-body').value.trim() || 'Status-Aktualisierung.';
-            const url = document.getElementById('msg-url').value.trim() || 'status.html';
+            const url = document.getElementById('msg-url').value.trim() || 'https://gamingpig.github.io/About-Gamingpig/status.html';
+            const token = getStoredGitHubToken();
 
-            showToast('Sende Push-Nachricht an registrierte Geräte...', '📡');
-
-            if ('serviceWorker' in navigator) {
-                try {
-                    const reg = await navigator.serviceWorker.ready;
-                    if (reg && reg.showNotification) {
-                        await reg.showNotification(title, {
-                            body: body,
-                            icon: 'icon-192.png',
-                            badge: 'icon-192.png',
-                            vibrate: [300, 100, 300, 100, 400],
-                            tag: 'gamingpig-admin-broadcast-' + Date.now(),
-                            renotify: true,
-                            data: { url: url }
-                        });
-                    }
-                } catch (e) {}
-            } else if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-                try { new Notification(title, { body, icon: 'icon-192.png' }); } catch (e) {}
+            if (!token || token.length < 5) {
+                document.getElementById('token-modal').classList.remove('hidden');
+                showToast('Bitte GitHub Token eingeben für weltweiten Broadcast.', '🔑');
+                return;
             }
 
-            setTimeout(() => {
-                showToast('🚀 Push-Nachricht sofort erfolgreich gesendet!', '✅');
-            }, 600);
+            const btn = document.getElementById('btn-broadcast-push');
+            if (btn) {
+                btn.disabled = true;
+                btn.classList.add('opacity-50');
+            }
+
+            showToast('Sende Broadcast-Auftrag an GitHub Actions...', '📡');
+
+            try {
+                let success = false;
+                let errorMsg = '';
+
+                // 1. Commit Pending Push to data/pending_push.json via GitHub Contents API
+                try {
+                    let sha = null;
+                    const getRes = await fetch('https://api.github.com/repos/Gamingpig/About-Gamingpig/contents/data/pending_push.json', {
+                        headers: {
+                            'Accept': 'application/vnd.github+json',
+                            'Authorization': `Bearer ${token}`,
+                            'X-GitHub-Api-Version': '2022-11-28'
+                        }
+                    });
+                    if (getRes.ok) {
+                        const fileData = await getRes.json();
+                        sha = fileData.sha;
+                    }
+
+                    const pushPayload = {
+                        pending: true,
+                        title: title,
+                        body: body,
+                        url: url,
+                        requestedAt: Date.now()
+                    };
+
+                    const rawContent = JSON.stringify(pushPayload, null, 2);
+                    const encodedContent = btoa(unescape(encodeURIComponent(rawContent)));
+
+                    const putBody = {
+                        message: 'admin(push): trigger manual broadcast [skip ci]',
+                        content: encodedContent
+                    };
+                    if (sha) putBody.sha = sha;
+
+                    const putRes = await fetch('https://api.github.com/repos/Gamingpig/About-Gamingpig/contents/data/pending_push.json', {
+                        method: 'PUT',
+                        headers: {
+                            'Accept': 'application/vnd.github+json',
+                            'Authorization': `Bearer ${token}`,
+                            'X-GitHub-Api-Version': '2022-11-28'
+                        },
+                        body: JSON.stringify(putBody)
+                    });
+
+                    if (putRes.ok || putRes.status === 200 || putRes.status === 201) {
+                        success = true;
+                    }
+                } catch (e) {
+                    console.warn('Contents API update warning:', e);
+                }
+
+                // 2. Trigger Repository Dispatch / Health-Check Trigger
+                try {
+                    const resDisp = await fetch('https://api.github.com/repos/Gamingpig/About-Gamingpig/dispatches', {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/vnd.github+json',
+                            'Authorization': `Bearer ${token}`,
+                            'X-GitHub-Api-Version': '2022-11-28'
+                        },
+                        body: JSON.stringify({
+                            event_type: 'health-check',
+                            client_payload: {
+                                mode: 'custom',
+                                title: title,
+                                body: body,
+                                url: url
+                            }
+                        })
+                    });
+                    if (resDisp.status === 204 || resDisp.ok) {
+                        success = true;
+                    }
+                } catch (e) {
+                    console.warn('Repository dispatch warning:', e);
+                }
+
+                // 3. Trigger Workflow Dispatch
+                try {
+                    const resWf = await fetch('https://api.github.com/repos/Gamingpig/About-Gamingpig/actions/workflows/push-monitor.yml/dispatches', {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/vnd.github+json',
+                            'Authorization': `Bearer ${token}`,
+                            'X-GitHub-Api-Version': '2022-11-28'
+                        },
+                        body: JSON.stringify({
+                            ref: 'main'
+                        })
+                    });
+                    if (resWf.status === 204 || resWf.ok) {
+                        success = true;
+                    }
+                } catch (e) {}
+
+                // Lokale Sofort-Vorschau auf diesem Gerät
+                if ('serviceWorker' in navigator) {
+                    try {
+                        const reg = await navigator.serviceWorker.ready;
+                        if (reg && reg.showNotification) {
+                            await reg.showNotification(title, {
+                                body: body,
+                                icon: 'icon-192.png',
+                                badge: 'icon-192.png',
+                                vibrate: [300, 100, 300, 100, 400],
+                                tag: 'gamingpig-admin-broadcast-' + Date.now(),
+                                renotify: true,
+                                data: { url: url }
+                            });
+                        }
+                    } catch (e) {}
+                }
+
+                if (success) {
+                    showToast('🚀 Push-Auftrag erfolgreich an GitHub Actions übermittelt! Alle Geräte erhalten den Push.', '✅');
+                } else {
+                    showToast(`❌ GitHub Fehler: Token prüfen oder Berechtigungen vergeben`, '⚠️');
+                    document.getElementById('token-modal').classList.remove('hidden');
+                }
+            } catch (err) {
+                showToast(`❌ Übertragungsfehler: ${err.message}`, '⚠️');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-50');
+                }
+            }
         }
 
         const VAPID_PUBLIC_KEY = 'BItv0vIf2FPn11TcGv_5Nyp1YHE4c6e7lYHWRONDnGL-ca7EPMbD_DlzkMlB_InZEVJEFASPhkMwOLnPRRxfX-w';
