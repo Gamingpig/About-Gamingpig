@@ -49,20 +49,30 @@ async function sendPushToAll(payload) {
     console.log(`Sending Web Push to ${subscribers.length} subscriber(s)...`);
     const expiredEndpoints = new Set();
 
-    const payloadString = JSON.stringify({
-        title: payload.title || '⚠️ Gamingpig System-Status',
-        body: payload.body || 'Status-Änderung festgestellt.',
-        url: payload.url || 'https://gamingpig.github.io/About-Gamingpig/status.html',
-        timestamp: Date.now()
-    });
-
     const sendPromises = subscribers.map(async (sub) => {
         try {
+            const subLang = (sub.lang || 'de').slice(0, 2).toLowerCase();
+            let title = payload.title || '⚠️ Gamingpig System-Status';
+            let body = payload.body || 'Status-Änderung festgestellt.';
+
+            if (payload.translations && payload.translations[subLang]) {
+                title = payload.translations[subLang].title || title;
+                body = payload.translations[subLang].body || body;
+            }
+
+            const payloadString = JSON.stringify({
+                title: title,
+                body: body,
+                translations: payload.translations || {},
+                url: payload.url || 'https://gamingpig.github.io/About-Gamingpig/status.html',
+                timestamp: Date.now()
+            });
+
             await webPush.sendNotification(sub, payloadString, {
                 TTL: 86400, // 24h
                 urgency: 'high'
             });
-            console.log(`✅ Push delivered successfully to ${sub.endpoint.substring(0, 45)}...`);
+            console.log(`✅ Push delivered successfully to ${sub.endpoint.substring(0, 45)}... [Lang: ${subLang}]`);
         } catch (err) {
             console.warn(`❌ Push failed for ${sub.endpoint.substring(0, 45)}... [${err.statusCode || err.message}]`);
             // If subscription is expired/unregistered (HTTP 404 or 410 Gone)
@@ -211,9 +221,36 @@ async function main() {
     if (failures.length > 0) {
         console.warn('Failures detected:', failures.join(', '));
         if (failureSig !== lastFailureSig) {
+            const failList = failures.join(', ');
             await sendPushToAll({
                 title: '🔴 Störung festgestellt – Gamingpig Portfolio',
-                body: `Folgende Dienste antworten nicht: ${failures.join(', ')}. Tippe hier für Sofort-Hilfen.`,
+                body: `Folgende Dienste antworten nicht: ${failList}. Tippe hier für Sofort-Hilfen.`,
+                translations: {
+                    de: {
+                        title: '🔴 Störung festgestellt – Gamingpig Portfolio',
+                        body: `Folgende Dienste antworten nicht: ${failList}. Tippe hier für Sofort-Hilfen.`
+                    },
+                    en: {
+                        title: '🔴 Incident Detected – Gamingpig Portfolio',
+                        body: `The following services are unreachable: ${failList}. Tap here for troubleshooting.`
+                    },
+                    es: {
+                        title: '🔴 Incidencia Detectada – Gamingpig Portfolio',
+                        body: `Los siguientes servicios no responden: ${failList}. Toca aquí para ver soluciones.`
+                    },
+                    fr: {
+                        title: '🔴 Incident Détecté – Gamingpig Portfolio',
+                        body: `Les services suivants sont indisponibles: ${failList}. Appuyez ici pour le dépannage.`
+                    },
+                    pt: {
+                        title: '🔴 Falha Detectada – Gamingpig Portfolio',
+                        body: `Os seguintes serviços não estão respondendo: ${failList}. Toque aqui para soluções.`
+                    },
+                    tr: {
+                        title: '🔴 Sistem Kesintisi – Gamingpig Portfolio',
+                        body: `Aşağıdaki servisler yanıt vermiyor: ${failList}. Çözüm için buraya dokunun.`
+                    }
+                },
                 url: 'https://gamingpig.github.io/About-Gamingpig/status.html'
             });
         } else {
@@ -225,6 +262,32 @@ async function main() {
             await sendPushToAll({
                 title: '🟢 Entwarnung – Alle Systeme wieder online',
                 body: 'Spotify, stats.fm, Songtexte, Discord und CDNs laufen wieder im einwandfreien Normalbetrieb!',
+                translations: {
+                    de: {
+                        title: '🟢 Entwarnung – Alle Systeme wieder online',
+                        body: 'Spotify, stats.fm, Songtexte, Discord und CDNs laufen wieder im einwandfreien Normalbetrieb!'
+                    },
+                    en: {
+                        title: '🟢 All Systems Operational – Gamingpig Portfolio',
+                        body: 'Spotify, stats.fm, Lyrics, Discord, and CDNs have fully recovered and are running smoothly!'
+                    },
+                    es: {
+                        title: '🟢 Todos los sistemas operativos – Gamingpig Portfolio',
+                        body: '¡Spotify, stats.fm, letras y Discord han vuelto al funcionamiento normal!'
+                    },
+                    fr: {
+                        title: '🟢 Tous les systèmes sont opérationnels – Gamingpig Portfolio',
+                        body: 'Spotify, stats.fm, paroles, Discord et CDNs fonctionnent à nouveau normalement !'
+                    },
+                    pt: {
+                        title: '🟢 Todos os sistemas operacionais – Gamingpig Portfolio',
+                        body: 'Spotify, stats.fm, letras e Discord voltaram a funcionar normalmente!'
+                    },
+                    tr: {
+                        title: '🟢 Tüm Sistemler Tekrar Çevrimiçi – Gamingpig Portfolio',
+                        body: 'Spotify, stats.fm, şarkı sözleri ve Discord sorunsuz bir şekilde çalışıyor!'
+                    }
+                },
                 url: 'https://gamingpig.github.io/About-Gamingpig/status.html'
             });
         } else {

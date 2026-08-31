@@ -7,7 +7,7 @@
 // - Sofortige Übernahme: self.skipWaiting() & clients.claim()
 // ==============================================================================
 
-const SW_VERSION = "24.133.8";
+const SW_VERSION = "24.133.9";
 const CACHE_NAME = `gamingpig-cache-v${SW_VERSION}`;
 const CACHE_PREFIX = "gamingpig-cache-";
 
@@ -88,7 +88,7 @@ self.addEventListener("notificationclick", (event) => {
     );
 });
 
-// Web Push Event Handler für Android / Web Push
+// Web Push Event Handler für Android / iOS / Web Push mit Multi-Language Erkennung
 self.addEventListener("push", (event) => {
     let data = {
         title: "⚠️ Gamingpig System-Status",
@@ -102,15 +102,29 @@ self.addEventListener("push", (event) => {
             data.body = event.data.text();
         }
     }
+
+    // Automatische Geräte- und App-Spracherkennung (DE, EN, ES, FR, PT, TR)
+    const userLang = (navigator.language || "de").slice(0, 2).toLowerCase();
+    let title = data.title;
+    let body = data.body;
+
+    if (data.translations && data.translations[userLang]) {
+        title = data.translations[userLang].title || title;
+        body = data.translations[userLang].body || body;
+    } else if (data.translations && data.translations.en && userLang !== "de") {
+        title = data.translations.en.title || title;
+        body = data.translations.en.body || body;
+    }
+
     const options = {
-        body: data.body,
+        body: body,
         icon: "icon-192.png",
         badge: "icon-192.png",
         vibrate: [200, 100, 200, 100, 300],
         tag: "gamingpig-status-alert",
         data: { url: data.url || "./status.html" }
     };
-    event.waitUntil(self.registration.showNotification(data.title, options));
+    event.waitUntil(self.registration.showNotification(title, options));
 });
 
 // Intelligenter Fetch-Handler
