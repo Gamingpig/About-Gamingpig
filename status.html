@@ -160,6 +160,9 @@
                 </div>
 
                 <div class="flex items-center gap-2 w-full sm:w-auto shrink-0 justify-end flex-wrap">
+                    <button id="btn-push-token" onclick="copyMyDeviceToken()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5 shadow-sm" title="Geräte-Token für Push-Registrierung kopieren">
+                        <span>📋</span> <span>Token kopieren</span>
+                    </button>
                     <button id="btn-push-test" onclick="sendTestPush()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-bold transition-all active:scale-95 hidden">
                         📲 Test-Push
                     </button>
@@ -168,6 +171,9 @@
                     </button>
                 </div>
             </div>
+
+            <!-- Optional Collapsible Token Box -->
+            <div id="status-token-box" class="hidden mt-3 p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 text-[10px] font-mono text-slate-400 break-all select-all"></div>
         </div>
 
         <!-- Live Services Health Grid -->
@@ -1224,6 +1230,48 @@
                     })
                 }).catch(() => {});
             } catch(e) {}
+        }
+
+        async function copyMyDeviceToken() {
+            if (typeof Notification === 'undefined') {
+                const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+                if (isIOS) {
+                    showToast('Auf iOS: Tippe erst auf Teilen 📤 → "Zum Home-Bildschirm", um Push zu nutzen.', '📲');
+                } else {
+                    showToast('Web Push wird von diesem Browser nicht unterstützt.', '⚠️');
+                }
+                return;
+            }
+            try {
+                if (Notification.permission !== 'granted') {
+                    const perm = await requestNotificationPermissionSafe();
+                    if (perm !== 'granted') {
+                        showToast('Benachrichtigungen wurden im Browser blockiert.', '🔒');
+                        return;
+                    }
+                }
+                const reg = await navigator.serviceWorker.ready;
+                let sub = await reg.pushManager.getSubscription();
+                if (!sub) {
+                    sub = await reg.pushManager.subscribe({
+                        userVisibleOnly: true,
+                        applicationServerKey: urlB64ToUint8Array(VAPID_PUBLIC_KEY)
+                    });
+                }
+                const subStr = JSON.stringify(sub.toJSON());
+                const box = document.getElementById('status-token-box');
+                if (box) {
+                    box.innerText = subStr;
+                    box.classList.remove('hidden');
+                }
+                if (typeof autoRegisterSubscription === 'function') {
+                    autoRegisterSubscription(subStr);
+                }
+                await navigator.clipboard.writeText(subStr);
+                showToast('📋 Geräte-Token in Zwischenablage kopiert!', '✅');
+            } catch(e) {
+                showToast('Konnte Token nicht kopieren: ' + (e.message || 'Fehler'), '⚠️');
+            }
         }
 
         async function togglePushNotifications() {
