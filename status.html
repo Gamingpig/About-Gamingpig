@@ -1156,6 +1156,7 @@
             const isSpotifyStreaming = !!(statsData && statsData.item && statsData.item.isPlaying);
             const activeDevice = (statsData && statsData.item && statsData.item.deviceName) ? statsData.item.deviceName : null;
             const currentTrack = (statsData && statsData.item && statsData.item.track) ? statsData.item.track.name : null;
+            const currentArtist = (statsData && statsData.item && statsData.item.track && statsData.item.track.artists && statsData.item.track.artists[0]) ? statsData.item.track.artists[0].name : null;
 
             const npcRes = await pingEndpoint('https://npc-api.aikins.xyz/v1/users/gamingpig/now');
             const npcOk = npcRes.ok && (npcRes.status === 200 || npcRes.status === 204);
@@ -1169,6 +1170,7 @@
                     degraded: true,
                     piOffline: true,
                     trackName: currentTrack,
+                    artistName: currentArtist,
                     deviceName: activeDevice,
                     status: `Pi offline (Spielt auf ${activeDevice || 'Gerät'})`
                 };
@@ -1176,6 +1178,7 @@
                 lastDiagnosticResults.spotify = {
                     ...npcRes,
                     ok: false,
+                    artistName: currentArtist,
                     status: 'NPC-API Nicht erreichbar'
                 };
             } else {
@@ -1183,6 +1186,7 @@
                     ...npcRes,
                     ok: true,
                     trackName: currentTrack,
+                    artistName: currentArtist,
                     deviceName: activeDevice,
                     status: npcHasData ? 'Live Playing' : 'Standby / Bereit'
                 };
@@ -1683,30 +1687,37 @@
 
         function generateIntelligentBriefing(lang) {
             const results = lastDiagnosticResults || {};
+            const serviceKeys = ['spotify', 'statsfm', 'lyrics', 'cover', 'discord', 'pwa', 'network'];
+            const totalServices = serviceKeys.length; // 7
+
+            const onlineCount = serviceKeys.filter(k => results[k] && results[k].ok).length;
+            const degradedServices = serviceKeys.filter(k => results[k] && (results[k].degraded || results[k].piOffline));
+            const offlineServices = serviceKeys.filter(k => results[k] && !results[k].ok && !results[k].degraded && !results[k].piOffline);
+            const isAllOk = (onlineCount >= 6 && offlineServices.length === 0);
+
             const hour = new Date().getHours();
             
             // Reale Telemetrie-Werte
-            const spotifyLatency = (results.spotify?.latency && results.spotify.latency < 9999) ? `${results.spotify.latency} Millisekunden` : 'unter 150 Millisekunden';
-            const networkPing = (results.network?.rtt && results.network.rtt > 0) ? `${results.network.rtt} Millisekunden` : 'hervorragend';
+            const spotifyLatency = (results.spotify?.duration && results.spotify.duration > 0 && results.spotify.duration < 9999) 
+                ? `${results.spotify.duration} Millisekunden` 
+                : 'unter 150 Millisekunden';
+            const networkPing = (results.network?.duration && results.network.duration > 0 && results.network.duration < 9999) 
+                ? `${results.network.duration} Millisekunden` 
+                : 'hervorragend';
 
-            const onlineCount = Object.values(results).filter(s => s && s.status === 'ok').length;
-            const degradedServices = Object.keys(results).filter(k => results[k] && results[k].status === 'degraded');
-            const offlineServices = Object.keys(results).filter(k => results[k] && results[k].status === 'down');
-            const isAllOk = (onlineCount >= 5 && offlineServices.length === 0);
-
-            // Tageszeit-Begrüßungen
-            let greeting = 'Hallo!';
-            let greetingEn = 'Hello!';
-            let greetingEs = '¡Hola!';
-            let greetingFr = 'Bonjour !';
-            let greetingPt = 'Olá!';
-            let greetingTr = 'Merhaba!';
+            // Dynamische tageszeitabhängige Begrüßungen
+            const greetingDe = hour < 6 ? 'Gute Nacht!' : (hour < 11 ? 'Guten Morgen!' : (hour < 18 ? 'Schönen Tag!' : 'Guten Abend!'));
+            const greetingEn = hour < 6 ? 'Good night!' : (hour < 12 ? 'Good morning!' : (hour < 18 ? 'Good afternoon!' : 'Good evening!'));
+            const greetingEs = hour < 6 ? '¡Buenas noches!' : (hour < 12 ? '¡Buenos días!' : (hour < 20 ? '¡Buenas tardes!' : '¡Buenas noches!'));
+            const greetingFr = hour < 6 ? 'Bonne nuit !' : (hour < 12 ? 'Bonjour !' : (hour < 18 ? 'Bon après-midi !' : 'Bonsoir !'));
+            const greetingPt = hour < 6 ? 'Boa noite!' : (hour < 12 ? 'Bom dia!' : (hour < 18 ? 'Boa tarde!' : 'Boa noite!'));
+            const greetingTr = hour < 6 ? 'İyi geceler!' : (hour < 11 ? 'Günaydın!' : (hour < 18 ? 'İyi günler!' : 'İyi akşamlar!'));
 
             // Spotify Live-Track & Device Kontext
             const spTrack = results.spotify?.trackName || null;
             const spArtist = results.spotify?.artistName || null;
             const spDevice = results.spotify?.deviceName || null;
-            const discordOnline = results.discord?.presence_count || null;
+            const discordOnline = results.discordData?.approximate_presence_count || results.discord?.presence_count || null;
 
             // Witzige Sysadmin / Gamer Punchlines
             const funPunchlinesDe = [
@@ -1757,46 +1768,46 @@
                 if (isAllOk) {
                     let musicPart = spTrack ? `Auf Spotify läuft gerade '${spTrack}'${spArtist ? ' von ' + spArtist : ''}${spDevice ? ' auf ' + spDevice : ''}. ` : `Spotify im Standby. `;
                     let discordPart = discordOnline ? `Discord zählt ${discordOnline} aktive Member. ` : '';
-                    return `${greeting} Gamingpig Telemetrie-Cockpit online. Live-Status: Alle Systeme laufen bei 100%. Spotify-API antwortet in ${spotifyLatency}, Netzwerk-Ping bei ${networkPing}. ${musicPart}${discordPart}${punchlineDe}`;
+                    return `${greetingDe} Gamingpig Telemetrie-Cockpit online. Live-Status: Alle Systeme laufen bei 100% (${onlineCount} von ${totalServices} Diensten online). Spotify-API antwortet in ${spotifyLatency}, Netzwerk-Ping bei ${networkPing}. ${musicPart}${discordPart}${punchlineDe}`;
                 }
-                return `System-Hinweis: ${onlineCount} von 6 Diensten aktiv. Siehe Dashboard für Details.`;
+                return `System-Hinweis: ${onlineCount} von ${totalServices} Diensten aktiv. Siehe Dashboard für Details.`;
             } else if (lang === 'en') {
                 if (isAllOk) {
                     let musicPart = spTrack ? `Streaming '${spTrack}'${spArtist ? ' by ' + spArtist : ''}${spDevice ? ' on ' + spDevice : ''}. ` : `Spotify in standby. `;
                     let discordPart = discordOnline ? `Discord shows ${discordOnline} active members. ` : '';
-                    return `${greetingEn} Gamingpig Telemetry Cockpit online. Diagnosis: All systems 100% operational. Spotify latency ${spotifyLatency}, network ping ${networkPing}. ${musicPart}${discordPart}${punchlineEn}`;
+                    return `${greetingEn} Gamingpig Telemetry Cockpit online. Diagnosis: All systems operational (${onlineCount} of ${totalServices} services online). Spotify latency ${spotifyLatency}, network ping ${networkPing}. ${musicPart}${discordPart}${punchlineEn}`;
                 }
-                return `System notice: ${onlineCount} of 6 services operational. Check dashboard for details.`;
+                return `System notice: ${onlineCount} of ${totalServices} services operational. Check dashboard for details.`;
             } else if (lang === 'es') {
                 if (isAllOk) {
                     let musicPart = spTrack ? `En Spotify suena '${spTrack}'${spArtist ? ' de ' + spArtist : ''}${spDevice ? ' en ' + spDevice : ''}. ` : `Spotify en espera. `;
                     let discordPart = discordOnline ? `Discord tiene ${discordOnline} miembros activos. ` : '';
-                    return `${greetingEs} Cabina de telemetría Gamingpig activa. Diagnóstico: Todos los sistemas al 100%. Latencia Spotify ${spotifyLatency}, ping ${networkPing}. ${musicPart}${discordPart}${punchlineEs}`;
+                    return `${greetingEs} Cabina de telemetría Gamingpig activa. Diagnóstico: Todos los sistemas operativos (${onlineCount} de ${totalServices} servicios online). Latencia Spotify ${spotifyLatency}, ping ${networkPing}. ${musicPart}${discordPart}${punchlineEs}`;
                 }
-                return `Alerta del sistema: ${onlineCount} de 6 servicios operativos. Consulta el panel.`;
+                return `Alerta del sistema: ${onlineCount} de ${totalServices} servicios operativos. Consulta el panel.`;
             } else if (lang === 'fr') {
                 if (isAllOk) {
                     let musicPart = spTrack ? `Sur Spotify : '${spTrack}'${spArtist ? ' par ' + spArtist : ''}${spDevice ? ' sur ' + spDevice : ''}. ` : `Spotify en veille. `;
                     let discordPart = discordOnline ? `Discord affiche ${discordOnline} membres connectés. ` : '';
-                    return `${greetingFr} Cockpit de télémétrie Gamingpig en ligne. Diagnostic : Tous systèmes opérationnels. Latence Spotify ${spotifyLatency}, ping ${networkPing}. ${musicPart}${discordPart}${punchlineFr}`;
+                    return `${greetingFr} Cockpit de télémétrie Gamingpig en ligne. Diagnostic : Tous systèmes opérationnels (${onlineCount} services sur ${totalServices} en ligne). Latence Spotify ${spotifyLatency}, ping ${networkPing}. ${musicPart}${discordPart}${punchlineFr}`;
                 }
-                return `Avis système : ${onlineCount} services sur 6 opérationnels. Voir tableau.`;
+                return `Avis système : ${onlineCount} services sur ${totalServices} opérationnels. Voir tableau.`;
             } else if (lang === 'pt') {
                 if (isAllOk) {
                     let musicPart = spTrack ? `No Spotify tocando '${spTrack}'${spArtist ? ' de ' + spArtist : ''}${spDevice ? ' no ' + spDevice : ''}. ` : `Spotify em standby. `;
                     let discordPart = discordOnline ? `Discord tem ${discordOnline} membros ativos. ` : '';
-                    return `${greetingPt} Cockpit de telemetria Gamingpig online. Diagnóstico: Tudo 100%. Latência Spotify ${spotifyLatency}, ping ${networkPing}. ${musicPart}${discordPart}${punchlinePt}`;
+                    return `${greetingPt} Cockpit de telemetria Gamingpig online. Diagnóstico: Sistemas 100% operacionais (${onlineCount} de ${totalServices} serviços online). Latência Spotify ${spotifyLatency}, ping ${networkPing}. ${musicPart}${discordPart}${punchlinePt}`;
                 }
-                return `Alerta de sistema: ${onlineCount} de 6 serviços operacionais. Verifique.`;
+                return `Alerta de sistema: ${onlineCount} de ${totalServices} serviços operacionais. Verifique.`;
             } else if (lang === 'tr') {
                 if (isAllOk) {
                     let musicPart = spTrack ? `Spotify'da '${spTrack}'${spArtist ? ' - ' + spArtist : ''}${spDevice ? ' (' + spDevice + ')' : ''} çalıyor. ` : `Spotify beklemede. `;
                     let discordPart = discordOnline ? `Discord'da ${discordOnline} aktif üye var. ` : '';
-                    return `${greetingTr} Gamingpig Telemetri Kokpiti devrede. Teşhis: Tüm sistemler %100 çalışıyor. Spotify gecikmesi ${spotifyLatency}, ağ gecikmesi ${networkPing}. ${musicPart}${discordPart}${punchlineTr}`;
+                    return `${greetingTr} Gamingpig Telemetri Kokpiti devrede. Teşhis: Tüm sistemler sorunsuz çalışıyor (${totalServices} servisten ${onlineCount} tanesi aktif). Spotify gecikmesi ${spotifyLatency}, ağ gecikmesi ${networkPing}. ${musicPart}${discordPart}${punchlineTr}`;
                 }
-                return `Sistem bildirimi: 6 servisten ${onlineCount} tanesi aktif. Paneli kontrol edin.`;
+                return `Sistem bildirimi: ${totalServices} servisten ${onlineCount} tanesi aktif. Paneli kontrol edin.`;
             }
-            return `Systemstatus: ${onlineCount} online.`;
+            return `Systemstatus: ${onlineCount} von ${totalServices} online.`;
         }
 
         function generateIntelligentHelpBriefing(lang) {
@@ -1828,13 +1839,19 @@
             window.speechSynthesis.speak(u);
         }
 
-        function toggleReadAloud() {
+        async function toggleReadAloud() {
             if (activeSpeakingMode === 'status') {
                 stopSpeech();
                 return;
             }
 
             stopSpeech();
+
+            // Falls die Diagnose beim Klick noch nicht fertig ist, kurz abwarten
+            if (!lastDiagnosticResults || Object.keys(lastDiagnosticResults).length === 0) {
+                await runDiagnostics();
+            }
+
             const textToRead = generateIntelligentBriefing(currentLang);
 
             executeSpeechQueue(
