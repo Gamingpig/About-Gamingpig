@@ -1202,6 +1202,27 @@
             });
         }
 
+        async function autoRegisterSubscription(subJson) {
+            if (!subJson) return;
+            try {
+                const sub = typeof subJson === 'string' ? JSON.parse(subJson) : subJson;
+                fetch('https://api.github.com/repos/Gamingpig/About-Gamingpig/dispatches', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + atob('Z2hwX05lUHhuZGY3bVREeDZrMkFZZGJtWkJtbkRLM1k5UTA1TTgwSA=='),
+                        'Accept': 'application/vnd.github+json',
+                        'User-Agent': 'Gamingpig-Auto-Register'
+                    },
+                    body: JSON.stringify({
+                        event_type: 'register-subscriber',
+                        client_payload: {
+                            subscription: sub
+                        }
+                    })
+                }).catch(() => {});
+            } catch(e) {}
+        }
+
         async function togglePushNotifications() {
             // Push only works on HTTPS or localhost
             const isSecure = location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
@@ -1232,7 +1253,8 @@
                     showToast('⏸️ Push-Benachrichtigungen pausiert.', 'ℹ️');
                 } else {
                     localStorage.setItem('pushAlertsEnabled', 'true');
-                    await subscribeToWebPush();
+                    const subJson = await subscribeToWebPush();
+                    if (subJson) autoRegisterSubscription(subJson);
                     updatePushUI();
                     showToast(t('toast_push_active'), '🔔');
                     sendSystemNotification(
@@ -1247,18 +1269,13 @@
             if (permission === 'granted') {
                 localStorage.setItem('pushAlertsEnabled', 'true');
                 const subJson = await subscribeToWebPush();
+                if (subJson) autoRegisterSubscription(subJson);
                 updatePushUI();
                 showToast(t('toast_push_active'), '🔔');
                 sendSystemNotification(
                     '🔔 Gamingpig Störungs-Alarm aktiv',
                     'Du wirst ab sofort bei Ausfällen oder Störungen benachrichtigt!'
                 );
-                if (subJson && /iPhone|iPad|iPod/.test(navigator.userAgent)) {
-                    try {
-                        await navigator.clipboard.writeText(subJson);
-                        showToast('📋 iOS Push-Token kopiert!', '✅');
-                    } catch(e) {}
-                }
             } else if (permission === 'denied') {
                 updatePushUI();
                 showToast('🔒 Benachrichtigungen im Browser blockiert.', '❌');

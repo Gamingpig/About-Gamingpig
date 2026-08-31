@@ -162,13 +162,15 @@ async function main() {
 
     if (mode === 'register') {
         // Register a new subscription payload passed via argument or env
-        const subJson = process.argv[3] || process.env.NEW_SUBSCRIPTION;
-        if (!subJson) {
+        const raw = process.argv[3] || process.env.NEW_SUBSCRIPTION;
+        if (!raw) {
             console.error('No subscription JSON provided.');
             process.exit(1);
         }
         try {
-            const newSub = JSON.parse(subJson);
+            let parsed = JSON.parse(raw);
+            let newSub = parsed.subscription || parsed;
+            if (typeof newSub === 'string') newSub = JSON.parse(newSub);
             if (!newSub.endpoint || !newSub.keys) {
                 throw new Error('Invalid subscription format.');
             }
@@ -185,8 +187,8 @@ async function main() {
 
             // Send confirmation welcome push!
             await webPush.sendNotification(newSub, JSON.stringify({
-                title: '🔔 Störungs-Push aktiviert',
-                body: 'Dein Gerät empfängt ab sofort Push-Alarme über GitHub Actions – auch bei geschlossener App!',
+                title: '🔔 Gamingpig Störungs-Alarm aktiv',
+                body: 'Dein Gerät empfängt ab sofort alle Alarme & Entwarnungen vollautomatisch!',
                 url: 'https://gamingpig.github.io/About-Gamingpig/status.html'
             }));
             console.log('Welcome push sent successfully!');
