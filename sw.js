@@ -7,7 +7,7 @@
 // - Sofortige Übernahme: self.skipWaiting() & clients.claim()
 // ==============================================================================
 
-const SW_VERSION = "24.138.0";
+const SW_VERSION = "24.138.1";
 const CACHE_NAME = `gamingpig-cache-v${SW_VERSION}`;
 const CACHE_PREFIX = "gamingpig-cache-";
 
