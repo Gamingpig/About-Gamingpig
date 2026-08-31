@@ -70,13 +70,34 @@
     <!-- Main Container -->
     <main class="max-w-3xl w-full my-auto pb-12 space-y-6">
 
+        <!-- 0. BANNED NO ACCESS SCREEN (Permanent Hardware/Fingerprint Lockout) -->
+        <div id="banned-panel" class="hidden glow-card p-6 sm:p-8 rounded-3xl border-rose-500/60 text-center max-w-md mx-auto bg-rose-950/40 shadow-2xl">
+            <div class="w-16 h-16 rounded-2xl bg-rose-500/20 text-rose-400 border border-rose-500/40 flex items-center justify-center text-4xl mx-auto mb-4 shadow-xl animate-pulse">
+                🚫
+            </div>
+            <h1 class="text-2xl font-black text-rose-400 mb-1 tracking-tight">NO ACCESS</h1>
+            <p class="text-xs text-rose-300 font-bold uppercase tracking-wider mb-3">Gerät permanent gesperrt</p>
+            <p class="text-xs text-slate-300 leading-relaxed mb-4">
+                Aufgrund von <strong>10 aufeinanderfolgenden Fehlversuchen</strong> wurde der Zugriff für dieses Gerät und die Hardware-Signatur dauerhaft blockiert.
+            </p>
+            <div class="p-3 rounded-xl bg-black/60 border border-rose-500/30 text-[10px] font-mono text-slate-400 text-left">
+                <span class="block text-rose-400 font-bold">STATUS: HARDWARE_LOCKOUT_ACTIVE</span>
+                <span id="banned-hw-id" class="block truncate mt-1">HW-SIGNATURE: INITIALIZING...</span>
+                <span class="block text-slate-500 mt-0.5">SECURITY_LAYER: MULTI_STORAGE_VAULT (ENFORCED)</span>
+            </div>
+        </div>
+
         <!-- 1. LOGIN SCREEN (Visible when locked) -->
         <div id="login-panel" class="glow-card p-6 sm:p-8 rounded-3xl border-indigo-500/30 text-center max-w-md mx-auto">
             <div class="w-14 h-14 rounded-2xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center text-3xl mx-auto mb-4 shadow-lg">
                 🔐
             </div>
             <h1 class="text-xl font-black text-white mb-1">Push Control Center</h1>
-            <p class="text-xs text-slate-400 mb-6">Bitte Admin-Passwort eingeben, um Push-Benachrichtigungen zu verfassen und zu testen.</p>
+            <p class="text-xs text-slate-400 mb-4">Bitte Admin-Passwort eingeben, um Push-Benachrichtigungen zu verfassen und zu testen.</p>
+
+            <div id="attempts-badge" class="mb-4 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 border border-slate-700 text-[11px] font-mono text-slate-300">
+                <span>🛡️ Versuche übrig:</span> <strong id="attempts-left-count" class="text-emerald-400">10 / 10</strong>
+            </div>
 
             <form onsubmit="handleLogin(event)" class="space-y-4">
                 <div class="relative">
@@ -86,7 +107,7 @@
                 <div id="login-error" class="text-xs font-bold text-rose-400 hidden">
                     ❌ Falsches Passwort. Zugriff verweigert.
                 </div>
-                <button type="submit" class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2">
+                <button type="submit" id="btn-login-submit" class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2">
                     <span>Entsperren</span> <span>→</span>
                 </button>
             </form>
@@ -297,6 +318,13 @@
             }
         };
 
+        // ========================================================= //
+        // --- ANTI-BRUTE-FORCE & HARDWARE LOCK SECURITY SYSTEM --- //
+        // ========================================================= //
+        const MAX_FAILED_ATTEMPTS = 10;
+        let globalHardwareFp = null;
+        let isDevicePermanentlyBanned = false;
+
         async function sha256(str) {
             const buffer = new TextEncoder().encode(str);
             const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
@@ -304,21 +332,257 @@
             return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
         }
 
+        async function computeHardwareFingerprint() {
+            try {
+                const canvas = document.createElement('canvas');
+                canvas.width = 200;
+                canvas.height = 50;
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    ctx.textBaseline = "top";
+                    ctx.font = "14px 'Arial'";
+                    ctx.fillStyle = "#f60";
+                    ctx.fillRect(125,1,62,20);
+                    ctx.fillStyle = "#069";
+                    ctx.fillText("GamingpigSecureLock2026", 2, 15);
+                    ctx.fillStyle = "rgba(102, 204, 0, 0.7)";
+                    ctx.fillText("GamingpigSecureLock2026", 4, 17);
+                }
+                const cData = canvas.toDataURL();
+
+                let glInfo = '';
+                try {
+                    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                    if (gl) {
+                        const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+                        if (dbg) {
+                            glInfo = gl.getParameter(dbg.UNMASKED_VENDOR_WEBGL) + '~' + gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL);
+                        }
+                    }
+                } catch(e) {}
+
+                const rawSig = [
+                    cData,
+                    glInfo,
+                    navigator.userAgent,
+                    navigator.language,
+                    screen.width + 'x' + screen.height + 'x' + screen.colorDepth,
+                    navigator.hardwareConcurrency || 4,
+                    navigator.deviceMemory || 8,
+                    Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+                ].join('###');
+
+                return await sha256(rawSig);
+            } catch(e) {
+                return await sha256(navigator.userAgent + screen.width + screen.height);
+            }
+        }
+
+        // --- Layer 1: IndexedDB Vault ---
+        function getIDBState(fp) {
+            return new Promise((resolve) => {
+                try {
+                    const req = indexedDB.open('GamingpigSecurityDB', 1);
+                    req.onupgradeneeded = (e) => {
+                        e.target.result.createObjectStore('sec_vault');
+                    };
+                    req.onsuccess = (e) => {
+                        const db = e.target.result;
+                        const tx = db.transaction('sec_vault', 'readonly');
+                        const store = tx.objectStore('sec_vault');
+                        const g = store.get('lock_' + fp);
+                        g.onsuccess = () => resolve(g.result || null);
+                        g.onerror = () => resolve(null);
+                    };
+                    req.onerror = () => resolve(null);
+                } catch(e) { resolve(null); }
+            });
+        }
+
+        function setIDBState(fp, val) {
+            return new Promise((resolve) => {
+                try {
+                    const req = indexedDB.open('GamingpigSecurityDB', 1);
+                    req.onupgradeneeded = (e) => {
+                        e.target.result.createObjectStore('sec_vault');
+                    };
+                    req.onsuccess = (e) => {
+                        const db = e.target.result;
+                        const tx = db.transaction('sec_vault', 'readwrite');
+                        const store = tx.objectStore('sec_vault');
+                        store.put(val, 'lock_' + fp);
+                        tx.oncomplete = () => resolve(true);
+                        tx.onerror = () => resolve(false);
+                    };
+                    req.onerror = () => resolve(false);
+                } catch(e) { resolve(false); }
+            });
+        }
+
+        // --- Layer 2: CacheStorage Vault ---
+        async function getCacheState(fp) {
+            try {
+                if (!('caches' in window)) return null;
+                const cache = await caches.open('gp-sec-vault');
+                const resp = await cache.match('https://security.gp.local/lock/' + fp);
+                if (resp) return await resp.json();
+            } catch(e) {}
+            return null;
+        }
+
+        async function setCacheState(fp, val) {
+            try {
+                if (!('caches' in window)) return;
+                const cache = await caches.open('gp-sec-vault');
+                const resp = new Response(JSON.stringify(val), { headers: { 'Content-Type': 'application/json' } });
+                await cache.put('https://security.gp.local/lock/' + fp, resp);
+            } catch(e) {}
+        }
+
+        // --- Layer 3: Cookie Vault ---
+        function getCookieState(fp) {
+            try {
+                const match = document.cookie.match(new RegExp('(?:^|; )gp_lock_' + fp + '=([^;]*)'));
+                if (match) return JSON.parse(decodeURIComponent(match[1]));
+            } catch(e) {}
+            return null;
+        }
+
+        function setCookieState(fp, val) {
+            try {
+                document.cookie = `gp_lock_${fp}=${encodeURIComponent(JSON.stringify(val))}; max-age=315360000; path=/; SameSite=Strict`;
+            } catch(e) {}
+        }
+
+        // --- Layer 4 & 5: LocalStorage + SessionStorage ---
+        async function getConsolidatedSecurityState(fp) {
+            const locAttempts = parseInt(localStorage.getItem('gp_att_' + fp) || '0', 10);
+            const locBanned = localStorage.getItem('gp_ban_' + fp) === 'true';
+
+            const sessAttempts = parseInt(sessionStorage.getItem('gp_att_' + fp) || '0', 10);
+            const sessBanned = sessionStorage.getItem('gp_ban_' + fp) === 'true';
+
+            const idbData = await getIDBState(fp) || {};
+            const idbAttempts = parseInt(idbData.attempts || '0', 10);
+            const idbBanned = !!idbData.banned;
+
+            const cacheData = await getCacheState(fp) || {};
+            const cacheAttempts = parseInt(cacheData.attempts || '0', 10);
+            const cacheBanned = !!cacheData.banned;
+
+            const cookieData = getCookieState(fp) || {};
+            const cookieAttempts = parseInt(cookieData.attempts || '0', 10);
+            const cookieBanned = !!cookieData.banned;
+
+            const maxAttempts = Math.max(locAttempts, sessAttempts, idbAttempts, cacheAttempts, cookieAttempts);
+            const isBanned = locBanned || sessBanned || idbBanned || cacheBanned || cookieBanned || (maxAttempts >= MAX_FAILED_ATTEMPTS);
+
+            return { attempts: maxAttempts, banned: isBanned };
+        }
+
+        async function saveConsolidatedSecurityState(fp, attempts, banned) {
+            const stateObj = { fp, attempts, banned, timestamp: Date.now() };
+
+            try { localStorage.setItem('gp_att_' + fp, attempts); } catch(e) {}
+            if (banned) { try { localStorage.setItem('gp_ban_' + fp, 'true'); } catch(e) {} }
+
+            try { sessionStorage.setItem('gp_att_' + fp, attempts); } catch(e) {}
+            if (banned) { try { sessionStorage.setItem('gp_ban_' + fp, 'true'); } catch(e) {} }
+
+            await setIDBState(fp, stateObj);
+            await setCacheState(fp, stateObj);
+            setCookieState(fp, stateObj);
+        }
+
+        function enforcePermanentBanUI(fp) {
+            isDevicePermanentlyBanned = true;
+            const loginPanel = document.getElementById('login-panel');
+            const dashPanel = document.getElementById('admin-dashboard');
+            const logoutBtn = document.getElementById('btn-logout');
+            const banPanel = document.getElementById('banned-panel');
+
+            if (loginPanel) loginPanel.classList.add('hidden');
+            if (dashPanel) dashPanel.classList.add('hidden');
+            if (logoutBtn) logoutBtn.classList.add('hidden');
+
+            if (banPanel) {
+                banPanel.classList.remove('hidden');
+                const hwLabel = document.getElementById('banned-hw-id');
+                if (hwLabel) hwLabel.innerText = 'HW-SIGNATURE: ' + fp.slice(0, 16) + '...' + fp.slice(-8);
+            }
+
+            // Remove input elements completely
+            const passInput = document.getElementById('input-password');
+            if (passInput) passInput.remove();
+            const submitBtn = document.getElementById('btn-login-submit');
+            if (submitBtn) submitBtn.remove();
+
+            // Self-healing watchdog: re-enforces ban every 400ms against console tampering
+            setInterval(() => {
+                saveConsolidatedSecurityState(fp, 10, true);
+            }, 400);
+        }
+
+        function updateAttemptsUI(attempts) {
+            const left = Math.max(0, MAX_FAILED_ATTEMPTS - attempts);
+            const badge = document.getElementById('attempts-left-count');
+            if (badge) {
+                badge.innerText = `${left} / ${MAX_FAILED_ATTEMPTS}`;
+                if (left <= 3) {
+                    badge.className = "text-rose-400 font-bold animate-pulse";
+                } else if (left <= 6) {
+                    badge.className = "text-amber-400 font-bold";
+                } else {
+                    badge.className = "text-emerald-400 font-bold";
+                }
+            }
+        }
+
         async function handleLogin(e) {
             if (e) e.preventDefault();
-            const input = document.getElementById('input-password').value;
+            if (isDevicePermanentlyBanned) return;
+
+            const fp = globalHardwareFp || await computeHardwareFingerprint();
+            const state = await getConsolidatedSecurityState(fp);
+
+            if (state.banned || state.attempts >= MAX_FAILED_ATTEMPTS) {
+                enforcePermanentBanUI(fp);
+                return;
+            }
+
+            const inputEl = document.getElementById('input-password');
+            if (!inputEl) return;
+            const input = inputEl.value;
             const err = document.getElementById('login-error');
 
             const computed = await sha256(input + AUTH_SALT);
             if (computed === AUTH_HASH) {
+                // Correct password resets failure counter
+                await saveConsolidatedSecurityState(fp, 0, false);
                 sessionStorage.setItem('pushAdminAuth', 'true');
-                err.classList.add('hidden');
+                if (err) err.classList.add('hidden');
                 unlockDashboard();
                 showToast('Erfolgreich eingeloggt!', '🔓');
             } else {
-                err.classList.remove('hidden');
-                document.getElementById('input-password').value = '';
-                document.getElementById('input-password').focus();
+                const newAttempts = state.attempts + 1;
+                const willBan = newAttempts >= MAX_FAILED_ATTEMPTS;
+
+                await saveConsolidatedSecurityState(fp, newAttempts, willBan);
+                updateAttemptsUI(newAttempts);
+
+                if (willBan) {
+                    enforcePermanentBanUI(fp);
+                    showToast('🚫 NO ACCESS: Gerät dauerhaft gesperrt!', '❌');
+                } else {
+                    const left = MAX_FAILED_ATTEMPTS - newAttempts;
+                    if (err) {
+                        err.innerHTML = `❌ Falsches Passwort. Noch <strong>${left}</strong> ${left === 1 ? 'Versuch' : 'Versuche'} bis zur dauerhaften Sperre!`;
+                        err.classList.remove('hidden');
+                    }
+                    inputEl.value = '';
+                    inputEl.focus();
+                    showToast(`Fehlversuch ${newAttempts}/${MAX_FAILED_ATTEMPTS}!`, '⚠️');
+                }
             }
         }
 
@@ -327,7 +591,8 @@
             document.getElementById('admin-dashboard').classList.add('hidden');
             document.getElementById('login-panel').classList.remove('hidden');
             document.getElementById('btn-logout').classList.add('hidden');
-            document.getElementById('input-password').value = '';
+            const passInput = document.getElementById('input-password');
+            if (passInput) passInput.value = '';
             showToast('Abgemeldet.', '🔒');
         }
 
@@ -517,10 +782,23 @@
             }
         }
 
-        // Check if session is already active
-        window.addEventListener('DOMContentLoaded', () => {
-            if (sessionStorage.getItem('pushAdminAuth') === 'true') {
-                unlockDashboard();
+        // Check if device is banned or session is already active on load
+        window.addEventListener('DOMContentLoaded', async () => {
+            try {
+                globalHardwareFp = await computeHardwareFingerprint();
+                const state = await getConsolidatedSecurityState(globalHardwareFp);
+                updateAttemptsUI(state.attempts);
+
+                if (state.banned || state.attempts >= MAX_FAILED_ATTEMPTS) {
+                    enforcePermanentBanUI(globalHardwareFp);
+                    return;
+                }
+
+                if (sessionStorage.getItem('pushAdminAuth') === 'true') {
+                    unlockDashboard();
+                }
+            } catch(e) {
+                console.warn('Security init fallback:', e);
             }
         });
     </script>
