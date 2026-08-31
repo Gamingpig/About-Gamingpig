@@ -1246,13 +1246,19 @@
             const permission = await requestNotificationPermissionSafe();
             if (permission === 'granted') {
                 localStorage.setItem('pushAlertsEnabled', 'true');
-                await subscribeToWebPush();
+                const subJson = await subscribeToWebPush();
                 updatePushUI();
                 showToast(t('toast_push_active'), '🔔');
                 sendSystemNotification(
                     '🔔 Gamingpig Störungs-Alarm aktiv',
                     'Du wirst ab sofort bei Ausfällen oder Störungen benachrichtigt!'
                 );
+                if (subJson && /iPhone|iPad|iPod/.test(navigator.userAgent)) {
+                    try {
+                        await navigator.clipboard.writeText(subJson);
+                        showToast('📋 iOS Push-Token kopiert!', '✅');
+                    } catch(e) {}
+                }
             } else if (permission === 'denied') {
                 updatePushUI();
                 showToast('🔒 Benachrichtigungen im Browser blockiert.', '❌');
