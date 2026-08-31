@@ -7,7 +7,7 @@
 // - Sofortige Übernahme: self.skipWaiting() & clients.claim()
 // ==============================================================================
 
-const SW_VERSION = "24.133.12";
+const SW_VERSION = "24.134.0";
 const CACHE_NAME = `gamingpig-cache-v${SW_VERSION}`;
 const CACHE_PREFIX = "gamingpig-cache-";
 
@@ -116,16 +116,13 @@ self.addEventListener("push", (event) => {
         body = data.translations.en.body || body;
     }
 
-    // Eindeutiger Tag pro Notification -> Verhindert das Überschreiben auf Android und erzeugt einen sauberen Stack!
-    const uniqueTag = data.tag || ("gamingpig-notif-" + Date.now() + "-" + Math.floor(Math.random() * 100000));
-
+    // KEIN 'tag' Attribut setzen!
+    // Wenn 'tag' weggelassen wird, zwingt dies Android/Chromium, für jede Nachricht eine separate Karte im Benachrichtigungs-Stack anzulegen, statt sie zu überschreiben.
     const options = {
         body: body,
         icon: "icon-192.png",
         badge: "icon-192.png",
-        vibrate: [200, 100, 200, 100, 300],
-        tag: uniqueTag,
-        renotify: true,
+        timestamp: data.timestamp || Date.now(),
         data: { url: data.url || "./status.html" }
     };
     event.waitUntil(self.registration.showNotification(title, options));
