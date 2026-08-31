@@ -5129,7 +5129,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.135 · 2026-08-31';
+        const SITE_VERSION = 'v24.136 · 2026-08-31';
 
         // =========================================================
         // NEU v24.118: Automatischer Reset veralteter Cached Flags bei Versionswechsel
@@ -16035,19 +16035,19 @@ window.generateShareCard = function() {
             showWrappedSlide(currentWrappedSlide - 1);
         };
 
-        window.fetchStatsFmWrapped = async function(range = 'weeks') {
+        window.fetchStatsFmWrapped = async function(range = 'days') {
             currentWrappedRange = range;
-            const rangeLabels = { weeks: '4 Wochen', months: '6 Monate', lifetime: 'All-Time' };
+            const rangeLabels = { days: '7 Tage (Woche)', weeks: '4 Wochen', months: '6 Monate', lifetime: 'All-Time' };
             const rangeBadge = document.getElementById('wrapped-share-range-badge');
-            if (rangeBadge) rangeBadge.innerText = rangeLabels[range] || '4 Wochen';
+            if (rangeBadge) rangeBadge.innerText = rangeLabels[range] || '7 Tage';
 
-            ['weeks', 'months', 'lifetime'].forEach(r => {
+            ['days', 'weeks', 'months', 'lifetime'].forEach(r => {
                 const btn = document.getElementById('tab-wrapped-' + r);
                 if (btn) {
                     if (r === range) {
-                        btn.className = 'px-3 py-1.5 rounded-lg bg-green-500 text-black font-bold transition-all';
+                        btn.className = 'px-2.5 sm:px-3 py-1.5 rounded-lg bg-green-500 text-black font-black shadow transition-all';
                     } else {
-                        btn.className = 'px-3 py-1.5 rounded-lg text-white/70 hover:text-white transition-all';
+                        btn.className = 'px-2.5 sm:px-3 py-1.5 rounded-lg text-white/70 hover:text-white transition-all';
                     }
                 }
             });
@@ -16072,10 +16072,11 @@ window.generateShareCard = function() {
             if (topArtistsEl) topArtistsEl.innerHTML = '<div class="p-4 text-center text-xs text-white/50 animate-pulse">Lade Top-Künstler...</div>';
 
             try {
+                const cb = Date.now();
                 const [resTracks, resArtists, resUser] = await Promise.all([
-                    fetch(`https://api.stats.fm/api/v1/users/gamingpig/top/tracks?range=${range}`).then(r => r.json()).catch(() => null),
-                    fetch(`https://api.stats.fm/api/v1/users/gamingpig/top/artists?range=${range}`).then(r => r.json()).catch(() => null),
-                    fetch(`https://api.stats.fm/api/v1/users/gamingpig`).then(r => r.json()).catch(() => null)
+                    fetch(`https://api.stats.fm/api/v1/users/gamingpig/top/tracks?range=${range}&_cb=${cb}`).then(r => r.json()).catch(() => null),
+                    fetch(`https://api.stats.fm/api/v1/users/gamingpig/top/artists?range=${range}&_cb=${cb}`).then(r => r.json()).catch(() => null),
+                    fetch(`https://api.stats.fm/api/v1/users/gamingpig?_cb=${cb}`).then(r => r.json()).catch(() => null)
                 ]);
 
                 if (resUser?.item?.image && topArtEl) {
@@ -16334,11 +16335,12 @@ window.generateShareCard = function() {
             <h3 class="text-2xl font-black text-white tracking-tight mb-0.5">Top Songs</h3>
             <p class="text-white/60 text-xs mb-3">Live synchronisiert via stats.fm</p>
 
-            <!-- Filter Range -->
-            <div class="flex items-center gap-1 p-1 bg-white/5 border border-white/10 rounded-xl mb-3 text-xs font-bold">
-                <button onclick="fetchStatsFmWrapped('weeks')" id="tab-wrapped-weeks" class="px-3 py-1.5 rounded-lg bg-green-500 text-black font-bold transition-all">4 Wochen</button>
-                <button onclick="fetchStatsFmWrapped('months')" id="tab-wrapped-months" class="px-3 py-1.5 rounded-lg text-white/70 hover:text-white transition-all">6 Monate</button>
-                <button onclick="fetchStatsFmWrapped('lifetime')" id="tab-wrapped-lifetime" class="px-3 py-1.5 rounded-lg text-white/70 hover:text-white transition-all">All-Time</button>
+            <!-- Filter Range (Neu: Letzte 7 Tage / Letzte Woche als Standard) -->
+            <div class="flex items-center gap-1 p-1 bg-white/5 border border-white/10 rounded-xl mb-3 text-[11px] sm:text-xs font-bold overflow-x-auto max-w-full">
+                <button onclick="fetchStatsFmWrapped('days')" id="tab-wrapped-days" class="px-2.5 sm:px-3 py-1.5 rounded-lg bg-green-500 text-black font-black shadow transition-all">7 Tage</button>
+                <button onclick="fetchStatsFmWrapped('weeks')" id="tab-wrapped-weeks" class="px-2.5 sm:px-3 py-1.5 rounded-lg text-white/70 hover:text-white transition-all">4 Wochen</button>
+                <button onclick="fetchStatsFmWrapped('months')" id="tab-wrapped-months" class="px-2.5 sm:px-3 py-1.5 rounded-lg text-white/70 hover:text-white transition-all">6 Monate</button>
+                <button onclick="fetchStatsFmWrapped('lifetime')" id="tab-wrapped-lifetime" class="px-2.5 sm:px-3 py-1.5 rounded-lg text-white/70 hover:text-white transition-all">All-Time</button>
             </div>
 
             <!-- Top Tracks List -->

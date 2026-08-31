@@ -170,6 +170,26 @@ async function main() {
         return;
     }
 
+    if (mode === 'custom' || mode === 'maintenance') {
+        const title = process.argv[3] || '⚠️ Wartungsarbeiten – Gamingpig';
+        const body = process.argv[4] || 'Neue Updates und Optimierungen werden gerade eingespielt.';
+        console.log(`Sending custom push: "${title}" - "${body}"`);
+        await sendPushToAll({
+            title: title,
+            body: body,
+            translations: {
+                de: { title: title, body: body },
+                en: { title: title, body: body },
+                es: { title: title, body: body },
+                fr: { title: title, body: body },
+                pt: { title: title, body: body },
+                tr: { title: title, body: body }
+            },
+            url: 'https://gamingpig.github.io/About-Gamingpig/status.html'
+        });
+        return;
+    }
+
     if (mode === 'update') {
         const customMsg = process.argv[3] || 'Ein neues PWA-Update mit Optimierungen und neuen Features ist online!';
         console.log(`Triggering release update push: "${customMsg}"`);
