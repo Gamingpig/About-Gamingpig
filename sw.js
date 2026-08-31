@@ -7,7 +7,7 @@
 // - Sofortige Übernahme: self.skipWaiting() & clients.claim()
 // ==============================================================================
 
-const SW_VERSION = "24.133.11";
+const SW_VERSION = "24.133.12";
 const CACHE_NAME = `gamingpig-cache-v${SW_VERSION}`;
 const CACHE_PREFIX = "gamingpig-cache-";
 
@@ -116,12 +116,16 @@ self.addEventListener("push", (event) => {
         body = data.translations.en.body || body;
     }
 
+    // Eindeutiger Tag pro Notification -> Verhindert das Überschreiben auf Android und erzeugt einen sauberen Stack!
+    const uniqueTag = data.tag || ("gamingpig-notif-" + Date.now() + "-" + Math.floor(Math.random() * 100000));
+
     const options = {
         body: body,
         icon: "icon-192.png",
         badge: "icon-192.png",
         vibrate: [200, 100, 200, 100, 300],
-        tag: "gamingpig-status-alert",
+        tag: uniqueTag,
+        renotify: true,
         data: { url: data.url || "./status.html" }
     };
     event.waitUntil(self.registration.showNotification(title, options));

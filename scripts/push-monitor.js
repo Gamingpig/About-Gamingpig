@@ -170,6 +170,43 @@ async function main() {
         return;
     }
 
+    if (mode === 'update') {
+        const customMsg = process.argv[3] || 'Ein neues PWA-Update mit Optimierungen und neuen Features ist online!';
+        console.log(`Triggering release update push: "${customMsg}"`);
+        await sendPushToAll({
+            title: '🚀 Neues Update – Gamingpig Portfolio',
+            body: customMsg,
+            translations: {
+                de: {
+                    title: '🚀 Neues Update – Gamingpig Portfolio',
+                    body: customMsg
+                },
+                en: {
+                    title: '🚀 New Update – Gamingpig Portfolio',
+                    body: 'A fresh update with new features and improvements is now live!'
+                },
+                es: {
+                    title: '🚀 Nueva Actualización – Gamingpig Portfolio',
+                    body: '¡Hay una nueva actualización con mejoras y funciones disponibles!'
+                },
+                fr: {
+                    title: '🚀 Nouvelle Mise à Jour – Gamingpig Portfolio',
+                    body: 'Une nouvelle mise à jour avec des améliorations est disponible !'
+                },
+                pt: {
+                    title: '🚀 Nova Atualização – Gamingpig Portfolio',
+                    body: 'Uma nova atualização com melhorias e novidades está disponível!'
+                },
+                tr: {
+                    title: '🚀 Yeni Güncelleme – Gamingpig Portfolio',
+                    body: 'Yeni özellikler ve iyileştirmeler içeren güncelleme yayınlandı!'
+                }
+            },
+            url: 'https://gamingpig.github.io/About-Gamingpig/release-v24-115.html'
+        });
+        return;
+    }
+
     if (mode === 'register') {
         // Register a new subscription payload passed via argument or env
         const raw = process.argv[3] || process.env.NEW_SUBSCRIPTION;
