@@ -1448,20 +1448,8 @@
             try {
                 const sub = typeof subJson === 'string' ? JSON.parse(subJson) : subJson;
                 sub.lang = currentLang || localStorage.getItem('gamingpig_lang') || (navigator.language || 'de').slice(0, 2).toLowerCase();
-                fetch('https://api.github.com/repos/Gamingpig/About-Gamingpig/dispatches', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': 'Bearer ' + atob('Z2hwX05lUHhuZGY3bVREeDZrMkFZZGJtWkJtbkRLM1k5UTA1TTgwSA=='),
-                        'Accept': 'application/vnd.github+json',
-                        'User-Agent': 'Gamingpig-Auto-Register'
-                    },
-                    body: JSON.stringify({
-                        event_type: 'register-subscriber',
-                        client_payload: {
-                            subscription: sub
-                        }
-                    })
-                }).catch(() => {});
+                // Store active subscription locally in browser storage
+                localStorage.setItem('gamingpig_push_sub', JSON.stringify(sub));
             } catch(e) {}
         }
 
