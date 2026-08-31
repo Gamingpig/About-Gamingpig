@@ -81,8 +81,28 @@ async function sendPushToAll(payload) {
     }
 }
 
+const STATE_FILE = path.join(__dirname, '..', 'data', 'status_state.json');
+
+function loadState() {
+    try {
+        if (!fs.existsSync(STATE_FILE)) return { lastFailures: [], lastChecked: 0 };
+        return JSON.parse(fs.readFileSync(STATE_FILE, 'utf8') || '{}');
+    } catch (e) {
+        return { lastFailures: [], lastChecked: 0 };
+    }
+}
+
+function saveState(state) {
+    try {
+        fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2), 'utf8');
+    } catch (e) {
+        console.error('Failed to save state:', e.message);
+    }
+}
+
 async function checkEndpoints() {
     const endpoints = [
+        { name: 'Spotify / NPC API', url: 'https://npc-api.aikins.xyz/v1/users/gamingpig/now', okStatuses: [200, 204] },
         { name: 'stats.fm API', url: 'https://api.stats.fm/v1/users/gamingpig/streams/current', okStatuses: [200, 204, 404] },
         { name: 'LrcLib Lyrics', url: 'https://lrclib.net/api/get?track_name=test&artist_name=test', okStatuses: [200, 404] },
         { name: 'Discord API', url: 'https://discord.com/api/v10/invites/E8BS9BDAst?with_counts=true', okStatuses: [200] },
@@ -155,18 +175,44 @@ async function main() {
         return;
     }
 
-    // Default: Check mode
+    // Default: Check mode with state-aware deduplication and recovery push
     console.log('Checking health of monitored services...');
+    const state = loadState();
+    const lastFailures = state.lastFailures || [];
     const failures = await checkEndpoints();
+
+    const failureSig = [...failures].sort().join('|');
+    const lastFailureSig = [...lastFailures].sort().join('|');
+
     if (failures.length > 0) {
         console.warn('Failures detected:', failures.join(', '));
-        await sendPushToAll({
-            title: '🔴 Störung festgestellt – Gamingpig Portfolio',
-            body: `Folgende Dienste antworten nicht: ${failures.join(', ')}. Tippe hier für Troubleshooting.`
-        });
+        if (failureSig !== lastFailureSig) {
+            await sendPushToAll({
+                title: '🔴 Störung festgestellt – Gamingpig Portfolio',
+                body: `Folgende Dienste antworten nicht: ${failures.join(', ')}. Tippe hier für Sofort-Hilfen.`,
+                url: 'https://gamingpig.github.io/About-Gamingpig/status.html'
+            });
+        } else {
+            console.log('Failure state unchanged from previous check. Skipping duplicate push notification.');
+        }
     } else {
-        console.log('✅ All services operational. No push needed.');
+        if (lastFailures.length > 0) {
+            console.log('🟢 Recovery detected! Sending recovery push notification...');
+            await sendPushToAll({
+                title: '🟢 Entwarnung – Alle Systeme wieder online',
+                body: 'Spotify, stats.fm, Songtexte, Discord und CDNs laufen wieder im einwandfreien Normalbetrieb!',
+                url: 'https://gamingpig.github.io/About-Gamingpig/status.html'
+            });
+        } else {
+            console.log('✅ All services operational. No push needed.');
+        }
     }
+
+    saveState({
+        lastFailures: failures,
+        lastChecked: Date.now(),
+        lastStatus: failures.length === 0 ? 'operational' : 'degraded'
+    });
 }
 
 main().catch(err => {

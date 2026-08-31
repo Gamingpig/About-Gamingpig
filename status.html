@@ -907,11 +907,13 @@
             const statsfmOk = statsRes.ok || (statsRes.status && statsRes.status < 500);
             lastDiagnosticResults.statsfm = { ...statsRes, ok: statsfmOk };
 
-            // 3. Spotify live stream (online if stats.fm API is reachable)
+            // 3. Spotify Live Player & Stream (Primary NPC API Check)
+            const npcRes = await pingEndpoint('https://npc-api.aikins.xyz/v1/users/gamingpig/now');
+            const npcOk = npcRes.ok || (npcRes.status && [200, 204].includes(npcRes.status));
             lastDiagnosticResults.spotify = {
-                ok: statsfmOk,
-                duration: statsRes.duration,
-                status: statsfmOk ? 'Reachable' : 'Degraded'
+                ...npcRes,
+                ok: npcOk,
+                status: npcOk ? (npcRes.status === 200 ? 'Live Playing' : 'Standby / Bereit') : 'Nicht erreichbar'
             };
 
             // 4. LrcLib Lyrics Provider
