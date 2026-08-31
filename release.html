@@ -75,29 +75,38 @@
 <body class="text-slate-100 min-h-screen flex flex-col items-center justify-between p-4 sm:p-8 md:p-12 selection:bg-pink-500/40">
 
     <!-- Top Navigation Bar -->
-    <header class="max-w-4xl w-full flex items-center justify-between py-4 px-5 rounded-2xl bg-slate-900/85 border border-slate-800 backdrop-blur-xl mb-8 shadow-2xl">
-        <a href="index.html" class="flex items-center gap-2.5 text-white hover:text-blue-400 font-extrabold text-sm sm:text-base transition-colors group">
-            <span class="p-1.5 rounded-lg bg-blue-500/10 text-blue-400 group-hover:-translate-x-1 transition-transform">←</span>
+    <header class="max-w-4xl w-full flex items-center justify-between py-3.5 px-4 sm:px-5 rounded-2xl bg-slate-900/85 border border-slate-800 backdrop-blur-xl mb-8 shadow-2xl">
+        <a href="index.html" class="flex items-center gap-2 text-white hover:text-blue-400 font-extrabold text-xs sm:text-base transition-colors group">
+            <span class="p-1 sm:p-1.5 rounded-lg bg-blue-500/10 text-blue-400 group-hover:-translate-x-1 transition-transform text-xs sm:text-sm">←</span>
             <span id="nav-back">Hauptseite</span>
         </a>
 
-        <!-- Controls: Read Aloud & Language Switcher -->
-        <div class="flex items-center gap-2 sm:gap-3">
+        <!-- Controls: Read Aloud, Speed & Language Switcher -->
+        <div class="flex items-center gap-1.5 sm:gap-2.5">
             <!-- TTS Button -->
-            <button id="tts-toggle-btn" onclick="toggleReadAloud()" class="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs sm:text-sm font-black transition-all shadow-md active:scale-95">
+            <button id="tts-toggle-btn" onclick="toggleReadAloud()" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs sm:text-sm font-black transition-all shadow-md active:scale-95">
                 <span id="tts-icon">🔊</span>
                 <span id="tts-label">Vorlesen</span>
             </button>
 
+            <!-- TTS Speed Control -->
+            <select id="tts-speed-select" onchange="setSpeechRate(parseFloat(this.value))" title="Vorlesegeschwindigkeit / Speech Speed" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs sm:text-sm py-1.5 px-2 sm:py-2 sm:px-2.5 rounded-xl border border-slate-700 cursor-pointer outline-none focus:ring-2 focus:ring-pink-500 transition-all shadow-md">
+                <option value="0.75">0.75x</option>
+                <option value="1.0" selected>1.0x</option>
+                <option value="1.25">1.25x</option>
+                <option value="1.5">1.5x</option>
+                <option value="2.0">2.0x</option>
+            </select>
+
             <!-- Language Dropdown -->
             <div class="relative">
-                <select id="lang-select" onchange="changeLanguage(this.value)" class="bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs sm:text-sm py-1.5 px-3 sm:py-2 sm:px-4 rounded-xl border border-slate-700 cursor-pointer outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-md">
-                    <option value="de">🇩🇪 Deutsch</option>
-                    <option value="en">🇬🇧 English</option>
-                    <option value="es">🇪🇸 Español</option>
-                    <option value="fr">🇫🇷 Français</option>
-                    <option value="pt">🇧🇷 Português</option>
-                    <option value="tr">🇹🇷 Türkçe</option>
+                <select id="lang-select" onchange="changeLanguage(this.value)" class="bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs sm:text-sm py-1.5 px-2 sm:py-2 sm:px-3 rounded-xl border border-slate-700 cursor-pointer outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-md">
+                    <option value="de">🇩🇪 DE</option>
+                    <option value="en">🇬🇧 EN</option>
+                    <option value="es">🇪🇸 ES</option>
+                    <option value="fr">🇫🇷 FR</option>
+                    <option value="pt">🇧🇷 PT</option>
+                    <option value="tr">🇹🇷 TR</option>
                 </select>
             </div>
         </div>
@@ -217,22 +226,47 @@
             </div>
 
             <!-- Card 5: Community & Partner -->
-            <div class="glow-card p-6 sm:p-8 rounded-3xl border-l-4 border-l-amber-500">
+            <div class="glow-card p-6 sm:p-8 rounded-3xl border-l-4 border-l-amber-500 shadow-2xl">
                 <div class="flex items-center gap-3 mb-3">
                     <span class="text-3xl">🤝</span>
                     <h2 id="card4-title" class="text-xl sm:text-2xl font-black text-white uppercase tracking-tight">5. Community & Partner: Offizielle Kanäle & Support</h2>
                 </div>
-                <p id="card4-text" class="text-slate-200 text-sm sm:text-base leading-relaxed mb-5">
-                    Offizieller Team Gamingpig TikTok-Kanal, Direkt-Links zu YouTube & GitHub und riesiger Dank an MTB Noel für den Support!
+                <p id="card4-text" class="text-slate-200 text-sm sm:text-base mb-4 leading-relaxed">
+                    Aus Gamingpig ist eine lebendige Umgebung geworden: Offizieller Discord-Server, Kontakt per E-Mail, Social-Media-Kanäle auf TikTok & YouTube sowie die Android-App im Google Play Test!
                 </p>
-                <div class="flex flex-wrap gap-2.5 text-xs sm:text-sm font-bold">
-                    <a href="https://www.tiktok.com/@team.gamingpig" target="_blank" rel="noopener noreferrer" class="px-4 py-2 rounded-xl bg-pink-500/20 hover:bg-pink-500/30 text-pink-300 border border-pink-500/30 transition-all flex items-center gap-1.5 active:scale-95 shadow-md">
-                        <span>🎵</span> Team Gamingpig TikTok
-                        <span id="card4-badge1" class="text-[10px] bg-pink-500 text-white px-2 py-0.5 rounded-full font-black ml-1 uppercase">Offizieller Kanal</span>
+
+                <!-- Android Play Store Status Badge -->
+                <div class="mb-4 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-mono font-bold">
+                    <span>📱</span>
+                    <span id="card4-play-status">Android App • Closed Testing (TWA / Google Play)</span>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <a href="https://www.tiktok.com/@team_gamingpig_official?is_from_webapp=1&sender_device=pc" target="_blank" rel="noopener noreferrer" class="p-4 bg-slate-950/90 hover:bg-slate-800 rounded-2xl border border-slate-800 hover:border-pink-500/50 transition-all flex items-center justify-between group shadow-lg">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl overflow-hidden border border-white/20 shadow shrink-0">
+                                <img src="icon-192.png" alt="Team Gamingpig Logo" class="w-full h-full object-cover">
+                            </div>
+                            <div>
+                                <span class="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider bg-pink-500/20 text-pink-400 rounded-full" id="card4-badge1">Offizieller Kanal</span>
+                                <p class="font-black text-white text-base mt-0.5">Team Gamingpig</p>
+                                <p class="text-[10px] text-slate-400 font-semibold">© 2026 • @team_gamingpig_official</p>
+                            </div>
+                        </div>
+                        <span class="text-pink-400 group-hover:translate-x-1.5 transition-transform text-lg shrink-0">➔</span>
                     </a>
-                    <a href="https://www.tiktok.com/@noelmtb" target="_blank" rel="noopener noreferrer" class="px-4 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 transition-all flex items-center gap-1.5 active:scale-95 shadow-md">
-                        <span>🚵</span> MTB Noel
-                        <span id="card4-badge2" class="text-[10px] bg-amber-500 text-black px-2 py-0.5 rounded-full font-black ml-1 uppercase">Partner & Support</span>
+                    <a href="https://www.tiktok.com/@nur_mtb_noel?is_from_webapp=1&sender_device=pc" target="_blank" rel="noopener noreferrer" class="p-4 bg-slate-950/90 hover:bg-slate-800 rounded-2xl border border-slate-800 hover:border-amber-500/50 transition-all flex items-center justify-between group shadow-lg">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-xl shrink-0 shadow">
+                                <span>🚵</span>
+                            </div>
+                            <div>
+                                <span class="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-400 rounded-full" id="card4-badge2">Partner & Support</span>
+                                <p class="font-black text-white text-base mt-0.5">Noel (MTB Noel)</p>
+                                <p class="text-[10px] text-slate-400 font-semibold">@nur_mtb_noel</p>
+                            </div>
+                        </div>
+                        <span class="text-amber-400 group-hover:translate-x-1.5 transition-transform text-lg shrink-0">➔</span>
                     </a>
                 </div>
             </div>
@@ -283,7 +317,8 @@
                 card_standby_sub1: "Perfekt zentriert auf allen 20 Designs",
                 card_standby_sub2: "Echter Akku-Schutz: Bildschirm schläft normal",
                 card4_title: "5. Community & Partner: Offizielle Kanäle & Support",
-                card4_text: "Offizieller Team Gamingpig TikTok-Kanal, Direkt-Links zu YouTube & GitHub und riesiger Dank an MTB Noel für den Support!",
+                card4_text: "Aus Gamingpig ist eine lebendige Umgebung geworden: Offizieller Discord-Server, Kontakt per E-Mail, Social-Media-Kanäle auf TikTok & YouTube sowie die Android-App im Google Play Test!",
+                card4_play_status: "Android App • Closed Testing (TWA / Google Play)",
                 card4_badge1: "Offizieller Kanal",
                 card4_badge2: "Partner & Support",
                 cta_launch: "🚀 Jetzt Live-Erlebnis Starten",
@@ -315,7 +350,8 @@
                 card_standby_sub1: "Centered precision across 20 designs",
                 card_standby_sub2: "Battery protection: Phone sleeps normally",
                 card4_title: "5. Community & Partners: Official Channels & Support",
-                card4_text: "Official Team Gamingpig TikTok, YouTube & GitHub links, plus big thanks to MTB Noel for project support!",
+                card4_text: "Gamingpig is now an active ecosystem: Official Discord server, direct contact, TikTok & YouTube channels, plus the Android app in Google Play testing!",
+                card4_play_status: "Android App • Closed Testing (TWA / Google Play)",
                 card4_badge1: "Official Channel",
                 card4_badge2: "Partner & Support",
                 cta_launch: "🚀 Launch Live Experience Now",
@@ -347,7 +383,8 @@
                 card_standby_sub1: "Centrado perfecto en 20 diseños",
                 card_standby_sub2: "Protección de batería y reposo normal",
                 card4_title: "5. Comunidad y socios: Redes y soporte",
-                card4_text: "TikTok oficial de Team Gamingpig, YouTube, GitHub y agradecimiento a MTB Noel.",
+                card4_text: "Discord oficial, contacto por correo, canales de TikTok & YouTube y app Android en fase de pruebas!",
+                card4_play_status: "App Android • Pruebas cerradas (TWA / Google Play)",
                 card4_badge1: "Canal Oficial",
                 card4_badge2: "Socio y Soporte",
                 cta_launch: "🚀 Abrir la Experiencia en Vivo",
@@ -379,7 +416,8 @@
                 card_standby_sub1: "Centrage parfait sur 20 styles",
                 card_standby_sub2: "Protection batterie & veille normale",
                 card4_title: "5. Communauté & Partenaires",
-                card4_text: "TikTok officiel Team Gamingpig, YouTube, GitHub et remerciements à MTB Noel.",
+                card4_text: "Serveur Discord officiel, contact par e-mail, TikTok & YouTube et application Android en test !",
+                card4_play_status: "Application Android • Test fermé (TWA / Google Play)",
                 card4_badge1: "Chaîne Officielle",
                 card4_badge2: "Partenaire & Support",
                 cta_launch: "🚀 Lancer l'Expérience en Direct",
@@ -411,7 +449,8 @@
                 card_standby_sub1: "Alinhamento exato nos 20 estilos",
                 card_standby_sub2: "Proteção de bateria e bloqueio normal",
                 card4_title: "5. Comunidade e Parceiros",
-                card4_text: "TikTok oficial Team Gamingpig, YouTube, GitHub e agradecimento ao MTB Noel.",
+                card4_text: "Servidor oficial do Discord, contato por e-mail, canais no TikTok & YouTube e app Android em teste!",
+                card4_play_status: "App Android • Teste fechado (TWA / Google Play)",
                 card4_badge1: "Canal Oficial",
                 card4_badge2: "Parceiro & Suporte",
                 cta_launch: "🚀 Iniciar Experiência ao Vivo",
@@ -443,7 +482,8 @@
                 card_standby_sub1: "20 tasarımın tümünde tam merkezleme",
                 card_standby_sub2: "Pil koruması: Ekran normal uyur",
                 card4_title: "5. Topluluk ve Ortaklar",
-                card4_text: "Resmi Team Gamingpig TikTok hesabı, YouTube, GitHub ve MTB Noel'e teşekkürler!",
+                card4_text: "Resmi Discord sunucusu, e-posta iletişimi, TikTok & YouTube kanalları ve Android uygulaması!",
+                card4_play_status: "Android Uygulaması • Kapalı Test (TWA / Google Play)",
                 card4_badge1: "Resmi Kanal",
                 card4_badge2: "Ortak & Destek",
                 cta_launch: "🚀 Canlı Deneyimi Başlat",
@@ -486,6 +526,7 @@
 
             document.getElementById('card4-title').innerText = t.card4_title;
             document.getElementById('card4-text').innerText = t.card4_text;
+            if (document.getElementById('card4-play-status')) document.getElementById('card4-play-status').innerText = t.card4_play_status || "Android App • Closed Testing (TWA / Google Play)";
             document.getElementById('card4-badge1').innerText = t.card4_badge1;
             document.getElementById('card4-badge2').innerText = t.card4_badge2;
 
@@ -506,8 +547,18 @@
         // --- Read Aloud (TTS) Engine ---
         window.isSpeaking = false;
         window._activeUtterance = null;
+        window.ttsSpeed = parseFloat(localStorage.getItem('ttsSpeechRate')) || 1.0;
         let ttsQueue = [];
         let ttsCurrentIndex = 0;
+
+        function setSpeechRate(rate) {
+            window.ttsSpeed = rate;
+            localStorage.setItem('ttsSpeechRate', rate);
+            if (window.isSpeaking) {
+                stopSpeech();
+                toggleReadAloud();
+            }
+        }
 
         const TTS_LANG_MAP = {
             de: 'de-DE',
@@ -578,7 +629,7 @@
 
             const u = new SpeechSynthesisUtterance(spokenText);
             u.lang = langCode;
-            u.rate = 1.0;
+            u.rate = window.ttsSpeed || 1.0;
             u.pitch = 1.0;
             u.volume = 1.0;
 
@@ -676,10 +727,12 @@
             playNextChunk();
         }
 
-        // Init language on load
+        // Init language and speed on load
         document.addEventListener('DOMContentLoaded', () => {
             const selectEl = document.getElementById('lang-select');
             if (selectEl) selectEl.value = currentLang;
+            const speedSelect = document.getElementById('tts-speed-select');
+            if (speedSelect) speedSelect.value = String(window.ttsSpeed || 1.0);
             applyTranslations(currentLang);
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.onvoiceschanged = () => {};
