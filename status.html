@@ -168,13 +168,13 @@
 
                 <div class="flex items-center gap-2 w-full sm:w-auto shrink-0 justify-end flex-wrap">
                     <button id="btn-push-token" onclick="copyMyDeviceToken()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5 shadow-sm" title="Geräte-Token für Push-Registrierung kopieren">
-                        <span>📋</span> <span>Token kopieren</span>
+                        <span>📋</span> <span id="btn-push-token-text">Token kopieren</span>
                     </button>
                     <button id="btn-push-test" onclick="sendTestPush()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-bold transition-all active:scale-95 hidden">
-                        📲 Test-Push
+                        <span id="btn-push-test-text">📲 Test-Push</span>
                     </button>
                     <button id="btn-push-toggle" onclick="togglePushNotifications()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-all shadow-lg active:scale-95">
-                        Push aktivieren
+                        <span id="btn-push-toggle-text">Push aktivieren</span>
                     </button>
                 </div>
             </div>
@@ -185,12 +185,12 @@
             <!-- Platform Push & Token Guide -->
             <div class="mt-3.5 pt-3 border-t border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-[11px] text-slate-400 leading-snug">
                 <div class="flex items-center gap-1.5 flex-wrap">
-                    <span class="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold text-[10px]">🤖 Android &amp; PC</span>
-                    <span>Verbinden sich <strong>vollautomatisch</strong> im Hintergrund – kein Token-Kopieren nötig!</span>
+                    <span id="push-guide-android-badge" class="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold text-[10px]">🤖 Android &amp; PC</span>
+                    <span id="push-guide-android-text">Verbinden sich <strong>vollautomatisch</strong> im Hintergrund – kein Token-Kopieren nötig!</span>
                 </div>
                 <div class="flex items-center gap-1.5 flex-wrap">
-                    <span class="px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20 font-bold text-[10px]">🍏 iOS (Safari PWA)</span>
-                    <span>„Token kopieren“ dient nur zur manuellen Prüfung oder Übergabe an den Admin.</span>
+                    <span id="push-guide-ios-badge" class="px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20 font-bold text-[10px]">🍏 iOS (Safari PWA)</span>
+                    <span id="push-guide-ios-text">„Token kopieren“ dient nur zur manuellen Prüfung oder Übergabe an den Admin.</span>
                 </div>
             </div>
         </div>
@@ -419,17 +419,17 @@
     <!-- Footer -->
     <footer class="max-w-4xl w-full text-center py-6 text-xs text-slate-500 border-t border-slate-900 mt-6 px-3">
         <div class="flex items-center justify-center gap-2 sm:gap-4 flex-wrap mb-2">
-            <a href="index.html" class="hover:text-slate-300 transition-colors">Portfolio</a>
+            <a href="index.html" id="footer-portfolio" class="hover:text-slate-300 transition-colors">Portfolio</a>
             <span>•</span>
-            <a href="release-v24-115.html" class="hover:text-slate-300 transition-colors">Release v24.133</a>
+            <a href="release-v24-115.html" id="footer-release" class="hover:text-slate-300 transition-colors">Release v24.138</a>
             <span>•</span>
-            <a href="privacy.html" class="hover:text-slate-300 transition-colors">Datenschutz</a>
+            <a href="privacy.html" id="footer-privacy" class="hover:text-slate-300 transition-colors">Datenschutz</a>
             <span>•</span>
-            <span class="text-emerald-400 font-bold">Live Status</span>
+            <span id="footer-status" class="text-emerald-400 font-bold">Live Status</span>
             <span>•</span>
-            <a href="push-admin.html" class="hover:text-indigo-400 transition-colors">🔐 Admin</a>
+            <a href="push-admin.html" id="footer-admin" class="hover:text-indigo-400 transition-colors">🔐 Admin</a>
         </div>
-        <p>© 2026 Gamingpig • Automatische Status-Telemetrie</p>
+        <p id="footer-copyright">© 2026 Gamingpig • Automatische Status-Telemetrie</p>
     </footer>
 
     <!-- Toast Notification Container -->
@@ -439,9 +439,9 @@
     </div>
 
     <script>
-        // ========================================================= //
-        // Multi-Language Dictionaries (DE, EN, ES, FR, PT, TR)      //
-        // ========================================================= //
+        // ==========================================
+        // 🌐 ULTRA MULTILINGUAL SYSTEM (DE, EN, ES, FR, PT, TR)
+        // ==========================================
         const I18N = {
             de: {
                 nav_back: "Hauptseite",
@@ -459,14 +459,19 @@
                 overall_down_title: "Störung erkannt / Offline",
                 overall_down_sub: "Keine Verbindung zum Netzwerk oder kritische Endpunkte nicht erreichbar.",
                 btn_refresh_text: "Prüfen",
-                push_card_title: "Störungs-Push für Android & Mobilgeräte",
+                push_card_title: "Störungs-Push für Android, iOS & Desktop",
                 push_card_desc: "Lasse dich bei Ausfällen (z. B. Spotify API oder Lyrics offline) und anschließender Wiederherstellung sofort per System-Benachrichtigung auf deinem Smartphone informieren.",
                 push_enabled: "Aktiviert",
                 push_disabled: "Nicht aktiviert",
                 push_blocked: "Blockiert",
                 btn_push_enable: "Push aktivieren",
                 btn_push_disable: "Push deaktivieren",
-                btn_push_test: "📲 Test-Push senden",
+                btn_push_test: "📲 Test-Push",
+                btn_push_token: "Token kopieren",
+                push_guide_android_badge: "🤖 Android & PC",
+                push_guide_android_text: "Verbinden sich <strong>vollautomatisch</strong> im Hintergrund – kein Token-Kopieren nötig!",
+                push_guide_ios_badge: "🍏 iOS (Safari PWA)",
+                push_guide_ios_text: "„Token kopieren“ dient nur zur manuellen Prüfung oder Übergabe an den Admin.",
                 section_services_title: "Einzelne Dienste & APIs",
                 service_spotify_name: "Spotify Live-Player & Stream",
                 service_spotify_desc: "Live-Synchronisation des aktuellen Titels",
@@ -495,10 +500,20 @@
                 btn_clear_cache: "Cache leeren & neu laden",
                 diag_copy_hint: "Problem besteht weiterhin? Kopiere den automatischen Diagnosebericht für ein schnelles Discord-Ticket.",
                 btn_copy_report_text: "Diagnose-Bericht kopieren",
+                footer_portfolio: "Portfolio",
+                footer_release: "Release v24.138",
+                footer_privacy: "Datenschutz",
+                footer_status: "Live Status",
+                footer_admin: "🔐 Admin",
+                footer_copyright: "© 2026 Gamingpig • Automatische Status-Telemetrie",
+                last_checked_just_now: "Gerade eben",
                 toast_copied: "Diagnose-Bericht in Zwischenablage kopiert!",
                 toast_push_active: "🔔 Push-Benachrichtigungen aktiviert!",
                 toast_push_sent: "📲 Test-Push an Smartphone gesendet!",
-                toast_cache_cleared: "Cache geleert! Seite lädt neu..."
+                toast_cache_cleared: "Cache geleert! Seite lädt neu...",
+                toast_token_copied: "📋 Token kopiert! (Nur für iOS-Debugging/Admin nötig – Android & PC verbinden sich automatisch)",
+                toast_token_unsupported: "Web Push wird von diesem Browser nicht unterstützt.",
+                toast_token_ios_hint: "Auf iOS: Tippe erst auf Teilen 📤 → 'Zum Home-Bildschirm', um Push zu nutzen."
             },
             en: {
                 nav_back: "Main Page",
@@ -516,14 +531,19 @@
                 overall_down_title: "Outage Detected / Offline",
                 overall_down_sub: "No network connection or critical endpoints are unreachable.",
                 btn_refresh_text: "Check",
-                push_card_title: "Outage Alerts for Android & Mobile",
+                push_card_title: "Outage Alerts for Android, iOS & Desktop",
                 push_card_desc: "Get instant device notifications whenever Spotify, Lyrics, or APIs go down and when service is restored.",
                 push_enabled: "Active",
                 push_disabled: "Inactive",
                 push_blocked: "Blocked",
                 btn_push_enable: "Enable Push",
                 btn_push_disable: "Disable Push",
-                btn_push_test: "📲 Send Test Push",
+                btn_push_test: "📲 Test Push",
+                btn_push_token: "Copy Token",
+                push_guide_android_badge: "🤖 Android & PC",
+                push_guide_android_text: "Connects <strong>automatically</strong> in background – no token copying needed!",
+                push_guide_ios_badge: "🍏 iOS (Safari PWA)",
+                push_guide_ios_text: "'Copy Token' is only needed for manual testing or sending to the admin.",
                 section_services_title: "Individual Services & APIs",
                 service_spotify_name: "Spotify Live Player & Stream",
                 service_spotify_desc: "Real-time track sync with Gamingpig",
@@ -552,10 +572,20 @@
                 btn_clear_cache: "Clear Cache & Reload",
                 diag_copy_hint: "Issue still persists? Copy the automated diagnostic report for a swift Discord support ticket.",
                 btn_copy_report_text: "Copy Diagnostic Report",
+                footer_portfolio: "Portfolio",
+                footer_release: "Release v24.138",
+                footer_privacy: "Privacy Policy",
+                footer_status: "Live Status",
+                footer_admin: "🔐 Admin",
+                footer_copyright: "© 2026 Gamingpig • Automated Status Telemetry",
+                last_checked_just_now: "Just now",
                 toast_copied: "Diagnostic report copied to clipboard!",
                 toast_push_active: "🔔 Push notifications enabled!",
                 toast_push_sent: "📲 Test push sent to device!",
-                toast_cache_cleared: "Cache cleared! Reloading page..."
+                toast_cache_cleared: "Cache cleared! Reloading page...",
+                toast_token_copied: "📋 Token copied! (Only needed for iOS debugging/admin – Android & PC connect automatically)",
+                toast_token_unsupported: "Web Push is not supported by this browser.",
+                toast_token_ios_hint: "On iOS: Tap Share 📤 → 'Add to Home Screen' first to enable Push."
             },
             es: {
                 nav_back: "Página Principal",
@@ -573,14 +603,19 @@
                 overall_down_title: "Fallo Detectado / Desconectado",
                 overall_down_sub: "Sin conexión de red o endpoints críticos no disponibles.",
                 btn_refresh_text: "Verificar",
-                push_card_title: "Alertas Push para Android y Móvil",
+                push_card_title: "Alertas Push para Android, iOS y Desktop",
                 push_card_desc: "Recibe notificaciones automáticas en tu teléfono ante caídas o restablecimiento de servicios.",
                 push_enabled: "Activo",
                 push_disabled: "Inactivo",
                 push_blocked: "Bloqueado",
                 btn_push_enable: "Activar Push",
                 btn_push_disable: "Desactivar Push",
-                btn_push_test: "📲 Enviar Push de Prueba",
+                btn_push_test: "📲 Push de Prueba",
+                btn_push_token: "Copiar Token",
+                push_guide_android_badge: "🤖 Android & PC",
+                push_guide_android_text: "Se conectan <strong>automáticamente</strong> en segundo plano – ¡sin copiar token!",
+                push_guide_ios_badge: "🍏 iOS (Safari PWA)",
+                push_guide_ios_text: "'Copiar Token' sirve únicamente para pruebas manuales o soporte del admin.",
                 section_services_title: "Servicios y APIs",
                 service_spotify_name: "Spotify Live Player",
                 service_spotify_desc: "Sincronización de música en vivo",
@@ -609,10 +644,20 @@
                 btn_clear_cache: "Limpiar Caché y Recargar",
                 diag_copy_hint: "¿Persiste el problema? Copia el reporte de diagnóstico para Discord.",
                 btn_copy_report_text: "Copiar Reporte",
+                footer_portfolio: "Portafolio",
+                footer_release: "Notas v24.138",
+                footer_privacy: "Privacidad",
+                footer_status: "Estado en Vivo",
+                footer_admin: "🔐 Admin",
+                footer_copyright: "© 2026 Gamingpig • Telemetría de estado automatizada",
+                last_checked_just_now: "Hace un momento",
                 toast_copied: "¡Reporte copiado al portapapeles!",
                 toast_push_active: "🔔 ¡Notificaciones push activadas!",
                 toast_push_sent: "📲 ¡Push de prueba enviado!",
-                toast_cache_cleared: "¡Caché borrada! Recargando..."
+                toast_cache_cleared: "¡Caché borrada! Recargando...",
+                toast_token_copied: "📋 ¡Token copiado! (Solo necesario para iOS/admin – Android y PC se conectan solos)",
+                toast_token_unsupported: "Web Push no es compatible con este navegador.",
+                toast_token_ios_hint: "En iOS: Toca Compartir 📤 → 'Añadir a pantalla de inicio' primero."
             },
             fr: {
                 nav_back: "Page Principale",
@@ -630,14 +675,19 @@
                 overall_down_title: "Panne Détectée / Hors-ligne",
                 overall_down_sub: "Connexion impossible aux serveurs essentiels.",
                 btn_refresh_text: "Vérifier",
-                push_card_title: "Alertes Push pour Android & Mobile",
+                push_card_title: "Alertes Push pour Android, iOS & Desktop",
                 push_card_desc: "Soyez prévenu instantanément sur votre smartphone lors d'une panne ou d'un retour à la normale.",
                 push_enabled: "Actif",
                 push_disabled: "Inactif",
                 push_blocked: "Bloqué",
                 btn_push_enable: "Activer Push",
                 btn_push_disable: "Désactiver Push",
-                btn_push_test: "📲 Envoyer Push Test",
+                btn_push_test: "📲 Push Test",
+                btn_push_token: "Copier le Token",
+                push_guide_android_badge: "🤖 Android & PC",
+                push_guide_android_text: "Connexion <strong>automatique</strong> en arrière-plan – aucun token à copier !",
+                push_guide_ios_badge: "🍏 iOS (Safari PWA)",
+                push_guide_ios_text: "« Copier le Token » sert uniquement au test manuel ou au support admin.",
                 section_services_title: "Services & APIs",
                 service_spotify_name: "Lecteur Spotify en Direct",
                 service_spotify_desc: "Synchronisation de la piste active",
@@ -666,10 +716,20 @@
                 btn_clear_cache: "Vider le Cache & Recharger",
                 diag_copy_hint: "Le problème persiste ? Copiez le rapport pour le support Discord.",
                 btn_copy_report_text: "Copier le Rapport",
+                footer_portfolio: "Portfolio",
+                footer_release: "Notes v24.138",
+                footer_privacy: "Confidentialité",
+                footer_status: "État en Direct",
+                footer_admin: "🔐 Admin",
+                footer_copyright: "© 2026 Gamingpig • Télémétrie d'état automatisée",
+                last_checked_just_now: "À l'instant",
                 toast_copied: "Rapport copié dans le presse-papiers !",
                 toast_push_active: "🔔 Notifications push activées !",
                 toast_push_sent: "📲 Notification test envoyée !",
-                toast_cache_cleared: "Cache vidé ! Rechargement en cours..."
+                toast_cache_cleared: "Cache vidé ! Rechargement en cours...",
+                toast_token_copied: "📋 Token copié ! (Nécessaire uniquement pour iOS/admin – Android & PC se connectent automatiquement)",
+                toast_token_unsupported: "Web Push n'est pas supporté par ce navigateur.",
+                toast_token_ios_hint: "Sur iOS : Appuyez d'abord sur Partager 📤 → « Sur l'écran d'accueil »."
             },
             pt: {
                 nav_back: "Página Principal",
@@ -687,14 +747,19 @@
                 overall_down_title: "Falha Detectada / Desconectado",
                 overall_down_sub: "Sem conexão com a rede ou servidores fora do ar.",
                 btn_refresh_text: "Verificar",
-                push_card_title: "Alertas Push para Android & Celular",
+                push_card_title: "Alertas Push para Android, iOS & Desktop",
                 push_card_desc: "Receba alertas no smartphone em caso de falha de APIs e quando os serviços voltarem.",
                 push_enabled: "Ativo",
                 push_disabled: "Inativo",
                 push_blocked: "Bloqueado",
                 btn_push_enable: "Ativar Push",
                 btn_push_disable: "Desativar Push",
-                btn_push_test: "📲 Enviar Push de Teste",
+                btn_push_test: "📲 Push de Teste",
+                btn_push_token: "Copiar Token",
+                push_guide_android_badge: "🤖 Android & PC",
+                push_guide_android_text: "Conectam-se <strong>automaticamente</strong> em segundo plano – sem copiar token!",
+                push_guide_ios_badge: "🍏 iOS (Safari PWA)",
+                push_guide_ios_text: "'Copiar Token' serve apenas para testes manuais ou envio ao admin.",
                 section_services_title: "Serviços Individuais & APIs",
                 service_spotify_name: "Spotify Player ao Vivo",
                 service_spotify_desc: "Sincronização de faixa ativa",
@@ -723,10 +788,20 @@
                 btn_clear_cache: "Limpar Cache & Recarregar",
                 diag_copy_hint: "Problema persiste? Copie o relatório de diagnóstico para o Discord.",
                 btn_copy_report_text: "Copiar Relatório",
+                footer_portfolio: "Portfólio",
+                footer_release: "Notas v24.138",
+                footer_privacy: "Privacidade",
+                footer_status: "Status ao Vivo",
+                footer_admin: "🔐 Admin",
+                footer_copyright: "© 2026 Gamingpig • Telemetria de status automatizada",
+                last_checked_just_now: "Agora mesmo",
                 toast_copied: "Relatório copiado para a área de transferência!",
                 toast_push_active: "🔔 Notificações push ativadas!",
                 toast_push_sent: "📲 Push de teste enviado!",
-                toast_cache_cleared: "Cache limpo! Recarregando..."
+                toast_cache_cleared: "Cache limpo! Recarregando...",
+                toast_token_copied: "📋 Token copiado! (Necessário apenas para iOS/admin – Android e PC conectam automaticamente)",
+                toast_token_unsupported: "Web Push não é suportado neste navegador.",
+                toast_token_ios_hint: "No iOS: Toque em Compartilhar 📤 → 'Adicionar à Tela de Início' primeiro."
             },
             tr: {
                 nav_back: "Ana Sayfa",
@@ -744,14 +819,19 @@
                 overall_down_title: "Kesinti / Çevrimdışı",
                 overall_down_sub: "Ağ bağlantısı yok veya kritik sunuculara ulaşılamıyor.",
                 btn_refresh_text: "Kontrol Et",
-                push_card_title: "Android & Mobil Bildirim Uyarısı",
+                push_card_title: "Android, iOS & Masaüstü Bildirimi",
                 push_card_desc: "Kesintilerde veya sistemler normale döndüğünde telefonunuza anında bildirim alın.",
                 push_enabled: "Etkin",
                 push_disabled: "Devre Dışı",
                 push_blocked: "Engellendi",
                 btn_push_enable: "Bildirimi Aç",
                 btn_push_disable: "Bildirimi Kapat",
-                btn_push_test: "📲 Test Bildirimi Gönder",
+                btn_push_test: "📲 Test Bildirimi",
+                btn_push_token: "Tokeni Kopyala",
+                push_guide_android_badge: "🤖 Android & PC",
+                push_guide_android_text: "Arka planda <strong>otomatik</strong> bağlanır – token kopyalamaya gerek yok!",
+                push_guide_ios_badge: "🍏 iOS (Safari PWA)",
+                push_guide_ios_text: "'Tokeni Kopyala' yalnızca manuel kontroller veya yönetici için gereklidir.",
                 section_services_title: "Bireysel Servisler & API'ler",
                 service_spotify_name: "Spotify Canlı Çalar",
                 service_spotify_desc: "Mevcut şarkı senkronizasyonu",
@@ -780,10 +860,20 @@
                 btn_clear_cache: "Önbelleği Temizle & Yenile",
                 diag_copy_hint: "Sorun devam mı ediyor? Discord için otomatik teşhis raporunu kopyalayın.",
                 btn_copy_report_text: "Raporu Kopyala",
+                footer_portfolio: "Portföy",
+                footer_release: "Sürüm v24.138",
+                footer_privacy: "Gizlilik",
+                footer_status: "Canlı Durum",
+                footer_admin: "🔐 Admin",
+                footer_copyright: "© 2026 Gamingpig • Otomatik Durum Telemetrisi",
+                last_checked_just_now: "Az önce",
                 toast_copied: "Teşhis raporu panoya kopyalandı!",
                 toast_push_active: "🔔 Bildirimler etkinleştirildi!",
                 toast_push_sent: "📲 Test bildirimi gönderildi!",
-                toast_cache_cleared: "Önbellek temizlendi! Yeniden yükleniyor..."
+                toast_cache_cleared: "Önbellek temizlendi! Yeniden yükleniyor...",
+                toast_token_copied: "📋 Token kopyalandı! (Yalnızca iOS/admin için gereklidir – Android ve PC otomatik bağlanır)",
+                toast_token_unsupported: "Web Push bu tarayıcı tarafından desteklenmiyor.",
+                toast_token_ios_hint: "iOS'ta: Önce Paylaş 📤 → 'Ana Ekrana Ekle' seçeneğine dokunun."
             }
         };
 
@@ -823,6 +913,9 @@
             const translatable = [
                 'nav-back', 'badge-title', 'hero-title', 'hero-subtitle',
                 'btn-refresh-text', 'push-card-title', 'push-card-desc',
+                'btn-push-token-text', 'btn-push-test-text',
+                'push-guide-android-badge', 'push-guide-android-text',
+                'push-guide-ios-badge', 'push-guide-ios-text',
                 'section-services-title', 'service-spotify-name', 'service-spotify-desc',
                 'service-statsfm-name', 'service-statsfm-desc', 'service-lyrics-name',
                 'service-lyrics-desc', 'service-cover-name', 'service-cover-desc',
@@ -831,13 +924,22 @@
                 'help-title', 'help-subtitle', 'btn-clear-cache', 'diag-copy-hint',
                 'btn-copy-report-text',
                 'tip1-title', 'tip1-desc', 'tip2-title', 'tip2-desc',
-                'tip3-title', 'tip3-desc', 'tip4-title', 'tip4-desc'
+                'tip3-title', 'tip3-desc', 'tip4-title', 'tip4-desc',
+                'footer-portfolio', 'footer-release', 'footer-privacy',
+                'footer-status', 'footer-admin', 'footer-copyright',
+                'last-checked-time'
             ];
 
             translatable.forEach(id => {
                 const el = document.getElementById(id);
                 const key = id.replace(/-/g, '_');
-                if (el && t(key)) el.innerText = t(key);
+                if (el && t(key)) {
+                    if (t(key).includes('<')) {
+                        el.innerHTML = t(key);
+                    } else {
+                        el.innerText = t(key);
+                    }
+                }
             });
 
             const ttsLabel = document.getElementById('tts-label');
@@ -1208,13 +1310,6 @@
                 btnToggle.disabled = false;
                 btnToggle.className = "px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition-all active:scale-95 border border-slate-700 cursor-pointer";
                 if (btnTest) btnTest.classList.remove('hidden');
-            } else if (perm === 'denied') {
-                badge.innerText = "🔴 " + t('push_blocked');
-                badge.className = "px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30";
-                btnToggle.innerText = t('push_blocked');
-                btnToggle.disabled = false;
-                btnToggle.className = "px-4 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 font-bold text-xs transition-all active:scale-95 border border-rose-500/30 cursor-pointer";
-                if (btnTest) btnTest.classList.add('hidden');
             } else {
                 badge.innerText = "⚪ " + t('push_disabled');
                 badge.className = "px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-400 border border-white/10";
@@ -1223,6 +1318,11 @@
                 btnToggle.className = "px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-all shadow-lg active:scale-95 cursor-pointer";
                 if (btnTest) btnTest.classList.add('hidden');
             }
+
+            const btnTokenText = document.getElementById('btn-push-token-text');
+            if (btnTokenText) btnTokenText.innerText = t('btn_push_token');
+            const btnTestText = document.getElementById('btn-push-test-text');
+            if (btnTestText) btnTestText.innerText = t('btn_push_test');
         }
 
         async function subscribeToWebPush() {
@@ -1319,9 +1419,9 @@
                     autoRegisterSubscription(subStr);
                 }
                 await navigator.clipboard.writeText(subStr);
-                showToast('📋 Token kopiert! (Nur für iOS-Debugging/Admin nötig – Android & PC verbinden sich automatisch)', '✅');
+                showToast(t('toast_token_copied'), '✅');
             } catch(e) {
-                showToast('Konnte Token nicht kopieren: ' + (e.message || 'Fehler'), '⚠️');
+                showToast((t('toast_token_error') || 'Konnte Token nicht kopieren: ') + (e.message || 'Error'), '⚠️');
             }
         }
 
