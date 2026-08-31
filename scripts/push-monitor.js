@@ -61,11 +61,12 @@ async function sendPushToAll(payload) {
             }
 
             const payloadString = JSON.stringify({
+                broadcastId: payload.broadcastId || ('gp_' + (payload.timestamp || Date.now())),
                 title: title,
                 body: body,
                 translations: payload.translations || {},
                 url: payload.url || 'https://gamingpig.github.io/About-Gamingpig/status.html',
-                timestamp: Date.now()
+                timestamp: payload.timestamp || Date.now()
             });
 
             await webPush.sendNotification(sub, payloadString, {
@@ -347,25 +348,44 @@ async function main() {
     if (fs.existsSync(PENDING_FILE)) {
         try {
             const pendingData = JSON.parse(fs.readFileSync(PENDING_FILE, 'utf8') || '{}');
+            const state = loadState();
+            const lastSentBroadcastId = state.lastBroadcastId || '';
+
             if (pendingData && pendingData.pending === true) {
-                console.log(`🚀 Found pending manual broadcast push: "${pendingData.title}" - "${pendingData.body}"`);
-                await sendPushToAll({
-                    title: pendingData.title || '⚠️ Gamingpig Status-Alarm',
-                    body: pendingData.body || 'Status-Aktualisierung.',
-                    translations: pendingData.translations || {
-                        de: { title: pendingData.title, body: pendingData.body },
-                        en: { title: pendingData.title, body: pendingData.body },
-                        es: { title: pendingData.title, body: pendingData.body },
-                        fr: { title: pendingData.title, body: pendingData.body },
-                        pt: { title: pendingData.title, body: pendingData.body },
-                        tr: { title: pendingData.title, body: pendingData.body }
-                    },
-                    url: pendingData.url || 'https://gamingpig.github.io/About-Gamingpig/status.html'
-                });
-                pendingData.pending = false;
-                pendingData.deliveredAt = Date.now();
-                fs.writeFileSync(PENDING_FILE, JSON.stringify(pendingData, null, 2), 'utf8');
-                console.log('✅ Pending manual broadcast marked as delivered.');
+                const bId = pendingData.broadcastId || ('bcast_' + (pendingData.requestedAt || Date.now()));
+                
+                if (bId !== lastSentBroadcastId) {
+                    console.log(`🚀 Found pending manual broadcast push [ID: ${bId}]: "${pendingData.title}" - "${pendingData.body}"`);
+                    
+                    // Mark as delivered in state and file IMMEDIATELY before sending to lock out parallel action runners
+                    pendingData.pending = false;
+                    pendingData.deliveredAt = Date.now();
+                    fs.writeFileSync(PENDING_FILE, JSON.stringify(pendingData, null, 2), 'utf8');
+
+                    state.lastBroadcastId = bId;
+                    state.lastBroadcastTime = Date.now();
+                    saveState(state);
+
+                    await sendPushToAll({
+                        broadcastId: bId,
+                        title: pendingData.title || '⚠️ Gamingpig Status-Alarm',
+                        body: pendingData.body || 'Status-Aktualisierung.',
+                        translations: pendingData.translations || {
+                            de: { title: pendingData.title, body: pendingData.body },
+                            en: { title: pendingData.title, body: pendingData.body },
+                            es: { title: pendingData.title, body: pendingData.body },
+                            fr: { title: pendingData.title, body: pendingData.body },
+                            pt: { title: pendingData.title, body: pendingData.body },
+                            tr: { title: pendingData.title, body: pendingData.body }
+                        },
+                        url: pendingData.url || 'https://gamingpig.github.io/About-Gamingpig/status.html'
+                    });
+                    console.log('✅ Pending manual broadcast marked as delivered.');
+                } else {
+                    console.log(`Skipping already processed broadcast [ID: ${bId}].`);
+                    pendingData.pending = false;
+                    fs.writeFileSync(PENDING_FILE, JSON.stringify(pendingData, null, 2), 'utf8');
+                }
             }
         } catch (e) {
             console.warn('Could not process pending push:', e.message);

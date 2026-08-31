@@ -122,7 +122,10 @@ function getStoredAppLanguage() {
     });
 }
 
-// Web Push Event Handler für Android / iOS / Web Push mit Multi-Language Erkennung
+// In-Memory Push Deduplication Cache
+const recentPushDedupeMap = new Map();
+
+// Web Push Event Handler für Android / iOS / Web Push mit Multi-Language Erkennung & Anti-Doppel-Filter
 self.addEventListener("push", (event) => {
     event.waitUntil((async () => {
         let data = {
@@ -160,12 +163,31 @@ self.addEventListener("push", (event) => {
             }
         }
 
-        // KEIN 'tag' Attribut setzen für ungestörtes Stapeln im Benachrichtigungs-Drawer
+        // 3. Intelligente Deduplizierung: Verhindert mehrfaches Aufpoppen innerhalb von 45 Sekunden
+        const dedupeKey = data.broadcastId || (title + ':::' + body);
+        const now = Date.now();
+        if (recentPushDedupeMap.has(dedupeKey)) {
+            const lastSeen = recentPushDedupeMap.get(dedupeKey);
+            if (now - lastSeen < 45000) {
+                console.log("[SW] Ignoriere doppelte Push-Nachricht:", dedupeKey);
+                return;
+            }
+        }
+        recentPushDedupeMap.set(dedupeKey, now);
+
+        // Aufräumen alter Einträge
+        for (const [k, time] of recentPushDedupeMap.entries()) {
+            if (now - time > 120000) recentPushDedupeMap.delete(k);
+        }
+
+        const tag = data.broadcastId || ('gp-alert-' + Math.floor(now / 30000));
         const options = {
             body: body,
             icon: "icon-192.png",
             badge: "icon-192.png",
-            timestamp: data.timestamp || Date.now(),
+            tag: tag,
+            renotify: false,
+            timestamp: data.timestamp || now,
             data: { url: data.url || "./status.html" }
         };
         return self.registration.showNotification(title, options);

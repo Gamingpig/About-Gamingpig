@@ -938,6 +938,8 @@
                 let success = false;
                 let errorMsg = '';
 
+                const broadcastId = 'gp_bcast_' + Date.now();
+
                 // 1. Commit Pending Push to data/pending_push.json via GitHub Contents API
                 try {
                     let sha = null;
@@ -955,6 +957,7 @@
 
                     const pushPayload = {
                         pending: true,
+                        broadcastId: broadcastId,
                         title: title,
                         body: body,
                         url: url,
@@ -987,7 +990,7 @@
                     console.warn('Contents API update warning:', e);
                 }
 
-                // 2. Trigger Repository Dispatch / Health-Check Trigger
+                // 2. Einziger Trigger: Repository Dispatch zur sofortigen Ausführung
                 try {
                     const resDisp = await fetch('https://api.github.com/repos/Gamingpig/About-Gamingpig/dispatches', {
                         method: 'POST',
@@ -997,13 +1000,7 @@
                             'X-GitHub-Api-Version': '2022-11-28'
                         },
                         body: JSON.stringify({
-                            event_type: 'health-check',
-                            client_payload: {
-                                mode: 'custom',
-                                title: title,
-                                body: body,
-                                url: url
-                            }
+                            event_type: 'health-check'
                         })
                     });
                     if (resDisp.status === 204 || resDisp.ok) {
@@ -1011,42 +1008,6 @@
                     }
                 } catch (e) {
                     console.warn('Repository dispatch warning:', e);
-                }
-
-                // 3. Trigger Workflow Dispatch
-                try {
-                    const resWf = await fetch('https://api.github.com/repos/Gamingpig/About-Gamingpig/actions/workflows/push-monitor.yml/dispatches', {
-                        method: 'POST',
-                        headers: {
-                            'Accept': 'application/vnd.github+json',
-                            'Authorization': `Bearer ${token}`,
-                            'X-GitHub-Api-Version': '2022-11-28'
-                        },
-                        body: JSON.stringify({
-                            ref: 'main'
-                        })
-                    });
-                    if (resWf.status === 204 || resWf.ok) {
-                        success = true;
-                    }
-                } catch (e) {}
-
-                // Lokale Sofort-Vorschau auf diesem Gerät
-                if ('serviceWorker' in navigator) {
-                    try {
-                        const reg = await navigator.serviceWorker.ready;
-                        if (reg && reg.showNotification) {
-                            await reg.showNotification(title, {
-                                body: body,
-                                icon: 'icon-192.png',
-                                badge: 'icon-192.png',
-                                vibrate: [300, 100, 300, 100, 400],
-                                tag: 'gamingpig-admin-broadcast-' + Date.now(),
-                                renotify: true,
-                                data: { url: url }
-                            });
-                        }
-                    } catch (e) {}
                 }
 
                 if (success) {
