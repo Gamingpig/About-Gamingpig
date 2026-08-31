@@ -102,26 +102,48 @@ function saveState(state) {
 
 async function checkEndpoints() {
     const endpoints = [
+        { name: 'stats.fm API', url: 'https://api.stats.fm/api/v1/users/gamingpig/streams/current', okStatuses: [200, 204, 404] },
         { name: 'Spotify / NPC API', url: 'https://npc-api.aikins.xyz/v1/users/gamingpig/now', okStatuses: [200, 204] },
-        { name: 'stats.fm API', url: 'https://api.stats.fm/v1/users/gamingpig/streams/current', okStatuses: [200, 204, 404] },
         { name: 'LrcLib Lyrics', url: 'https://lrclib.net/api/get?track_name=test&artist_name=test', okStatuses: [200, 404] },
         { name: 'Discord API', url: 'https://discord.com/api/v10/invites/E8BS9BDAst?with_counts=true', okStatuses: [200] },
         { name: 'Apple CDN', url: 'https://is1-ssl.mzstatic.com/image/thumb/Music/v4/00/00/00/000000.jpg/100x100bb.jpg', okStatuses: [200, 404] }
     ];
 
     const failed = [];
+    let statsData = null;
+    let npcData = null;
+
     for (const ep of endpoints) {
         try {
             const controller = new AbortController();
             const timeout = setTimeout(() => controller.abort(), 6000);
             const res = await fetch(ep.url, { method: 'GET', signal: controller.signal });
             clearTimeout(timeout);
+
+            if (ep.name === 'stats.fm API' && res.ok) {
+                try { statsData = await res.json(); } catch (e) {}
+            }
+            if (ep.name === 'Spotify / NPC API' && res.status === 200) {
+                try { npcData = await res.json(); } catch (e) {}
+            }
+
             if (!ep.okStatuses.includes(res.status)) {
                 failed.push(`${ep.name} (HTTP ${res.status})`);
             }
         } catch (e) {
             failed.push(`${ep.name} (${e.name === 'AbortError' ? 'Timeout' : 'Offline'})`);
         }
+    }
+
+    // Raspberry Pi Live Feed Discrepancy Check:
+    // If Spotify is actively streaming on Gamingpig's account, but NPC-API has no data (HTTP 204 / empty),
+    // then the Raspberry Pi is offline or its daemon stopped sending data!
+    const isSpotifyPlaying = !!(statsData && statsData.item && statsData.item.isPlaying);
+    const activeDevice = (statsData && statsData.item && statsData.item.deviceName) ? statsData.item.deviceName : 'Spotify';
+    const trackName = (statsData && statsData.item && statsData.item.track) ? statsData.item.track.name : '';
+
+    if (isSpotifyPlaying && !npcData) {
+        failed.push(`Raspberry Pi Offline (Musik '${trackName}' läuft auf ${activeDevice}, aber Pi sendet keine NPC-Daten)`);
     }
 
     return failed;

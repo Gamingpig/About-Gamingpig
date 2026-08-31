@@ -902,19 +902,60 @@
                 status: isOnline ? 'Online' : 'Offline'
             };
 
-            // 2. stats.fm API check (404=no current song is valid, not a server error)
-            const statsRes = await pingEndpoint('https://api.stats.fm/v1/users/gamingpig/streams/current');
-            const statsfmOk = statsRes.ok || (statsRes.status && statsRes.status < 500);
-            lastDiagnosticResults.statsfm = { ...statsRes, ok: statsfmOk };
+            // 2. stats.fm API check (real-time stream verification)
+            let statsData = null;
+            let statsfmOk = false;
+            let statsDuration = 45;
+            try {
+                const sStart = performance.now();
+                const sRes = await fetch('https://api.stats.fm/api/v1/users/gamingpig/streams/current', { cache: 'no-store' });
+                statsDuration = Math.max(1, Math.round(performance.now() - sStart));
+                if (sRes.ok) {
+                    statsData = await sRes.json();
+                    statsfmOk = true;
+                } else if (sRes.status === 404 || sRes.status === 204) {
+                    statsfmOk = true;
+                }
+            } catch (e) {
+                const fallbackPing = await pingEndpoint('https://api.stats.fm/api/v1/users/gamingpig');
+                statsfmOk = fallbackPing.ok;
+                statsDuration = fallbackPing.duration;
+            }
+            lastDiagnosticResults.statsfm = { ok: statsfmOk, duration: statsDuration, status: statsfmOk ? 'Operational' : 'Offline' };
 
-            // 3. Spotify Live Player & Stream (Primary NPC API Check)
+            // 3. Spotify Live Player & Raspberry Pi Stream
+            const isSpotifyStreaming = !!(statsData && statsData.item && statsData.item.isPlaying);
+            const activeDevice = (statsData && statsData.item && statsData.item.deviceName) ? statsData.item.deviceName : null;
+            const currentTrack = (statsData && statsData.item && statsData.item.track) ? statsData.item.track.name : null;
+
             const npcRes = await pingEndpoint('https://npc-api.aikins.xyz/v1/users/gamingpig/now');
-            const npcOk = npcRes.ok || (npcRes.status && [200, 204].includes(npcRes.status));
-            lastDiagnosticResults.spotify = {
-                ...npcRes,
-                ok: npcOk,
-                status: npcOk ? (npcRes.status === 200 ? 'Live Playing' : 'Standby / Bereit') : 'Nicht erreichbar'
-            };
+            const npcOk = npcRes.ok && (npcRes.status === 200 || npcRes.status === 204);
+            const npcHasData = (npcRes.status === 200);
+
+            // Pi Discrepancy Check: Spotify is playing on account, but Pi is not sending data
+            if (isSpotifyStreaming && !npcHasData) {
+                lastDiagnosticResults.spotify = {
+                    ...npcRes,
+                    ok: false,
+                    degraded: true,
+                    piOffline: true,
+                    trackName: currentTrack,
+                    deviceName: activeDevice,
+                    status: `Pi offline (Spielt auf ${activeDevice || 'Gerät'})`
+                };
+            } else if (!npcOk) {
+                lastDiagnosticResults.spotify = {
+                    ...npcRes,
+                    ok: false,
+                    status: 'NPC-API Nicht erreichbar'
+                };
+            } else {
+                lastDiagnosticResults.spotify = {
+                    ...npcRes,
+                    ok: true,
+                    status: npcHasData ? 'Live Playing' : 'Standby / Bereit'
+                };
+            }
 
             // 4. LrcLib Lyrics Provider
             const lyricsRes = await pingEndpoint('https://lrclib.net/api/get?track_name=test&artist_name=test');
@@ -993,11 +1034,11 @@
                     } else {
                         pingEl.innerText = data.status || 'OK';
                     }
-                } else if (data.duration > 0 && data.duration < 4000) {
+                } else if (data.degraded || data.piOffline) {
                     badgeEl.className = "px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30";
-                    badgeEl.innerText = "🟡 Degraded";
+                    badgeEl.innerText = data.piOffline ? "🟡 Pi offline" : "🟡 Degraded";
                     pingEl.className = "text-amber-300 font-bold";
-                    pingEl.innerText = isDuration ? (data.duration + ' ms') : (data.status || 'Verzögert');
+                    pingEl.innerText = data.status || 'Eingeschränkt';
                 } else {
                     badgeEl.className = "px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30";
                     badgeEl.innerText = "🔴 Offline";
@@ -1417,11 +1458,13 @@
 
             services.forEach(s => {
                 const r = results[s];
-                if (r && r.status === 'ok') {
+                if (r && r.piOffline) {
+                    degradedServices.push(lang === 'de' ? `Raspberry Pi (Musik läuft auf ${r.deviceName || 'Gerät'}, aber Pi sendet keine NPC-Daten)` : `Raspberry Pi Offline (Spotify playing on ${r.deviceName || 'device'}, but Pi silent)`);
+                } else if (r && r.ok) {
                     onlineCount++;
-                } else if (r && r.status === 'degraded') {
+                } else if (r && r.degraded) {
                     degradedServices.push(t(`service_${s}_name`));
-                } else if (r && r.status === 'down') {
+                } else if (r && !r.ok) {
                     offlineServices.push(t(`service_${s}_name`));
                 } else {
                     onlineCount++;
