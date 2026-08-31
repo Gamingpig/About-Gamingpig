@@ -150,13 +150,67 @@ function formatFailures(failedItems, lang = 'de') {
     return list.join(', ');
 }
 
+async function resilientFetch(url, timeoutMs = 10000, maxRetries = 2) {
+    let lastErr = null;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), timeoutMs);
+        try {
+            const res = await fetch(url, {
+                method: 'GET',
+                signal: controller.signal,
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (compatible; GamingpigStatusMonitor/24.138; +https://gamingpig.github.io/About-Gamingpig/)',
+                    'Accept': 'application/json, text/plain, */*'
+                }
+            });
+            clearTimeout(timeout);
+            return { ok: true, status: res.status, res };
+        } catch (e) {
+            clearTimeout(timeout);
+            lastErr = e;
+            if (attempt < maxRetries) {
+                // Short wait before retry (1.2s)
+                await new Promise(r => setTimeout(r, 1200));
+            }
+        }
+    }
+    return { ok: false, error: lastErr, errorType: (lastErr && lastErr.name === 'AbortError') ? 'Timeout' : 'Offline' };
+}
+
 async function checkEndpoints() {
     const endpoints = [
-        { id: 'statsfm', name: 'stats.fm API', url: 'https://api.stats.fm/api/v1/users/gamingpig/streams/current', okStatuses: [200, 204, 404] },
-        { id: 'npc', name: 'Spotify / NPC API', url: 'https://npc-api.aikins.xyz/v1/users/gamingpig/now', okStatuses: [200, 204] },
-        { id: 'lyrics', name: 'LrcLib Lyrics', url: 'https://lrclib.net/api/get?track_name=test&artist_name=test', okStatuses: [200, 404] },
-        { id: 'discord', name: 'Discord API', url: 'https://discord.com/api/v10/invites/E8BS9BDAst?with_counts=true', okStatuses: [200] },
-        { id: 'apple_cdn', name: 'Apple CDN', url: 'https://is1-ssl.mzstatic.com/image/thumb/Music/v4/00/00/00/000000.jpg/100x100bb.jpg', okStatuses: [200, 404] }
+        { 
+            id: 'statsfm', 
+            name: 'stats.fm API', 
+            url: 'https://api.stats.fm/api/v1/users/gamingpig/streams/current',
+            fallbackUrl: 'https://api.stats.fm/api/v1/users/gamingpig',
+            okStatuses: [200, 204, 404, 429]
+        },
+        { 
+            id: 'npc', 
+            name: 'Spotify / NPC API', 
+            url: 'https://npc-api.aikins.xyz/v1/users/gamingpig/now', 
+            okStatuses: [200, 204, 429] 
+        },
+        { 
+            id: 'lyrics', 
+            name: 'LrcLib Lyrics', 
+            url: 'https://lrclib.net/api/get?track_name=test&artist_name=test', 
+            okStatuses: [200, 404, 429] 
+        },
+        { 
+            id: 'discord', 
+            name: 'Discord API', 
+            url: 'https://discord.com/api/v10/invites/E8BS9BDAst?with_counts=true', 
+            okStatuses: [200, 429] 
+        },
+        { 
+            id: 'apple_cdn', 
+            name: 'Apple CDN', 
+            url: 'https://is1-ssl.mzstatic.com/image/thumb/Music/v4/00/00/00/000000.jpg/100x100bb.jpg', 
+            okStatuses: [200, 404] 
+        }
     ];
 
     const failed = [];
@@ -164,24 +218,31 @@ async function checkEndpoints() {
     let npcData = null;
 
     for (const ep of endpoints) {
-        try {
-            const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), 6000);
-            const res = await fetch(ep.url, { method: 'GET', signal: controller.signal });
-            clearTimeout(timeout);
+        // Generous 12s timeout with 2 attempts
+        const fetchRes = await resilientFetch(ep.url, 12000, 2);
 
-            if (ep.id === 'statsfm' && res.ok) {
-                try { statsData = await res.json(); } catch (e) {}
+        if (fetchRes.ok) {
+            if (ep.id === 'statsfm' && fetchRes.status === 200 && fetchRes.res) {
+                try { statsData = await fetchRes.res.json(); } catch (e) {}
             }
-            if (ep.id === 'npc' && res.status === 200) {
-                try { npcData = await res.json(); } catch (e) {}
+            if (ep.id === 'npc' && fetchRes.status === 200 && fetchRes.res) {
+                try { npcData = await fetchRes.res.json(); } catch (e) {}
             }
 
-            if (!ep.okStatuses.includes(res.status)) {
-                failed.push({ id: ep.id, name: ep.name, status: res.status });
+            if (!ep.okStatuses.includes(fetchRes.status)) {
+                failed.push({ id: ep.id, name: ep.name, status: fetchRes.status });
             }
-        } catch (e) {
-            failed.push({ id: ep.id, name: ep.name, errorType: e.name === 'AbortError' ? 'Timeout' : 'Offline' });
+        } else {
+            // If primary failed for statsfm, test fallback profile endpoint before flagging failure
+            if (ep.fallbackUrl) {
+                console.log(`[HealthCheck] Primary ${ep.name} check had slow response, verifying fallback endpoint...`);
+                const fallbackRes = await resilientFetch(ep.fallbackUrl, 10000, 2);
+                if (fallbackRes.ok && ep.okStatuses.includes(fallbackRes.status)) {
+                    console.log(`[HealthCheck] Fallback for ${ep.name} succeeded (Status: ${fallbackRes.status}). Service is operational.`);
+                    continue; // stats.fm is fine!
+                }
+            }
+            failed.push({ id: ep.id, name: ep.name, errorType: fetchRes.errorType || 'Timeout' });
         }
     }
 

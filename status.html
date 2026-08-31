@@ -1054,7 +1054,7 @@
         // ========================================================= //
         // Live Diagnostics Engine                                   //
         // ========================================================= //
-        async function pingEndpoint(url, timeoutMs = 4000) {
+        async function pingEndpoint(url, timeoutMs = 8000) {
             const start = performance.now();
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -1130,7 +1130,7 @@
                 status: isOnline ? 'Online' : 'Offline'
             };
 
-            // 2. stats.fm API check (real-time stream verification)
+            // 2. stats.fm API check (real-time stream verification with dual fallback)
             let statsData = null;
             let statsfmOk = false;
             let statsDuration = 45;
@@ -1141,11 +1141,11 @@
                 if (sRes.ok) {
                     statsData = await sRes.json();
                     statsfmOk = true;
-                } else if (sRes.status === 404 || sRes.status === 204) {
+                } else if (sRes.status === 404 || sRes.status === 204 || sRes.status === 429) {
                     statsfmOk = true;
                 }
             } catch (e) {
-                const fallbackPing = await pingEndpoint('https://api.stats.fm/api/v1/users/gamingpig');
+                const fallbackPing = await pingEndpoint('https://api.stats.fm/api/v1/users/gamingpig', 8000);
                 statsfmOk = fallbackPing.ok;
                 statsDuration = fallbackPing.duration;
             }
