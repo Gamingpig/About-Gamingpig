@@ -4392,6 +4392,24 @@
             }
         }
 
+        /* --- ZOOM, SIZING & ANTI-REDRAW GLITCH FIXES --- */
+        /* Verhindert ungewolltes Safari-Auto-Zooming bei Tastatureingaben */
+        @media screen and (max-width: 768px) {
+            input, select, textarea {
+                font-size: 16px !important;
+            }
+        }
+        /* Hardware-beschleunigtes, flackerfreies Redrawing für Glass-Karten & Dynamic Island */
+        .glass-card, #dynamic-island, #dynamic-island-ring, #ui-controls, #main-music-card, .standby-panel {
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            transform: translateZ(0);
+        }
+        /* Bild- & Canvas-Sizing-Schutz vor Container-Overflows bei Zoom/Skalierung */
+        img, canvas, svg {
+            max-width: 100%;
+        }
+
         /* ========================================================= */
         /* --- NEW: DYNAMIC ISLAND 2.0 ------------------------------ */
         /* ========================================================= */
@@ -5111,7 +5129,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.132 · 2026-08-20';
+        const SITE_VERSION = 'v24.135 · 2026-08-31';
 
         // =========================================================
         // NEU v24.118: Automatischer Reset veralteter Cached Flags bei Versionswechsel
@@ -5420,9 +5438,17 @@
             <p id="header-intro-p2" class="mt-3 xxs:mt-4 sm:mt-6 text-xs xxs:text-sm xs:text-base sm:text-lg text-slate-600 dark:text-slate-400 leading-relaxed drop-shadow-sm">
                 In meiner Freizeit beschäftige ich mich mit Gaming und Streaming. Ich bin zwar etwas schüchtern, jedoch an sich ein sehr freundlicher und gelassener Mensch. Ich repariere auch gerne IT Geräte (Laptops, Tablets, PCs, Smartphones usw.).
             </p>
-            <!-- NEU v24.22: Sprachausgabe - lädt die TTS-Bibliothek erst bei Klick, kostet
-                 vorher niemandem irgendwelche Leistung. -->
-            <button onclick="speakBio(this)" class="mt-3 xxs:mt-4 sm:mt-6 inline-flex items-center gap-1.5 text-xs xxs:text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline">🔊 Vorlesen</button>
+            <!-- Audio Quick Actions: Bio Vorlesen & Ultra-Smart Live-Briefing -->
+            <div class="mt-4 xxs:mt-5 sm:mt-8 flex items-center gap-2.5 sm:gap-4 flex-wrap">
+                <button onclick="speakBio(this)" id="btn-speak-bio" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-500/10 dark:bg-blue-500/15 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-xs xxs:text-sm font-bold border border-blue-500/20 active:scale-95 transition-all shadow-sm">
+                    <span>🔊</span> <span id="btn-speak-bio-text">Bio vorlesen</span>
+                </button>
+                <button onclick="speakSmartBriefing(this)" id="btn-smart-briefing" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white text-xs xxs:text-sm font-black shadow-lg hover:shadow-indigo-500/25 active:scale-95 transition-all relative overflow-hidden group">
+                    <span class="animate-pulse">🎙️</span>
+                    <span id="btn-smart-briefing-text">Smart Live-Briefing</span>
+                    <span class="px-1.5 py-0.5 rounded-full bg-white/20 text-[9px] font-mono font-bold tracking-wider">AI/LIVE</span>
+                </button>
+            </div>
         </header>
 
         <!-- AUSBILDUNG & ALLTAG: Gequetschtes Grid, 2 Spalten -->
@@ -5437,7 +5463,7 @@
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                     </div>
                     <div>
-                        <div class="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 mb-0.5 xxs:mb-1"><h3 id="card-title-status" class="font-bold text-sm xxs:text-base sm:text-lg">Status</h3><button onclick="event.stopPropagation(); speakCardFace('status')" aria-label="Diese Karte vorlesen" class="shrink-0 p-0.5 xxs:p-1 rounded-full text-slate-400 hover:text-blue-500 hover:bg-blue-500/10 transition-all"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button></div>
+                        <div class="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 mb-0.5 xxs:mb-1"><h3 id="card-title-status" class="font-bold text-sm xxs:text-base sm:text-lg">Status</h3><button onclick="event.stopPropagation(); speakCardFace('status', this)" aria-label="Diese Karte vorlesen" class="shrink-0 p-0.5 xxs:p-1 rounded-full text-slate-400 hover:text-blue-500 hover:bg-blue-500/10 transition-all"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button></div>
                         <p id="card-teaser-status" class="text-slate-700 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">Ausbildung zum Fachinformatiker...</p>
                     </div>
                 </div>
@@ -5447,7 +5473,7 @@
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                     </div>
                     <div>
-                        <div class="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 mb-0.5 xxs:mb-1"><h3 id="card-title-background" class="font-bold text-sm xxs:text-base sm:text-lg">Hintergrund</h3><button onclick="event.stopPropagation(); speakCardFace('background')" aria-label="Diese Karte vorlesen" class="shrink-0 p-0.5 xxs:p-1 rounded-full text-slate-400 hover:text-blue-500 hover:bg-blue-500/10 transition-all"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button></div>
+                        <div class="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 mb-0.5 xxs:mb-1"><h3 id="card-title-background" class="font-bold text-sm xxs:text-base sm:text-lg">Hintergrund</h3><button onclick="event.stopPropagation(); speakCardFace('background', this)" aria-label="Diese Karte vorlesen" class="shrink-0 p-0.5 xxs:p-1 rounded-full text-slate-400 hover:text-blue-500 hover:bg-blue-500/10 transition-all"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button></div>
                         <p id="card-teaser-background" class="text-slate-700 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">Im Jugendalter & in Ausbildung...</p>
                     </div>
                 </div>
@@ -5457,7 +5483,7 @@
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 12h.01M18 12h.01M15 10h.01M15 14h.01"/></svg>
                     </div>
                     <div>
-                        <div class="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 mb-0.5 xxs:mb-1"><h3 id="card-title-freizeit" class="font-bold text-sm xxs:text-base sm:text-lg">Freizeit</h3><button onclick="event.stopPropagation(); speakCardFace('freizeit')" aria-label="Diese Karte vorlesen" class="shrink-0 p-0.5 xxs:p-1 rounded-full text-slate-400 hover:text-blue-500 hover:bg-blue-500/10 transition-all"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button></div>
+                        <div class="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 mb-0.5 xxs:mb-1"><h3 id="card-title-freizeit" class="font-bold text-sm xxs:text-base sm:text-lg">Freizeit</h3><button onclick="event.stopPropagation(); speakCardFace('freizeit', this)" aria-label="Diese Karte vorlesen" class="shrink-0 p-0.5 xxs:p-1 rounded-full text-slate-400 hover:text-blue-500 hover:bg-blue-500/10 transition-all"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button></div>
                         <p id="card-teaser-freizeit" class="text-slate-700 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">Forza Horizon 6 & Streaming...</p>
                     </div>
                 </div>
@@ -5467,7 +5493,7 @@
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
                     </div>
                     <div>
-                        <div class="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 mb-0.5 xxs:mb-1"><h3 id="card-title-menschen" class="font-bold text-sm xxs:text-base sm:text-lg">Menschen</h3><button onclick="event.stopPropagation(); speakCardFace('menschen')" aria-label="Diese Karte vorlesen" class="shrink-0 p-0.5 xxs:p-1 rounded-full text-slate-400 hover:text-blue-500 hover:bg-blue-500/10 transition-all"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button></div>
+                        <div class="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 mb-0.5 xxs:mb-1"><h3 id="card-title-menschen" class="font-bold text-sm xxs:text-base sm:text-lg">Menschen</h3><button onclick="event.stopPropagation(); speakCardFace('menschen', this)" aria-label="Diese Karte vorlesen" class="shrink-0 p-0.5 xxs:p-1 rounded-full text-slate-400 hover:text-blue-500 hover:bg-blue-500/10 transition-all"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button></div>
                         <p id="card-teaser-menschen" class="text-slate-700 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">Tom, Danilo, Jakob & Lukas...</p>
                     </div>
                 </div>
@@ -5477,7 +5503,7 @@
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="M20 16V7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v9m16 0H4m16 0 1.28 2.55a1 1 0 0 1-.9 1.45H3.62a1 1 0 0 1-.9-1.45L4 16"/></svg>
                     </div>
                     <div>
-                        <div class="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 mb-0.5 xxs:mb-1"><h3 id="card-title-techstack" class="font-bold text-sm xxs:text-base sm:text-lg">Tech Stack</h3><button onclick="event.stopPropagation(); speakCardFace('techstack')" aria-label="Diese Karte vorlesen" class="shrink-0 p-0.5 xxs:p-1 rounded-full text-slate-400 hover:text-blue-500 hover:bg-blue-500/10 transition-all"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button></div>
+                        <div class="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 mb-0.5 xxs:mb-1"><h3 id="card-title-techstack" class="font-bold text-sm xxs:text-base sm:text-lg">Tech Stack</h3><button onclick="event.stopPropagation(); speakCardFace('techstack', this)" aria-label="Diese Karte vorlesen" class="shrink-0 p-0.5 xxs:p-1 rounded-full text-slate-400 hover:text-blue-500 hover:bg-blue-500/10 transition-all"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button></div>
                         <p id="card-teaser-techstack" class="text-slate-700 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">Hardware, Linux, Windows...</p>
                     </div>
                 </div>
@@ -5487,7 +5513,7 @@
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
                     </div>
                     <div>
-                        <div class="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 mb-0.5 xxs:mb-1"><h3 id="card-title-setup" class="font-bold text-sm xxs:text-base sm:text-lg">Setup</h3><button onclick="event.stopPropagation(); speakCardFace('setup')" aria-label="Diese Karte vorlesen" class="shrink-0 p-0.5 xxs:p-1 rounded-full text-slate-400 hover:text-blue-500 hover:bg-blue-500/10 transition-all"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button></div>
+                        <div class="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 mb-0.5 xxs:mb-1"><h3 id="card-title-setup" class="font-bold text-sm xxs:text-base sm:text-lg">Setup</h3><button onclick="event.stopPropagation(); speakCardFace('setup', this)" aria-label="Diese Karte vorlesen" class="shrink-0 p-0.5 xxs:p-1 rounded-full text-slate-400 hover:text-blue-500 hover:bg-blue-500/10 transition-all"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button></div>
                         <p id="card-teaser-setup" class="text-slate-700 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">DT 770 Pro & Rockster Cross...</p>
                     </div>
                 </div>
@@ -5497,7 +5523,7 @@
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="M10 2v7.31"/><path d="M14 9.3V1.99"/><path d="M8.5 2h7"/><path d="M14 9.3a6.5 6.5 0 1 1-4 0"/><path d="M5.52 16h12.96"/></svg>
                     </div>
                     <div>
-                        <div class="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 mb-0.5 xxs:mb-1"><h3 id="card-title-labor" class="font-bold text-sm xxs:text-base sm:text-lg">Labor</h3><button onclick="event.stopPropagation(); speakCardFace('labor')" aria-label="Diese Karte vorlesen" class="shrink-0 p-0.5 xxs:p-1 rounded-full text-slate-400 hover:text-blue-500 hover:bg-blue-500/10 transition-all"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button></div>
+                        <div class="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 mb-0.5 xxs:mb-1"><h3 id="card-title-labor" class="font-bold text-sm xxs:text-base sm:text-lg">Labor</h3><button onclick="event.stopPropagation(); speakCardFace('labor', this)" aria-label="Diese Karte vorlesen" class="shrink-0 p-0.5 xxs:p-1 rounded-full text-slate-400 hover:text-blue-500 hover:bg-blue-500/10 transition-all"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button></div>
                         <p id="card-teaser-labor" class="text-slate-700 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">Server & Docker...</p>
                     </div>
                 </div>
@@ -5507,7 +5533,7 @@
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
                     </div>
                     <div>
-                        <div class="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 mb-0.5 xxs:mb-1"><h3 id="card-title-contact" class="font-bold text-sm xxs:text-base sm:text-lg">Kontakt</h3><button onclick="event.stopPropagation(); speakCardFace('contact')" aria-label="Diese Karte vorlesen" class="shrink-0 p-0.5 xxs:p-1 rounded-full text-slate-400 hover:text-blue-500 hover:bg-blue-500/10 transition-all"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button></div>
+                        <div class="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 mb-0.5 xxs:mb-1"><h3 id="card-title-contact" class="font-bold text-sm xxs:text-base sm:text-lg">Kontakt</h3><button onclick="event.stopPropagation(); speakCardFace('contact', this)" aria-label="Diese Karte vorlesen" class="shrink-0 p-0.5 xxs:p-1 rounded-full text-slate-400 hover:text-blue-500 hover:bg-blue-500/10 transition-all"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button></div>
                         <p id="card-teaser-contact" class="text-slate-700 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">Connect mit mir...</p>
                     </div>
                 </div>
@@ -9557,33 +9583,15 @@
             }
         };
 
+        function pickRandom(arr) {
+            if (!arr || arr.length === 0) return '';
+            return arr[Math.floor(Math.random() * arr.length)];
+        }
+
         window.speakTrackInfo = function(btnEl) {
             window.speakNowPlaying(btnEl);
         };
 
-        // Support-Bereich mit dynamischer Begrüßung
-        window.speakSupportSection = function(btnEl) {
-            const lang = currentLang || 'de';
-            const onlineCount = document.getElementById('discord-online-count')?.innerText || 'einige Mitglieder';
-            if (lang === 'de') {
-                const text = `Du hast eine Frage, einen Bug gefunden oder willst einfach quatschen? Schreib mir direkt eine E-Mail an gamingpig.support@gmail.com oder tritt unserem offiziellen Discord-Server bei. Dort sind gerade ${onlineCount} online und ich antworte meistens am schnellsten. Beide Buttons findest du direkt hier auf der Karte!`;
-                ttsSpeak(text, btnEl);
-            } else if (lang === 'en') {
-                const text = `Got questions, discovered a bug, or just want to chat? Reach out directly via email at gamingpig.support@gmail.com or join our official Discord server where ${onlineCount} are currently online. Both action buttons are right below!`;
-                ttsSpeak(text, btnEl);
-            } else {
-                const titleEl = document.getElementById('support-section-title');
-                const emailTitleEl = document.getElementById('support-email-title');
-                const emailDescEl = document.getElementById('support-email-desc');
-                const discordTitleEl = document.getElementById('support-discord-title');
-                const discordDescEl = document.getElementById('support-discord-desc');
-                const text = [titleEl, emailTitleEl, emailDescEl, discordTitleEl, discordDescEl]
-                    .filter(Boolean).map(el => el.innerText).join('. ');
-                ttsSpeak(text, btnEl);
-            }
-        };
-
-        // Liest den aktuell gespielten Songtitel + Künstler dynamisch und cool vor
         window.speakNowPlaying = function(btnEl) {
             const lang = currentLang || 'de';
             const npCard = document.getElementById('standby-nowplaying');
@@ -9625,183 +9633,164 @@
             }
         };
 
-        function pickRandom(arr) {
-            if (!arr || arr.length === 0) return '';
-            return arr[Math.floor(Math.random() * arr.length)];
-        }
-
-        function getDynamicStatusSpeech() {
+        window.speakSupportSection = function(btnEl) {
             const lang = currentLang || 'de';
+            const onlineCount = document.getElementById('discord-online-count')?.innerText || 'einige Mitglieder';
+            if (lang === 'de') {
+                const text = `Du hast eine Frage, einen Bug gefunden oder willst einfach quatschen? Schreib mir direkt eine E-Mail an gamingpig.support@gmail.com oder tritt unserem offiziellen Discord-Server bei. Dort sind gerade ${onlineCount} online und ich antworte meistens am schnellsten. Beide Buttons findest du direkt hier auf der Karte!`;
+                ttsSpeak(text, btnEl);
+            } else if (lang === 'en') {
+                const text = `Got questions, discovered a bug, or just want to chat? Reach out directly via email at gamingpig.support@gmail.com or join our official Discord server where ${onlineCount} are currently online. Both action buttons are right below!`;
+                ttsSpeak(text, btnEl);
+            } else {
+                const titleEl = document.getElementById('support-section-title');
+                const emailTitleEl = document.getElementById('support-email-title');
+                const emailDescEl = document.getElementById('support-email-desc');
+                const discordTitleEl = document.getElementById('support-discord-title');
+                const discordDescEl = document.getElementById('support-discord-desc');
+                const text = [titleEl, emailTitleEl, emailDescEl, discordTitleEl, discordDescEl]
+                    .filter(Boolean).map(el => el.innerText).join('. ');
+                ttsSpeak(text, btnEl);
+            }
+        };
+
+        function getDynamicStatusSpeech(isUltra = false) {
             const now = new Date();
             const hours = now.getHours();
-            const minutes = String(now.getMinutes()).padStart(2, '0');
-            const timeStr = `${hours}:${minutes}`;
-
-            // Music status
-            const npCard = document.getElementById('standby-nowplaying');
-            const isIdle = npCard ? npCard.classList.contains('standby-idle') : true;
-            const songTitle = document.getElementById('track-title')?.innerText || '';
-            const songArtist = document.getElementById('track-artist')?.innerText || '';
-            const isPlaying = !isIdle && songTitle && songTitle !== 'Keine Wiedergabe' && songTitle !== 'Aktuell ist es ruhig...';
-
-            // Discord status
-            const onlineCount = document.getElementById('discord-online-count')?.innerText || '5 online';
-            const memberCount = document.getElementById('discord-member-count')?.innerText || '9 Mitglieder';
+            const minutes = now.getMinutes();
+            const timeStr = `${hours}:${minutes < 10 ? '0' : ''}${minutes}`;
+            const isPlaying = (typeof trackIsPlaying !== 'undefined' && trackIsPlaying) || (typeof mTitle !== 'undefined' && mTitle && mTitle.textContent && mTitle.textContent !== 'Offline' && mTitle.textContent !== 'Lade...');
+            const songTitle = (typeof mTitle !== 'undefined' && mTitle) ? mTitle.textContent : 'Unbekannter Track';
+            const songArtist = (typeof mArtist !== 'undefined' && mArtist) ? mArtist.textContent : 'Gamingpig';
+            const onlineCount = document.getElementById('discord-online-count')?.innerText?.replace(/[^0-9]/g, '') || '5';
+            const memberCount = document.getElementById('discord-member-count')?.innerText?.replace(/[^0-9]/g, '') || '9';
+            const lang = currentLang || 'de';
 
             let greeting = 'Hallo';
             if (hours >= 5 && hours < 12) greeting = 'Guten Morgen';
             else if (hours >= 12 && hours < 18) greeting = 'Guten Tag';
-            else if (hours >= 18 && hours < 22) greeting = 'Guten Abend';
-            else greeting = 'Gute Nacht';
+            else if (hours >= 18 && hours < 23) greeting = 'Guten Abend';
+            else greeting = 'Nachteulen-Grüße';
 
             if (lang === 'de') {
                 const intros = [
-                    `${greeting}! System-Check um ${timeStr} Uhr. Hier ist dein frischer Live-Status für Gamingpig:`,
-                    `Yo! Zeitstempel: ${timeStr} Uhr. Telemetrie-Assistent meldet sich mit den neuesten Daten:`,
-                    `Moin! Status-Protokoll um ${timeStr} Uhr initialisiert. Schnall dich an:`,
-                    `Gamingpig Matrix-Cockpit um ${timeStr} Uhr aktiv. Vibe-Check läuft:`
+                    `${greeting}! Willkommen im ultra-dynamischen Gamingpig Live-Briefing um ${timeStr} Uhr.`,
+                    `Yo! Zeitstempel: ${timeStr} Uhr. Hier ist deine hochintelligente Telemetrie-Zentrale direkt von Gamingpig:`,
+                    `Moin Moin! Status-Protokoll um ${timeStr} Uhr gestartet. Schnall dich an für den Live-Überblick:`,
+                    `Gamingpig Matrix-Cockpit um ${timeStr} Uhr online. Vibe-Check und System-Scan laufen:`
                 ];
                 const musicPhrases = isPlaying ? [
-                    `Im Live-Hub hämmert gerade "${songTitle}" von ${songArtist}. Cover-Engine auf Anschlag, Beat-Sync läuft auf 100%.`,
-                    `Aktueller Soundtrack deines Besuchs: "${songTitle}" von ${songArtist}. Volle Musik-Power aktiv.`,
-                    `Im Hintergrund pumpt "${songTitle}" von ${songArtist} durch die Speaker. HD-Artwork aufgelöst, Lyrics synchronisiert.`
+                    `Im Audio-Hub pumpt gerade "${songTitle}" von ${songArtist} durch die Lautsprecher. Beat-Synchronisation läuft auf 100% und der Sound ballert richtig.`,
+                    `Soundtrack deines Besuchs: "${songTitle}" von ${songArtist}. Cover-Engine, Shader und Dynamic Island sind voll synchronisiert.`,
+                    `Aus den Speakern dröhnt "${songTitle}" von ${songArtist}. Pure Energie im Terminal!`
                 ] : [
-                    `Im Musik-Deck herrscht gerade pure Ruhe – entspannter Zen-Modus zum Fokussieren.`,
-                    `Aktuell läuft kein Song. Zeit für pure Konzentration oder starte gleich einen Track über die Command Palette.`,
-                    `Im Musik-Hub ist chilliger Leerlauf im Zen-State.`
+                    `Im Musik-Deck herrscht gerade pure Ruhe – entspannter Zen-Modus für maximalen Coding-Hyperfokus.`,
+                    `Aktuell läuft kein Song. Zeit für pure Konzentration oder starte gleich einen Track über die Spotify-Integration.`
                 ];
                 const discordPhrases = [
-                    `Auf unserem offiziellen Discord-Server sind aktuell ${onlineCount} am Start.`,
-                    `Community-Radar meldet ${onlineCount} auf Discord.`,
-                    `Im Discord-HQ treiben sich gerade ${onlineCount} bei ${memberCount} rum.`
+                    `Auf unserem offiziellen Discord-Server sind gerade ${onlineCount} Leute aktiv bei insgesamt ${memberCount} Mitgliedern.`,
+                    `Im Community-Radar leuchten aktuell ${onlineCount} aktive User auf Discord.`
                 ];
-                const systemPhrases = [
-                    `Alle 16.000 Zeilen Code, Caches und APIs laufen absolut butterweich mit 0% Lag.`,
-                    `Homelab-Server schnurren, PWA-Service-Worker ist scharf geschaltet und die FPS-Rate ist stabil.`,
-                    `Keine Bugs in Sicht, Server sind kühl und die Performance ist auf Anschlag.`
+                const techPhrases = [
+                    `Alle 16.500 Zeilen Code, Service Worker Caches und Multi-CDNs laufen absolut butterweich mit 60 FPS und 0% Lag.`,
+                    `Die Homelab-Server schnurren wie ein Kätzchen, Raspberry Pi Telemetrie ist grün und die APIs liefern blitzschnell Daten.`
                 ];
-                return `${pickRandom(intros)} ${pickRandom(musicPhrases)} ${pickRandom(discordPhrases)} ${pickRandom(systemPhrases)}`;
+                const ultraPunchlines = [
+                    `Fun Fact: Mein ADHS-Hyperfokus ist heute auf Anschlag kalibriert – perfekt für neue Features und sauberen Code.`,
+                    `Pro-Tipp: Wenn du im Musik-Player auf den Songtext tippst, springt der Spotify-Player direkt zur passenden Zeile.`,
+                    `Schau dir auch mal den StandBy-Lockscreen-Modus oben rechts an – Apple-Feeling pur!`,
+                    `Keine Bugs in Sicht, Kaffeetasse ist voll und die Systeme sind auf Höchstleistung getrimmt.`
+                ];
+
+                const parts = [
+                    pickRandom(intros),
+                    pickRandom(musicPhrases),
+                    pickRandom(discordPhrases),
+                    pickRandom(techPhrases)
+                ];
+                if (isUltra) parts.push(pickRandom(ultraPunchlines));
+                return parts.join(' ');
             } else if (lang === 'en') {
                 let enGreeting = 'Hello';
                 if (hours >= 5 && hours < 12) enGreeting = 'Good morning';
                 else if (hours >= 12 && hours < 18) enGreeting = 'Good afternoon';
-                else if (hours >= 18 && hours < 22) enGreeting = 'Good evening';
-                else enGreeting = 'Good night';
+                else if (hours >= 18 && hours < 23) enGreeting = 'Good evening';
+                else enGreeting = 'Night owl greetings';
 
                 const intros = [
-                    `${enGreeting}! Telemetry scan at ${timeStr}. Here is your live Gamingpig status briefing:`,
-                    `Yo! Timestamp: ${timeStr}. Matrix assistant reporting in with live telemetry:`,
-                    `Hey there! Live diagnostic check at ${timeStr}. Let's see what's happening:`
+                    `${enGreeting}! Welcome to your ultra-dynamic Gamingpig live briefing at ${timeStr}.`,
+                    `Yo! Timestamp: ${timeStr}. High-intelligence telemetry cockpit reporting in:`,
+                    `Hey there! Live diagnostic check at ${timeStr}. Let's see what is happening:`
                 ];
                 const musicPhrases = isPlaying ? [
-                    `Currently bumping through the speakers: "${songTitle}" by ${songArtist}. Cover decoders and stream telemetry running at full speed.`,
-                    `Live music feed active: "${songTitle}" by ${songArtist}. Soundwaves synchronized, vibe is 100%.`
+                    `Currently bumping through the speakers: "${songTitle}" by ${songArtist}. Cover decoders, lyrics, and beats are fully synchronized.`,
+                    `Live audio feed active: "${songTitle}" by ${songArtist}. Soundwaves locked, vibe is 100%.`
                 ] : [
-                    `The music dashboard is currently resting in a peaceful Zen mode.`,
-                    `No audio track playing right now. Pure focus mode active.`
+                    `The music dashboard is resting in a peaceful Zen mode for maximum coding focus.`,
+                    `No track playing right now. Pure focus mode active.`
                 ];
                 const discordPhrases = [
-                    `Over on Discord, ${onlineCount} are currently active in the server.`,
-                    `Community radar shows ${onlineCount} hanging out on the Discord hub.`
+                    `Over on Discord, ${onlineCount} members are currently active in the community hub.`,
+                    `Community radar shows ${onlineCount} users hanging out on Discord.`
                 ];
-                const systemPhrases = [
-                    `All 16,000 lines of code, service workers, and APIs are running buttery smooth with zero lag.`,
-                    `All systems 100% nominal, latency is ultra-low, and everything is firing on all cylinders.`
+                const techPhrases = [
+                    `All 16,500 lines of code, service workers, and APIs are running buttery smooth at 60 FPS with zero lag.`,
+                    `Homelab servers are icy cool, Pi telemetry is green, and the PWA pipeline is firing on all cylinders.`
                 ];
-                return `${pickRandom(intros)} ${pickRandom(musicPhrases)} ${pickRandom(discordPhrases)} ${pickRandom(systemPhrases)}`;
-            } else if (lang === 'es') {
-                const intros = [
-                    `¡Hola! Son las ${timeStr}. Informe de telemetría en vivo de Gamingpig:`,
-                    `¡Buenas! Hora del sistema: ${timeStr}. Estado en tiempo real:`
+                const ultraPunchlines = [
+                    `Fun Fact: Hyperfocus is calibrated to 100% today – turning complex code into pure digital art.`,
+                    `Pro Tip: Check out the StandBy lockscreen mode in the top right for a true iOS display experience!`
                 ];
-                const musicPhrases = isPlaying ? [
-                    `Sonando ahora mismo: "${songTitle}" de ${songArtist}. Pipeline de carátulas y audio al 100%.`,
-                    `Música en directo: "${songTitle}" de ${songArtist}.`
-                ] : [
-                    `El reproductor está en modo Zen tranquilo.`,
-                    `Sin música por ahora, pura concentración.`
+
+                const parts = [
+                    pickRandom(intros),
+                    pickRandom(musicPhrases),
+                    pickRandom(discordPhrases),
+                    pickRandom(techPhrases)
                 ];
-                const discordPhrases = [
-                    `En Discord hay ${onlineCount} activos.`,
-                    `La comunidad tiene ${onlineCount} conectados en Discord.`
-                ];
-                const systemPhrases = [
-                    `Todas las APIs, Service Workers y 16.000 líneas de código funcionan con fluidez total y cero latencia.`,
-                    `Sistemas al 100% nominales y servidores estables.`
-                ];
-                return `${pickRandom(intros)} ${pickRandom(musicPhrases)} ${pickRandom(discordPhrases)} ${pickRandom(systemPhrases)}`;
-            } else if (lang === 'fr') {
-                const intros = [
-                    `Bonjour ! Il est ${timeStr}. Diagnostic en direct pour Gamingpig :`,
-                    `Salut ! Point système à ${timeStr}. Voici les métriques en temps réel :`
-                ];
-                const musicPhrases = isPlaying ? [
-                    `Morceau en cours : "${songTitle}" par ${songArtist}. Moteur de pochettes et synchronisation au maximum.`,
-                    `En direct dans les haut-parleurs : "${songTitle}" par ${songArtist}.`
-                ] : [
-                    `Le lecteur est en mode Zen reposant.`,
-                    `Pas de musique en ce moment, concentration maximale.`
-                ];
-                const discordPhrases = [
-                    `Sur Discord, ${onlineCount} sont actuellement connectés.`,
-                    `Le serveur Discord compte ${onlineCount} actifs.`
-                ];
-                const systemPhrases = [
-                    `Toutes les 16 000 lignes de code, caches et APIs tournent avec une fluidité absolue.`,
-                    `Systèmes 100% opérationnels, latence minimale.`
-                ];
-                return `${pickRandom(intros)} ${pickRandom(musicPhrases)} ${pickRandom(discordPhrases)} ${pickRandom(systemPhrases)}`;
-            } else if (lang === 'pt') {
-                const intros = [
-                    `Olá! São ${timeStr}. Relatório de telemetria em tempo real do Gamingpig:`,
-                    `Fala aí! Horário: ${timeStr}. Status ao vivo:`
-                ];
-                const musicPhrases = isPlaying ? [
-                    `Tocando agora a todo vapor: "${songTitle}" de ${songArtist}. Decodificador de capas e stream a 100%.`,
-                    `Na caixa de som agora: "${songTitle}" de ${songArtist}.`
-                ] : [
-                    `O reprodutor está em modo Zen relaxante.`,
-                    `Sem música no momento, foco total.`
-                ];
-                const discordPhrases = [
-                    `No Discord temos ${onlineCount} conectados.`,
-                    `Comunidade com ${onlineCount} ativos no servidor Discord.`
-                ];
-                const systemPhrases = [
-                    `Todas as 16.000 linhas de código e APIs operando perfeitamente sem engasgos.`,
-                    `Sistemas 100% estáveis e nominais.`
-                ];
-                return `${pickRandom(intros)} ${pickRandom(musicPhrases)} ${pickRandom(discordPhrases)} ${pickRandom(systemPhrases)}`;
-            } else if (lang === 'tr') {
-                const intros = [
-                    `Merhaba! Saat ${timeStr}. Gamingpig canlı telemetri durum raporu:`,
-                    `Selam! Sistem saati: ${timeStr}. Canlı veriler hazır:`
-                ];
-                const musicPhrases = isPlaying ? [
-                    `Şu an çalan bomba parça: ${songArtist} - "${songTitle}". Kapak motoru ve akış tam gaz devrede.`,
-                    `Canlı müzik yayını: ${songArtist} tarafından seslendirilen "${songTitle}".`
-                ] : [
-                    `Müzik çalar şu anda huzurlu ve sessiz Zen modunda.`,
-                    `Şu an çalan şarkı yok, tam odaklanma modu açık.`
-                ];
-                const discordPhrases = [
-                    `Discord sunucumuzda şu an ${onlineCount} aktif.`,
-                    `Topluluk radarında Discord üzerinde ${onlineCount} görünüyor.`
-                ];
-                const systemPhrases = [
-                    `16.000 satır kod, Service Worker ve tüm API'lar sıfır gecikmeyle yağ gibi akıyor.`,
-                    `Tüm sistemler %100 nominal ve hazır durumda.`
-                ];
-                return `${pickRandom(intros)} ${pickRandom(musicPhrases)} ${pickRandom(discordPhrases)} ${pickRandom(systemPhrases)}`;
+                if (isUltra) parts.push(pickRandom(ultraPunchlines));
+                return parts.join(' ');
             }
-            return `Status: ${timeStr}. Alle Systeme nominal.`;
+            return `Status: ${timeStr}. Alle Systeme nominal und einsatzbereit.`;
         }
 
-        window.speakCardFace = function(key) {
+        window.speakSmartBriefing = function(btnEl) {
+            if (typeof haptic === 'function') haptic(25);
+            const btn = btnEl || document.getElementById('btn-smart-briefing');
+
+            if (ttsQueueActive || ttsSyncedPlaybackActive) {
+                ttsQueueActive = false;
+                ttsSyncedPlaybackActive = false;
+                if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel();
+                ttsSetButtonState(btn, 'idle');
+                return;
+            }
+
+            const dynamicText = getDynamicStatusSpeech(true);
+            ttsSpeak(dynamicText, btn);
+        };
+
+        window.speakCardFace = function(key, btnEl) {
             if (typeof haptic === 'function') haptic(20);
+            const btn = btnEl || (typeof event !== 'undefined' && event && event.currentTarget ? event.currentTarget : null);
+
             if (key === 'status') {
-                const dynamicText = getDynamicStatusSpeech();
-                ttsSpeak(dynamicText, null);
+                const lang = currentLang || 'de';
+                let statusText = '';
+                if (lang === 'de') {
+                    statusText = "Status: Ausbildung zum Fachinformatiker für Systemintegration. Gamingpig ist aktuell aktiv, tüftelt an Homelab-Servern, PWA-Technologien und Musik-Telemetrie im vollen Flow.";
+                } else if (lang === 'en') {
+                    statusText = "Status: Apprenticeship in IT Systems Integration. Gamingpig is currently active, engineering homelab servers, PWA tech, and music telemetry in full flow.";
+                } else if (lang === 'es') {
+                    statusText = "Estado: Formación en Integración de Sistemas TI. Gamingpig está activo, configurando servidores homelab, PWA y telemetría.";
+                } else if (lang === 'fr') {
+                    statusText = "Statut : Formation en intégration de systèmes informatiques. Gamingpig est actif, travaillant sur ses serveurs homelab et la PWA.";
+                } else if (lang === 'pt') {
+                    statusText = "Status: Formação em Integração de Sistemas de TI. Gamingpig está ativo, desenvolvendo servidores homelab e PWA.";
+                } else if (lang === 'tr') {
+                    statusText = "Durum: BT Sistem Entegrasyonu Eğitimi. Gamingpig şu anda aktif, homelab sunucuları ve PWA üzerinde çalışıyor.";
+                }
+                ttsSpeak(statusText, btn);
                 return;
             }
 
@@ -9842,7 +9831,7 @@
                     ]
                 };
                 if (cardDescriptions[key]) {
-                    ttsSpeak(pickRandom(cardDescriptions[key]), null);
+                    ttsSpeak(pickRandom(cardDescriptions[key]), btn);
                     return;
                 }
             }
@@ -9850,7 +9839,7 @@
             const titleEl = document.getElementById('card-title-' + key);
             const teaserEl = document.getElementById('card-teaser-' + key);
             const text = [titleEl, teaserEl].filter(Boolean).map(el => el.innerText).join('. ');
-            ttsSpeak(text, null);
+            ttsSpeak(text, btn);
         };
 
         window.speakModalGeneric = function(btnEl) {
@@ -10192,26 +10181,31 @@
             const uiControls = document.getElementById('ui-controls');
             if (!island || !uiControls) return;
 
+            const safeAreaTop = 14;
+            const defaultBaseTop = safeAreaTop + 40;
+
             const uiRect = uiControls.getBoundingClientRect();
-            const baseTop = parseFloat(getComputedStyle(island).top) || 40; // Standard-Position (safe-area + 40px)
-
-            // Die Insel bleibt IMMER horizontal mittig (wie das echte iPhone-Vorbild) - wir
-            // rühren left/transform nie an. Geprüft wird nur, ob die (im ausgeklappten
-            // Zustand max. ~320px breite) mittige Insel horizontal in den Bereich der
-            // Kontrollleiste hineinragen würde. Falls ja, weicht sie NUR nach unten aus.
-            const maxIslandWidth = Math.min(320, window.innerWidth * 0.86);
+            const maxIslandWidth = Math.min(330, window.innerWidth * 0.88);
+            const islandLeftEdge = (window.innerWidth - maxIslandWidth) / 2;
             const islandRightEdge = (window.innerWidth + maxIslandWidth) / 2;
-            const wouldOverlapHorizontally = islandRightEdge > (uiRect.left - 12);
 
-            const topPx = wouldOverlapHorizontally ? Math.max(baseTop, uiRect.bottom + 10) : baseTop;
+            // Prüfe präzise 2D-Kollision zwischen Insel und Kontrollleiste (#ui-controls)
+            const wouldOverlapX = (islandRightEdge > (uiRect.left - 12)) && (islandLeftEdge < (uiRect.right + 12));
+            const wouldOverlapY = defaultBaseTop < (uiRect.bottom + 8);
+
+            const topPx = (wouldOverlapX && wouldOverlapY) ? Math.round(uiRect.bottom + 12) : defaultBaseTop;
 
             island.style.top = topPx + 'px';
-            island.style.left = ''; // NEW: horizontal nie verändern, CSS-Default (mittig) bleibt bestehen
-            island.style.transform = '';
-            if (ring) { ring.style.top = topPx + 'px'; ring.style.left = ''; }
+            island.style.left = '50%';
+            island.style.transform = 'translateX(-50%) translateZ(0)';
+            if (ring) {
+                ring.style.top = topPx + 'px';
+                ring.style.left = '50%';
+                ring.style.transform = 'translateX(-50%) scale(1)';
+            }
         }
-        window.addEventListener('resize', () => { clearTimeout(window._diPosTimeout); window._diPosTimeout = setTimeout(positionDynamicIsland, 120); });
-        window.addEventListener('orientationchange', () => setTimeout(positionDynamicIsland, 200));
+        window.addEventListener('resize', () => { clearTimeout(window._diPosTimeout); window._diPosTimeout = setTimeout(positionDynamicIsland, 100); });
+        window.addEventListener('orientationchange', () => setTimeout(positionDynamicIsland, 150));
 
         function updateIslandRing() {
             const ring = document.getElementById('dynamic-island-ring');
@@ -10229,11 +10223,7 @@
             const artistEl = document.getElementById('di-artist');
             if (titleEl) titleEl.textContent = title || '';
             if (artistEl) artistEl.textContent = artist || '';
-            // FIX v24.87: #di-art ist jetzt ein <canvas> und zeichnet das bereits vom
-            // Haupt-Cover (#artwork) fertig dekodierte Bild direkt rein (drawCoverToCanvas
-            // via syncAllCoverConsumers()) - eigene Fehlerbehandlung/eigener Ladeversuch
-            // dadurch überflüssig, #di-art zeigt automatisch dasselbe wie #artwork, inklusive
-            // dessen bereits vorhandener iTunes-Fallback-Kette aus v24.63/83.
+            positionDynamicIsland();
             syncAllCoverConsumers();
             island.classList.add('di-visible');
             updateIslandRing();
