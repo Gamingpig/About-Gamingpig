@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🔥 RELEASE v24.138.1 – Gamingpig Mega-Update</title>
     <link rel="icon" href="icon-192.png" type="image/png">
+    <script>
+        try {
+            const savedAppLang = localStorage.getItem('selectedLanguage');
+            if (savedAppLang) document.documentElement.setAttribute('lang', savedAppLang);
+        } catch(e) {}
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -60,13 +66,13 @@
         }
 
         .tts-active {
-            background: linear-gradient(135deg, #ec4899, #8b5cf6) !important;
-            color: #ffffff !important;
-            animation: pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+            animation: tts-pulse 1.8s infinite;
+            border-color: #ec4899 !important;
+            color: #f472b6 !important;
         }
 
-        @keyframes pulse-ring {
-            0% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0.7); }
+        @keyframes tts-pulse {
+            0% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0.6); }
             70% { box-shadow: 0 0 0 14px rgba(236, 72, 153, 0); }
             100% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0); }
         }
@@ -101,12 +107,12 @@
             <!-- Language Dropdown -->
             <div class="relative">
                 <select id="lang-select" onchange="changeLanguage(this.value)" class="bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs sm:text-sm py-1.5 px-2 sm:py-2 sm:px-3 rounded-xl border border-slate-700 cursor-pointer outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-md">
-                    <option value="de">🇩🇪 DE</option>
-                    <option value="en">🇬🇧 EN</option>
-                    <option value="es">🇪🇸 ES</option>
-                    <option value="fr">🇫🇷 FR</option>
-                    <option value="pt">🇧🇷 PT</option>
-                    <option value="tr">🇹🇷 TR</option>
+                    <option value="de">🇩🇪 Deutsch</option>
+                    <option value="en">🇬🇧 English</option>
+                    <option value="es">🇪🇸 Español</option>
+                    <option value="fr">🇫🇷 Français</option>
+                    <option value="pt">🇧🇷 Português</option>
+                    <option value="tr">🇹🇷 Türkçe</option>
                 </select>
             </div>
         </div>
@@ -493,7 +499,37 @@
 
         let currentLang = localStorage.getItem('selectedLanguage') || 'de';
 
+        function syncLangToIndexedDB(lang) {
+            try {
+                const req = indexedDB.open('gamingpig_pwa_db', 1);
+                req.onupgradeneeded = (e) => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains('settings')) {
+                        db.createObjectStore('settings');
+                    }
+                };
+                req.onsuccess = (e) => {
+                    try {
+                        const db = e.target.result;
+                        const tx = db.transaction('settings', 'readwrite');
+                        tx.objectStore('settings').put(lang, 'app_lang');
+                    } catch(err) {}
+                };
+            } catch(e) {}
+        }
+
         function applyTranslations(lang) {
+            if (!TRANSLATIONS[lang]) lang = 'de';
+            currentLang = lang;
+            document.documentElement.setAttribute('lang', lang);
+            try {
+                localStorage.setItem('selectedLanguage', lang);
+                syncLangToIndexedDB(lang);
+            } catch(e) {}
+
+            const selectEl = document.getElementById('lang-select');
+            if (selectEl && selectEl.value !== lang) selectEl.value = lang;
+
             const t = TRANSLATIONS[lang] || TRANSLATIONS.de;
             document.getElementById('nav-back').innerText = t.nav_back;
             document.getElementById('tts-label').innerText = window.isSpeaking ? t.tts_stop : t.tts_read;
@@ -535,8 +571,6 @@
         }
 
         function changeLanguage(lang) {
-            currentLang = lang;
-            localStorage.setItem('selectedLanguage', lang);
             applyTranslations(lang);
             if (window.isSpeaking) {
                 stopSpeech();

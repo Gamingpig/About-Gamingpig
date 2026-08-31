@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>🟢 Live System-Status & Störungsmelder – Gamingpig</title>
     <link rel="icon" href="icon-192.png" type="image/png">
+    <script>
+        try {
+            const savedAppLang = localStorage.getItem('selectedLanguage');
+            if (savedAppLang) document.documentElement.setAttribute('lang', savedAppLang);
+        } catch(e) {}
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -983,10 +989,16 @@
         }
 
         function applyTranslations(lang) {
+            if (!I18N[lang]) lang = 'de';
             currentLang = lang;
             document.documentElement.lang = lang;
-            localStorage.setItem('selectedLanguage', lang);
-            syncLangToIndexedDB(lang);
+            try {
+                localStorage.setItem('selectedLanguage', lang);
+                syncLangToIndexedDB(lang);
+            } catch(e) {}
+
+            const selectEl = document.getElementById('lang-select');
+            if (selectEl && selectEl.value !== lang) selectEl.value = lang;
             
             const translatable = [
                 'nav-back', 'badge-title', 'hero-title', 'hero-subtitle',

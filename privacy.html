@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Privacy Policy / Datenschutzerklärung – Gamingpig Portfolio</title>
+<script>
+  try {
+    const savedAppLang = localStorage.getItem('selectedLanguage');
+    if (savedAppLang) document.documentElement.setAttribute('lang', savedAppLang);
+  } catch(e) {}
+</script>
 <style>
   :root{
     --bg:#0d0d12;
@@ -753,6 +759,25 @@
 </div>
 
 <script>
+  function syncLangToIndexedDB(lang) {
+    try {
+      const req = indexedDB.open('gamingpig_pwa_db', 1);
+      req.onupgradeneeded = (e) => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains('settings')) {
+          db.createObjectStore('settings');
+        }
+      };
+      req.onsuccess = (e) => {
+        try {
+          const db = e.target.result;
+          const tx = db.transaction('settings', 'readwrite');
+          tx.objectStore('settings').put(lang, 'app_lang');
+        } catch(err) {}
+      };
+    } catch(e) {}
+  }
+
   // NEU: Sprachumschalter - respektiert automatisch die auf der Hauptseite bereits
   // gewählte Sprache (gleicher localStorage-Schlüssel 'selectedLanguage'), lässt sich
   // aber auch unabhängig davon direkt auf dieser Seite umschalten.
@@ -772,7 +797,10 @@
     buttons.forEach(btn => {
       btn.classList.toggle('active', btn.getAttribute('data-lang') === lang);
     });
-    localStorage.setItem('selectedLanguage', lang);
+    try {
+      localStorage.setItem('selectedLanguage', lang);
+      syncLangToIndexedDB(lang);
+    } catch(e) {}
     document.documentElement.setAttribute('lang', lang);
   }
   const savedLang = localStorage.getItem('selectedLanguage') || 'de';
