@@ -340,7 +340,7 @@
     </footer>
 
     <script>
-        // Salted SHA-256 Hash of Password 'Loo4cohj'
+        // Cryptographic salted authentication hash
         const AUTH_SALT = 'gamingpig_status_push_salt_2026';
         const AUTH_HASH = 'a14370f4bac2464358ee34ec6fe9313c9e3b5bf0728e7b4359eb409d8e7f8116';
 
@@ -656,32 +656,128 @@
             showToast('Abgemeldet.', '🔒');
         }
 
-        const GH_TOKEN_KEY = 'gamingpig_gh_pat';
+        const GH_TOKEN_KEY = 'gamingpig_gh_pat_enc';
+        const GH_TOKEN_LEGACY_KEY = 'gamingpig_gh_pat';
 
-        function getStoredGitHubToken() {
-            return localStorage.getItem(GH_TOKEN_KEY) || '';
+        // --- Web Crypto AES-GCM 256-Bit Storage Vault ---
+        async function deriveEncryptionKey(saltStr) {
+            const enc = new TextEncoder();
+            const fp = globalHardwareFp || await computeHardwareFingerprint();
+            const baseMaterial = fp + AUTH_HASH + AUTH_SALT;
+            const keyMaterial = await crypto.subtle.importKey(
+                'raw',
+                enc.encode(baseMaterial),
+                { name: 'PBKDF2' },
+                false,
+                ['deriveKey']
+            );
+            return await crypto.subtle.deriveKey(
+                {
+                    name: 'PBKDF2',
+                    salt: enc.encode(saltStr || 'gamingpig_vault_salt_2026'),
+                    iterations: 100000,
+                    hash: 'SHA-256'
+                },
+                keyMaterial,
+                { name: 'AES-GCM', length: 256 },
+                false,
+                ['encrypt', 'decrypt']
+            );
         }
 
-        function saveGitHubToken(token) {
+        async function encryptSecureToken(plaintext) {
+            if (!plaintext) return '';
+            const enc = new TextEncoder();
+            const iv = crypto.getRandomValues(new Uint8Array(12));
+            const key = await deriveEncryptionKey('gamingpig_token_vault_salt');
+            const encrypted = await crypto.subtle.encrypt(
+                { name: 'AES-GCM', iv: iv },
+                key,
+                enc.encode(plaintext)
+            );
+            const blob = {
+                iv: Array.from(iv),
+                data: Array.from(new Uint8Array(encrypted))
+            };
+            return btoa(JSON.stringify(blob));
+        }
+
+        async function decryptSecureToken(encryptedB64) {
+            if (!encryptedB64) return '';
+            try {
+                const parsed = JSON.parse(atob(encryptedB64));
+                if (!parsed.iv || !parsed.data) return '';
+                const iv = new Uint8Array(parsed.iv);
+                const data = new Uint8Array(parsed.data);
+                const key = await deriveEncryptionKey('gamingpig_token_vault_salt');
+                const decrypted = await crypto.subtle.decrypt(
+                    { name: 'AES-GCM', iv: iv },
+                    key,
+                    data
+                );
+                return new TextDecoder().decode(decrypted);
+            } catch (e) {
+                // If legacy plain text was stored, return it and upgrade
+                if (encryptedB64.startsWith('ghp_') || encryptedB64.startsWith('github_pat_')) {
+                    return encryptedB64;
+                }
+                return '';
+            }
+        }
+
+        async function getStoredGitHubToken() {
+            const encrypted = localStorage.getItem(GH_TOKEN_KEY);
+            if (encrypted) {
+                return await decryptSecureToken(encrypted);
+            }
+            const legacy = localStorage.getItem(GH_TOKEN_LEGACY_KEY);
+            if (legacy) {
+                // Upgrade to encrypted format automatically
+                await saveGitHubToken(legacy);
+                localStorage.removeItem(GH_TOKEN_LEGACY_KEY);
+                return legacy;
+            }
+            return '';
+        }
+
+        async function hasStoredGitHubToken() {
+            const encrypted = localStorage.getItem(GH_TOKEN_KEY) || localStorage.getItem(GH_TOKEN_LEGACY_KEY);
+            if (!encrypted) return false;
+            const token = await getStoredGitHubToken();
+            return !!(token && token.length > 5);
+        }
+
+        async function saveGitHubToken(token) {
             if (token && token.trim().length > 0) {
-                localStorage.setItem(GH_TOKEN_KEY, token.trim());
+                const enc = await encryptSecureToken(token.trim());
+                localStorage.setItem(GH_TOKEN_KEY, enc);
+                localStorage.removeItem(GH_TOKEN_LEGACY_KEY);
             } else {
                 localStorage.removeItem(GH_TOKEN_KEY);
+                localStorage.removeItem(GH_TOKEN_LEGACY_KEY);
             }
-            updateGitHubBridgeUI();
+            await updateGitHubBridgeUI();
         }
 
-        function updateGitHubBridgeUI() {
-            const token = getStoredGitHubToken();
+        async function updateGitHubBridgeUI() {
+            const hasToken = await hasStoredGitHubToken();
             const badge = document.getElementById('gh-status-badge');
             const tokenInput = document.getElementById('gh-token-input');
             const modalInput = document.getElementById('modal-token-input');
-            if (tokenInput) tokenInput.value = token;
-            if (modalInput) modalInput.value = token;
+            
+            if (tokenInput) {
+                tokenInput.value = '';
+                tokenInput.placeholder = hasToken ? '•••••••••••••••• (AES-256 Verschlüsselt)' : 'GitHub Personal Access Token (ghp_...)';
+            }
+            if (modalInput) {
+                modalInput.value = '';
+                modalInput.placeholder = hasToken ? '••••••••••••••••' : 'ghp_...';
+            }
+
             if (badge) {
-                if (token && token.length > 5) {
+                if (hasToken) {
                     badge.className = 'px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5';
-                    badge.innerHTML = '<span>🟢</span> <span>GitHub Cloud-Bridge Aktiv</span>';
+                    badge.innerHTML = '<span>🔒</span> <span>GitHub Bridge Aktiv (AES-256)</span>';
                 } else {
                     badge.className = 'px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center gap-1.5';
                     badge.innerHTML = '<span>🟡</span> <span>GitHub Token fehlt</span>';
@@ -689,24 +785,30 @@
             }
         }
 
-        function handleSaveGitHubToken() {
+        async function handleSaveGitHubToken() {
             const input = document.getElementById('gh-token-input');
             const token = input ? input.value.trim() : '';
-            saveGitHubToken(token);
-            if (token) {
-                showToast('GitHub Token sicher lokal gespeichert!', '💾');
-            } else {
-                showToast('GitHub Token entfernt.', 'ℹ️');
+            if (!token) {
+                const hadToken = await hasStoredGitHubToken();
+                if (hadToken) {
+                    await saveGitHubToken('');
+                    showToast('Gespeicherter Token entfernt.', 'ℹ️');
+                    return;
+                }
+                showToast('Bitte Token eingeben.', '⚠️');
+                return;
             }
+            await saveGitHubToken(token);
+            showToast('Token mit AES-256 verschlüsselt gespeichert!', '🔒');
         }
 
-        function handleSaveModalToken() {
+        async function handleSaveModalToken() {
             const input = document.getElementById('modal-token-input');
             const token = input ? input.value.trim() : '';
-            saveGitHubToken(token);
-            document.getElementById('token-modal').classList.add('hidden');
             if (token) {
-                showToast('Token gespeichert! Starte Push...', '🚀');
+                await saveGitHubToken(token);
+                document.getElementById('token-modal').classList.add('hidden');
+                showToast('Token verschlüsselt gespeichert! Starte Push...', '🚀');
                 sendBroadcastPush();
             } else {
                 showToast('Bitte gültigen Token eingeben.', '⚠️');
@@ -816,7 +918,7 @@
             const title = document.getElementById('msg-title').value.trim() || '⚠️ Gamingpig Status-Alarm';
             const body = document.getElementById('msg-body').value.trim() || 'Status-Aktualisierung.';
             const url = document.getElementById('msg-url').value.trim() || 'https://gamingpig.github.io/About-Gamingpig/status.html';
-            const token = getStoredGitHubToken();
+            const token = await getStoredGitHubToken();
 
             if (!token || token.length < 5) {
                 document.getElementById('token-modal').classList.remove('hidden');
