@@ -5129,7 +5129,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.136 · 2026-08-31';
+        const SITE_VERSION = 'v24.137 · 2026-08-31';
 
         // =========================================================
         // NEU v24.118: Automatischer Reset veralteter Cached Flags bei Versionswechsel
@@ -7499,12 +7499,32 @@
             window._manualLangChange = false;
         };
 
+        function syncLangToIndexedDB(lang) {
+            try {
+                const req = indexedDB.open('gamingpig_pwa_db', 1);
+                req.onupgradeneeded = (e) => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains('settings')) {
+                        db.createObjectStore('settings');
+                    }
+                };
+                req.onsuccess = (e) => {
+                    try {
+                        const db = e.target.result;
+                        const tx = db.transaction('settings', 'readwrite');
+                        tx.objectStore('settings').put(lang, 'app_lang');
+                    } catch(err) {}
+                };
+            } catch(e) {}
+        }
+
         // Aktualisiert alle übersetzbaren Bedienelemente auf der Seite. Persönliche
         // Bio-Texte (details-Objekt) werden hier bewusst NICHT angefasst.
         function applyLanguage(lang) {
             if (!translations[lang]) lang = 'de';
             currentLang = lang;
             localStorage.setItem('selectedLanguage', lang);
+            syncLangToIndexedDB(lang);
             document.documentElement.setAttribute('lang', lang);
 
             const cpInput = document.getElementById('cp-input');

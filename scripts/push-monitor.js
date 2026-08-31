@@ -110,13 +110,52 @@ function saveState(state) {
     }
 }
 
+function formatFailures(failedItems, lang = 'de') {
+    const list = failedItems.map(item => {
+        if (item.id === 'pi_offline') {
+            const track = item.track || 'Track';
+            const dev = item.device || 'Spotify';
+            switch (lang) {
+                case 'en': return `Raspberry Pi Offline (Track '${track}' is playing on ${dev}, but Pi is not sending telemetry)`;
+                case 'es': return `Raspberry Pi Desconectada (Pista '${track}' suena en ${dev}, pero la Pi no envía datos)`;
+                case 'fr': return `Raspberry Pi Hors Ligne (Titre '${track}' en lecture sur ${dev}, mais le Pi n'envoie pas de données)`;
+                case 'pt': return `Raspberry Pi Desconectada (Faixa '${track}' tocando no ${dev}, mas a Pi não envia dados)`;
+                case 'tr': return `Raspberry Pi Çevrimdışı ('${track}' parçası ${dev} üzerinde çalıyor, ancak Pi telemetri göndermiyor)`;
+                default: return `Raspberry Pi Offline (Musik '${track}' läuft auf ${dev}, aber Pi sendet keine Telemetrie-Daten)`;
+            }
+        }
+        if (item.errorType === 'Timeout') {
+            switch (lang) {
+                case 'en': return `${item.name} (Timeout)`;
+                case 'es': return `${item.name} (Tiempo de espera)`;
+                case 'fr': return `${item.name} (Délai dépassé)`;
+                case 'pt': return `${item.name} (Tempo limite)`;
+                case 'tr': return `${item.name} (Zaman aşımı)`;
+                default: return `${item.name} (Zeitüberschreitung)`;
+            }
+        }
+        if (item.errorType === 'Offline') {
+            switch (lang) {
+                case 'en': return `${item.name} (Offline)`;
+                case 'es': return `${item.name} (Fuera de línea)`;
+                case 'fr': return `${item.name} (Hors ligne)`;
+                case 'pt': return `${item.name} (Offline)`;
+                case 'tr': return `${item.name} (Çevrimdışı)`;
+                default: return `${item.name} (Offline)`;
+            }
+        }
+        return `${item.name} (HTTP ${item.status || 'Error'})`;
+    });
+    return list.join(', ');
+}
+
 async function checkEndpoints() {
     const endpoints = [
-        { name: 'stats.fm API', url: 'https://api.stats.fm/api/v1/users/gamingpig/streams/current', okStatuses: [200, 204, 404] },
-        { name: 'Spotify / NPC API', url: 'https://npc-api.aikins.xyz/v1/users/gamingpig/now', okStatuses: [200, 204] },
-        { name: 'LrcLib Lyrics', url: 'https://lrclib.net/api/get?track_name=test&artist_name=test', okStatuses: [200, 404] },
-        { name: 'Discord API', url: 'https://discord.com/api/v10/invites/E8BS9BDAst?with_counts=true', okStatuses: [200] },
-        { name: 'Apple CDN', url: 'https://is1-ssl.mzstatic.com/image/thumb/Music/v4/00/00/00/000000.jpg/100x100bb.jpg', okStatuses: [200, 404] }
+        { id: 'statsfm', name: 'stats.fm API', url: 'https://api.stats.fm/api/v1/users/gamingpig/streams/current', okStatuses: [200, 204, 404] },
+        { id: 'npc', name: 'Spotify / NPC API', url: 'https://npc-api.aikins.xyz/v1/users/gamingpig/now', okStatuses: [200, 204] },
+        { id: 'lyrics', name: 'LrcLib Lyrics', url: 'https://lrclib.net/api/get?track_name=test&artist_name=test', okStatuses: [200, 404] },
+        { id: 'discord', name: 'Discord API', url: 'https://discord.com/api/v10/invites/E8BS9BDAst?with_counts=true', okStatuses: [200] },
+        { id: 'apple_cdn', name: 'Apple CDN', url: 'https://is1-ssl.mzstatic.com/image/thumb/Music/v4/00/00/00/000000.jpg/100x100bb.jpg', okStatuses: [200, 404] }
     ];
 
     const failed = [];
@@ -130,30 +169,33 @@ async function checkEndpoints() {
             const res = await fetch(ep.url, { method: 'GET', signal: controller.signal });
             clearTimeout(timeout);
 
-            if (ep.name === 'stats.fm API' && res.ok) {
+            if (ep.id === 'statsfm' && res.ok) {
                 try { statsData = await res.json(); } catch (e) {}
             }
-            if (ep.name === 'Spotify / NPC API' && res.status === 200) {
+            if (ep.id === 'npc' && res.status === 200) {
                 try { npcData = await res.json(); } catch (e) {}
             }
 
             if (!ep.okStatuses.includes(res.status)) {
-                failed.push(`${ep.name} (HTTP ${res.status})`);
+                failed.push({ id: ep.id, name: ep.name, status: res.status });
             }
         } catch (e) {
-            failed.push(`${ep.name} (${e.name === 'AbortError' ? 'Timeout' : 'Offline'})`);
+            failed.push({ id: ep.id, name: ep.name, errorType: e.name === 'AbortError' ? 'Timeout' : 'Offline' });
         }
     }
 
     // Raspberry Pi Live Feed Discrepancy Check:
-    // If Spotify is actively streaming on Gamingpig's account, but NPC-API has no data (HTTP 204 / empty),
-    // then the Raspberry Pi is offline or its daemon stopped sending data!
     const isSpotifyPlaying = !!(statsData && statsData.item && statsData.item.isPlaying);
     const activeDevice = (statsData && statsData.item && statsData.item.deviceName) ? statsData.item.deviceName : 'Spotify';
     const trackName = (statsData && statsData.item && statsData.item.track) ? statsData.item.track.name : '';
 
     if (isSpotifyPlaying && !npcData) {
-        failed.push(`Raspberry Pi Offline (Musik '${trackName}' läuft auf ${activeDevice}, aber Pi sendet keine NPC-Daten)`);
+        failed.push({
+            id: 'pi_offline',
+            name: 'Raspberry Pi Telemetrie',
+            track: trackName,
+            device: activeDevice
+        });
     }
 
     return failed;
@@ -228,7 +270,6 @@ async function main() {
     }
 
     if (mode === 'register') {
-        // Register a new subscription payload passed via argument or env
         const raw = process.argv[3] || process.env.NEW_SUBSCRIPTION;
         if (!raw) {
             console.error('No subscription JSON provided.');
@@ -272,40 +313,41 @@ async function main() {
     const lastFailures = state.lastFailures || [];
     const failures = await checkEndpoints();
 
-    const failureSig = [...failures].sort().join('|');
-    const lastFailureSig = [...lastFailures].sort().join('|');
+    const failureSig = failures.map(f => f.id + (f.status || f.errorType || '')).sort().join('|');
+    const lastFailureSig = (typeof lastFailures[0] === 'object') 
+        ? lastFailures.map(f => f.id + (f.status || f.errorType || '')).sort().join('|')
+        : lastFailures.sort().join('|');
 
     if (failures.length > 0) {
-        console.warn('Failures detected:', failures.join(', '));
+        console.warn('Failures detected:', JSON.stringify(failures));
         if (failureSig !== lastFailureSig) {
-            const failList = failures.join(', ');
             await sendPushToAll({
                 title: '🔴 Störung festgestellt – Gamingpig Portfolio',
-                body: `Folgende Dienste antworten nicht: ${failList}. Tippe hier für Sofort-Hilfen.`,
+                body: `Folgende Dienste antworten nicht: ${formatFailures(failures, 'de')}. Tippe hier für Sofort-Hilfen.`,
                 translations: {
                     de: {
                         title: '🔴 Störung festgestellt – Gamingpig Portfolio',
-                        body: `Folgende Dienste antworten nicht: ${failList}. Tippe hier für Sofort-Hilfen.`
+                        body: `Folgende Dienste antworten nicht: ${formatFailures(failures, 'de')}. Tippe hier für Sofort-Hilfen.`
                     },
                     en: {
                         title: '🔴 Incident Detected – Gamingpig Portfolio',
-                        body: `The following services are unreachable: ${failList}. Tap here for troubleshooting.`
+                        body: `The following services are unreachable: ${formatFailures(failures, 'en')}. Tap here for troubleshooting.`
                     },
                     es: {
                         title: '🔴 Incidencia Detectada – Gamingpig Portfolio',
-                        body: `Los siguientes servicios no responden: ${failList}. Toca aquí para ver soluciones.`
+                        body: `Los siguientes servicios no responden: ${formatFailures(failures, 'es')}. Toca aquí para ver soluciones.`
                     },
                     fr: {
                         title: '🔴 Incident Détecté – Gamingpig Portfolio',
-                        body: `Les services suivants sont indisponibles: ${failList}. Appuyez ici pour le dépannage.`
+                        body: `Les services suivants sont indisponibles: ${formatFailures(failures, 'fr')}. Appuyez ici pour le dépannage.`
                     },
                     pt: {
                         title: '🔴 Falha Detectada – Gamingpig Portfolio',
-                        body: `Os seguintes serviços não estão respondendo: ${failList}. Toque aqui para soluções.`
+                        body: `Os seguintes serviços não estão respondendo: ${formatFailures(failures, 'pt')}. Toque aqui para soluções.`
                     },
                     tr: {
                         title: '🔴 Sistem Kesintisi – Gamingpig Portfolio',
-                        body: `Aşağıdaki servisler yanıt vermiyor: ${failList}. Çözüm için buraya dokunun.`
+                        body: `Aşağıdaki servisler yanıt vermiyor: ${formatFailures(failures, 'tr')}. Çözüm için buraya dokunun.`
                     }
                 },
                 url: 'https://gamingpig.github.io/About-Gamingpig/status.html'

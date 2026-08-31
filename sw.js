@@ -88,44 +88,88 @@ self.addEventListener("notificationclick", (event) => {
     );
 });
 
+// Helper: Liest die in der App gespeicherte Nutzersprache aus IndexedDB
+function getStoredAppLanguage() {
+    return new Promise((resolve) => {
+        try {
+            const req = indexedDB.open('gamingpig_pwa_db', 1);
+            req.onupgradeneeded = (e) => {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains('settings')) {
+                    db.createObjectStore('settings');
+                }
+            };
+            req.onsuccess = (e) => {
+                try {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains('settings')) {
+                        resolve(null);
+                        return;
+                    }
+                    const tx = db.transaction('settings', 'readonly');
+                    const store = tx.objectStore('settings');
+                    const getReq = store.get('app_lang');
+                    getReq.onsuccess = () => resolve(getReq.result || null);
+                    getReq.onerror = () => resolve(null);
+                } catch(err) {
+                    resolve(null);
+                }
+            };
+            req.onerror = () => resolve(null);
+        } catch (e) {
+            resolve(null);
+        }
+    });
+}
+
 // Web Push Event Handler für Android / iOS / Web Push mit Multi-Language Erkennung
 self.addEventListener("push", (event) => {
-    let data = {
-        title: "⚠️ Gamingpig System-Status",
-        body: "Status-Änderung bei Spotify, Lyrics oder Server-Verbindung festgestellt.",
-        url: "./status.html"
-    };
-    if (event.data) {
-        try {
-            data = event.data.json();
-        } catch (e) {
-            data.body = event.data.text();
+    event.waitUntil((async () => {
+        let data = {
+            title: "⚠️ Gamingpig System-Status",
+            body: "Status-Änderung bei Spotify, Lyrics oder Server-Verbindung festgestellt.",
+            url: "./status.html"
+        };
+        if (event.data) {
+            try {
+                data = event.data.json();
+            } catch (e) {
+                data.body = event.data.text();
+            }
         }
-    }
 
-    // Automatische Geräte- und App-Spracherkennung (DE, EN, ES, FR, PT, TR)
-    const userLang = (navigator.language || "de").slice(0, 2).toLowerCase();
-    let title = data.title;
-    let body = data.body;
+        // 1. Hole vom Nutzer in der Web-App gewählte Sprache
+        const storedLang = await getStoredAppLanguage();
+        // 2. Fallback: targetLang vom Server oder Browser-Sprache
+        const deviceLang = (navigator.language || "de").slice(0, 2).toLowerCase();
+        const effectiveLang = (storedLang || data.targetLang || deviceLang || "de").slice(0, 2).toLowerCase();
 
-    if (data.translations && data.translations[userLang]) {
-        title = data.translations[userLang].title || title;
-        body = data.translations[userLang].body || body;
-    } else if (data.translations && data.translations.en && userLang !== "de") {
-        title = data.translations.en.title || title;
-        body = data.translations.en.body || body;
-    }
+        let title = data.title;
+        let body = data.body;
 
-    // KEIN 'tag' Attribut setzen!
-    // Wenn 'tag' weggelassen wird, zwingt dies Android/Chromium, für jede Nachricht eine separate Karte im Benachrichtigungs-Stack anzulegen, statt sie zu überschreiben.
-    const options = {
-        body: body,
-        icon: "icon-192.png",
-        badge: "icon-192.png",
-        timestamp: data.timestamp || Date.now(),
-        data: { url: data.url || "./status.html" }
-    };
-    event.waitUntil(self.registration.showNotification(title, options));
+        if (data.translations) {
+            if (effectiveLang.startsWith("de") && data.translations.de) {
+                title = data.translations.de.title || title;
+                body = data.translations.de.body || body;
+            } else if (data.translations[effectiveLang]) {
+                title = data.translations[effectiveLang].title || title;
+                body = data.translations[effectiveLang].body || body;
+            } else if (data.translations.de) {
+                title = data.translations.de.title || title;
+                body = data.translations.de.body || body;
+            }
+        }
+
+        // KEIN 'tag' Attribut setzen für ungestörtes Stapeln im Benachrichtigungs-Drawer
+        const options = {
+            body: body,
+            icon: "icon-192.png",
+            badge: "icon-192.png",
+            timestamp: data.timestamp || Date.now(),
+            data: { url: data.url || "./status.html" }
+        };
+        return self.registration.showNotification(title, options);
+    })());
 });
 
 // Intelligenter Fetch-Handler

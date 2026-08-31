@@ -795,9 +795,30 @@
             return I18N[currentLang]?.[key] || I18N['de'][key] || key;
         }
 
+        function syncLangToIndexedDB(lang) {
+            try {
+                const req = indexedDB.open('gamingpig_pwa_db', 1);
+                req.onupgradeneeded = (e) => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains('settings')) {
+                        db.createObjectStore('settings');
+                    }
+                };
+                req.onsuccess = (e) => {
+                    try {
+                        const db = e.target.result;
+                        const tx = db.transaction('settings', 'readwrite');
+                        tx.objectStore('settings').put(lang, 'app_lang');
+                    } catch(err) {}
+                };
+            } catch(e) {}
+        }
+
         function applyTranslations(lang) {
             currentLang = lang;
             document.documentElement.lang = lang;
+            localStorage.setItem('selectedLanguage', lang);
+            syncLangToIndexedDB(lang);
             
             const translatable = [
                 'nav-back', 'badge-title', 'hero-title', 'hero-subtitle',
