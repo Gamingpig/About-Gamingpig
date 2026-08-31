@@ -969,6 +969,7 @@
                 statsfmOk = fallbackPing.ok;
                 statsDuration = fallbackPing.duration;
             }
+            lastDiagnosticResults.statsData = statsData;
             lastDiagnosticResults.statsfm = { ok: statsfmOk, duration: statsDuration, status: statsfmOk ? 'Operational' : 'Offline' };
 
             // 3. Spotify Live Player & Raspberry Pi Stream
@@ -1001,6 +1002,8 @@
                 lastDiagnosticResults.spotify = {
                     ...npcRes,
                     ok: true,
+                    trackName: currentTrack,
+                    deviceName: activeDevice,
                     status: npcHasData ? 'Live Playing' : 'Standby / Bereit'
                 };
             }
@@ -1019,8 +1022,16 @@
             };
 
             // 6. Discord Widget API
+            let discordData = null;
             const discordRes = await pingEndpoint('https://discord.com/api/v10/invites/E8BS9BDAst?with_counts=true');
+            if (discordRes.ok) {
+                try {
+                    const dFetch = await fetch('https://discord.com/api/v10/invites/E8BS9BDAst?with_counts=true');
+                    if (dFetch.ok) discordData = await dFetch.json();
+                } catch(e) {}
+            }
             lastDiagnosticResults.discord = discordRes;
+            lastDiagnosticResults.discordData = discordData;
 
             // 7. PWA Service Worker & Cache
             const hasSW = 'serviceWorker' in navigator && !!navigator.serviceWorker.controller;
@@ -1573,7 +1584,7 @@
             services.forEach(s => {
                 const r = results[s];
                 if (r && r.piOffline) {
-                    degradedServices.push(lang === 'de' ? `Raspberry Pi (Musik läuft auf ${r.deviceName || 'Gerät'}, aber Pi sendet keine NPC-Daten)` : `Raspberry Pi Offline (Spotify playing on ${r.deviceName || 'device'}, but Pi silent)`);
+                    degradedServices.push(lang === 'de' ? `Raspberry Pi (Musik läuft auf ${r.deviceName || 'Gerät'}, aber Pi sendet keine Telemetrie-Daten)` : `Raspberry Pi Offline (Spotify playing on ${r.deviceName || 'device'}, but Pi silent)`);
                 } else if (r && r.ok) {
                     onlineCount++;
                 } else if (r && r.degraded) {
@@ -1586,57 +1597,122 @@
             });
 
             const isAllOk = (offlineServices.length === 0 && degradedServices.length === 0);
-            const spotifyLatency = (results.spotify && results.spotify.duration) ? `${results.spotify.duration} Millisekunden` : 'optimal';
-            const networkPing = (results.network && results.network.duration) ? `${results.network.duration} Millisekunden` : 'stabil';
+            const spotifyLatency = (results.spotify && results.spotify.duration) ? `${results.spotify.duration} ms` : 'blitzschnell';
+            const networkPing = (results.network && results.network.duration) ? `${results.network.duration} ms` : 'optimal';
+            
+            // Tageszeit-Kontext
+            const hour = new Date().getHours();
+            let greeting = 'Hallo!';
+            let greetingEn = 'Hello!';
+            let greetingEs = '¡Hola!';
+            let greetingFr = 'Bonjour !';
+            let greetingPt = 'Olá!';
+            let greetingTr = 'Merhaba!';
+
+            if (hour >= 5 && hour < 12) {
+                greeting = 'Guten Morgen!';
+                greetingEn = 'Good morning!';
+                greetingEs = '¡Buenos días!';
+                greetingFr = 'Bonjour !';
+                greetingPt = 'Bom dia!';
+                greetingTr = 'Günaydın!';
+            } else if (hour >= 12 && hour < 18) {
+                greeting = 'Guten Tag!';
+                greetingEn = 'Good afternoon!';
+                greetingEs = '¡Buenas tardes!';
+                greetingFr = 'Bon après-midi !';
+                greetingPt = 'Boa tarde!';
+                greetingTr = 'İyi günler!';
+            } else if (hour >= 18 && hour < 23) {
+                greeting = 'Guten Abend!';
+                greetingEn = 'Good evening!';
+                greetingEs = '¡Buenas noches!';
+                greetingFr = 'Bonsoir !';
+                greetingPt = 'Boa noite!';
+                greetingTr = 'İyi akşamlar!';
+            } else {
+                greeting = 'Willkommen zur Nachtschicht!';
+                greetingEn = 'Welcome to the night shift!';
+                greetingEs = '¡Turno nocturno activo!';
+                greetingFr = 'Bienvenue dans l\'équipe de nuit !';
+                greetingPt = 'Turno da noite ativo!';
+                greetingTr = 'Gece vardiyası devrede!';
+            }
+
+            // Spotify Live-Track & Device Kontext
+            const spTrack = results.spotify?.trackName || (results.statsData?.item?.track?.name) || null;
+            const spArtist = results.statsData?.item?.track?.artists?.[0]?.name || null;
+            const spDevice = results.spotify?.deviceName || (results.statsData?.item?.deviceName) || null;
+            
+            // Discord Community Kontext
+            const discordOnline = results.discordData?.approximate_presence_count || null;
+
+            // Witzige Sysadmin / Gamer Punchlines
+            const funPunchlinesDe = [
+                'Server-Last liegt im absoluten Wohlfühlbereich, kein Paketverlust und der Kaffee-Pegel steht bei 100%.',
+                'Null Kernel-Panics in Sicht – der ADHS-Hyperfokus-Modus läuft auf maximaler Taktfrequenz.',
+                'Docker-Container schnurren wie ein Kätzchen, alle Pipelines laufen im grünen Bereich.',
+                'Perfekter Sync: Alle APIs antworten synchron, kein Lag im gesamten Datenfluss.'
+            ];
+            const funPunchlinesEn = [
+                'Server load is at optimal baseline with 0% packet loss and peak coffee levels.',
+                'Zero kernel panics detected. ADHS hyperfocus engine operating at maximum clock speed.',
+                'Docker containers humming smoothly with all monitoring pipelines fully green.',
+                'Flawless synchronization: zero telemetry lag across all external APIs.'
+            ];
+
+            const punchlineDe = pickStatusRandom(funPunchlinesDe);
+            const punchlineEn = pickStatusRandom(funPunchlinesEn);
 
             if (lang === 'de') {
                 if (isAllOk) {
-                    const variations = [
-                        `Gamingpig Telemetrie-Assistent initialisiert. Live-Systemdiagnose: Alle sechs Kern-Dienste und Schnittstellen arbeiten mit optimaler Performance. Der Spotify Live-Player, stats.fm, Songtexte und unsere vierstufige Cover-Pipeline laufen mit blitzschneller Reaktionszeit von ${spotifyLatency}. Die Netzwerk-Latenz beträgt ${networkPing}. Sämtliche Systeme sind nominal und einsatzbereit.`,
-                        `System-Check vollständig. Alle 6 Module laufen auf Hochtouren mit 0% Paketverlust. Spotify-Sync und Cover-Resolver antworten in rasanten ${spotifyLatency}. Telemetrie-Status: 100% stabil.`,
-                        `Cockpit-Telemetrie online. Keine Anomalien festgestellt. Die Schnittstellen zu Spotify, Discord und CDNs liefern Spitzenwerte. Alle Systeme sind scharf geschaltet.`
-                    ];
-                    return pickStatusRandom(variations);
+                    let musicPart = spTrack 
+                        ? `Auf Spotify läuft im Live-Stream gerade '${spTrack}'${spArtist ? ' von ' + spArtist : ''}${spDevice ? ' auf ' + spDevice : ''}. `
+                        : `Der Spotify Live-Player ist im Standby und wartet auf die nächste Session. `;
+                    let discordPart = discordOnline ? `Auf dem Discord-Server sind aktuell ${discordOnline} Member aktiv. ` : '';
+
+                    return `${greeting} Gamingpig Telemetrie-Cockpit online. Live-Systemstatus: Alle sechs Kern-Dienste laufen mit 100% Spitzenperformance. Die Spotify-API antwortet in rasanten ${spotifyLatency}, dein Netzwerk-Ping liegt bei ${networkPing}. ${musicPart}${discordPart}${punchlineDe}`;
                 } else if (offlineServices.length > 0) {
-                    return `Achtung, Störungsmeldung im System. Aktuell sind ${onlineCount} von sechs Diensten betriebsbereit. Folgende Endpunkte antworten derzeit nicht: ${offlineServices.join(', ')}. Sofort-Hilfen und Fehlerbehebungen stehen unten auf dieser Seite bereit.`;
+                    return `Achtung, System-Alarm: Aktuell sind ${onlineCount} von sechs Diensten erreichbar. Ausgefallen sind derzeit: ${offlineServices.join(', ')}. Sofort-Hilfen und Workarounds stehen unten für dich bereit.`;
                 } else {
-                    return `Systemhinweis: Erhöhte Latenz oder Ausweichrouten festgestellt bei: ${degradedServices.join(', ')}. Das Portfolio bleibt über alternative Fallbacks uneingeschränkt nutzbar.`;
+                    return `Systemhinweis: Leicht erhöhte Latenz oder Fallback-Routing festgestellt bei: ${degradedServices.join(', ')}. Alle Kernfunktionen des Portfolios bleiben uneingeschränkt aktiv.`;
                 }
             } else if (lang === 'en') {
                 if (isAllOk) {
-                    const variations = [
-                        `Gamingpig Telemetry Assistant online. System diagnostics complete: All six core infrastructure services are operating at peak performance. Spotify live player, stats.fm stories, synchronized lyrics, and multi-CDN cover pipelines are responding with ultra-low latency of ${spotifyLatency}. All systems nominal and fully operational.`,
-                        `Diagnostic scan clear. All 6 services firing on all cylinders with latency of ${spotifyLatency}. Network health is optimal. Zero issues detected.`
-                    ];
-                    return pickStatusRandom(variations);
+                    let musicPart = spTrack 
+                        ? `Currently streaming on Spotify: '${spTrack}'${spArtist ? ' by ' + spArtist : ''}${spDevice ? ' on ' + spDevice : ''}. `
+                        : `Spotify live player is in standby awaiting the next beat. `;
+                    let discordPart = discordOnline ? `The Discord community has ${discordOnline} active members online. ` : '';
+
+                    return `${greetingEn} Gamingpig Telemetry Cockpit online. Full system diagnosis: All six core infrastructure services are running at 100% peak performance. Spotify latency is ${spotifyLatency}, network ping is ${networkPing}. ${musicPart}${discordPart}${punchlineEn}`;
                 } else if (offlineServices.length > 0) {
-                    return `Attention, system alert detected. Currently ${onlineCount} of six services are active. The following endpoints are temporarily unreachable: ${offlineServices.join(', ')}. Please review the instant troubleshooting guides below.`;
+                    return `Attention, incident detected: Currently ${onlineCount} of 6 services are operational. The following endpoints are unreachable: ${offlineServices.join(', ')}. Instant troubleshooting steps are listed below.`;
                 } else {
-                    return `System advisory: Minor latency or fallback routing observed on: ${degradedServices.join(', ')}. All core portfolio functions remain operational.`;
+                    return `System notice: Minor latency or backup routing observed on: ${degradedServices.join(', ')}. All main features remain fully functional.`;
                 }
             } else if (lang === 'es') {
                 if (isAllOk) {
-                    return `Asistente de telemetría Gamingpig activo. Diagnóstico del sistema: Los seis servicios y APIs principales funcionan con rendimiento óptimo. El reproductor de Spotify, stats.fm, letras sincronizadas y CDNs responden sin demora. Todos los sistemas nominales.`;
+                    return `${greetingEs} Centro de telemetría Gamingpig activo. Diagnóstico completo: Los seis servicios y APIs están al 100% de rendimiento. Spotify y CDNs responden sin latencia. Todos los sistemas nominales.`;
                 } else {
-                    return `Alerta del sistema: Se han detectado fallos. ${onlineCount} de seis servicios están funcionando. Consulta las opciones de diagnóstico a continuación.`;
+                    return `Alerta del sistema: ${onlineCount} de 6 servicios están funcionando. Consulta las soluciones a continuación.`;
                 }
             } else if (lang === 'fr') {
                 if (isAllOk) {
-                    return `Assistant de télémétrie Gamingpig en ligne. Diagnostic terminé : Les six services principaux fonctionnent avec une performance optimale. Le lecteur Spotify, les statistiques, les paroles synchronisées et les serveurs CDN répondent instantanément. Tous les systèmes sont opérationnels.`;
+                    return `${greetingFr} Centre de télémétrie Gamingpig en ligne. Diagnostic en temps réel : Les six services d'infrastructure fonctionnent à 100% de performance. Zéro latence détectée. Tous les systèmes sont opérationnels.`;
                 } else {
-                    return `Alerte système : Des anomalies ont été détectées. ${onlineCount} services sur six sont actifs. Consultez la section d'aide ci-dessous.`;
+                    return `Alerte système : ${onlineCount} services sur 6 sont actifs. Consultez les guides de dépannage ci-dessous.`;
                 }
             } else if (lang === 'pt') {
                 if (isAllOk) {
-                    return `Assistente de telemetria Gamingpig online. Diagnóstico do sistema: Todos os seis serviços essenciais estão operando em velocidade máxima. O player do Spotify, stats.fm, letras sincronizadas e CDNs de capas respondem sem atrasos. Todos os sistemas estão nominais.`;
+                    return `${greetingPt} Cockpit de telemetria Gamingpig online. Todos os 6 serviços estão operando em velocidade máxima com latência ultra baixa. Sistemas 100% estáveis.`;
                 } else {
-                    return `Alerta de sistema: Oscilação detectada. ${onlineCount} de seis serviços estão operacionais. Consulte as soluções de autoajuda abaixo.`;
+                    return `Alerta de sistema: ${onlineCount} de 6 serviços estão operacionais. Veja as soluções abaixo.`;
                 }
             } else if (lang === 'tr') {
                 if (isAllOk) {
-                    return `Gamingpig Telemetri Asistanı devrede. Sistem teşhisi tamamlandı: Altı ana servisin ve API altyapısının tümü en yüksek hızda çalışıyor. Spotify canlı çalar, stats.fm, senkronize şarkı sözleri ve kapak CDN hatları gecikmesiz yanıt veriyor. Tüm sistemler aktif ve sorunsuz.`;
+                    return `${greetingTr} Gamingpig Telemetri Kokpiti devrede. Sistem teşhisi: Altı ana servisin tümü %100 performansla ve sıfır gecikmeyle çalışıyor. Tüm sistemler nominal.`;
                 } else {
-                    return `Sistem uyarısı: Kesinti tespit edildi. Altı servisten ${onlineCount} tanesi çalışıyor. Ayrıntılar için aşağıdaki sorun giderme kılavuzunu inceleyebilirsiniz.`;
+                    return `Sistem uyarısı: 6 servisten ${onlineCount} tanesi aktif. Sorun giderme kılavuzunu inceleyebilirsiniz.`;
                 }
             }
             return `Systemstatus: ${onlineCount} Dienste online.`;
