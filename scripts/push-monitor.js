@@ -276,30 +276,72 @@ async function main() {
             process.exit(1);
         }
         try {
-            let parsed = JSON.parse(raw);
+            let parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
             let newSub = parsed.subscription || parsed;
+            const subLang = (parsed.lang || newSub.lang || 'de').slice(0, 2).toLowerCase();
             if (typeof newSub === 'string') newSub = JSON.parse(newSub);
             if (!newSub.endpoint || !newSub.keys) {
                 throw new Error('Invalid subscription format.');
             }
+            newSub.lang = subLang;
             const subscribers = loadSubscribers();
             const existingIdx = subscribers.findIndex(s => s.endpoint === newSub.endpoint);
             if (existingIdx >= 0) {
                 subscribers[existingIdx] = newSub; // Update
-                console.log('Updated existing subscription.');
+                console.log(`Updated existing subscription with language: ${subLang}`);
             } else {
                 subscribers.push(newSub); // Add
-                console.log('Added new subscription.');
+                console.log(`Added new subscription with language: ${subLang}`);
             }
             saveSubscribers(subscribers);
 
-            // Send confirmation welcome push!
-            await webPush.sendNotification(newSub, JSON.stringify({
+            // Send confirmation welcome push with 6-language translations!
+            const welcomePayload = {
                 title: '🔔 Gamingpig Störungs-Alarm aktiv',
                 body: 'Dein Gerät empfängt ab sofort alle Alarme & Entwarnungen vollautomatisch!',
+                translations: {
+                    de: {
+                        title: '🔔 Gamingpig Störungs-Alarm aktiv',
+                        body: 'Dein Gerät empfängt ab sofort alle Alarme & Entwarnungen vollautomatisch!'
+                    },
+                    en: {
+                        title: '🔔 Gamingpig Outage Alerts Active',
+                        body: 'Your device will now receive outage & recovery notifications automatically!'
+                    },
+                    es: {
+                        title: '🔔 Alertas del sistema Gamingpig activadas',
+                        body: '¡Tu dispositivo recibirá alertas de fallos y recuperaciones automáticamente!'
+                    },
+                    fr: {
+                        title: '🔔 Alertes système Gamingpig activées',
+                        body: 'Votre appareil recevra désormais toutes les alertes et retours en ligne automatiquement !'
+                    },
+                    pt: {
+                        title: '🔔 Alertas de sistema Gamingpig ativados',
+                        body: 'Seu dispositivo agora receberá todos os alertas e recuperações automaticamente!'
+                    },
+                    tr: {
+                        title: '🔔 Gamingpig Sistem Bildirimleri Aktif',
+                        body: 'Cihazınız artık tüm kesinti ve kurtarma bildirimlerini otomatik olarak alacak!'
+                    }
+                },
                 url: 'https://gamingpig.github.io/About-Gamingpig/status.html'
+            };
+
+            let welcomeTitle = welcomePayload.title;
+            let welcomeBody = welcomePayload.body;
+            if (welcomePayload.translations[subLang]) {
+                welcomeTitle = welcomePayload.translations[subLang].title;
+                welcomeBody = welcomePayload.translations[subLang].body;
+            }
+
+            await webPush.sendNotification(newSub, JSON.stringify({
+                title: welcomeTitle,
+                body: welcomeBody,
+                translations: welcomePayload.translations,
+                url: welcomePayload.url
             }));
-            console.log('Welcome push sent successfully!');
+            console.log(`Welcome push sent successfully in [${subLang}]!`);
         } catch (e) {
             console.error('Failed to register subscription:', e.message);
             process.exit(1);
@@ -313,10 +355,8 @@ async function main() {
     const lastFailures = state.lastFailures || [];
     const failures = await checkEndpoints();
 
-    const failureSig = failures.map(f => f.id + (f.status || f.errorType || '')).sort().join('|');
-    const lastFailureSig = (typeof lastFailures[0] === 'object') 
-        ? lastFailures.map(f => f.id + (f.status || f.errorType || '')).sort().join('|')
-        : lastFailures.sort().join('|');
+    const failureSig = failures.map(f => (typeof f === 'object' ? f.id + (f.status || f.errorType || '') : f)).sort().join('|');
+    const lastFailureSig = lastFailures.map(f => (typeof f === 'object' ? f.id + (f.status || f.errorType || '') : f)).sort().join('|');
 
     if (failures.length > 0) {
         console.warn('Failures detected:', JSON.stringify(failures));
@@ -356,8 +396,13 @@ async function main() {
             console.log('Failure state unchanged from previous check. Skipping duplicate push notification.');
         }
     } else {
-        if (lastFailures.length > 0) {
-            console.log('🟢 Recovery detected! Sending recovery push notification...');
+        // FIX: Prevent false recovery push when music is simply paused.
+        // A recovery alert is ONLY sent if actual infrastructure endpoints (APIs) were previously down and have recovered.
+        const realPreviousFailures = lastFailures.filter(f => (typeof f === 'object' ? f.id !== 'pi_offline' : f !== 'pi_offline'));
+        const hadRealFailures = realPreviousFailures.length > 0;
+
+        if (hadRealFailures) {
+            console.log('🟢 Genuine API recovery detected! Sending recovery push notification...');
             await sendPushToAll({
                 title: '🟢 Entwarnung – Alle Systeme wieder online',
                 body: 'Spotify, stats.fm, Songtexte, Discord und CDNs laufen wieder im einwandfreien Normalbetrieb!',
@@ -390,7 +435,7 @@ async function main() {
                 url: 'https://gamingpig.github.io/About-Gamingpig/status.html'
             });
         } else {
-            console.log('✅ All services operational. No push needed.');
+            console.log('✅ All services operational. (No previous API outages to recover from).');
         }
     }
 

@@ -147,16 +147,16 @@ self.addEventListener("push", (event) => {
         let title = data.title;
         let body = data.body;
 
-        if (data.translations) {
-            if (effectiveLang.startsWith("de") && data.translations.de) {
-                title = data.translations.de.title || title;
-                body = data.translations.de.body || body;
-            } else if (data.translations[effectiveLang]) {
+        if (data.translations && typeof data.translations === 'object') {
+            if (data.translations[effectiveLang]) {
                 title = data.translations[effectiveLang].title || title;
                 body = data.translations[effectiveLang].body || body;
             } else if (data.translations.de) {
                 title = data.translations.de.title || title;
                 body = data.translations.de.body || body;
+            } else if (data.translations.en) {
+                title = data.translations.en.title || title;
+                body = data.translations.en.body || body;
             }
         }
 

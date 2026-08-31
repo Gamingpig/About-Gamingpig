@@ -10001,6 +10001,32 @@
                 if (isRefreshing) return;
                 isRefreshing = true;
                 console.log('[SW] Neuer Service Worker aktiv – lade Seite neu');
+                try {
+                    const pushAllowed = (typeof Notification !== 'undefined' && Notification.permission === 'granted' && localStorage.getItem('pushAlertsEnabled') !== 'false');
+                    if (pushAllowed) {
+                        const lang = localStorage.getItem('selectedLanguage') || 'de';
+                        const titles = {
+                            de: '🚀 Neues Update verfügbar!',
+                            en: '🚀 New Update Available!',
+                            es: '🚀 ¡Nueva actualización disponible!',
+                            fr: '🚀 Nouvelle mise à jour disponible !',
+                            pt: '🚀 Nova atualização disponível!',
+                            tr: '🚀 Yeni Güncelleme Yayında!'
+                        };
+                        const bodies = {
+                            de: 'Gamingpig Portfolio ist jetzt live mit neuen Features und Optimierungen.',
+                            en: 'Gamingpig Portfolio is live with fresh features and improvements.',
+                            es: 'Gamingpig Portfolio ya está disponible con nuevas mejoras.',
+                            fr: 'Gamingpig Portfolio est disponible avec de nouvelles fonctionnalités.',
+                            pt: 'Gamingpig Portfolio está disponível com novos recursos.',
+                            tr: 'Gamingpig Portfolio yeni özelliklerle yayında.'
+                        };
+                        new Notification(titles[lang] || titles.de, {
+                            body: bodies[lang] || bodies.de,
+                            icon: 'icon-192.png'
+                        });
+                    }
+                } catch(e) {}
                 window.location.reload();
             });
 
