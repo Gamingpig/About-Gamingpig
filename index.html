@@ -3776,6 +3776,24 @@
         @media (max-width: 640px) {
             #main-music-card.lyrics-open { max-width: 100% !important; width: 100% !important; margin-left: auto !important; margin-right: auto !important; }
         }
+
+        /* Verhindert Kollisionen: Toggle-Balken, Hinweis und Steuerungselemente ausblenden, solange Lyrics aktiv sind */
+        body:has(#main-music-card.lyrics-open) #mini-player-toggle,
+        body:has(#main-music-card.lyrics-open) #music-sync-note,
+        body:has(#main-music-card.lyrics-open) #music-section-title,
+        body.lyrics-mode-active #mini-player-toggle,
+        body.lyrics-mode-active #music-sync-note,
+        body.lyrics-mode-active #music-section-title {
+            display: none !important;
+        }
+
+        body:has(#main-music-card.lyrics-open) #ui-controls,
+        body.lyrics-mode-active #ui-controls {
+            opacity: 0 !important;
+            pointer-events: none !important;
+            transition: opacity 0.3s ease;
+        }
+
         #main-music-card #track-title { color: #ffffff !important; }
         #main-music-card #track-artist { color: rgba(255, 255, 255, 0.7) !important; }
 
@@ -5733,11 +5751,11 @@
                             </div>
                             
                             <div class="relative flex items-center shrink-0">
-                                <div id="apple-style-badge" class="px-1.5 xxs:px-2 py-0.5 xxs:py-1 mr-1 bg-gradient-to-r from-pink-500/20 to-red-500/20 text-pink-300 text-[8px] xxs:text-[10px] sm:text-xs rounded-full font-bold shrink-0 whitespace-nowrap hidden items-center gap-1">
-                                    🍎 <span class="hidden xs:inline">Apple Music </span>Style
+                                <div id="apple-style-badge" class="px-2 py-0.5 mr-1.5 bg-gradient-to-r from-pink-500/20 to-red-500/20 text-pink-300 text-[10px] sm:text-xs rounded-full font-bold shrink-0 whitespace-nowrap hidden items-center gap-1">
+                                    <span>🍎</span><span class="hidden sm:inline"> Apple Music Style</span>
                                 </div>
-                                <div id="sync-status-badge" class="px-1.5 xxs:px-2 py-0.5 xxs:py-1 mr-1 bg-blue-500/20 text-blue-400 text-[8px] xxs:text-[10px] sm:text-xs rounded-full font-bold shrink-0 whitespace-nowrap hidden">
-                                    <span id="lyrics-synced-label">Synced</span>
+                                <div id="sync-status-badge" class="px-2 py-0.5 mr-1.5 bg-blue-500/20 text-blue-400 text-[9px] sm:text-[10px] rounded-full font-bold shrink-0 whitespace-nowrap hidden items-center">
+                                    <span class="hidden sm:inline">Lyrics: </span><span id="lyrics-synced-label">Synced</span>
                                 </div>
 
                                 <button onclick="toggleLyricsSettings(event)" id="btn-lyrics-settings" aria-label="Lyrics Einstellungen" class="p-1 xxs:p-1.5 sm:p-2 hover:bg-white/10 rounded-full transition-colors text-white shrink-0 mr-0.5 xxs:mr-1">
@@ -5745,7 +5763,7 @@
                                 </button>
                                     
                                     <!-- Das Settings Menü Fenster -->
-                                    <div id="lyrics-settings-menu" class="absolute top-full right-0 mt-2 xxs:mt-3 bg-slate-900/98 border border-slate-700/80 rounded-2xl p-2.5 xxs:p-3 sm:p-3.5 shadow-2xl hidden flex flex-col gap-2 w-[275px] xxs:w-[305px] sm:w-[335px] max-w-[calc(100vw-2rem)] z-[9999] origin-top-right max-h-[390px] overflow-y-auto backdrop-blur-2xl" style="overscroll-behavior: contain;">
+                                    <div id="lyrics-settings-menu" class="absolute top-full right-0 mt-2 xxs:mt-3 bg-slate-900/98 border border-slate-700/80 rounded-2xl p-2.5 xxs:p-3 sm:p-3.5 shadow-2xl hidden flex flex-col gap-2 w-[285px] xxs:w-[315px] sm:w-[345px] max-w-[calc(100vw-1.5rem)] z-[9999] origin-top-right max-h-[390px] overflow-y-auto backdrop-blur-2xl" style="overscroll-behavior: contain;">
                                         <p id="label-animation-style" class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-slate-400 px-1 sticky top-0 bg-slate-900/95 py-0.5 z-10">Animation Style</p>
                                         <select id="lyrics-style-select" onchange="setLyricsStyle(this.value)" class="w-full bg-slate-800 text-white text-[10px] xxs:text-xs sm:text-sm px-2.5 py-2 rounded-xl border border-slate-600 focus:outline-none focus:border-blue-500 mb-0.5"></select>
                                         <div id="lyrics-style-preview-box" class="w-full bg-black/50 rounded-xl p-2.5 overflow-hidden text-center min-h-[56px] flex items-center justify-center select-none border border-white/5">
@@ -5755,14 +5773,14 @@
                                         <div class="h-px w-full bg-slate-700/70 my-0.5"></div>
                                         <p id="label-features" class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-slate-400 px-1">Features</p>
                                         <div class="grid grid-cols-2 gap-1.5 w-full">
-                                            <button onclick="toggleCanvasVideo()" id="btn-toggle-canvas" class="text-left text-[10px] xxs:text-xs text-green-400 px-2.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold truncate active:scale-95">Canvas: AN</button>
-                                            <button onclick="toggleAmbientColor()" id="btn-toggle-ambient" class="text-left text-[10px] xxs:text-xs text-cyan-400 px-2.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold truncate active:scale-95">Ambient: AN</button>
-                                            <button onclick="toggleColorFrame()" id="btn-toggle-color-frame" class="text-left text-[10px] xxs:text-xs text-cyan-400 px-2.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold truncate active:scale-95">Farbrahmen: AN</button>
-                                            <button onclick="toggleGlowEffect()" id="btn-toggle-glow" class="text-left text-[10px] xxs:text-xs text-orange-400 px-2.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold truncate active:scale-95">Glow-Effekt: AN</button>
-                                            <button onclick="toggleCoverGlow()" id="btn-toggle-cover-glow" class="text-left text-[10px] xxs:text-xs text-yellow-400 px-2.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold truncate active:scale-95">Cover-Glow: AN</button>
-                                            <button onclick="toggleTilt()" id="btn-toggle-tilt" class="text-left text-[10px] xxs:text-xs text-purple-400 px-2.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold truncate active:scale-95">Spatial Tilt: AN</button>
-                                            <button onclick="toggleUiSoundEnabled()" id="btn-toggle-sound" class="text-left text-[10px] xxs:text-xs text-teal-400 px-2.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold truncate active:scale-95">UI-Sounds: AN</button>
-                                            <button onclick="toggleHapticEnabled()" id="btn-toggle-haptic" class="text-left text-[10px] xxs:text-xs text-teal-400 px-2.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold truncate active:scale-95">Haptik: AN</button>
+                                            <button onclick="toggleCanvasVideo()" id="btn-toggle-canvas" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-green-400 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold whitespace-nowrap active:scale-95">Canvas: AN</button>
+                                            <button onclick="toggleAmbientColor()" id="btn-toggle-ambient" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-cyan-400 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold whitespace-nowrap active:scale-95">Ambient: AN</button>
+                                            <button onclick="toggleColorFrame()" id="btn-toggle-color-frame" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-cyan-400 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold whitespace-nowrap active:scale-95">Farbrahmen: AN</button>
+                                            <button onclick="toggleGlowEffect()" id="btn-toggle-glow" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-orange-400 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold whitespace-nowrap active:scale-95">Glow-Effekt: AN</button>
+                                            <button onclick="toggleCoverGlow()" id="btn-toggle-cover-glow" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-yellow-400 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold whitespace-nowrap active:scale-95">Cover-Glow: AN</button>
+                                            <button onclick="toggleTilt()" id="btn-toggle-tilt" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-purple-400 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold whitespace-nowrap active:scale-95">Spatial Tilt: AN</button>
+                                            <button onclick="toggleUiSoundEnabled()" id="btn-toggle-sound" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-teal-400 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold whitespace-nowrap active:scale-95">UI-Sounds: AN</button>
+                                            <button onclick="toggleHapticEnabled()" id="btn-toggle-haptic" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-teal-400 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold whitespace-nowrap active:scale-95">Haptik: AN</button>
                                         </div>
                                         <div class="grid grid-cols-2 gap-1.5 w-full mt-0.5">
                                             <button onclick="generateShareCard()" id="btn-share-card" class="text-center text-[10px] xxs:text-xs text-pink-300 px-2 py-2 rounded-xl bg-pink-500/15 hover:bg-pink-500/25 border border-pink-500/20 transition-all font-bold truncate active:scale-95">🎴 Share Card</button>
@@ -6390,7 +6408,7 @@
                 cp_canvas_video: 'Canvas-Video-Hintergrund umschalten', cp_cover_glow: 'Cover-Glow umschalten',
                 cp_island_back: 'Dynamic Island wieder einblenden', cp_copy_link: 'Link zur Seite kopieren', cp_reload: 'Seite neu laden',
                 cp_change_lang: '🌐 Sprache ändern / Change language',
-                settings_ambient: 'Ambient Color', settings_color_frame: 'Cover-Farbrahmen', settings_glow: 'Glow-Effekt', settings_cover_glow: 'Cover-Glow', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
+                settings_ambient: 'Ambient', settings_color_frame: 'Farbrahmen', settings_glow: 'Glow-Effekt', settings_cover_glow: 'Cover-Glow', settings_tilt: 'Spatial Tilt', settings_canvas: 'Canvas',
                 on_label: 'AN', off_label: 'AUS',
                 standby_idle_title: 'Aktuell ist es ruhig...', standby_idle_subtitle: 'Genieße die Stille', standby_hint: 'Zum Verlassen tippen',
                 install_btn: '📲 App installieren',
@@ -6510,7 +6528,7 @@
                 greeting_evening: '🌆 Guten Abend! Viel Spaß beim Stöbern.',
                 greeting_late_night: '🌙 Nachteule, wie ich sehe. Willkommen!',
                 socials_section_title: 'Socials & Kanäle',
-                settings_wakelock: 'Bildschirm an (StandBy)', settings_wakelock_hint: 'Hält den Bildschirm nur wach, solange Musik läuft - pausiert sie, darf das Handy normal einschlafen.', settings_notifications: 'Benachrichtigungen', notifications_unsupported: 'nicht verfügbar', notifications_on: 'AN', notifications_blocked: 'blockiert - in Browser-Einstellungen ändern', notifications_not_set: 'nicht eingerichtet, antippen', notifications_denied_hint: 'Du hast Benachrichtigungen blockiert - das kann ich nicht per Klick zurücksetzen, nur du selbst in den Browser-/System-Einstellungen für diese Seite.', notifications_enabled_toast: '🔔 Benachrichtigungen sind jetzt aktiviert.', settings_notification_hint: 'Für die "Willkommen zurück"-Meldung, falls Musik pausiert war während du weg warst.', settings_standby_design: 'StandBy-Design', standby_design_classic: 'Classic', standby_design_minimal: 'Minimal', standby_design_cover_focus: 'Cover-Fokus', standby_design_clock_only: 'Nur Uhr', standby_design_vinyl: 'Vinyl', standby_design_split: 'Split', standby_design_typography: 'Typografie', standby_design_edge_glow: 'Edge-Glow', standby_design_compact: 'Kompakt', standby_design_poster: 'Poster', standby_design_frame: 'Rahmen', standby_design_neon: 'Neon', standby_design_polaroid: 'Polaroid', standby_design_bar: 'Leiste', standby_design_grid: 'Raster', standby_design_transparent: 'Transparent', standby_design_giant_clock: 'Riesen-Uhr', standby_design_zen: 'Zen', standby_design_stacked: 'Gestapelt', standby_design_contrast: 'Kontrast', standby_design_cyberpunk: 'Cyberpunk', standby_design_cassette: 'Retro-Kassette', standby_design_ambient_orb: 'Ambient-Orb', standby_design_hologram: 'Hologram', standby_design_studio: 'Studio', label_standby_accent: 'Akzentfarbe', label_standby_radius: 'Eckenradius', label_standby_design_code: 'Design-Code teilen', design_code_placeholder: 'Code hier einfügen...', btn_design_code_copy: 'Kopieren', btn_design_code_load: 'Laden', settings_design_code_hint: 'Kopiere deinen StandBy-Look als Code und schick ihn Freunden - die laden ihn hier ein und haben genau denselben Style.', standby_design_code_copied: '📋 Code kopiert - jetzt an Freunde weitergeben!', standby_design_code_loaded: '✨ Design geladen!', standby_design_code_invalid: 'Das war kein gültiger Design-Code.', label_standby_scale: 'StandBy-Größe', settings_standby_scale_hint: 'Passt sich automatisch an deinen Bildschirm an - hier nur bei Bedarf feinjustieren.', settings_haptic: 'Haptic-Feedback', settings_sound: 'UI-Sounds', whatsnew_summary_title: 'Updates seit deinem letzten Besuch',
+                settings_wakelock: 'Bildschirm an (StandBy)', settings_wakelock_hint: 'Hält den Bildschirm nur wach, solange Musik läuft - pausiert sie, darf das Handy normal einschlafen.', settings_notifications: 'Benachrichtigungen', notifications_unsupported: 'nicht verfügbar', notifications_on: 'AN', notifications_blocked: 'blockiert - in Browser-Einstellungen ändern', notifications_not_set: 'nicht eingerichtet, antippen', notifications_denied_hint: 'Du hast Benachrichtigungen blockiert - das kann ich nicht per Klick zurücksetzen, nur du selbst in den Browser-/System-Einstellungen für diese Seite.', notifications_enabled_toast: '🔔 Benachrichtigungen sind jetzt aktiviert.', settings_notification_hint: 'Für die "Willkommen zurück"-Meldung, falls Musik pausiert war während du weg warst.', settings_standby_design: 'StandBy-Design', standby_design_classic: 'Classic', standby_design_minimal: 'Minimal', standby_design_cover_focus: 'Cover-Fokus', standby_design_clock_only: 'Nur Uhr', standby_design_vinyl: 'Vinyl', standby_design_split: 'Split', standby_design_typography: 'Typografie', standby_design_edge_glow: 'Edge-Glow', standby_design_compact: 'Kompakt', standby_design_poster: 'Poster', standby_design_frame: 'Rahmen', standby_design_neon: 'Neon', standby_design_polaroid: 'Polaroid', standby_design_bar: 'Leiste', standby_design_grid: 'Raster', standby_design_transparent: 'Transparent', standby_design_giant_clock: 'Riesen-Uhr', standby_design_zen: 'Zen', standby_design_stacked: 'Gestapelt', standby_design_contrast: 'Kontrast', standby_design_cyberpunk: 'Cyberpunk', standby_design_cassette: 'Retro-Kassette', standby_design_ambient_orb: 'Ambient-Orb', standby_design_hologram: 'Hologram', standby_design_studio: 'Studio', label_standby_accent: 'Akzentfarbe', label_standby_radius: 'Eckenradius', label_standby_design_code: 'Design-Code teilen', design_code_placeholder: 'Code hier einfügen...', btn_design_code_copy: 'Kopieren', btn_design_code_load: 'Laden', settings_design_code_hint: 'Kopiere deinen StandBy-Look als Code und schick ihn Freunden - die laden ihn hier ein und haben genau denselben Style.', standby_design_code_copied: '📋 Code kopiert - jetzt an Freunde weitergeben!', standby_design_code_loaded: '✨ Design geladen!', standby_design_code_invalid: 'Das war kein gültiger Design-Code.', label_standby_scale: 'StandBy-Größe', settings_standby_scale_hint: 'Passt sich automatisch an deinen Bildschirm an - hier nur bei Bedarf feinjustieren.', settings_haptic: 'Haptik', settings_sound: 'UI-Sounds', whatsnew_summary_title: 'Updates seit deinem letzten Besuch',
                 mini_click_to_open: 'Klicken zum Öffnen', mini_click_to_close: 'Klicken zum Schließen',
                 aria_cp: 'Befehlspalette öffnen', aria_install: 'Als App installieren', aria_island: 'Song-Details öffnen, nach oben wischen zum Ausblenden',
                 btn_speak_bio: 'Bio vorlesen', btn_smart_briefing: 'Smart Live-Briefing',
@@ -14472,7 +14490,14 @@ window.generateShareCard = function() {
             }
             if (show) { pushOverlayHistory(); } else { popOverlayHistory(); }
             const diEl = document.getElementById('dynamic-island');
+            const miniToggleEl = document.getElementById('mini-player-toggle');
+            const musicNoteEl = document.getElementById('music-sync-note');
+            const musicTitleEl = document.getElementById('music-section-title');
             if(show) {
+                document.body.classList.add('lyrics-mode-active');
+                if (miniToggleEl) miniToggleEl.classList.add('hidden');
+                if (musicNoteEl) musicNoteEl.classList.add('hidden');
+                if (musicTitleEl) musicTitleEl.classList.add('hidden');
                 if (diEl) {
                     diEl.classList.add('di-hidden-by-lyrics');
                     updateIslandRing();
@@ -14480,9 +14505,16 @@ window.generateShareCard = function() {
                 mainMusicCard.classList.remove('lyrics-closing-state');
                 void mainMusicCard.offsetWidth; // Reflow erzwingen
                 mainMusicCard.classList.add('lyrics-open');
-                setTimeout(() => syncLyricsUI(true), 100);
+                setTimeout(() => {
+                    syncLyricsUI(true);
+                    mainMusicCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 100);
                 startProgressTracking();
             } else {
+                document.body.classList.remove('lyrics-mode-active');
+                if (miniToggleEl) miniToggleEl.classList.remove('hidden');
+                if (musicNoteEl) musicNoteEl.classList.remove('hidden');
+                if (musicTitleEl) musicTitleEl.classList.remove('hidden');
                 if (diEl) {
                     diEl.classList.remove('di-hidden-by-lyrics');
                     updateIslandRing();
