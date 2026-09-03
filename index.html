@@ -3534,7 +3534,6 @@
 
         body.liquid-glass-active .modal-opening .modal-content,
         body.liquid-glass-active .lyrics-open #lyrics-overlay,
-        body.liquid-glass-active .settings-opening,
         body.liquid-glass-active .picker-opening,
         body.liquid-glass-active .tutorial-opening {
             display: flex !important;
@@ -3545,13 +3544,32 @@
         
         body.liquid-glass-active .modal-closing .modal-content,
         body.liquid-glass-active .lyrics-closing-state #lyrics-overlay,
-        body.liquid-glass-active .settings-closing,
         body.liquid-glass-active .picker-closing,
         body.liquid-glass-active .tutorial-closing {
             animation: ext-pop-out 0.9s var(--liquid-fluid) forwards !important;
             transform-origin: center center;
             will-change: transform, opacity;
             display: flex !important; /* Sicherstellen, dass es sichtbar bleibt während Animation */
+        }
+
+        /* Dedizierte, präzise Dropdown-Animation für Lyrics-Einstellungen */
+        @keyframes lyrics-menu-in {
+            0% { opacity: 0; transform: scale(0.95) translateY(-6px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        @keyframes lyrics-menu-out {
+            0% { opacity: 1; transform: scale(1) translateY(0); }
+            100% { opacity: 0; transform: scale(0.95) translateY(-6px); }
+        }
+        #lyrics-settings-menu.settings-opening {
+            display: flex !important;
+            animation: lyrics-menu-in 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+            transform-origin: top right;
+        }
+        #lyrics-settings-menu.settings-closing {
+            display: flex !important;
+            animation: lyrics-menu-out 0.15s ease-out forwards !important;
+            transform-origin: top right;
         }
 
         body.liquid-glass-active .dashboard-opening #main-music-card { animation: ext-dashboard-in 1.2s var(--liquid-fluid) forwards !important; transform-origin: top center; will-change: transform, opacity; }
@@ -3592,8 +3610,8 @@
         body.liquid-glass-active .tutorial-morphing { animation: tutorial-morph 0.5s var(--liquid-fluid) !important; }
 
         /* --- STANDARD FALLBACKS --- */
-        .modal-opening .modal-content, .picker-opening, .tutorial-opening, .settings-opening { animation: std-pop-in 0.5s var(--apple-spring) forwards; }
-        .modal-closing .modal-content, .picker-closing, .tutorial-closing, .settings-closing { animation: std-pop-out 0.4s var(--apple-ease) forwards; }
+        .modal-opening .modal-content, .picker-opening, .tutorial-opening { animation: std-pop-in 0.5s var(--apple-spring) forwards; }
+        .modal-closing .modal-content, .picker-closing, .tutorial-closing { animation: std-pop-out 0.4s var(--apple-ease) forwards; }
         .dashboard-opening #main-music-card { animation: std-pop-in 0.5s var(--apple-spring) forwards; transform-origin: top center; }
         .dashboard-closing #main-music-card { animation: std-pop-out 0.4s var(--apple-ease) forwards; transform-origin: top center; }
         /* NEW: Kart-Dashboard bekommt dieselben Pop-In/Pop-Out-Animationen wie das Musik-
@@ -4437,8 +4455,19 @@
             transition: width 0.7s var(--liquid-fluid), height 0.7s var(--liquid-fluid), border-radius 0.6s var(--liquid-fluid), opacity 0.4s ease, padding 0.7s var(--liquid-fluid), box-shadow 0.4s ease, top 0.4s ease, left 0.4s ease;
         }
         #dynamic-island.di-visible { opacity: 1; pointer-events: auto; }
-        /* NEW: Im StandBy-Modus soll die Insel nicht zu sehen sein (überlagert sonst den Lockscreen) */
-        #dynamic-island.di-hidden-by-standby { opacity: 0 !important; pointer-events: none !important; }
+        /* NEW: Insel ausblenden wenn StandBy, Lyrics, Dashboard oder Musikbereich aktiv/im Bild ist (verhindert Überlappungen und doppelte Player) */
+        #dynamic-island.di-hidden-by-standby,
+        #dynamic-island.di-hidden-by-lyrics,
+        #dynamic-island.di-hidden-by-dashboard,
+        #dynamic-island.di-hidden-by-section {
+            opacity: 0 !important;
+            pointer-events: none !important;
+            transform: translateX(-50%) scale(0.85) translateZ(0) !important;
+        }
+        #dynamic-island-ring.di-ring-hidden {
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
         /* Sanfter Puls-Ring im eingeklappten (persistenten) Zustand: eigenes, nicht
            geclipptes Wrapper-Element (die Insel selbst hat overflow:hidden für den
            Inhalt), animiert nur über transform/opacity statt box-shadow (günstiger
@@ -5693,55 +5722,58 @@
                         <div id="lyrics-ambient-bg"></div>
                         <div id="lyrics-ambient-tint"></div>
                         
-                        <div class="flex items-center justify-between gap-1.5 xxs:gap-2 sm:gap-4 mb-3 xxs:mb-4 sm:mb-6 shrink-0 w-full bg-white/10 p-1.5 xxs:p-2 xs:p-3 sm:p-4 rounded-lg xxs:rounded-xl sm:rounded-2xl border border-white/10 relative z-[100]">
-                            <div class="flex items-center gap-1.5 xxs:gap-2 sm:gap-3 min-w-0 flex-1">
-                                    <!-- FIX v24.87: <img> -> <canvas>, siehe ausführliche Begründung bei #di-art. -->
-                                    <canvas id="lyrics-mini-art" aria-label="Album Art" class="w-6 h-6 xxs:w-8 xxs:h-8 sm:w-10 sm:h-10 rounded shadow-md object-cover shrink-0"></canvas>
-                                    <div class="text-left min-w-0">
-                                        <p id="lyrics-mini-title" class="text-[10px] xxs:text-xs sm:text-sm font-bold text-white truncate" data-i18n-placeholder="true">Titel</p>
-                                        <p id="lyrics-mini-artist" class="text-[8px] xxs:text-[10px] sm:text-xs text-white/60 truncate" data-i18n-placeholder="true">Artist</p>
-                                    </div>
+                        <div class="flex items-center justify-between gap-1 xxs:gap-1.5 sm:gap-4 mb-2 xxs:mb-3 sm:mb-6 shrink-0 w-full bg-white/10 p-1.5 xxs:p-2 xs:p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-white/10 relative z-[100]">
+                            <div class="flex items-center gap-1.5 xxs:gap-2 sm:gap-3 min-w-0 flex-1 pr-1">
+                                <!-- FIX v24.87: <img> -> <canvas>, siehe ausführliche Begründung bei #di-art. -->
+                                <canvas id="lyrics-mini-art" aria-label="Album Art" class="w-6 h-6 xxs:w-8 xxs:h-8 sm:w-10 sm:h-10 rounded shadow-md object-cover shrink-0"></canvas>
+                                <div class="text-left min-w-0 flex-1">
+                                    <p id="lyrics-mini-title" class="text-[10px] xxs:text-xs sm:text-sm font-bold text-white truncate" data-i18n-placeholder="true">Titel</p>
+                                    <p id="lyrics-mini-artist" class="text-[8px] xxs:text-[10px] sm:text-xs text-white/60 truncate" data-i18n-placeholder="true">Artist</p>
                                 </div>
-                                
-                                <div class="relative flex items-center">
-                                    <div id="apple-style-badge" class="px-1.5 xxs:px-2 py-1 mr-1 xxs:mr-2 bg-gradient-to-r from-pink-500/20 to-red-500/20 text-pink-300 text-[8px] xxs:text-[10px] sm:text-xs rounded font-bold shrink-0 whitespace-nowrap hidden items-center gap-1">
-                                        🍎 Apple Music Style
-                                    </div>
-                                    <div id="sync-status-badge" class="px-1.5 xxs:px-2 py-1 mr-1 xxs:mr-2 bg-blue-500/20 text-blue-400 text-[8px] xxs:text-[10px] sm:text-xs rounded font-bold shrink-0 whitespace-nowrap hidden">
-                                        <span id="lyrics-synced-label">Lyrics: Synced</span>
-                                    </div>
+                            </div>
+                            
+                            <div class="relative flex items-center shrink-0">
+                                <div id="apple-style-badge" class="px-1.5 xxs:px-2 py-0.5 xxs:py-1 mr-1 bg-gradient-to-r from-pink-500/20 to-red-500/20 text-pink-300 text-[8px] xxs:text-[10px] sm:text-xs rounded-full font-bold shrink-0 whitespace-nowrap hidden items-center gap-1">
+                                    🍎 <span class="hidden xs:inline">Apple Music </span>Style
+                                </div>
+                                <div id="sync-status-badge" class="px-1.5 xxs:px-2 py-0.5 xxs:py-1 mr-1 bg-blue-500/20 text-blue-400 text-[8px] xxs:text-[10px] sm:text-xs rounded-full font-bold shrink-0 whitespace-nowrap hidden">
+                                    <span id="lyrics-synced-label">Synced</span>
+                                </div>
 
-                                    <button onclick="toggleLyricsSettings(event)" id="btn-lyrics-settings" aria-label="Lyrics Einstellungen" class="p-1 xxs:p-1.5 sm:p-2 hover:bg-white/10 rounded-full transition-colors text-white shrink-0 mr-0.5 xxs:mr-1 sm:mr-2">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-4 xxs:h-4 sm:w-5 sm:h-5"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/></svg>
-                                    </button>
+                                <button onclick="toggleLyricsSettings(event)" id="btn-lyrics-settings" aria-label="Lyrics Einstellungen" class="p-1 xxs:p-1.5 sm:p-2 hover:bg-white/10 rounded-full transition-colors text-white shrink-0 mr-0.5 xxs:mr-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-4 xxs:h-4 sm:w-5 sm:h-5"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/></svg>
+                                </button>
                                     
                                     <!-- Das Settings Menü Fenster -->
-                                    <div id="lyrics-settings-menu" class="absolute top-full right-0 mt-2 xxs:mt-3 sm:mt-4 bg-slate-900 border border-slate-700 rounded-xl p-1.5 xxs:p-2 sm:p-3 shadow-2xl hidden flex-col gap-1.5 min-w-[140px] xxs:min-w-[160px] sm:min-w-[180px] z-[9999] origin-top-right max-h-[350px] overflow-y-auto" style="overscroll-behavior: contain;">
-                                        <p id="label-animation-style" class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1 px-1 sticky top-0 bg-slate-900 py-1 z-10">Animation Style</p>
-                                        <!-- NEW: Kompaktes Dropdown statt 61 einzelner Buttons - hält die
-                                             Einstellungen übersichtlich, egal wie viele Stile es gibt. Wird
-                                             per JS aus einem zentralen LYRICS_STYLES-Register befüllt. -->
-                                        <select id="lyrics-style-select" onchange="setLyricsStyle(this.value)" class="w-full bg-slate-800 text-white text-[10px] xxs:text-xs sm:text-sm px-2 py-1.5 rounded border border-slate-600 mb-1.5"></select>
-                                        <!-- NEW: Live-Vorschau - zeigt sofort, wie der ausgewählte Stil
-                                             aussieht, anhand eines generischen Beispieltextes (keine echten
-                                             Songtexte). -->
-                                        <div id="lyrics-style-preview-box" class="w-full bg-black/40 rounded-lg p-2.5 mb-1 overflow-hidden text-center min-h-[52px] flex items-center justify-center">
-                                            <p id="lyrics-style-preview-text" class="text-sm xxs:text-base font-bold leading-snug"></p>
+                                    <div id="lyrics-settings-menu" class="absolute top-full right-0 mt-2 xxs:mt-3 bg-slate-900/98 border border-slate-700/80 rounded-2xl p-2.5 xxs:p-3 sm:p-3.5 shadow-2xl hidden flex flex-col gap-2 w-[275px] xxs:w-[305px] sm:w-[335px] max-w-[calc(100vw-2rem)] z-[9999] origin-top-right max-h-[390px] overflow-y-auto backdrop-blur-2xl" style="overscroll-behavior: contain;">
+                                        <p id="label-animation-style" class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-slate-400 px-1 sticky top-0 bg-slate-900/95 py-0.5 z-10">Animation Style</p>
+                                        <select id="lyrics-style-select" onchange="setLyricsStyle(this.value)" class="w-full bg-slate-800 text-white text-[10px] xxs:text-xs sm:text-sm px-2.5 py-2 rounded-xl border border-slate-600 focus:outline-none focus:border-blue-500 mb-0.5"></select>
+                                        <div id="lyrics-style-preview-box" class="w-full bg-black/50 rounded-xl p-2.5 overflow-hidden text-center min-h-[56px] flex items-center justify-center select-none border border-white/5">
+                                            <p id="lyrics-style-preview-text" class="lyric-line active text-sm xxs:text-base font-bold leading-snug !m-0 !max-w-full !p-0"></p>
                                         </div>
 
-                                        <div class="h-px w-full bg-slate-700 my-1"></div>
-                                        <p id="label-features" class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1 px-1">Features</p>
-                                        <button onclick="toggleCanvasVideo()" id="btn-toggle-canvas" class="text-left text-[10px] xxs:text-xs sm:text-sm text-green-400 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">Canvas: AN</button>
-                                        <button onclick="toggleAmbientColor()" id="btn-toggle-ambient" class="text-left text-[10px] xxs:text-xs sm:text-sm text-cyan-400 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">Ambient Color: AN</button>
-                                        <button onclick="toggleColorFrame()" id="btn-toggle-color-frame" class="text-left text-[10px] xxs:text-xs sm:text-sm text-cyan-400 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">Cover-Farbrahmen: AN</button>
-                                        <button onclick="toggleGlowEffect()" id="btn-toggle-glow" class="text-left text-[10px] xxs:text-xs sm:text-sm text-orange-400 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">Hintergrund-Glow: AN</button>
-                                        <button onclick="toggleCoverGlow()" id="btn-toggle-cover-glow" class="text-left text-[10px] xxs:text-xs sm:text-sm text-yellow-400 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">Cover-Glow: AN</button>
-                                        <button onclick="toggleTilt()" id="btn-toggle-tilt" class="text-left text-[10px] xxs:text-xs sm:text-sm text-purple-400 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">Spatial Tilt: AN</button>
-                                        <button onclick="generateShareCard()" id="btn-share-card" class="text-left text-[10px] xxs:text-xs sm:text-sm text-pink-400 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">🎴 Share Card erstellen</button>
-                                        <button onclick="quickExportSongCard()" id="btn-quick-export" class="text-left text-[10px] xxs:text-xs sm:text-sm text-pink-300 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">📸 Schnellexport (Classic)</button>
-                                        <!-- NEU v24.22: Songtext vorlesen + Stimmauswahl -->
-                                        <button onclick="speakLyrics(this)" id="btn-speak-lyrics" class="text-left text-[10px] xxs:text-xs sm:text-sm text-cyan-300 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">🔊 Songtext vorlesen</button>
-                                        <select id="tts-voice-select" onchange="setTtsVoiceId(this.value)" class="w-full bg-slate-800 text-white text-[10px] xxs:text-xs sm:text-sm px-2 py-1.5 rounded border border-slate-600 mb-1.5"></select>
+                                        <div class="h-px w-full bg-slate-700/70 my-0.5"></div>
+                                        <p id="label-features" class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-slate-400 px-1">Features</p>
+                                        <div class="grid grid-cols-2 gap-1.5 w-full">
+                                            <button onclick="toggleCanvasVideo()" id="btn-toggle-canvas" class="text-left text-[10px] xxs:text-xs text-green-400 px-2.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold truncate active:scale-95">Canvas: AN</button>
+                                            <button onclick="toggleAmbientColor()" id="btn-toggle-ambient" class="text-left text-[10px] xxs:text-xs text-cyan-400 px-2.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold truncate active:scale-95">Ambient: AN</button>
+                                            <button onclick="toggleColorFrame()" id="btn-toggle-color-frame" class="text-left text-[10px] xxs:text-xs text-cyan-400 px-2.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold truncate active:scale-95">Farbrahmen: AN</button>
+                                            <button onclick="toggleGlowEffect()" id="btn-toggle-glow" class="text-left text-[10px] xxs:text-xs text-orange-400 px-2.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold truncate active:scale-95">Glow-Effekt: AN</button>
+                                            <button onclick="toggleCoverGlow()" id="btn-toggle-cover-glow" class="text-left text-[10px] xxs:text-xs text-yellow-400 px-2.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold truncate active:scale-95">Cover-Glow: AN</button>
+                                            <button onclick="toggleTilt()" id="btn-toggle-tilt" class="text-left text-[10px] xxs:text-xs text-purple-400 px-2.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold truncate active:scale-95">Spatial Tilt: AN</button>
+                                            <button onclick="toggleUiSoundEnabled()" id="btn-toggle-sound" class="text-left text-[10px] xxs:text-xs text-teal-400 px-2.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold truncate active:scale-95">UI-Sounds: AN</button>
+                                            <button onclick="toggleHapticEnabled()" id="btn-toggle-haptic" class="text-left text-[10px] xxs:text-xs text-teal-400 px-2.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold truncate active:scale-95">Haptik: AN</button>
+                                        </div>
+                                        <div class="grid grid-cols-2 gap-1.5 w-full mt-0.5">
+                                            <button onclick="generateShareCard()" id="btn-share-card" class="text-center text-[10px] xxs:text-xs text-pink-300 px-2 py-2 rounded-xl bg-pink-500/15 hover:bg-pink-500/25 border border-pink-500/20 transition-all font-bold truncate active:scale-95">🎴 Share Card</button>
+                                            <button onclick="quickExportSongCard()" id="btn-quick-export" class="text-center text-[10px] xxs:text-xs text-pink-300 px-2 py-2 rounded-xl bg-pink-500/15 hover:bg-pink-500/25 border border-pink-500/20 transition-all font-bold truncate active:scale-95">📸 Export</button>
+                                        </div>
+                                        <div class="w-full flex flex-col gap-1 mt-0.5">
+                                            <button onclick="speakLyrics(this)" id="btn-speak-lyrics" class="w-full text-center text-[10px] xxs:text-xs text-cyan-300 px-2.5 py-2 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/20 transition-all font-bold active:scale-95 flex items-center justify-center gap-1.5">
+                                                <span>📢</span> <span>Songtext vorlesen</span>
+                                            </button>
+                                            <select id="tts-voice-select" onchange="setTtsVoiceId(this.value)" class="w-full bg-slate-800 text-white text-[10px] xxs:text-xs px-2.5 py-2 rounded-xl border border-slate-700"></select>
+                                        </div>
                                         <!-- NEW: StandBy-Transparenz-Regler - steuert, wie blickdicht der schwarze
                                              Hintergrund im StandBy-/Lockscreen-Modus ist. -->
                                         <div class="px-2 py-1.5">
@@ -5752,9 +5784,6 @@
                                             <input type="range" id="standby-opacity-slider" min="0" max="100" step="5" value="0" class="w-full accent-blue-500" oninput="updateStandbyOpacity(this.value)">
                                         </div>
                                         <!-- NEW: Bildschirm-an-Regler für StandBy (Screen Wake Lock API) -->
-                                        <!-- NEU v24.92: Haptic-Feedback Ein/Aus (Nutzerwunsch). -->
-                                        <button onclick="toggleUiSoundEnabled()" id="btn-toggle-sound" class="text-left text-[10px] xxs:text-xs sm:text-sm text-teal-400 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">UI-Sounds: AN</button>
-                                        <button onclick="toggleHapticEnabled()" id="btn-toggle-haptic" class="text-left text-[10px] xxs:text-xs sm:text-sm text-teal-400 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">Haptic-Feedback: AN</button>
                                         <button onclick="toggleStandbyWakeLock()" id="btn-toggle-wakelock" class="text-left text-[10px] xxs:text-xs sm:text-sm text-teal-400 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">Bildschirm an (StandBy): AN</button>
                                         <!-- NEU v24.74: Nutzer wünschte sich bessere Aufklärung darüber, was diese
                                              Einstellung eigentlich tut, statt nur "AN/AUS" ohne Kontext. -->
@@ -7876,10 +7905,6 @@
             ]}
         ];
 
-        // NEW: Generischer, nicht-urheberrechtlich-geschützter Beispieltext für die
-        // Live-Vorschau - bewusst KEIN echter Songtext, nur ein neutraler Platzhaltersatz.
-        const LYRICS_PREVIEW_SENTENCE = "This is a quick animation preview. Pick your favorite style above.";
-
         function populateLyricsStyleDropdown() {
             const select = document.getElementById('lyrics-style-select');
             if (!select) return;
@@ -7890,35 +7915,126 @@
             select.value = currentLyricsStyle;
         }
 
+        const LYRICS_PREVIEW_WORDS = ["Feel", "the", "sound", "flow"];
         let lyricsPreviewLoopInterval = null;
+        let lyricsPreviewStep = 0;
+
         function updateLyricsStylePreview(style) {
             const box = document.getElementById('lyrics-style-preview-box');
             const textEl = document.getElementById('lyrics-style-preview-text');
             if (!box || !textEl) return;
-            box.className = `w-full bg-black/40 rounded-lg p-2.5 mb-1 overflow-hidden text-center min-h-[52px] flex items-center justify-center lyrics-style-${style}`;
+            box.className = `w-full bg-black/40 rounded-xl p-2.5 mb-1 overflow-hidden text-center min-h-[56px] flex items-center justify-center select-none lyrics-style-${style}`;
+            textEl.className = 'lyric-line active text-sm xxs:text-base font-bold leading-snug !m-0 !max-w-full !p-0';
 
-            // NEW: Bugfix - die Vorschau spielte die Animation bisher nur EINMAL beim
-            // Öffnen/Wechseln ab und blieb danach bewegungslos stehen, wirkte dadurch wie
-            // "eingefroren"/kaputt. Jetzt läuft sie als echte Dauerschleife: alle 2.5s wird
-            // der Inhalt frisch neu erzeugt, was den Animationsstart bei jedem Durchlauf
-            // sauber neu auslöst (CSS-Animationen starten automatisch, sobald ein Element
-            // mit bereits aktiver Animations-Klasse frisch ins DOM eingefügt wird).
-            const renderOnce = () => {
-                const words = LYRICS_PREVIEW_SENTENCE.split(' ');
-                textEl.innerHTML = words.map((w, wi) =>
-                    `<span class="lyric-word word-active" style="--fill-percent:100%">${w.split('').map((c, ci) =>
-                        `<span class="lyric-char char-active" style="animation-delay:${(wi * 0.15 + ci * 0.03).toFixed(2)}s">${c}</span>`).join('')}</span>`
-                ).join(' ');
-            };
-            renderOnce();
+            const isCharStyle = CHAR_LEVEL_STYLES.has(style);
+            lyricsPreviewStep = 0;
+
+            if (isCharStyle) {
+                textEl.innerHTML = LYRICS_PREVIEW_WORDS.map((w, wi) => {
+                    const chars = w.split('').map((c, ci) => `<span id="prev-char-${wi}-${ci}" class="lyric-char">${escapeHTML(c)}</span>`).join('');
+                    return `<span id="prev-word-${wi}" class="lyric-word inline-block mx-1" style="--fill-percent:0%; --word-hold-scale:1.14;">${chars}</span>`;
+                }).join(' ');
+            } else {
+                textEl.innerHTML = LYRICS_PREVIEW_WORDS.map((w, wi) => {
+                    return `<span id="prev-word-${wi}" class="lyric-word inline-block mx-1" style="--fill-percent:0%; --word-hold-scale:1.14;">${escapeHTML(w)}</span>`;
+                }).join(' ');
+            }
+
+            const totalWords = LYRICS_PREVIEW_WORDS.length;
+            const totalSteps = totalWords + 2;
+
+            function tickPreviewStep(step) {
+                for (let wi = 0; wi < totalWords; wi++) {
+                    const wSpan = document.getElementById(`prev-word-${wi}`);
+                    if (!wSpan) continue;
+                    const wordLen = LYRICS_PREVIEW_WORDS[wi].length;
+
+                    if (step < totalWords) {
+                        if (wi < step) {
+                            wSpan.classList.remove('word-active');
+                            wSpan.classList.add('word-passed');
+                            wSpan.style.setProperty('--fill-percent', '100%');
+                            if (isCharStyle) {
+                                for (let ci = 0; ci < wordLen; ci++) {
+                                    const cSpan = document.getElementById(`prev-char-${wi}-${ci}`);
+                                    if (cSpan) {
+                                        cSpan.classList.remove('char-active');
+                                        cSpan.classList.add('char-passed');
+                                    }
+                                }
+                            }
+                        } else if (wi === step) {
+                            wSpan.classList.remove('word-passed');
+                            wSpan.classList.add('word-active');
+                            wSpan.style.setProperty('--fill-percent', '100%');
+                            if (isCharStyle) {
+                                for (let ci = 0; ci < wordLen; ci++) {
+                                    const cSpan = document.getElementById(`prev-char-${wi}-${ci}`);
+                                    if (cSpan) {
+                                        cSpan.classList.remove('char-passed');
+                                        cSpan.classList.add('char-active');
+                                    }
+                                }
+                            }
+                        } else {
+                            wSpan.classList.remove('word-active', 'word-passed');
+                            wSpan.style.setProperty('--fill-percent', '0%');
+                            if (isCharStyle) {
+                                for (let ci = 0; ci < wordLen; ci++) {
+                                    const cSpan = document.getElementById(`prev-char-${wi}-${ci}`);
+                                    if (cSpan) {
+                                        cSpan.classList.remove('char-active', 'char-passed');
+                                    }
+                                }
+                            }
+                        }
+                    } else if (step === totalWords) {
+                        wSpan.classList.remove('word-active');
+                        wSpan.classList.add('word-passed');
+                        wSpan.style.setProperty('--fill-percent', '100%');
+                        if (isCharStyle) {
+                            for (let ci = 0; ci < wordLen; ci++) {
+                                const cSpan = document.getElementById(`prev-char-${wi}-${ci}`);
+                                if (cSpan) {
+                                    cSpan.classList.remove('char-active');
+                                    cSpan.classList.add('char-passed');
+                                }
+                            }
+                        }
+                    } else {
+                        wSpan.classList.remove('word-active', 'word-passed');
+                        wSpan.style.setProperty('--fill-percent', '0%');
+                        if (isCharStyle) {
+                            for (let ci = 0; ci < wordLen; ci++) {
+                                const cSpan = document.getElementById(`prev-char-${wi}-${ci}`);
+                                if (cSpan) {
+                                    cSpan.classList.remove('char-active', 'char-passed');
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            tickPreviewStep(0);
+
             clearInterval(lyricsPreviewLoopInterval);
-            lyricsPreviewLoopInterval = setInterval(renderOnce, 2500);
+            lyricsPreviewLoopInterval = null;
+
+            if (typeof isLyricsSettingsOpen !== 'undefined' && isLyricsSettingsOpen && !document.hidden) {
+                lyricsPreviewLoopInterval = setInterval(() => {
+                    lyricsPreviewStep = (lyricsPreviewStep + 1) % totalSteps;
+                    tickPreviewStep(lyricsPreviewStep);
+                }, 550);
+            }
         }
-        // NEW: Bugfix - die Vorschau-Schleife lief unbemerkt im Hintergrund weiter, auch
-        // wenn das Einstellungsmenü längst geschlossen war, und verschwendete dadurch
-        // dauerhaft unnötig Rechenzeit. Jetzt wird sie explizit gestoppt, sobald das
-        // Lyrics-Einstellungsmenü geschlossen wird, und beim erneuten Öffnen neu gestartet.
-        function stopLyricsStylePreviewLoop() { clearInterval(lyricsPreviewLoopInterval); }
+
+        function stopLyricsStylePreviewLoop() {
+            if (lyricsPreviewLoopInterval) {
+                clearInterval(lyricsPreviewLoopInterval);
+                lyricsPreviewLoopInterval = null;
+            }
+        }
 
         // PERF-FIX v24.9 (radikal): Canvas-Video-Hintergründe (Spotify-Canvas-Loops) liefen
         // bisher standardmäßig AN (!== 'false' = an, außer explizit deaktiviert) und wurden bei
@@ -10194,8 +10310,13 @@
             const ring = document.getElementById('dynamic-island-ring');
             const island = document.getElementById('dynamic-island');
             if (!ring || !island) return;
-            const shouldPulse = island.classList.contains('di-visible') && !island.classList.contains('di-expanded') && !island.classList.contains('di-hidden-by-standby') && !document.body.classList.contains('low-end');
+            const isHidden = island.classList.contains('di-hidden-by-standby') || 
+                             island.classList.contains('di-hidden-by-lyrics') || 
+                             island.classList.contains('di-hidden-by-dashboard') || 
+                             island.classList.contains('di-hidden-by-section');
+            const shouldPulse = island.classList.contains('di-visible') && !island.classList.contains('di-expanded') && !isHidden && !document.body.classList.contains('low-end');
             ring.classList.toggle('di-ring-active', shouldPulse);
+            ring.classList.toggle('di-ring-hidden', isHidden);
         }
 
         function showIslandPersistent(title, artist, artUrl) {
@@ -13647,6 +13768,20 @@ window.generateShareCard = function() {
             revealObserver.observe(el);
         });
 
+        // Versteckt die Dynamic Island automatisch wenn der Musik-Bereich/Player im Blickfeld ist
+        const musicSectionEl = document.getElementById('music-section');
+        if (musicSectionEl && 'IntersectionObserver' in window) {
+            const diMusicObserver = new IntersectionObserver((entries) => {
+                const island = document.getElementById('dynamic-island');
+                if (!island) return;
+                entries.forEach(entry => {
+                    island.classList.toggle('di-hidden-by-section', entry.isIntersecting);
+                    updateIslandRing();
+                });
+            }, { threshold: 0.08 });
+            diMusicObserver.observe(musicSectionEl);
+        }
+
         // ========================================================= //
         // --- NEUES FEATURE: Back-to-Top-Button -------------------- //
         // ========================================================= //
@@ -14008,6 +14143,11 @@ window.generateShareCard = function() {
         window.toggleDashboard = function() {
             isDashboardOpen = !isDashboardOpen;
             document.body.classList.toggle('dashboard-open', isDashboardOpen);
+            const diEl = document.getElementById('dynamic-island');
+            if (diEl) {
+                diEl.classList.toggle('di-hidden-by-dashboard', isDashboardOpen);
+                updateIslandRing();
+            }
             if (isDashboardOpen) { pushOverlayHistory(); } else { popOverlayHistory(); }
             clearTimeout(dashboardTimeout); 
             clearTimeout(dashboardOpenTimeout);
@@ -14255,7 +14395,7 @@ window.generateShareCard = function() {
                 lyricsSettingsTimeout = setTimeout(() => {
                     lyricsSettingsMenu.classList.add('hidden');
                     lyricsSettingsMenu.classList.remove('settings-closing');
-                }, 900); // FIX: Zurück auf 900ms
+                }, 180); // 0.15s Pop-Out abwarten
             }
         };
 
@@ -14331,30 +14471,35 @@ window.generateShareCard = function() {
                 return;
             }
             if (show) { pushOverlayHistory(); } else { popOverlayHistory(); }
+            const diEl = document.getElementById('dynamic-island');
             if(show) {
+                if (diEl) {
+                    diEl.classList.add('di-hidden-by-lyrics');
+                    updateIslandRing();
+                }
                 mainMusicCard.classList.remove('lyrics-closing-state');
                 void mainMusicCard.offsetWidth; // Reflow erzwingen
                 mainMusicCard.classList.add('lyrics-open');
                 setTimeout(() => syncLyricsUI(true), 100);
-                // FIX v24.36: warmUpTts()-Aufruf entfernt - mit dem Umstieg auf die
-                // Browser-eigene Sprachausgabe (Web Speech API) gibt es keinen Download/
-                // Worker-Start mehr, den man vorwärmen müsste. Stimmen sind sofort verfügbar.
-                // NEU v24.47 (EFFIZIENZ): Vom sparsamen Intervall-Modus auf den vollen
-                // rAF-Loop umschalten, jetzt wo Lyrics wirklich sichtbar sind und die
-                // Wort-für-Wort-Synchronisation gebraucht wird.
                 startProgressTracking();
             } else {
+                if (diEl) {
+                    diEl.classList.remove('di-hidden-by-lyrics');
+                    updateIslandRing();
+                }
+                if (isLyricsSettingsOpen) {
+                    toggleLyricsSettings();
+                }
+                stopLyricsStylePreviewLoop();
                 mainMusicCard.classList.add('lyrics-closing-state');
-                // Wichtig: Um die Transition zurück auf Standard-Größe zu starten, direkt entfernen!
                 mainMusicCard.classList.remove('lyrics-open');
                 setTimeout(() => {
                     mainMusicCard.classList.remove('lyrics-closing-state');
                 }, 900); // Overlay Pop-Out Animation abwarten
-                // NEU v24.47 (EFFIZIENZ): Zurück auf den sparsamen Intervall-Modus wechseln -
-                // volle 60fps-Berechnung wird nicht mehr gebraucht, sobald niemand mehr die
-                // Songtext-Details sieht.
                 stopProgressTracking();
-                // NEU v24.51 (FIX): Overlay-Tiefen-Zähler auf Drift prüfen und ggf. korrigieren.
+                if (trackIsPlaying) {
+                    startProgressTracking();
+                }
                 resyncOverlayHistoryDepth();
             }
         };
@@ -14898,12 +15043,22 @@ window.generateShareCard = function() {
         function animateLoop(now) {
             if (!trackIsPlaying) {
                 isAnimating = false;
+                lyricAnimFrame = null;
                 return;
             }
 
             // NEU: In StandBy rAF-Loop komplett pausieren - verhindert 120Hz Dauerlast & Erhitzung auf OLED-Displays
             if (typeof standByActive !== 'undefined' && standByActive) {
                 isAnimating = false;
+                lyricAnimFrame = null;
+                return;
+            }
+
+            // PERF/HITZE-FIX: Wenn Lyrics nicht aktiv geöffnet sind, rAF-Loop sofort beenden!
+            // Spart 120Hz/60Hz Dauerlast, verhindert Smartphone-Überhitzung und Akku-Drain.
+            if (!mainMusicCard || !mainMusicCard.classList.contains('lyrics-open')) {
+                isAnimating = false;
+                lyricAnimFrame = null;
                 return;
             }
 
@@ -15018,21 +15173,39 @@ window.generateShareCard = function() {
                 return;
             }
 
-            if (isAnimating) return;
-            isAnimating = true;
-            if (lyricAnimFrame) cancelAnimationFrame(lyricAnimFrame);
-            lyricAnimFrame = requestAnimationFrame(animateLoop);
+            const isLyricsOpen = mainMusicCard && mainMusicCard.classList.contains('lyrics-open');
 
-            if (progressTickerInterval) clearInterval(progressTickerInterval);
-            progressTickerInterval = setInterval(() => {
-                if (!trackIsPlaying) return;
-                tickProgressInterval();
-            }, 250);
+            if (isLyricsOpen) {
+                if (progressTickerInterval) {
+                    clearInterval(progressTickerInterval);
+                    progressTickerInterval = null;
+                }
+                if (!isAnimating) {
+                    isAnimating = true;
+                    if (lyricAnimFrame) cancelAnimationFrame(lyricAnimFrame);
+                    lyricAnimFrame = requestAnimationFrame(animateLoop);
+                }
+            } else {
+                if (lyricAnimFrame) {
+                    cancelAnimationFrame(lyricAnimFrame);
+                    lyricAnimFrame = null;
+                }
+                isAnimating = false;
+                if (!progressTickerInterval) {
+                    progressTickerInterval = setInterval(() => {
+                        if (!trackIsPlaying) return;
+                        tickProgressInterval();
+                    }, 250);
+                }
+            }
         }
 
         function stopProgressTracking() {
             isAnimating = false;
-            if (lyricAnimFrame) cancelAnimationFrame(lyricAnimFrame);
+            if (lyricAnimFrame) {
+                cancelAnimationFrame(lyricAnimFrame);
+                lyricAnimFrame = null;
+            }
             if (progressTickerInterval) {
                 clearInterval(progressTickerInterval);
                 progressTickerInterval = null;
@@ -15042,8 +15215,14 @@ window.generateShareCard = function() {
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) {
                 stopProgressTracking();
-            } else if (trackIsPlaying) {
-                startProgressTracking();
+                stopLyricsStylePreviewLoop();
+            } else {
+                if (trackIsPlaying) {
+                    startProgressTracking();
+                }
+                if (typeof isLyricsSettingsOpen !== 'undefined' && isLyricsSettingsOpen) {
+                    updateLyricsStylePreview(currentLyricsStyle);
+                }
             }
         });
 
