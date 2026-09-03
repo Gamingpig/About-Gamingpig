@@ -3571,6 +3571,17 @@
             animation: lyrics-menu-out 0.15s ease-out forwards !important;
             transform-origin: top right;
         }
+        #lyrics-settings-menu {
+            background-color: #0f172a !important;
+            -webkit-overflow-scrolling: touch !important;
+            overscroll-behavior-y: contain !important;
+            transform: translate3d(0, 0, 0) !important;
+            will-change: scroll-position !important;
+        }
+        #lyrics-style-preview-box {
+            contain: paint layout !important;
+            transform: translate3d(0, 0, 0) !important;
+        }
 
         body.liquid-glass-active .dashboard-opening #main-music-card { animation: ext-dashboard-in 1.2s var(--liquid-fluid) forwards !important; transform-origin: top center; will-change: transform, opacity; }
         body.liquid-glass-active .dashboard-closing #main-music-card { animation: ext-dashboard-out 0.9s var(--liquid-fluid) forwards !important; transform-origin: top center; will-change: transform, opacity; }
@@ -5763,8 +5774,8 @@
                                 </button>
                                     
                                     <!-- Das Settings Menü Fenster -->
-                                    <div id="lyrics-settings-menu" class="absolute top-full right-0 mt-2 xxs:mt-3 bg-slate-900/98 border border-slate-700/80 rounded-2xl p-2.5 xxs:p-3 sm:p-3.5 shadow-2xl hidden flex flex-col gap-2 w-[285px] xxs:w-[315px] sm:w-[345px] max-w-[calc(100vw-1.5rem)] z-[9999] origin-top-right max-h-[390px] overflow-y-auto backdrop-blur-2xl" style="overscroll-behavior: contain;">
-                                        <p id="label-animation-style" class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-slate-400 px-1 sticky top-0 bg-slate-900/95 py-0.5 z-10">Animation Style</p>
+                                    <div id="lyrics-settings-menu" class="absolute top-full right-0 mt-2 xxs:mt-3 bg-[#0f172a] border border-slate-700/80 rounded-2xl p-2.5 xxs:p-3 sm:p-3.5 shadow-2xl hidden flex flex-col gap-2 w-[285px] xxs:w-[315px] sm:w-[345px] max-w-[calc(100vw-1.5rem)] z-[9999] origin-top-right max-h-[390px] overflow-y-auto" style="-webkit-overflow-scrolling: touch; overscroll-behavior-y: contain;">
+                                        <p id="label-animation-style" class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-slate-400 px-1 sticky top-0 bg-[#0f172a] py-0.5 z-10">Animation Style</p>
                                         <select id="lyrics-style-select" onchange="setLyricsStyle(this.value)" class="w-full bg-slate-800 text-white text-[10px] xxs:text-xs sm:text-sm px-2.5 py-2 rounded-xl border border-slate-600 focus:outline-none focus:border-blue-500 mb-0.5"></select>
                                         <div id="lyrics-style-preview-box" class="w-full bg-black/50 rounded-xl p-2.5 overflow-hidden text-center min-h-[56px] flex items-center justify-center select-none border border-white/5">
                                             <p id="lyrics-style-preview-text" class="lyric-line active text-sm xxs:text-base font-bold leading-snug !m-0 !max-w-full !p-0"></p>
@@ -14422,6 +14433,38 @@ window.generateShareCard = function() {
                 toggleLyricsSettings();
             }
         });
+
+        const lyricsStyleSelectEl = document.getElementById('lyrics-style-select');
+        if (lyricsStyleSelectEl) {
+            lyricsStyleSelectEl.addEventListener('focus', () => {
+                stopLyricsStylePreviewLoop();
+                if (isAnimating && lyricAnimFrame) {
+                    cancelAnimationFrame(lyricAnimFrame);
+                    lyricAnimFrame = null;
+                    isAnimating = false;
+                }
+            }, { passive: true });
+
+            lyricsStyleSelectEl.addEventListener('blur', () => {
+                if (typeof isLyricsSettingsOpen !== 'undefined' && isLyricsSettingsOpen) {
+                    updateLyricsStylePreview(currentLyricsStyle);
+                }
+                startProgressTracking();
+            }, { passive: true });
+        }
+
+        if (lyricsSettingsMenu) {
+            let menuScrollTimer = null;
+            lyricsSettingsMenu.addEventListener('scroll', () => {
+                stopLyricsStylePreviewLoop();
+                clearTimeout(menuScrollTimer);
+                menuScrollTimer = setTimeout(() => {
+                    if (typeof isLyricsSettingsOpen !== 'undefined' && isLyricsSettingsOpen) {
+                        updateLyricsStylePreview(currentLyricsStyle);
+                    }
+                }, 250);
+            }, { passive: true });
+        }
 
         window.setLyricsStyle = function(style) {
             currentLyricsStyle = style;
