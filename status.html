@@ -89,11 +89,33 @@
         </a>
 
         <div class="flex items-center gap-2 sm:gap-3">
-            <!-- TTS Button -->
-            <button id="tts-toggle-btn" onclick="toggleReadAloud()" class="inline-flex items-center gap-1 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-[11px] sm:text-xs font-bold transition-all shadow-md active:scale-95">
-                <span id="tts-icon">🔊</span>
-                <span id="tts-label">Vorlesen</span>
-            </button>
+            <!-- TTS Button & Speed Menu Container -->
+            <div class="relative inline-flex flex-col items-end">
+                <div class="inline-flex items-center rounded-xl bg-slate-800 border border-slate-700 shadow-md">
+                    <button id="tts-toggle-btn" onclick="toggleReadAloud()" class="inline-flex items-center gap-1 px-2.5 py-1.5 sm:px-3 sm:py-2 text-slate-200 hover:bg-slate-700 rounded-l-xl text-[11px] sm:text-xs font-bold transition-all active:scale-95">
+                        <span id="tts-icon">🔊</span>
+                        <span id="tts-label">Vorlesen</span>
+                    </button>
+                    <button id="tts-speed-btn" onclick="toggleTtsSpeedMenu()" class="px-1.5 py-1.5 sm:py-2 text-slate-400 hover:text-emerald-400 hover:bg-slate-700 rounded-r-xl border-l border-slate-700 text-[10px] sm:text-xs font-mono font-bold transition-colors" title="Sprachgeschwindigkeit anpassen">
+                        <span id="tts-speed-indicator">1.0x</span>
+                    </button>
+                </div>
+
+                <!-- Speed Menu Dropdown -->
+                <div id="tts-speed-menu" class="hidden absolute top-full right-0 mt-2 z-50 p-2 rounded-xl bg-slate-900/95 border border-slate-700 shadow-2xl backdrop-blur-xl min-w-[170px] animate-fadeIn">
+                    <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 py-1 flex items-center justify-between">
+                        <span>Tempo</span>
+                        <button onclick="stopSpeech()" class="text-rose-400 hover:text-rose-300 transition-colors font-sans">⏹ Stopp</button>
+                    </div>
+                    <div class="grid grid-cols-5 gap-1 mt-1">
+                        <button onclick="setTtsSpeed(0.8)" data-rate="0.8" class="tts-speed-pill px-1.5 py-1 rounded-lg text-center font-mono text-[10px] font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all">0.8x</button>
+                        <button onclick="setTtsSpeed(1.0)" data-rate="1.0" class="tts-speed-pill px-1.5 py-1 rounded-lg text-center font-mono text-[10px] font-bold bg-emerald-600 text-white transition-all">1.0x</button>
+                        <button onclick="setTtsSpeed(1.2)" data-rate="1.2" class="tts-speed-pill px-1.5 py-1 rounded-lg text-center font-mono text-[10px] font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all">1.2x</button>
+                        <button onclick="setTtsSpeed(1.5)" data-rate="1.5" class="tts-speed-pill px-1.5 py-1 rounded-lg text-center font-mono text-[10px] font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all">1.5x</button>
+                        <button onclick="setTtsSpeed(2.0)" data-rate="2.0" class="tts-speed-pill px-1.5 py-1 rounded-lg text-center font-mono text-[10px] font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all">2.0x</button>
+                    </div>
+                </div>
+            </div>
 
             <!-- Language Dropdown -->
             <div class="relative">
@@ -431,6 +453,8 @@
             <span>•</span>
             <a href="privacy.html" id="footer-privacy" class="hover:text-slate-300 transition-colors">Datenschutz</a>
             <span>•</span>
+            <a href="impressum.html" id="footer-impressum" class="hover:text-slate-300 transition-colors">Impressum</a>
+            <span>•</span>
             <span id="footer-status" class="text-emerald-400 font-bold">Live Status</span>
             <span>•</span>
             <a href="push-admin.html" id="footer-admin" class="hover:text-indigo-400 transition-colors">🔐 Admin</a>
@@ -509,6 +533,7 @@
                 footer_portfolio: "Portfolio",
                 footer_release: "Release v24.138.1",
                 footer_privacy: "Datenschutz",
+                footer_impressum: "Impressum",
                 footer_status: "Live Status",
                 footer_admin: "🔐 Admin",
                 footer_copyright: "© 2026 Gamingpig • Automatische Status-Telemetrie",
@@ -595,6 +620,7 @@
                 footer_portfolio: "Portfolio",
                 footer_release: "Release v24.138.1",
                 footer_privacy: "Privacy Policy",
+                footer_impressum: "Legal Notice",
                 footer_status: "Live Status",
                 footer_admin: "🔐 Admin",
                 footer_copyright: "© 2026 Gamingpig • Automated Status Telemetry",
@@ -681,6 +707,7 @@
                 footer_portfolio: "Portafolio",
                 footer_release: "Notas v24.138.1",
                 footer_privacy: "Privacidad",
+                footer_impressum: "Aviso Legal",
                 footer_status: "Estado en Vivo",
                 footer_admin: "🔐 Admin",
                 footer_copyright: "© 2026 Gamingpig • Telemetría de estado automatizada",
@@ -767,6 +794,7 @@
                 footer_portfolio: "Portfolio",
                 footer_release: "Notes v24.138.1",
                 footer_privacy: "Confidentialité",
+                footer_impressum: "Mentions Légales",
                 footer_status: "État en Direct",
                 footer_admin: "🔐 Admin",
                 footer_copyright: "© 2026 Gamingpig • Télémétrie d'état automatisée",
@@ -853,6 +881,7 @@
                 footer_portfolio: "Portfólio",
                 footer_release: "Notas v24.138.1",
                 footer_privacy: "Privacidade",
+                footer_impressum: "Aviso Legal",
                 footer_status: "Status ao Vivo",
                 footer_admin: "🔐 Admin",
                 footer_copyright: "© 2026 Gamingpig • Telemetria de status automatizada",
@@ -939,6 +968,7 @@
                 footer_portfolio: "Portföy",
                 footer_release: "Sürüm v24.138.1",
                 footer_privacy: "Gizlilik",
+                footer_impressum: "Künye",
                 footer_status: "Canlı Durum",
                 footer_admin: "🔐 Admin",
                 footer_copyright: "© 2026 Gamingpig • Otomatik Durum Telemetrisi",
@@ -1021,7 +1051,7 @@
                 'btn-copy-report-text',
                 'tip1-title', 'tip1-desc', 'tip2-title', 'tip2-desc',
                 'tip3-title', 'tip3-desc', 'tip4-title', 'tip4-desc',
-                'footer-portfolio', 'footer-release', 'footer-privacy',
+                'footer-portfolio', 'footer-release', 'footer-privacy', 'footer-impressum',
                 'footer-status', 'footer-admin', 'footer-copyright',
                 'last-checked-time'
             ];
@@ -1172,7 +1202,6 @@
 
             // 3. Spotify Live Player & Raspberry Pi Stream
             const isSpotifyStreaming = !!(statsData && statsData.item && statsData.item.isPlaying);
-            const activeDevice = (statsData && statsData.item && statsData.item.deviceName) ? statsData.item.deviceName : null;
             const currentTrack = (statsData && statsData.item && statsData.item.track) ? statsData.item.track.name : null;
             const currentArtist = (statsData && statsData.item && statsData.item.track && statsData.item.track.artists && statsData.item.track.artists[0]) ? statsData.item.track.artists[0].name : null;
 
@@ -1189,8 +1218,7 @@
                     piOffline: true,
                     trackName: currentTrack,
                     artistName: currentArtist,
-                    deviceName: activeDevice,
-                    status: `Pi offline (Spielt auf ${activeDevice || 'Gerät'})`
+                    status: 'Pi offline (Aktiv auf Gerät)'
                 };
             } else if (!npcOk) {
                 lastDiagnosticResults.spotify = {
@@ -1205,7 +1233,6 @@
                     ok: true,
                     trackName: currentTrack,
                     artistName: currentArtist,
-                    deviceName: activeDevice,
                     status: npcHasData ? 'Live Playing' : 'Standby / Bereit'
                 };
             }
@@ -1762,9 +1789,17 @@
         }
 
         function copyDiagnosticReport() {
+            // Sanitize userAgent to protect user's device model, hostname, or private identifiers
+            const rawUa = navigator.userAgent || '';
+            const isMobile = /Mobi|Android|iPhone|iPad/i.test(rawUa);
+            const isApple = /Mac|iPhone|iPad/i.test(rawUa);
+            const isWindows = /Win/i.test(rawUa);
+            const isLinux = /Linux/i.test(rawUa) && !/Android/i.test(rawUa);
+            const osType = isApple ? 'Apple/WebKit' : (isWindows ? 'Windows' : (isLinux ? 'Linux' : (isMobile ? 'Mobile' : 'Desktop')));
+
             const report = {
                 timestamp: new Date().toISOString(),
-                userAgent: navigator.userAgent,
+                clientType: `${osType} (${isMobile ? 'Mobile' : 'Desktop'})`,
                 language: currentLang,
                 screen: `${window.innerWidth}x${window.innerHeight} (dpr: ${window.devicePixelRatio})`,
                 connection: navigator.connection ? {
@@ -1841,10 +1876,9 @@
             const greetingPt = hour < 6 ? 'Boa noite!' : (hour < 12 ? 'Bom dia!' : (hour < 18 ? 'Boa tarde!' : 'Boa noite!'));
             const greetingTr = hour < 6 ? 'İyi geceler!' : (hour < 11 ? 'Günaydın!' : (hour < 18 ? 'İyi günler!' : 'İyi akşamlar!'));
 
-            // Spotify Live-Track & Device Kontext
+            // Spotify Live-Track Kontext (Gerätenamen aus Datenschutzgründen entfernt)
             const spTrack = results.spotify?.trackName || null;
             const spArtist = results.spotify?.artistName || null;
-            const spDevice = results.spotify?.deviceName || null;
             const discordOnline = results.discordData?.approximate_presence_count || results.discord?.presence_count || null;
 
             // Witzige Sysadmin / Gamer Punchlines
@@ -1894,42 +1928,42 @@
 
             if (lang === 'de') {
                 if (isAllOk) {
-                    let musicPart = spTrack ? `Auf Spotify läuft gerade '${spTrack}'${spArtist ? ' von ' + spArtist : ''}${spDevice ? ' auf ' + spDevice : ''}. ` : `Spotify im Standby. `;
+                    let musicPart = spTrack ? `Auf Spotify läuft gerade '${spTrack}'${spArtist ? ' von ' + spArtist : ''}. ` : `Spotify im Standby. `;
                     let discordPart = discordOnline ? `Discord zählt ${discordOnline} aktive Member. ` : '';
                     return `${greetingDe} Gamingpig Telemetrie-Cockpit online. Live-Status: Alle Systeme laufen bei 100% (${onlineCount} von ${totalServices} Diensten online). Spotify-API antwortet in ${spotifyLatency}, Netzwerk-Ping bei ${networkPing}. ${musicPart}${discordPart}${punchlineDe}`;
                 }
                 return `System-Hinweis: ${onlineCount} von ${totalServices} Diensten aktiv. Siehe Dashboard für Details.`;
             } else if (lang === 'en') {
                 if (isAllOk) {
-                    let musicPart = spTrack ? `Streaming '${spTrack}'${spArtist ? ' by ' + spArtist : ''}${spDevice ? ' on ' + spDevice : ''}. ` : `Spotify in standby. `;
+                    let musicPart = spTrack ? `Streaming '${spTrack}'${spArtist ? ' by ' + spArtist : ''}. ` : `Spotify in standby. `;
                     let discordPart = discordOnline ? `Discord shows ${discordOnline} active members. ` : '';
                     return `${greetingEn} Gamingpig Telemetry Cockpit online. Diagnosis: All systems operational (${onlineCount} of ${totalServices} services online). Spotify latency ${spotifyLatency}, network ping ${networkPing}. ${musicPart}${discordPart}${punchlineEn}`;
                 }
                 return `System notice: ${onlineCount} of ${totalServices} services operational. Check dashboard for details.`;
             } else if (lang === 'es') {
                 if (isAllOk) {
-                    let musicPart = spTrack ? `En Spotify suena '${spTrack}'${spArtist ? ' de ' + spArtist : ''}${spDevice ? ' en ' + spDevice : ''}. ` : `Spotify en espera. `;
+                    let musicPart = spTrack ? `En Spotify suena '${spTrack}'${spArtist ? ' de ' + spArtist : ''}. ` : `Spotify en espera. `;
                     let discordPart = discordOnline ? `Discord tiene ${discordOnline} miembros activos. ` : '';
                     return `${greetingEs} Cabina de telemetría Gamingpig activa. Diagnóstico: Todos los sistemas operativos (${onlineCount} de ${totalServices} servicios online). Latencia Spotify ${spotifyLatency}, ping ${networkPing}. ${musicPart}${discordPart}${punchlineEs}`;
                 }
                 return `Alerta del sistema: ${onlineCount} de ${totalServices} servicios operativos. Consulta el panel.`;
             } else if (lang === 'fr') {
                 if (isAllOk) {
-                    let musicPart = spTrack ? `Sur Spotify : '${spTrack}'${spArtist ? ' par ' + spArtist : ''}${spDevice ? ' sur ' + spDevice : ''}. ` : `Spotify en veille. `;
+                    let musicPart = spTrack ? `Sur Spotify : '${spTrack}'${spArtist ? ' par ' + spArtist : ''}. ` : `Spotify en veille. `;
                     let discordPart = discordOnline ? `Discord affiche ${discordOnline} membres connectés. ` : '';
                     return `${greetingFr} Cockpit de télémétrie Gamingpig en ligne. Diagnostic : Tous systèmes opérationnels (${onlineCount} services sur ${totalServices} en ligne). Latence Spotify ${spotifyLatency}, ping ${networkPing}. ${musicPart}${discordPart}${punchlineFr}`;
                 }
                 return `Avis système : ${onlineCount} services sur ${totalServices} opérationnels. Voir tableau.`;
             } else if (lang === 'pt') {
                 if (isAllOk) {
-                    let musicPart = spTrack ? `No Spotify tocando '${spTrack}'${spArtist ? ' de ' + spArtist : ''}${spDevice ? ' no ' + spDevice : ''}. ` : `Spotify em standby. `;
+                    let musicPart = spTrack ? `No Spotify tocando '${spTrack}'${spArtist ? ' de ' + spArtist : ''}. ` : `Spotify em standby. `;
                     let discordPart = discordOnline ? `Discord tem ${discordOnline} membros ativos. ` : '';
                     return `${greetingPt} Cockpit de telemetria Gamingpig online. Diagnóstico: Sistemas 100% operacionais (${onlineCount} de ${totalServices} serviços online). Latência Spotify ${spotifyLatency}, ping ${networkPing}. ${musicPart}${discordPart}${punchlinePt}`;
                 }
                 return `Alerta de sistema: ${onlineCount} de ${totalServices} serviços operacionais. Verifique.`;
             } else if (lang === 'tr') {
                 if (isAllOk) {
-                    let musicPart = spTrack ? `Spotify'da '${spTrack}'${spArtist ? ' - ' + spArtist : ''}${spDevice ? ' (' + spDevice + ')' : ''} çalıyor. ` : `Spotify beklemede. `;
+                    let musicPart = spTrack ? `Spotify'da '${spTrack}'${spArtist ? ' - ' + spArtist : ''} çalıyor. ` : `Spotify beklemede. `;
                     let discordPart = discordOnline ? `Discord'da ${discordOnline} aktif üye var. ` : '';
                     return `${greetingTr} Gamingpig Telemetri Kokpiti devrede. Teşhis: Tüm sistemler sorunsuz çalışıyor (${totalServices} servisten ${onlineCount} tanesi aktif). Spotify gecikmesi ${spotifyLatency}, ağ gecikmesi ${networkPing}. ${musicPart}${discordPart}${punchlineTr}`;
                 }
@@ -1948,6 +1982,112 @@
             return `Help assistant ready.`;
         }
 
+        // ========================================================= //
+        // 🎙️ ULTRA-INTELLIGENTE SPRACHAUSGABE & BRIEFINGS           //
+        // ========================================================= //
+        window._ttsUtterances = [];
+        let currentTtsSpeed = parseFloat(localStorage.getItem('gp_tts_speed') || '1.0');
+        let currentSpeakingText = null;
+
+        function sanitizeTextForSpeech(text, lang = 'de') {
+            if (!text) return '';
+            let s = String(text);
+
+            // 1. Markdown, HTML & URLs bereinigen
+            s = s.replace(/https?:\/\/[^\s]+/gi, '');
+            s = s.replace(/`{1,3}[^`]*`{1,3}/g, '');
+            s = s.replace(/[*_#~]/g, '');
+
+            // 2. Klammern auflösen, damit Browser nicht "Klammer auf ... Klammer zu" vorliest
+            // Z.B. "(6 von 7 Diensten online)" -> ", 6 von 7 Diensten online,"
+            s = s.replace(/\(([^)]+)\)/g, ', $1,');
+
+            // 3. Emojis entfernen (verhindert robotisches Vorlesen von Bildbeschreibungen)
+            s = s.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{27BF}\u{1F1E6}-\u{1F1FF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}]/gu, '');
+
+            // 4. Einheiten, Versionen & Akronyme sprachabhängig lesbar machen
+            if (lang === 'de') {
+                s = s.replace(/(\d+)\s*ms\b/gi, '$1 Millisekunden');
+                s = s.replace(/(\d+)%/g, '$1 Prozent');
+                s = s.replace(/\bv(\d+)\.(\d+)\.(\d+)\b/gi, 'Version $1 Punkt $2');
+                s = s.replace(/\bAPI\b/g, 'A P I');
+                s = s.replace(/\bAPIs\b/g, 'A P Is');
+                s = s.replace(/\bLrcLib\b/gi, 'L R C Lib');
+                s = s.replace(/\bstats\.fm\b/gi, 'Stats F M');
+                s = s.replace(/\bPWA\b/g, 'P W A');
+                s = s.replace(/\bCDN\b/g, 'C D N');
+                s = s.replace(/\bCDNs\b/g, 'C D Ns');
+                s = s.replace(/\bPi\b/g, 'Raspberry Pi');
+            } else if (lang === 'en') {
+                s = s.replace(/(\d+)\s*ms\b/gi, '$1 milliseconds');
+                s = s.replace(/(\d+)%/g, '$1 percent');
+                s = s.replace(/\bv(\d+)\.(\d+)\.(\d+)\b/gi, 'version $1 point $2');
+                s = s.replace(/\bAPI\b/g, 'A P I');
+                s = s.replace(/\bAPIs\b/g, 'A P Is');
+                s = s.replace(/\bLrcLib\b/gi, 'L R C Lib');
+                s = s.replace(/\bstats\.fm\b/gi, 'Stats F M');
+                s = s.replace(/\bPWA\b/g, 'P W A');
+                s = s.replace(/\bCDN\b/g, 'C D N');
+                s = s.replace(/\bCDNs\b/g, 'C D Ns');
+                s = s.replace(/\bPi\b/g, 'Raspberry Pi');
+            } else {
+                s = s.replace(/(\d+)\s*ms\b/gi, '$1 ms');
+                s = s.replace(/\bAPI\b/g, 'A P I');
+                s = s.replace(/\bPi\b/g, 'Raspberry Pi');
+            }
+
+            // Mehrfache Leerzeichen und Kommas bereinigen
+            s = s.replace(/\s+,/g, ',');
+            s = s.replace(/,+/g, ',');
+            s = s.replace(/\s{2,}/g, ' ').trim();
+            return s;
+        }
+
+        function setTtsSpeed(rate) {
+            currentTtsSpeed = Number(rate) || 1.0;
+            localStorage.setItem('gp_tts_speed', currentTtsSpeed.toString());
+            updateTtsSpeedUI();
+
+            // Falls gerade gesprochen wird: flüssig mit neuer Geschwindigkeit fortsetzen
+            if ('speechSynthesis' in window && window.speechSynthesis.speaking && currentSpeakingText) {
+                const text = currentSpeakingText;
+                const mode = activeSpeakingMode;
+                window.speechSynthesis.cancel();
+                executeSpeechQueue(text, () => {
+                    activeSpeakingMode = mode;
+                }, () => {
+                    stopSpeech();
+                });
+            }
+        }
+
+        function updateTtsSpeedUI() {
+            const ind = document.getElementById('tts-speed-indicator');
+            if (ind) ind.innerText = `${currentTtsSpeed.toFixed(1)}x`;
+
+            document.querySelectorAll('.tts-speed-pill').forEach(btn => {
+                const btnRate = parseFloat(btn.getAttribute('data-rate'));
+                if (Math.abs(btnRate - currentTtsSpeed) < 0.05) {
+                    btn.classList.add('bg-emerald-600', 'text-white');
+                    btn.classList.remove('bg-slate-800', 'text-slate-300');
+                } else {
+                    btn.classList.remove('bg-emerald-600', 'text-white');
+                    btn.classList.add('bg-slate-800', 'text-slate-300');
+                }
+            });
+        }
+
+        function toggleTtsSpeedMenu(forceState) {
+            const menu = document.getElementById('tts-speed-menu');
+            if (!menu) return;
+            if (typeof forceState === 'boolean') {
+                if (forceState) menu.classList.remove('hidden');
+                else menu.classList.add('hidden');
+            } else {
+                menu.classList.toggle('hidden');
+            }
+        }
+
         function executeSpeechQueue(textToRead, onStartCallback, onEndCallback) {
             if (!('speechSynthesis' in window)) {
                 showToast(t('toast_token_unsupported') || 'Sprachausgabe wird von diesem Browser nicht unterstützt.', '⚠️');
@@ -1959,11 +2099,27 @@
             }
 
             const langCode = currentLang || 'de';
-            const u = new SpeechSynthesisUtterance(textToRead);
+            const cleanText = sanitizeTextForSpeech(textToRead, langCode);
+            currentSpeakingText = cleanText;
+
+            const u = new SpeechSynthesisUtterance(cleanText);
             u.lang = langCode === 'en' ? 'en-US' : (langCode === 'es' ? 'es-ES' : (langCode === 'fr' ? 'fr-FR' : (langCode === 'pt' ? 'pt-BR' : (langCode === 'tr' ? 'tr-TR' : 'de-DE'))));
             u.voice = getBestVoice(u.lang);
-            u.onstart = onStartCallback;
-            u.onend = onEndCallback;
+            u.rate = currentTtsSpeed;
+
+            u.onstart = () => {
+                toggleTtsSpeedMenu(true);
+                if (onStartCallback) onStartCallback();
+            };
+            u.onend = () => {
+                currentSpeakingText = null;
+                if (onEndCallback) onEndCallback();
+            };
+            u.onerror = () => {
+                currentSpeakingText = null;
+                stopSpeech();
+            };
+
             window.speechSynthesis.speak(u);
         }
 
@@ -1975,7 +2131,6 @@
 
             stopSpeech();
 
-            // Falls die Diagnose beim Klick noch nicht fertig ist, kurz abwarten
             if (!lastDiagnosticResults || Object.keys(lastDiagnosticResults).length === 0) {
                 await runDiagnostics();
             }
@@ -1986,12 +2141,12 @@
                 textToRead,
                 () => {
                     activeSpeakingMode = 'status';
-                    const btn = document.getElementById('btn-tts-read');
-                    const text = document.getElementById('btn-tts-text');
-                    const icon = document.getElementById('btn-tts-icon');
+                    const btn = document.getElementById('tts-toggle-btn');
+                    const text = document.getElementById('tts-label');
+                    const icon = document.getElementById('tts-icon');
                     if (btn) {
-                        btn.classList.add('bg-indigo-600', 'text-white', 'border-indigo-400', 'shadow-indigo-500/30');
-                        btn.classList.remove('bg-slate-900/80', 'text-slate-200');
+                        btn.classList.add('bg-emerald-600', 'text-white');
+                        btn.classList.remove('text-slate-200');
                     }
                     if (text) text.innerText = t('tts_stop') || 'Stopp';
                     if (icon) icon.innerText = '⏹️';
@@ -2002,7 +2157,7 @@
             );
         }
 
-        function toggleReadHelp() {
+        function toggleReadAloudHelp() {
             if (activeSpeakingMode === 'help') {
                 stopSpeech();
                 return;
@@ -2015,12 +2170,12 @@
                 textToRead,
                 () => {
                     activeSpeakingMode = 'help';
-                    const btn = document.getElementById('btn-tts-help');
-                    const text = document.getElementById('btn-tts-help-text');
-                    const icon = document.getElementById('btn-tts-help-icon');
+                    const btn = document.getElementById('tts-help-btn');
+                    const text = document.getElementById('tts-help-label');
+                    const icon = document.getElementById('tts-help-icon');
                     if (btn) {
-                        btn.classList.add('bg-blue-600', 'text-white', 'border-blue-400', 'shadow-blue-500/30');
-                        btn.classList.remove('bg-slate-800/80', 'text-slate-300');
+                        btn.classList.add('bg-emerald-600', 'text-white', 'border-emerald-500');
+                        btn.classList.remove('bg-slate-800', 'text-slate-200');
                     }
                     if (text) text.innerText = t('tts_help_stop') || 'Stopp';
                     if (icon) icon.innerText = '⏹️';
@@ -2031,31 +2186,37 @@
             );
         }
 
+        // Backward compatibility
+        function toggleReadHelp() {
+            toggleReadAloudHelp();
+        }
+
         function stopSpeech() {
             activeSpeakingMode = null;
+            currentSpeakingText = null;
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
             }
 
-            const btn1 = document.getElementById('btn-tts-read');
-            const text1 = document.getElementById('btn-tts-text');
-            const icon1 = document.getElementById('btn-tts-icon');
+            const btn1 = document.getElementById('tts-toggle-btn');
+            const text1 = document.getElementById('tts-label');
+            const icon1 = document.getElementById('tts-icon');
             if (btn1) {
-                btn1.classList.remove('bg-indigo-600', 'text-white', 'border-indigo-400', 'shadow-indigo-500/30');
-                btn1.classList.add('bg-slate-900/80', 'text-slate-200');
+                btn1.classList.remove('bg-emerald-600', 'text-white');
+                btn1.classList.add('text-slate-200');
             }
             if (text1) text1.innerText = t('tts_read') || 'Vorlesen';
             if (icon1) icon1.innerText = '🔊';
 
-            const btn2 = document.getElementById('btn-tts-help');
-            const text2 = document.getElementById('btn-tts-help-text');
-            const icon2 = document.getElementById('btn-tts-help-icon');
+            const btn2 = document.getElementById('tts-help-btn');
+            const text2 = document.getElementById('tts-help-label');
+            const icon2 = document.getElementById('tts-help-icon');
             if (btn2) {
-                btn2.classList.remove('bg-blue-600', 'text-white', 'border-blue-400', 'shadow-blue-500/30');
-                btn2.classList.add('bg-slate-800/80', 'text-slate-300');
+                btn2.classList.remove('bg-emerald-600', 'text-white', 'border-emerald-500');
+                btn2.classList.add('bg-slate-800', 'text-slate-200');
             }
             if (text2) text2.innerText = t('tts_help_read') || 'Hilfe vorlesen';
-            if (icon2) icon2.innerText = '🎙️';
+            if (icon2) icon2.innerText = '🔊';
         }
 
         // ========================================================= //
@@ -2098,6 +2259,7 @@
             if (selectEl) selectEl.value = currentLang;
             applyTranslations(currentLang);
             updatePushUI();
+            updateTtsSpeedUI();
             runDiagnostics();
 
             setInterval(() => {
@@ -2110,6 +2272,17 @@
         } else {
             initStatusPage();
         }
+
+        // Klick außerhalb schließt das Speed-Menü
+        document.addEventListener('click', (e) => {
+            const menu = document.getElementById('tts-speed-menu');
+            const btn = document.getElementById('tts-speed-btn');
+            const toggleBtn = document.getElementById('tts-toggle-btn');
+            if (!menu || menu.classList.contains('hidden')) return;
+            if (!menu.contains(e.target) && !btn?.contains(e.target) && !toggleBtn?.contains(e.target)) {
+                menu.classList.add('hidden');
+            }
+        });
     </script>
 </body>
 </html>

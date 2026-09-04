@@ -392,15 +392,13 @@ async function checkEndpoints() {
 
     // Raspberry Pi Live Feed Discrepancy Check:
     const isSpotifyPlaying = !!(statsData && statsData.item && statsData.item.isPlaying);
-    const activeDevice = (statsData && statsData.item && statsData.item.deviceName) ? statsData.item.deviceName : 'Spotify';
     const trackName = (statsData && statsData.item && statsData.item.track) ? statsData.item.track.name : '';
 
     if (isSpotifyPlaying && !npcData) {
         failed.push({
             id: 'pi_offline',
             name: 'Raspberry Pi Telemetrie',
-            track: trackName,
-            device: activeDevice
+            track: trackName
         });
     }
 
