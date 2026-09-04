@@ -5253,6 +5253,36 @@
 </head>
 <body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen selection:bg-blue-500/30 overflow-x-hidden">
 
+    <!-- TRANSPARENTER & UNUMGÄNGLICHER DATENSCHUTZ-AKTUALISIERUNGS-HINWEIS -->
+    <div id="privacy-update-modal" class="fixed inset-0 z-[100000] bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4 animate-fadeIn" role="dialog" aria-modal="true">
+        <div class="glass-card max-w-md w-full p-5 sm:p-6 rounded-3xl border border-blue-500/30 shadow-2xl bg-slate-900/95 text-left relative overflow-hidden">
+            <div class="flex items-center gap-3 mb-3">
+                <div class="w-10 h-10 rounded-2xl bg-blue-500/20 text-blue-400 flex items-center justify-center text-xl shrink-0 font-bold border border-blue-500/30">
+                    ⚖️
+                </div>
+                <div>
+                    <h3 class="text-base sm:text-lg font-black text-white leading-tight">Datenschutz aktualisiert</h3>
+                    <p class="text-[10px] font-mono text-blue-400 font-bold">Stand: 4. September 2026</p>
+                </div>
+            </div>
+            <p class="text-xs text-slate-300 leading-relaxed mb-3">
+                Wir haben unsere <strong class="text-white">Datenschutzerklärung</strong> transparent erweitert:
+            </p>
+            <ul class="text-[11px] text-slate-400 space-y-1.5 mb-4 list-disc list-inside">
+                <li><strong class="text-slate-200">Mehrsprachiges Songtext-Vorlesen:</strong> Lokale Spracherkennung (u.&nbsp;a. Schwedisch für Marcus &amp; Martinus, Norwegisch, Deutsch, Englisch).</li>
+                <li><strong class="text-slate-200">Einstellbares Vorlesetempo:</strong> Anpassbare Geschwindigkeiten (0.8x bis 2.0x) für alle Audio-Elemente.</li>
+                <li><strong class="text-slate-200">Keine Datenübertragung:</strong> Sämtliche Einstellungen verbleiben rein lokal in deinem Browser.</li>
+            </ul>
+            <div class="flex items-center gap-2 pt-2 border-t border-white/10">
+                <a href="privacy.html" target="_blank" class="flex-1 text-center py-2.5 px-3 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold transition-all border border-white/10">
+                    Erklärung lesen ↗
+                </a>
+                <button onclick="acceptPrivacyUpdate()" class="flex-1 text-center py-2.5 px-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-black shadow-lg shadow-blue-500/25 transition-all active:scale-95">
+                    Verstanden ✓
+                </button>
+            </div>
+        </div>
+    </div>
     <div id="toast-container"></div>
     <div id="confetti-container"></div>
 
@@ -10566,7 +10596,30 @@
                 window.location.reload();
             });
 
-            window.addEventListener('load', () => {
+            
+        // UNUMGÄNGLICHE & TRANSPARENTE BENACHRICHTIGUNG BEI DATENSCHUTZ-AKTUALISIERUNG
+        const PRIVACY_POLICY_VERSION = '2026-09-04';
+        function checkPrivacyPolicyUpdate() {
+            try {
+                const accepted = localStorage.getItem('accepted_privacy_version');
+                if (accepted !== PRIVACY_POLICY_VERSION) {
+                    const modal = document.getElementById('privacy-update-modal');
+                    if (modal) modal.classList.remove('hidden');
+                }
+            } catch(e) {}
+        }
+        window.acceptPrivacyUpdate = function() {
+            try {
+                localStorage.setItem('accepted_privacy_version', PRIVACY_POLICY_VERSION);
+            } catch(e) {}
+            const modal = document.getElementById('privacy-update-modal');
+            if (modal) modal.classList.add('hidden');
+            if (typeof haptic === 'function') haptic(10);
+            if (typeof playUISound === 'function') playUISound('click');
+        };
+        setTimeout(checkPrivacyPolicyUpdate, 600);
+
+        window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
                     .then((reg) => {
                         // Prüfe beim Laden direkt auf Updates
