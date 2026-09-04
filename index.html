@@ -9582,7 +9582,42 @@
             else select.value = matching[0].name;
         }
 
+        function showGlobalTtsSpeedBar(show) {
+            let bar = document.getElementById('global-tts-speed-bar');
+            if (!bar) {
+                bar = document.createElement('div');
+                bar.id = 'global-tts-speed-bar';
+                bar.className = 'fixed bottom-5 left-1/2 -translate-x-1/2 z-[9999] px-3 py-2 rounded-2xl bg-slate-900/95 border border-blue-500/30 shadow-2xl backdrop-blur-xl flex items-center gap-2 transition-all duration-300 transform';
+                bar.innerHTML = `
+                    <div class="flex items-center gap-1.5 pr-1 border-r border-slate-700/80 text-[10px] xxs:text-xs font-bold text-blue-400">
+                        <span class="animate-pulse">🔊</span>
+                        <span>Tempo</span>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <button onclick="setTtsSpeed(0.8)" data-rate="0.8" class="tts-speed-pill px-2 py-1 rounded-lg text-center font-mono text-[10px] font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all">0.8x</button>
+                        <button onclick="setTtsSpeed(1.0)" data-rate="1.0" class="tts-speed-pill px-2 py-1 rounded-lg text-center font-mono text-[10px] font-bold bg-emerald-600 text-white transition-all">1.0x</button>
+                        <button onclick="setTtsSpeed(1.2)" data-rate="1.2" class="tts-speed-pill px-2 py-1 rounded-lg text-center font-mono text-[10px] font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all">1.2x</button>
+                        <button onclick="setTtsSpeed(1.5)" data-rate="1.5" class="tts-speed-pill px-2 py-1 rounded-lg text-center font-mono text-[10px] font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all">1.5x</button>
+                        <button onclick="setTtsSpeed(2.0)" data-rate="2.0" class="tts-speed-pill px-2 py-1 rounded-lg text-center font-mono text-[10px] font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all">2.0x</button>
+                    </div>
+                    <button onclick="speechSynthesis.cancel(); if (typeof currentActiveTtsBtn !== 'undefined') ttsSetButtonState(currentActiveTtsBtn, 'idle'); showGlobalTtsSpeedBar(false);" class="ml-1 px-2.5 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 font-bold text-[10px] transition-all border border-rose-500/30">⏹ Stopp</button>
+                `;
+                document.body.appendChild(bar);
+            }
+            if (show) {
+                bar.classList.remove('hidden', 'opacity-0', 'translate-y-4', 'pointer-events-none');
+                updateTtsSpeedUI();
+            } else {
+                bar.classList.add('opacity-0', 'translate-y-4', 'pointer-events-none');
+                setTimeout(() => { if (bar.classList.contains('opacity-0')) bar.classList.add('hidden'); }, 300);
+            }
+        }
+
+        let currentActiveTtsBtn = null;
+
         function ttsSetButtonState(btnEl, state) {
+            currentActiveTtsBtn = btnEl;
+            showGlobalTtsSpeedBar(state === 'speaking');
             const btns = [btnEl, document.getElementById('btn-speak-lyrics'), document.getElementById('btn-speak-lyrics-visible')].filter(Boolean);
             const seen = new Set();
             btns.forEach(btn => {
