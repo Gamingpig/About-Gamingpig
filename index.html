@@ -1133,7 +1133,7 @@
     [FIX - KRITISCH, DIESMAL WIRKLICH] Release v24.65: v24.64 allein reichte nicht - zweiter,
     tieferer Bug in der Neustart-Logik gefunden
       - Nutzer bestätigte per document.getElementById('time-current').innerText (umgeht das
-        bekannte Chrome-DevTools-Problem, dass let-Variablen aus <script>-Tags oft nicht per
+        bekannte Chrome-DevTools-Problem, dass let-Variablen aus Script-Tags oft nicht per
         Namen in der Konsole abrufbar sind, obwohl sie auf der echten Seite funktionieren) -
         derselbe Wert mehrfach identisch, der Fortschritt stand trotz v24.64 immer noch still.
       - ZWEITER Root Cause gefunden: Der Neustart-Check nach jeder Musikdaten-Antwort
@@ -3788,11 +3788,9 @@
             #main-music-card.lyrics-open { max-width: 100% !important; width: 100% !important; margin-left: auto !important; margin-right: auto !important; }
         }
 
-        /* Verhindert Kollisionen: Toggle-Balken, Hinweis und Steuerungselemente ausblenden, solange Lyrics aktiv sind */
-        body:has(#main-music-card.lyrics-open) #mini-player-toggle,
+        /* Verhindert Kollisionen: Hinweis und Steuerungselemente ausblenden, solange Lyrics aktiv sind (#mini-player-toggle bleibt sichtbar zum direkten Schließen) */
         body:has(#main-music-card.lyrics-open) #music-sync-note,
         body:has(#main-music-card.lyrics-open) #music-section-title,
-        body.lyrics-mode-active #mini-player-toggle,
         body.lyrics-mode-active #music-sync-note,
         body.lyrics-mode-active #music-section-title {
             display: none !important;
@@ -5506,16 +5504,40 @@
             <p id="header-intro-p2" class="mt-3 xxs:mt-4 sm:mt-6 text-xs xxs:text-sm xs:text-base sm:text-lg text-slate-600 dark:text-slate-400 leading-relaxed drop-shadow-sm">
                 In meiner Freizeit beschäftige ich mich mit Gaming und Streaming. Ich bin zwar etwas schüchtern, jedoch an sich ein sehr freundlicher und gelassener Mensch. Ich repariere auch gerne IT Geräte (Laptops, Tablets, PCs, Smartphones usw.).
             </p>
-            <!-- Audio Quick Actions: Bio Vorlesen & Ultra-Smart Live-Briefing -->
-            <div class="mt-4 xxs:mt-5 sm:mt-8 flex items-center gap-2.5 sm:gap-4 flex-wrap">
-                <button onclick="speakBio(this)" id="btn-speak-bio" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-500/10 dark:bg-blue-500/15 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-xs xxs:text-sm font-bold border border-blue-500/20 active:scale-95 transition-all shadow-sm">
-                    <span>🔊</span> <span id="btn-speak-bio-text">Bio vorlesen</span>
-                </button>
-                <button onclick="speakSmartBriefing(this)" id="btn-smart-briefing" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white text-xs xxs:text-sm font-black shadow-lg hover:shadow-indigo-500/25 active:scale-95 transition-all relative overflow-hidden group">
-                    <span class="animate-pulse">🎙️</span>
-                    <span id="btn-smart-briefing-text">Smart Live-Briefing</span>
-                    <span class="px-1.5 py-0.5 rounded-full bg-white/20 text-[9px] font-mono font-bold tracking-wider">AI/LIVE</span>
-                </button>
+            <!-- Audio Quick Actions: Bio Vorlesen & Ultra-Smart Live-Briefing with Speed Dropdown -->
+            <div class="mt-4 xxs:mt-5 sm:mt-8 flex items-center gap-2.5 sm:gap-4 flex-wrap relative">
+                <div class="relative inline-flex flex-col items-start">
+                    <div class="inline-flex items-center rounded-xl bg-blue-500/10 dark:bg-blue-500/15 border border-blue-500/20 shadow-sm">
+                        <button onclick="speakBio(this)" id="btn-speak-bio" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-l-xl hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-xs xxs:text-sm font-bold active:scale-95 transition-all">
+                            <span>🔊</span> <span id="btn-speak-bio-text">Bio vorlesen</span>
+                        </button>
+                        <button onclick="toggleTtsSpeedMenu('tts-speed-menu-bio')" class="px-2 py-2 text-blue-500 hover:bg-blue-500/20 rounded-r-xl border-l border-blue-500/20 text-[10px] xxs:text-xs font-mono font-bold transition-colors" title="Tempo anpassen">
+                            <span class="tts-speed-indicator-val">1.0x</span>
+                        </button>
+                    </div>
+                    <!-- Mini-Menü Bio -->
+                    <div id="tts-speed-menu-bio" class="hidden absolute top-full left-0 mt-2 z-50 p-2 rounded-xl bg-slate-900/95 border border-slate-700 shadow-2xl backdrop-blur-xl min-w-[170px]">
+                        <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 py-1 flex items-center justify-between">
+                            <span>Tempo</span>
+                            <button onclick="speechSynthesis.cancel(); ttsSetButtonState(document.getElementById('btn-speak-bio'), 'idle'); toggleTtsSpeedMenu('tts-speed-menu-bio', false);" class="text-rose-400 hover:text-rose-300 transition-colors font-sans">⏹ Stopp</button>
+                        </div>
+                        <div class="grid grid-cols-5 gap-1 mt-1">
+                            <button onclick="setTtsSpeed(0.8)" data-rate="0.8" class="tts-speed-pill px-1.5 py-1 rounded-lg text-center font-mono text-[10px] font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all">0.8x</button>
+                            <button onclick="setTtsSpeed(1.0)" data-rate="1.0" class="tts-speed-pill px-1.5 py-1 rounded-lg text-center font-mono text-[10px] font-bold bg-emerald-600 text-white transition-all">1.0x</button>
+                            <button onclick="setTtsSpeed(1.2)" data-rate="1.2" class="tts-speed-pill px-1.5 py-1 rounded-lg text-center font-mono text-[10px] font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all">1.2x</button>
+                            <button onclick="setTtsSpeed(1.5)" data-rate="1.5" class="tts-speed-pill px-1.5 py-1 rounded-lg text-center font-mono text-[10px] font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all">1.5x</button>
+                            <button onclick="setTtsSpeed(2.0)" data-rate="2.0" class="tts-speed-pill px-1.5 py-1 rounded-lg text-center font-mono text-[10px] font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all">2.0x</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="relative inline-flex flex-col items-start">
+                    <button onclick="speakSmartBriefing(this)" id="btn-smart-briefing" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white text-xs xxs:text-sm font-black shadow-lg hover:shadow-indigo-500/25 active:scale-95 transition-all relative overflow-hidden group">
+                        <span class="animate-pulse">🎙️</span>
+                        <span id="btn-smart-briefing-text">Smart Live-Briefing</span>
+                        <span class="px-1.5 py-0.5 rounded-full bg-white/20 text-[9px] font-mono font-bold tracking-wider">AI/LIVE</span>
+                    </button>
+                </div>
             </div>
         </header>
 
@@ -5797,11 +5819,30 @@
                                             <button onclick="generateShareCard()" id="btn-share-card" class="text-center text-[10px] xxs:text-xs text-pink-300 px-2 py-2 rounded-xl bg-pink-500/15 hover:bg-pink-500/25 border border-pink-500/20 transition-all font-bold truncate active:scale-95">🎴 Share Card</button>
                                             <button onclick="quickExportSongCard()" id="btn-quick-export" class="text-center text-[10px] xxs:text-xs text-pink-300 px-2 py-2 rounded-xl bg-pink-500/15 hover:bg-pink-500/25 border border-pink-500/20 transition-all font-bold truncate active:scale-95">📸 Export</button>
                                         </div>
-                                        <div class="w-full flex flex-col gap-1 mt-0.5">
-                                            <button onclick="speakLyrics(this)" id="btn-speak-lyrics" class="w-full text-center text-[10px] xxs:text-xs text-cyan-300 px-2.5 py-2 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/20 transition-all font-bold active:scale-95 flex items-center justify-center gap-1.5">
-                                                <span>📢</span> <span>Songtext vorlesen</span>
-                                            </button>
-                                            <select id="tts-voice-select" onchange="setTtsVoiceId(this.value)" class="w-full bg-slate-800 text-white text-[10px] xxs:text-xs px-2.5 py-2 rounded-xl border border-slate-700"></select>
+                                        <div class="w-full flex flex-col gap-1 mt-0.5 relative">
+                                            <div class="inline-flex items-center w-full rounded-xl bg-cyan-500/15 border border-cyan-500/20">
+                                                <button onclick="speakLyrics(this)" id="btn-speak-lyrics" class="flex-1 text-center text-[10px] xxs:text-xs text-cyan-300 px-2.5 py-2 hover:bg-cyan-500/25 transition-all font-bold active:scale-95 flex items-center justify-center gap-1.5 rounded-l-xl">
+                                                    <span>📢</span> <span>Songtext vorlesen</span>
+                                                </button>
+                                                <button onclick="toggleTtsSpeedMenu('tts-speed-menu-lyrics')" class="px-2 py-2 text-cyan-400 hover:bg-cyan-500/25 rounded-r-xl border-l border-cyan-500/20 text-[10px] xxs:text-xs font-mono font-bold transition-colors" title="Tempo anpassen">
+                                                    <span class="tts-speed-indicator-val">1.0x</span>
+                                                </button>
+                                            </div>
+                                            <!-- Mini-Menü Lyrics -->
+                                            <div id="tts-speed-menu-lyrics" class="hidden absolute top-full left-0 right-0 mt-1 z-50 p-2 rounded-xl bg-slate-900/95 border border-slate-700 shadow-2xl backdrop-blur-xl">
+                                                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 py-1 flex items-center justify-between">
+                                                    <span>Tempo</span>
+                                                    <button onclick="speechSynthesis.cancel(); ttsSetButtonState(document.getElementById('btn-speak-lyrics'), 'idle'); toggleTtsSpeedMenu('tts-speed-menu-lyrics', false);" class="text-rose-400 hover:text-rose-300 transition-colors font-sans">⏹ Stopp</button>
+                                                </div>
+                                                <div class="grid grid-cols-5 gap-1 mt-1">
+                                                    <button onclick="setTtsSpeed(0.8)" data-rate="0.8" class="tts-speed-pill px-1.5 py-1 rounded-lg text-center font-mono text-[10px] font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all">0.8x</button>
+                                                    <button onclick="setTtsSpeed(1.0)" data-rate="1.0" class="tts-speed-pill px-1.5 py-1 rounded-lg text-center font-mono text-[10px] font-bold bg-emerald-600 text-white transition-all">1.0x</button>
+                                                    <button onclick="setTtsSpeed(1.2)" data-rate="1.2" class="tts-speed-pill px-1.5 py-1 rounded-lg text-center font-mono text-[10px] font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all">1.2x</button>
+                                                    <button onclick="setTtsSpeed(1.5)" data-rate="1.5" class="tts-speed-pill px-1.5 py-1 rounded-lg text-center font-mono text-[10px] font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all">1.5x</button>
+                                                    <button onclick="setTtsSpeed(2.0)" data-rate="2.0" class="tts-speed-pill px-1.5 py-1 rounded-lg text-center font-mono text-[10px] font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all">2.0x</button>
+                                                </div>
+                                            </div>
+                                            <select id="tts-voice-select" onchange="setTtsVoiceId(this.value)" class="w-full bg-slate-800 text-white text-[10px] xxs:text-xs px-2.5 py-2 rounded-xl border border-slate-700 mt-1"></select>
                                         </div>
                                         <!-- NEW: StandBy-Transparenz-Regler - steuert, wie blickdicht der schwarze
                                              Hintergrund im StandBy-/Lockscreen-Modus ist. -->
@@ -5920,9 +5961,28 @@
                                 <!-- NEU v24.30: Vorlesen-Button jetzt direkt in der Lyrics-Ansicht sichtbar
                                      (vorher nur im Einstellungsmenü versteckt) - spiegelbildlich zur
                                      Tipp-zum-Springen-Uhr unten links platziert. -->
-                                <button onclick="speakLyrics(this)" id="btn-speak-lyrics-visible" aria-label="Songtext vorlesen" title="Songtext vorlesen" class="absolute bottom-2 right-2 z-30 p-2 rounded-full bg-black/50 hover:bg-black/70 text-white/70 hover:text-white transition-all border border-white/10">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
-                                </button>
+                                <div class="absolute bottom-2 right-2 z-30 flex items-center gap-1">
+                                    <button onclick="toggleTtsSpeedMenu('tts-speed-menu-floating')" class="px-2 py-1 rounded-full bg-black/60 hover:bg-black/80 text-cyan-400 border border-white/10 text-[10px] font-mono font-bold transition-all shadow-md" title="Vorlese-Tempo anpassen">
+                                        <span class="tts-speed-indicator-val">1.0x</span>
+                                    </button>
+                                    <button onclick="speakLyrics(this)" id="btn-speak-lyrics-visible" aria-label="Songtext vorlesen" title="Songtext vorlesen" class="p-2 rounded-full bg-black/50 hover:bg-black/70 text-white/70 hover:text-white transition-all border border-white/10 shadow-md">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+                                    </button>
+                                </div>
+                                <!-- Mini-Menü Floating Lyrics -->
+                                <div id="tts-speed-menu-floating" class="hidden absolute bottom-12 right-2 z-50 p-2 rounded-xl bg-slate-900/95 border border-slate-700 shadow-2xl backdrop-blur-xl min-w-[170px]">
+                                    <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 py-1 flex items-center justify-between">
+                                        <span>Tempo</span>
+                                        <button onclick="speechSynthesis.cancel(); ttsSetButtonState(document.getElementById('btn-speak-lyrics-visible'), 'idle'); toggleTtsSpeedMenu('tts-speed-menu-floating', false);" class="text-rose-400 hover:text-rose-300 transition-colors font-sans">⏹ Stopp</button>
+                                    </div>
+                                    <div class="grid grid-cols-5 gap-1 mt-1">
+                                        <button onclick="setTtsSpeed(0.8)" data-rate="0.8" class="tts-speed-pill px-1.5 py-1 rounded-lg text-center font-mono text-[10px] font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all">0.8x</button>
+                                        <button onclick="setTtsSpeed(1.0)" data-rate="1.0" class="tts-speed-pill px-1.5 py-1 rounded-lg text-center font-mono text-[10px] font-bold bg-emerald-600 text-white transition-all">1.0x</button>
+                                        <button onclick="setTtsSpeed(1.2)" data-rate="1.2" class="tts-speed-pill px-1.5 py-1 rounded-lg text-center font-mono text-[10px] font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all">1.2x</button>
+                                        <button onclick="setTtsSpeed(1.5)" data-rate="1.5" class="tts-speed-pill px-1.5 py-1 rounded-lg text-center font-mono text-[10px] font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all">1.5x</button>
+                                        <button onclick="setTtsSpeed(2.0)" data-rate="2.0" class="tts-speed-pill px-1.5 py-1 rounded-lg text-center font-mono text-[10px] font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all">2.0x</button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -9367,14 +9427,117 @@
         // VORLESEFUNKTION (Web Speech API)
         // 100% nativ, schnell, ressourcenschonend und browserweit stabil.
         // ========================================================= //
-        const TTS_LANG_PREFIX = { de: 'de', en: 'en', es: 'es', fr: 'fr', pt: 'pt', tr: 'tr' };
-        const TTS_LANG_BCP47 = { de: 'de-DE', en: 'en-US', es: 'es-ES', fr: 'fr-FR', pt: 'pt-BR', tr: 'tr-TR' };
+        const TTS_LANG_PREFIX = { de: 'de', en: 'en', es: 'es', fr: 'fr', pt: 'pt', tr: 'tr', it: 'it', ja: 'ja', ko: 'ko', zh: 'zh', ru: 'ru', nl: 'nl', pl: 'pl' };
+        const TTS_LANG_BCP47 = {
+            de: 'de-DE', en: 'en-US', es: 'es-ES', fr: 'fr-FR', pt: 'pt-BR', tr: 'tr-TR',
+            it: 'it-IT', ja: 'ja-JP', ko: 'ko-KR', zh: 'zh-CN', ru: 'ru-RU', nl: 'nl-NL', pl: 'pl-PL'
+        };
 
-        function getVoicesForCurrentLang() {
-            const lang = currentLang || 'de';
-            const prefix = TTS_LANG_PREFIX[lang] || 'de';
+        // TTS Speed State (0.8x, 1.0x, 1.2x, 1.5x, 2.0x)
+        let currentTtsSpeed = parseFloat(localStorage.getItem('gp_tts_speed')) || 1.0;
+
+        window.setTtsSpeed = function(rate) {
+            currentTtsSpeed = parseFloat(rate) || 1.0;
+            try { localStorage.setItem('gp_tts_speed', currentTtsSpeed.toString()); } catch (e) {}
+            updateTtsSpeedUI();
+            if (typeof haptic === 'function') haptic(10);
+        };
+
+        function updateTtsSpeedUI() {
+            const indicators = document.querySelectorAll('.tts-speed-indicator-val');
+            indicators.forEach(ind => {
+                ind.innerText = `${currentTtsSpeed.toFixed(1)}x`;
+            });
+            const pills = document.querySelectorAll('.tts-speed-pill');
+            pills.forEach(btn => {
+                const btnRate = parseFloat(btn.getAttribute('data-rate'));
+                if (Math.abs(btnRate - currentTtsSpeed) < 0.05) {
+                    btn.classList.add('bg-emerald-600', 'text-white');
+                    btn.classList.remove('bg-slate-800', 'text-slate-300');
+                } else {
+                    btn.classList.remove('bg-emerald-600', 'text-white');
+                    btn.classList.add('bg-slate-800', 'text-slate-300');
+                }
+            });
+        }
+
+        function toggleTtsSpeedMenu(menuId, forceState) {
+            const menu = document.getElementById(menuId || 'tts-speed-menu');
+            if (!menu) return;
+            if (typeof forceState === 'boolean') {
+                if (forceState) menu.classList.remove('hidden');
+                else menu.classList.add('hidden');
+            } else {
+                menu.classList.toggle('hidden');
+            }
+            if (!menu.classList.contains('hidden')) {
+                updateTtsSpeedUI();
+            }
+        }
+
+        window.toggleTtsSpeedMenu = toggleTtsSpeedMenu;
+
+        // Auto-Erkennung der Songtext-Sprache für akzentfreie & natürliche Vorlesung
+        function detectLyricsLanguage(lines) {
+            if (!lines || lines.length === 0) return currentLang || 'de';
+            let sample = '';
+            for (let i = 0; i < Math.min(lines.length, 25); i++) {
+                const line = lines[i];
+                if (line && line.tokens) {
+                    sample += ' ' + line.tokens.map(t => t.cleanText || t.text || '').join(' ');
+                }
+            }
+            sample = sample.toLowerCase();
+            if (sample.length < 5) return currentLang || 'de';
+
+            // CJK-Zeichen direkt erkennen
+            if (/[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]/.test(sample)) return 'ja';
+            if (/[\uac00-\ud7af]/.test(sample)) return 'ko';
+            if (/[\u0400-\u04ff]/.test(sample)) return 'ru';
+
+            // Häufigste Wörter & Buchstaben je Sprache
+            let scores = { de: 0, en: 0, es: 0, fr: 0, it: 0, pt: 0 };
+            
+            // Deutsch
+            const deMatches = sample.match(/\b(der|die|das|und|in|ich|nicht|mit|du|es|auf|ist|ein|eine|den|dem|dich|dir|mich|mir|uns|wir|hier|wenn|aber)\b/g);
+            if (deMatches) scores.de += deMatches.length * 2;
+            const deUmlauts = sample.match(/[äöüß]/g);
+            if (deUmlauts) scores.de += deUmlauts.length * 3;
+
+            // Englisch
+            const enMatches = sample.match(/\b(the|and|you|that|was|for|are|with|they|this|have|from|one|had|by|words|but|not|what|all|were|we|when|your|can|said|there|use|an|each|which|she|do|how|their|if|will|up|other|about|out|many|then|them|these|so|some|her|would|make|like|him|into|time|has|look|two|more|write|go|see|number|no|way|could|people|my|than|first|water|been|call|who|oil|its|now|find|long|down|day|did|get|come|made|may|part|yeah|baby|love|don't|can't|won't|ain't|i'm|you're)\b/g);
+            if (enMatches) scores.en += enMatches.length * 2;
+
+            // Spanisch
+            const esMatches = sample.match(/\b(el|la|de|que|en|un|por|con|para|los|las|una|este|esta|del|pero|como|yo|tu|mi|mas|te|se|su|al)\b/g);
+            if (esMatches) scores.es += esMatches.length * 2;
+            const esAccents = sample.match(/[áéíóúñ¿¡]/g);
+            if (esAccents) scores.es += esAccents.length * 3;
+
+            // Französisch
+            const frMatches = sample.match(/\b(le|la|les|des|du|est|une|pour|dans|avec|sur|qui|que|pas|mon|mes|ton|tes|son|ses|nous|vous|ils|elle)\b/g);
+            if (frMatches) scores.fr += frMatches.length * 2;
+            const frAccents = sample.match(/[àâçèêëîïôûùüÿœæ]/g);
+            if (frAccents) scores.fr += frAccents.length * 3;
+
+            let maxLang = 'en';
+            let maxScore = scores.en;
+            if (scores.de > maxScore) { maxLang = 'de'; maxScore = scores.de; }
+            if (scores.es > maxScore) { maxLang = 'es'; maxScore = scores.es; }
+            if (scores.fr > maxScore) { maxLang = 'fr'; maxScore = scores.fr; }
+
+            return maxScore > 0 ? maxLang : (currentLang || 'en');
+        }
+
+        function getVoicesForLang(lang) {
+            const l = lang || currentLang || 'de';
+            const prefix = TTS_LANG_PREFIX[l] || l;
             if (typeof speechSynthesis === 'undefined') return [];
             return speechSynthesis.getVoices().filter(v => v.lang.toLowerCase().startsWith(prefix));
+        }
+
+        function getVoicesForCurrentLang() {
+            return getVoicesForLang(currentLang || 'de');
         }
 
         // Manche Browser laden die Stimmenliste asynchron nach
@@ -9393,13 +9556,13 @@
             });
         }
 
-        function getTtsVoiceId() {
-            const lang = currentLang || 'de';
-            return localStorage.getItem('ttsVoiceId_' + lang) || '';
+        function getTtsVoiceId(lang) {
+            const l = lang || currentLang || 'de';
+            return localStorage.getItem('ttsVoiceId_' + l) || '';
         }
-        window.setTtsVoiceId = function(voiceId) {
-            const lang = currentLang || 'de';
-            localStorage.setItem('ttsVoiceId_' + lang, voiceId);
+        window.setTtsVoiceId = function(voiceId, lang) {
+            const l = lang || currentLang || 'de';
+            localStorage.setItem('ttsVoiceId_' + l, voiceId);
         };
 
         async function populateTtsVoiceDropdown() {
@@ -9443,11 +9606,16 @@
             });
         }
 
-        function ttsPickVoice() {
-            const voices = getVoicesForCurrentLang();
-            if (voices.length === 0) return null;
-            const saved = getTtsVoiceId();
-            return voices.find(v => v.name === saved) || voices[0];
+        function ttsPickVoice(targetLang) {
+            const l = targetLang || currentLang || 'de';
+            const voices = getVoicesForLang(l);
+            if (voices.length === 0) {
+                // Fallback auf beliebige Stimmen
+                const allVoices = (typeof speechSynthesis !== 'undefined') ? speechSynthesis.getVoices() : [];
+                return allVoices[0] || null;
+            }
+            const saved = getTtsVoiceId(l);
+            return (saved && voices.find(v => v.name === saved)) || voices[0];
         }
 
         function splitIntoSpeechChunks(text, maxLen = 180) {
@@ -9474,7 +9642,7 @@
 
         window._ttsUtterances = [];
 
-        function ttsSpeak(text, btnEl) {
+        function ttsSpeak(text, btnEl, optLang) {
             if (!text || !text.trim()) return;
 
             if (typeof speechSynthesis === 'undefined') {
@@ -9496,7 +9664,8 @@
                 speechSynthesis.resume();
             }
 
-            const voice = ttsPickVoice();
+            const activeLang = optLang || currentLang || 'de';
+            const voice = ttsPickVoice(activeLang);
             const chunks = splitIntoSpeechChunks(text.trim());
             if (chunks.length === 0) return;
 
@@ -9506,14 +9675,14 @@
             const total = chunks.length;
 
             chunks.forEach((chunk, index) => {
-                const targetLangCode = TTS_LANG_BCP47[currentLang || 'de'] || 'de-DE';
+                const targetLangCode = TTS_LANG_BCP47[activeLang] || TTS_LANG_BCP47[currentLang || 'de'] || 'de-DE';
                 const spokenChunk = targetLangCode.startsWith('de')
                     ? chunk.replace(/\bGamingpig\b/gi, 'Gaming Pigg')
                     : chunk;
                 const u = new SpeechSynthesisUtterance(spokenChunk);
                 if (voice) u.voice = voice;
                 u.lang = targetLangCode;
-                u.rate = 1.0;
+                u.rate = currentTtsSpeed || 1.0;
                 u.pitch = 1.0;
                 u.volume = 1.0;
 
@@ -9558,16 +9727,16 @@
                     `Moin moin! Schön dass du da bist. Gamingpig am Start:`,
                     `Hey! Herzlich willkommen im Gamingpig Cockpit. Kurz zu mir:`
                 ];
-                ttsSpeak(`${pickRandom(intros)} ${p1} ${p2}`, btnEl);
+                ttsSpeak(`${pickRandom(intros)} ${p1} ${p2}`, btnEl, 'de');
             } else if (lang === 'en') {
                 const intros = [
                     `Hello and welcome to my interactive portfolio! Here's a brief intro:`,
                     `Hey there! Gamingpig here. Let me introduce myself:`,
                     `Welcome to my developer hub! Here is my story:`
                 ];
-                ttsSpeak(`${pickRandom(intros)} ${p1} ${p2}`, btnEl);
+                ttsSpeak(`${pickRandom(intros)} ${p1} ${p2}`, btnEl, 'en');
             } else {
-                ttsSpeak(`${p1} ${p2}`, btnEl);
+                ttsSpeak(`${p1} ${p2}`, btnEl, lang);
             }
         };
 
@@ -9579,17 +9748,18 @@
             return new Promise(resolve => setTimeout(resolve, ms));
         }
 
-        function speakUtteranceAndWait(text, voice, rate) {
+        function speakUtteranceAndWait(text, voice, rate, optLang) {
             return new Promise(resolve => {
                 if (typeof speechSynthesis === 'undefined') return resolve();
-                const targetLangCode = TTS_LANG_BCP47[currentLang || 'de'] || 'de-DE';
+                const activeLang = optLang || currentLang || 'de';
+                const targetLangCode = TTS_LANG_BCP47[activeLang] || TTS_LANG_BCP47[currentLang || 'de'] || 'de-DE';
                 const spokenText = targetLangCode.startsWith('de')
                     ? text.replace(/\bGamingpig\b/gi, 'Gaming Pigg')
                     : text;
                 const u = new SpeechSynthesisUtterance(spokenText);
                 if (voice) u.voice = voice;
                 u.lang = targetLangCode;
-                u.rate = rate || 1.0;
+                u.rate = rate || currentTtsSpeed || 1.0;
                 u.pitch = 1.0;
                 u.volume = 1.0;
 
@@ -9597,13 +9767,16 @@
                 const done = () => {
                     if (finished) return;
                     finished = true;
+                    u.onend = null;
+                    u.onerror = null;
+                    window._activeTtsUtterance = null;
                     resolve();
                 };
 
                 u.onend = done;
                 u.onerror = done;
 
-                const maxWait = Math.max(2500, text.length * 180);
+                const maxWait = Math.max(1500, (text.length * 150) / Math.max(0.5, u.rate));
                 setTimeout(done, maxWait);
 
                 window._activeTtsUtterance = u;
@@ -9640,13 +9813,14 @@
                 speakLyricsSynced(parsedLyrics, btnEl);
             } else {
                 const text = parsedLyrics.map(line => line.tokens.map(t => t.cleanText).join(' ')).join('. ');
-                ttsSpeak(text, btnEl);
+                const lyricsLang = detectLyricsLanguage(parsedLyrics);
+                ttsSpeak(text, btnEl, lyricsLang);
             }
         };
 
         const TTS_MAX_LINE_GAP_MS = 6000;
-        const TTS_MS_PER_WORD_AT_RATE1 = 380;
-        const TTS_MAX_SYNC_RATE = 2.2;
+        const TTS_MS_PER_WORD_AT_RATE1 = 340;
+        const TTS_MAX_SYNC_RATE = 2.8;
 
         function groupTokensForSpeech(tokens, maxWordsPerGroup = 3) {
             const groups = [];
@@ -9664,7 +9838,9 @@
         }
 
         async function speakLyricsSynced(lines, btnEl) {
-            const voice = ttsPickVoice();
+            // Songtext-Sprache automatisch erkennen & passende Stimme wählen
+            const lyricsLang = detectLyricsLanguage(lines);
+            const voice = ttsPickVoice(lyricsLang);
             ttsSetButtonState(btnEl, 'speaking');
             ttsSyncedPlaybackActive = true;
 
@@ -9696,10 +9872,21 @@
             for (let i = 0; i < items.length; i++) {
                 if (!ttsSyncedPlaybackActive) break;
                 const item = items[i];
-                const rawOffset = item.timeMs - referenceMs;
-                const scheduledOffset = Math.min(rawOffset, cursor + TTS_MAX_LINE_GAP_MS);
-                const waitMs = Math.max(0, scheduledOffset - cursor);
-                if (waitMs > 0) await ttsSleep(waitMs);
+
+                // Dynamische Echtzeit-Synchronisation mit dem laufenden Track
+                const liveMusicMs = (typeof currentMs === 'number' && trackIsPlaying) ? (currentMs + liveSyncOffset) : (referenceMs + cursor);
+                const drift = liveMusicMs - item.timeMs;
+
+                // Wenn Stimme um mehr als 3.5 Sekunden hinterherhinkt: alte Zeile überspringen, um sofort aufzuschließen
+                if (drift > 3500 && i + 1 < items.length) {
+                    continue;
+                }
+
+                // Wartezeit berechnen
+                const waitMs = Math.max(0, item.timeMs - liveMusicMs);
+                if (waitMs > 0) {
+                    await ttsSleep(waitMs);
+                }
                 if (!ttsSyncedPlaybackActive) break;
 
                 if (typeof item.lineIdx === 'number') {
@@ -9707,15 +9894,29 @@
                     if (activeEl) scrollToLyricElement(activeEl);
                 }
 
-                const nextRawOffset = (i + 1 < items.length) ? items[i + 1].timeMs - referenceMs : scheduledOffset + TTS_MAX_LINE_GAP_MS;
-                const availableMs = Math.max(300, Math.min(nextRawOffset, scheduledOffset + TTS_MAX_LINE_GAP_MS) - scheduledOffset);
+                const nextItem = (i + 1 < items.length) ? items[i + 1] : null;
+                const currentLiveNow = (typeof currentMs === 'number' && trackIsPlaying) ? (currentMs + liveSyncOffset) : item.timeMs;
+                const availableMs = nextItem ? Math.max(250, nextItem.timeMs - currentLiveNow) : TTS_MAX_LINE_GAP_MS;
+
                 const wordCount = item.text.split(/\s+/).filter(Boolean).length;
                 const estimatedMs = wordCount * TTS_MS_PER_WORD_AT_RATE1;
-                const rate = Math.min(TTS_MAX_SYNC_RATE, Math.max(1, estimatedMs / availableMs));
+
+                // Basis-Geschwindigkeit aus Benutzeroberfläche (currentTtsSpeed: 0.8x - 2.0x)
+                const userSpeed = currentTtsSpeed || 1.0;
+                let neededRate = (estimatedMs / availableMs) * userSpeed;
+
+                // Drift-Kompensation: Bei Rückstand Sprechtempo dynamisch anziehen
+                const currentDrift = currentLiveNow - item.timeMs;
+                if (currentDrift > 150) {
+                    const catchupFactor = Math.min(2.0, 1.0 + (currentDrift / 1000));
+                    neededRate *= catchupFactor;
+                }
+
+                const finalRate = Math.min(TTS_MAX_SYNC_RATE, Math.max(0.75, neededRate));
 
                 const itemStart = performance.now();
-                await speakUtteranceAndWait(item.text, voice, rate);
-                cursor = Math.max(scheduledOffset, cursor) + (performance.now() - itemStart);
+                await speakUtteranceAndWait(item.text, voice, finalRate, lyricsLang);
+                cursor = (performance.now() - itemStart);
             }
 
             ttsSyncedPlaybackActive = false;
@@ -14271,6 +14472,9 @@ window.generateShareCard = function() {
                     if (miniStatus) miniStatus.innerText = t('mini_click_to_close');
                 }
             } else {
+                if (mainMusicCard && mainMusicCard.classList.contains('lyrics-open')) {
+                    toggleLyrics(false);
+                }
                 if (musicCardWrapper) {
                     musicCardWrapper.classList.remove('dashboard-opening');
                     musicCardWrapper.classList.add('dashboard-closing');
@@ -14604,7 +14808,11 @@ window.generateShareCard = function() {
             const musicTitleEl = document.getElementById('music-section-title');
             if(show) {
                 document.body.classList.add('lyrics-mode-active');
-                if (miniToggleEl) miniToggleEl.classList.add('hidden');
+                if (miniToggleEl) {
+                    miniToggleEl.classList.remove('hidden');
+                    if (miniTitle) miniTitle.innerText = currentTrackTitle || t('mini_dashboard_open') || 'Dashboard & Songtext';
+                    if (miniStatus) miniStatus.innerText = t('mini_click_to_close') || 'Klicken zum Schließen';
+                }
                 if (musicNoteEl) musicNoteEl.classList.add('hidden');
                 if (musicTitleEl) musicTitleEl.classList.add('hidden');
                 if (diEl) {
@@ -14621,7 +14829,17 @@ window.generateShareCard = function() {
                 startProgressTracking();
             } else {
                 document.body.classList.remove('lyrics-mode-active');
-                if (miniToggleEl) miniToggleEl.classList.remove('hidden');
+                if (miniToggleEl) {
+                    miniToggleEl.classList.remove('hidden');
+                    if (isDashboardOpen) {
+                        if (trackIsPlaying && currentTrackTitle) {
+                            if (miniTitle) miniTitle.innerText = currentTrackTitle;
+                            if (miniStatus) miniStatus.innerText = currentRawArtist ? `${currentRawArtist} · ${t('mini_click_to_close')}` : t('mini_click_to_close');
+                        } else {
+                            if (miniStatus) miniStatus.innerText = t('mini_click_to_close');
+                        }
+                    }
+                }
                 if (musicNoteEl) musicNoteEl.classList.remove('hidden');
                 if (musicTitleEl) musicTitleEl.classList.remove('hidden');
                 if (diEl) {
@@ -15181,6 +15399,8 @@ window.generateShareCard = function() {
             }
         }
 
+        let lastProgressUiUpdate = 0;
+
         function animateLoop(now) {
             if (!trackIsPlaying) {
                 isAnimating = false;
@@ -15203,15 +15423,20 @@ window.generateShareCard = function() {
                 return;
             }
 
-            const elapsed = performance.now() - localStartTime;
+            const currentPerfNow = performance.now();
+            const elapsed = currentPerfNow - localStartTime;
             currentMs = serverBaseProgress + elapsed;
 
             if (totalMs && currentMs > totalMs) {
                 currentMs = totalMs;
             }
 
-            // Timeline & Zeiten live auf jedem Frame synchronisieren
-            updateProgressUI();
+            // PERF-OPTIMIERUNG (Pixel/120Hz Fix): DOM-Text- & Skalierungs-Updates auf max 25fps drosseln (~40ms),
+            // während Wort-Highlights und sanfte Animationen flüssig bleiben. Verhindert massive Überhitzung & Lag.
+            if (currentPerfNow - lastProgressUiUpdate >= 40) {
+                updateProgressUI();
+                lastProgressUiUpdate = currentPerfNow;
+            }
 
             if (mainMusicCard && mainMusicCard.classList.contains('lyrics-open')) {
                 syncLyricsUI();
