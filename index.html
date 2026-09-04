@@ -9422,10 +9422,15 @@
         // VORLESEFUNKTION (Web Speech API)
         // 100% nativ, schnell, ressourcenschonend und browserweit stabil.
         // ========================================================= //
-        const TTS_LANG_PREFIX = { de: 'de', en: 'en', es: 'es', fr: 'fr', pt: 'pt', tr: 'tr', it: 'it', ja: 'ja', ko: 'ko', zh: 'zh', ru: 'ru', nl: 'nl', pl: 'pl' };
+        const TTS_LANG_PREFIX = {
+            de: 'de', en: 'en', es: 'es', fr: 'fr', pt: 'pt', tr: 'tr', it: 'it',
+            ja: 'ja', ko: 'ko', zh: 'zh', ru: 'ru', nl: 'nl', pl: 'pl',
+            sv: 'sv', no: 'nb', nb: 'nb', nn: 'nn', da: 'da', fi: 'fi'
+        };
         const TTS_LANG_BCP47 = {
             de: 'de-DE', en: 'en-US', es: 'es-ES', fr: 'fr-FR', pt: 'pt-BR', tr: 'tr-TR',
-            it: 'it-IT', ja: 'ja-JP', ko: 'ko-KR', zh: 'zh-CN', ru: 'ru-RU', nl: 'nl-NL', pl: 'pl-PL'
+            it: 'it-IT', ja: 'ja-JP', ko: 'ko-KR', zh: 'zh-CN', ru: 'ru-RU', nl: 'nl-NL', pl: 'pl-PL',
+            sv: 'sv-SE', no: 'nb-NO', nb: 'nb-NO', nn: 'nn-NO', da: 'da-DK', fi: 'fi-FI'
         };
 
         // TTS Speed State (0.8x, 1.0x, 1.2x, 1.5x, 2.0x)
@@ -9490,11 +9495,27 @@
             if (/[\uac00-\ud7af]/.test(sample)) return 'ko';
             if (/[\u0400-\u04ff]/.test(sample)) return 'ru';
 
-            // Häufigste Wörter & Buchstaben je Sprache
-            let scores = { de: 0, en: 0, es: 0, fr: 0, it: 0, pt: 0 };
-            
+            // Häufigste Wörter & Buchstaben je Sprache (inkl. Schwedisch & Norwegisch für Marcus & Martinus etc.)
+            let scores = { de: 0, en: 0, es: 0, fr: 0, it: 0, pt: 0, sv: 0, no: 0, da: 0, fi: 0 };
+
+            // Schwedisch (Svenska) - Marcus & Martinus (z.B. Air, Unforgettable, Elektrisk, Slå dig fri)
+            const svMatches = sample.match(/\b(och|jag|det|är|på|att|en|ett|som|med|för|av|till|inte|mig|dig|vi|om|han|hon|den|här|där|har|kan|ska|vill|nu|bara|när|eller|så|din|min|vår|er|alla|dessa|många|vet|utan|mer|aldrig|alltid|igen)\b/g);
+            if (svMatches) scores.sv += svMatches.length * 2.5;
+            const svChars = sample.match(/[åäöÅÄÖ]/g);
+            if (svChars) scores.sv += svChars.length * 3;
+
+            // Norwegisch (Norsk) - Muttersprache Marcus & Martinus
+            const noMatches = sample.match(/\b(og|jeg|det|er|på|at|en|et|som|med|for|av|til|ikke|meg|deg|vi|om|han|hun|den|her|der|har|kan|skal|vil|nå|bare|når|eller|så|din|min|vår|dere|alle|disse|mange|vet|uten|mer|aldri|alltid|igjen|hva|hvor|hvem)\b/g);
+            if (noMatches) scores.no += noMatches.length * 2.5;
+            const noChars = sample.match(/[æøåÆØÅ]/g);
+            if (noChars) scores.no += noChars.length * 3;
+
+            // Dänisch (Dansk)
+            const daMatches = sample.match(/\b(og|jeg|det|er|på|at|en|et|som|med|for|af|til|ikke|mig|dig|vi|om|han|hun|den|her|der|har|kan|skal|vil|nu|bare|når|eller|så|din|min|vores|hvad|hvor)\b/g);
+            if (daMatches) scores.da += daMatches.length * 2;
+
             // Deutsch
-            const deMatches = sample.match(/\b(der|die|das|und|in|ich|nicht|mit|du|es|auf|ist|ein|eine|den|dem|dich|dir|mich|mir|uns|wir|hier|wenn|aber)\b/g);
+            const deMatches = sample.match(/\b(der|die|das|und|in|ich|nicht|mit|du|es|auf|ist|ein|eine|den|dem|dich|dir|mich|mir|uns|wir|hier|wenn|aber|mein|dein|sein|unser|durch|für|gegen|ohne|um)\b/g);
             if (deMatches) scores.de += deMatches.length * 2;
             const deUmlauts = sample.match(/[äöüß]/g);
             if (deUmlauts) scores.de += deUmlauts.length * 3;
@@ -9515,11 +9536,18 @@
             const frAccents = sample.match(/[àâçèêëîïôûùüÿœæ]/g);
             if (frAccents) scores.fr += frAccents.length * 3;
 
+            // Italienisch
+            const itMatches = sample.match(/\b(il|la|di|che|in|un|per|con|del|della|questo|questa|come|io|tu|non|ma|sono|anche|cosa|ci|se)\b/g);
+            if (itMatches) scores.it += itMatches.length * 2;
+
             let maxLang = 'en';
             let maxScore = scores.en;
-            if (scores.de > maxScore) { maxLang = 'de'; maxScore = scores.de; }
-            if (scores.es > maxScore) { maxLang = 'es'; maxScore = scores.es; }
-            if (scores.fr > maxScore) { maxLang = 'fr'; maxScore = scores.fr; }
+            for (const [langKey, langScore] of Object.entries(scores)) {
+                if (langScore > maxScore) {
+                    maxScore = langScore;
+                    maxLang = langKey;
+                }
+            }
 
             return maxScore > 0 ? maxLang : (currentLang || 'en');
         }
@@ -9528,7 +9556,16 @@
             const l = lang || currentLang || 'de';
             const prefix = TTS_LANG_PREFIX[l] || l;
             if (typeof speechSynthesis === 'undefined') return [];
-            return speechSynthesis.getVoices().filter(v => v.lang.toLowerCase().startsWith(prefix));
+            const all = speechSynthesis.getVoices();
+            let matches = all.filter(v => {
+                const vl = v.lang.toLowerCase();
+                return vl.startsWith(prefix) || (prefix === 'nb' && vl.startsWith('no')) || (prefix === 'no' && vl.startsWith('nb'));
+            });
+            if (matches.length === 0 && (l === 'sv' || l === 'no' || l === 'da')) {
+                // Skandinavischer Ausgleich: falls keine rein schwedische Stimme installiert ist, skandinavische Fallbacks prüfen
+                matches = all.filter(v => /^(sv|nb|nn|no|da)/i.test(v.lang));
+            }
+            return matches;
         }
 
         function getVoicesForCurrentLang() {
