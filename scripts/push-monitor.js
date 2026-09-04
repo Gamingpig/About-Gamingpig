@@ -19,6 +19,8 @@ webPush.setVapidDetails(
 );
 
 const SUBSCRIBERS_FILE = path.join(__dirname, '..', 'data', 'subscribers.json');
+const PUSH_SYNC_TOPIC = process.env.PUSH_SYNC_TOPIC || 'gamingpig_push_sub_vault_9f8a2b3c4d5e';
+const PUSH_SYNC_URL = `https://ntfy.sh/${PUSH_SYNC_TOPIC}`;
 
 function loadSubscribers() {
     try {
@@ -36,6 +38,148 @@ function saveSubscribers(subscribers) {
         fs.writeFileSync(SUBSCRIBERS_FILE, JSON.stringify(subscribers, null, 2), 'utf8');
     } catch (e) {
         console.error('Failed to save subscribers:', e.message);
+    }
+}
+
+async function sendWelcomePush(sub) {
+    const subLang = (sub.lang || 'de').slice(0, 2).toLowerCase();
+    const welcomePayload = {
+        title: '🔔 Gamingpig Störungs-Alarm aktiv',
+        body: 'Dein Gerät empfängt ab sofort alle Alarme & Entwarnungen vollautomatisch!',
+        translations: {
+            de: {
+                title: '🔔 Gamingpig Störungs-Alarm aktiv',
+                body: 'Dein Gerät empfängt ab sofort alle Alarme & Entwarnungen vollautomatisch!'
+            },
+            en: {
+                title: '🔔 Gamingpig Outage Alerts Active',
+                body: 'Your device will now receive outage & recovery notifications automatically!'
+            },
+            es: {
+                title: '🔔 Alertas del sistema Gamingpig activadas',
+                body: '¡Tu dispositivo recibirá alertas de fallos y recuperaciones automáticamente!'
+            },
+            fr: {
+                title: '🔔 Alertes système Gamingpig activées',
+                body: 'Votre appareil recevra désormais toutes les alertes et retours en ligne automatiquement !'
+            },
+            pt: {
+                title: '🔔 Alertas de sistema Gamingpig ativados',
+                body: 'Seu dispositivo agora receberá todos os alertas e recuperações automaticamente!'
+            },
+            tr: {
+                title: '🔔 Gamingpig Sistem Bildirimleri Aktif',
+                body: 'Cihazınız artık tüm kesinti ve kurtarma bildirimlerini otomatik olarak alacak!'
+            }
+        },
+        url: 'https://gamingpig.github.io/About-Gamingpig/status.html'
+    };
+
+    let welcomeTitle = welcomePayload.title;
+    let welcomeBody = welcomePayload.body;
+    if (welcomePayload.translations[subLang]) {
+        welcomeTitle = welcomePayload.translations[subLang].title;
+        welcomeBody = welcomePayload.translations[subLang].body;
+    }
+
+    await webPush.sendNotification(sub, JSON.stringify({
+        broadcastId: 'welcome_' + Date.now(),
+        title: welcomeTitle,
+        body: welcomeBody,
+        translations: welcomePayload.translations,
+        url: welcomePayload.url,
+        timestamp: Date.now()
+    }), {
+        TTL: 86400,
+        urgency: 'high'
+    });
+    console.log(`✅ Welcome push delivered to ${sub.endpoint.substring(0, 45)}... [Lang: ${subLang}]`);
+}
+
+async function syncPendingSubscribersFromQueue() {
+    console.log('🔄 Checking for pending push subscriptions in server queue...');
+    try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 8000);
+        const res = await fetch(`${PUSH_SYNC_URL}/json?poll=1&since=24h`, {
+            signal: controller.signal,
+            headers: { 'Accept': 'application/json' }
+        });
+        clearTimeout(timeout);
+
+        if (!res.ok) {
+            console.log(`Queue response status: ${res.status}`);
+            return;
+        }
+
+        const text = await res.text();
+        if (!text || !text.trim()) {
+            console.log('No pending subscriptions found in queue.');
+            return;
+        }
+
+        const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+        let subscribers = loadSubscribers();
+        let addedCount = 0;
+        let updatedCount = 0;
+
+        for (const line of lines) {
+            try {
+                const item = JSON.parse(line);
+                if (item.event !== 'message' || !item.message) continue;
+                
+                let data;
+                try {
+                    data = typeof item.message === 'string' ? JSON.parse(item.message) : item.message;
+                } catch (e) {
+                    continue;
+                }
+
+                if (!data || !data.endpoint || typeof data.endpoint !== 'string') continue;
+                if (!data.endpoint.startsWith('https://')) continue;
+                if (!data.keys || !data.keys.p256dh || !data.keys.auth) continue;
+
+                const cleanSub = {
+                    endpoint: data.endpoint,
+                    expirationTime: data.expirationTime || null,
+                    lang: (data.lang || 'de').slice(0, 2).toLowerCase(),
+                    keys: {
+                        p256dh: data.keys.p256dh,
+                        auth: data.keys.auth
+                    }
+                };
+
+                const existingIdx = subscribers.findIndex(s => s.endpoint === cleanSub.endpoint);
+                if (existingIdx >= 0) {
+                    if (subscribers[existingIdx].lang !== cleanSub.lang || 
+                        subscribers[existingIdx].keys.p256dh !== cleanSub.keys.p256dh ||
+                        subscribers[existingIdx].keys.auth !== cleanSub.keys.auth) {
+                        subscribers[existingIdx] = cleanSub;
+                        updatedCount++;
+                    }
+                } else {
+                    subscribers.push(cleanSub);
+                    addedCount++;
+                    console.log(`✨ [Auto-Register] Ingested subscriber from queue: ${cleanSub.endpoint.substring(0, 45)}... [Lang: ${cleanSub.lang}]`);
+                    try {
+                        await sendWelcomePush(cleanSub);
+                    } catch (err) {
+                        console.warn(`Welcome push failed for new subscriber: ${err.message}`);
+                    }
+                }
+            } catch (err) {
+                // Ignore individual line malformation
+            }
+        }
+
+        if (addedCount > 0 || updatedCount > 0) {
+            saveSubscribers(subscribers);
+            console.log(`✅ Queue sync complete: Added ${addedCount}, updated ${updatedCount}. Total active subscribers: ${subscribers.length}`);
+        } else {
+            console.log(`Queue sync complete: All ${lines.length} items already up to date.`);
+        }
+    } catch (e) {
+        console.warn('Queue sync check warning:', e.message);
     }
 }
 
@@ -265,6 +409,14 @@ async function checkEndpoints() {
 
 async function main() {
     const mode = process.argv[2] || 'check';
+
+    // 1. Automatische Synchronisation aller neuen Abonnenten aus der Server-Queue
+    await syncPendingSubscribersFromQueue();
+
+    if (mode === 'sync' || mode === 'sync-subscribers') {
+        console.log('✅ Abonnenten-Synchronisation erfolgreich beendet.');
+        return;
+    }
 
     if (mode === 'send' || mode === 'custom' || mode === 'broadcast' || mode === 'manual-push' || mode === 'maintenance') {
         const title = process.argv[3] || process.env.PUSH_TITLE || '⚠️ Gamingpig Status-Alarm';

@@ -128,9 +128,15 @@
                     </div>
                 </div>
 
-                <div class="px-3.5 py-1.5 rounded-xl bg-slate-900/80 border border-white/10 text-right shrink-0">
-                    <span class="text-[10px] text-slate-400 block uppercase font-mono">Registrierte Geräte</span>
-                    <strong class="text-emerald-400 font-mono text-sm" id="subscribers-count">Lade...</strong>
+                <div class="flex items-center gap-2">
+                    <div class="px-3.5 py-1.5 rounded-xl bg-slate-900/80 border border-white/10 text-right shrink-0">
+                        <span class="text-[10px] text-slate-400 block uppercase font-mono">Registrierte Geräte</span>
+                        <strong class="text-emerald-400 font-mono text-sm" id="subscribers-count">Lade...</strong>
+                    </div>
+                    <button onclick="syncQueueNow()" title="Warteschlange jetzt synchronisieren" class="px-3 py-2 rounded-xl bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/40 text-indigo-300 text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer">
+                        <span>🔄</span>
+                        <span class="hidden sm:inline">Sync</span>
+                    </button>
                 </div>
             </div>
 
@@ -824,18 +830,138 @@
             updateGitHubBridgeUI();
         }
 
+        const PUSH_SYNC_TOPIC = 'gamingpig_push_sub_vault_9f8a2b3c4d5e';
+        const PUSH_SYNC_URL = 'https://ntfy.sh/' + PUSH_SYNC_TOPIC;
+
         async function loadSubscribersCount() {
             const el = document.getElementById('subscribers-count');
             try {
                 const res = await fetch('./data/subscribers.json?_t=' + Date.now());
+                let activeCount = 3;
+                let existingEndpoints = new Set();
                 if (res.ok) {
                     const data = await res.json();
-                    el.innerText = data.length + (data.length === 1 ? ' Gerät aktiv' : ' Geräte aktiv');
+                    activeCount = data.length;
+                    data.forEach(s => existingEndpoints.add(s.endpoint));
+                }
+
+                // Check pending items in queue
+                let pendingCount = 0;
+                try {
+                    const qRes = await fetch(`${PUSH_SYNC_URL}/json?poll=1&since=24h`);
+                    if (qRes.ok) {
+                        const qText = await qRes.text();
+                        const lines = qText.split('\n').filter(Boolean);
+                        for (const line of lines) {
+                            try {
+                                const item = JSON.parse(line);
+                                if (item.event === 'message' && item.message) {
+                                    const m = typeof item.message === 'string' ? JSON.parse(item.message) : item.message;
+                                    if (m && m.endpoint && !existingEndpoints.has(m.endpoint)) {
+                                        pendingCount++;
+                                    }
+                                }
+                            } catch (e) {}
+                        }
+                    }
+                } catch (e) {}
+
+                if (pendingCount > 0) {
+                    el.innerText = `${activeCount} aktiv (+${pendingCount} neu in Queue)`;
                 } else {
-                    el.innerText = '3 Geräte aktiv';
+                    el.innerText = activeCount + (activeCount === 1 ? ' Gerät aktiv' : ' Geräte aktiv');
                 }
             } catch (e) {
-                el.innerText = '3 Geräte aktiv';
+                el.innerText = 'Aktiv';
+            }
+        }
+
+        async function syncQueueNow() {
+            showToast('Synchronisiere Geräte aus Warteschlange...', '🔄');
+            try {
+                const token = await getStoredGitHubToken();
+                if (!token) {
+                    showToast('Bitte speichere zuerst deinen GitHub PAT in den Einstellungen!', '⚠️');
+                    return;
+                }
+
+                const getRes = await fetch('https://api.github.com/repos/Gamingpig/About-Gamingpig/contents/data/subscribers.json', {
+                    headers: {
+                        'Accept': 'application/vnd.github+json',
+                        'Authorization': `Bearer ${token}`,
+                        'X-GitHub-Api-Version': '2022-11-28'
+                    }
+                });
+                if (!getRes.ok) {
+                    showToast('Fehler beim Laden von data/subscribers.json von GitHub', '❌');
+                    return;
+                }
+                const fileData = await getRes.json();
+                const contentStr = decodeURIComponent(escape(atob(fileData.content.replace(/\s/g, ''))));
+                let subscribers = JSON.parse(contentStr || '[]');
+
+                const qRes = await fetch(`${PUSH_SYNC_URL}/json?poll=1&since=24h`);
+                if (!qRes.ok) {
+                    showToast('Warteschlange antwortet nicht', '⚠️');
+                    return;
+                }
+                const qText = await qRes.text();
+                const lines = qText.split('\n').filter(Boolean);
+                let added = 0;
+                for (const line of lines) {
+                    try {
+                        const item = JSON.parse(line);
+                        if (item.event === 'message' && item.message) {
+                            const data = typeof item.message === 'string' ? JSON.parse(item.message) : item.message;
+                            if (data && data.endpoint && data.endpoint.startsWith('https://') && data.keys && data.keys.p256dh && data.keys.auth) {
+                                const cleanSub = {
+                                    endpoint: data.endpoint,
+                                    expirationTime: data.expirationTime || null,
+                                    lang: (data.lang || 'de').slice(0, 2).toLowerCase(),
+                                    keys: {
+                                        p256dh: data.keys.p256dh,
+                                        auth: data.keys.auth
+                                    }
+                                };
+                                const idx = subscribers.findIndex(s => s.endpoint === cleanSub.endpoint);
+                                if (idx >= 0) {
+                                    subscribers[idx] = cleanSub;
+                                } else {
+                                    subscribers.push(cleanSub);
+                                    added++;
+                                }
+                            }
+                        }
+                    } catch (e) {}
+                }
+
+                if (added > 0) {
+                    const updatedJson = JSON.stringify(subscribers, null, 2);
+                    const encodedContent = btoa(unescape(encodeURIComponent(updatedJson)));
+                    const putRes = await fetch('https://api.github.com/repos/Gamingpig/About-Gamingpig/contents/data/subscribers.json', {
+                        method: 'PUT',
+                        headers: {
+                            'Accept': 'application/vnd.github+json',
+                            'Authorization': `Bearer ${token}`,
+                            'X-GitHub-Api-Version': '2022-11-28'
+                        },
+                        body: JSON.stringify({
+                            message: `chore(push): sync ${added} new subscriber(s) from queue [skip ci]`,
+                            content: encodedContent,
+                            sha: fileData.sha
+                        })
+                    });
+                    if (putRes.ok) {
+                        showToast(`✅ ${added} neue(s) Gerät(e) erfolgreich synchronisiert!`, '🎉');
+                    } else {
+                        showToast('GitHub Commit fehlgeschlagen', '❌');
+                    }
+                } else {
+                    showToast('Alle Geräte sind bereits synchronisiert.', 'ℹ️');
+                }
+                await loadSubscribersCount();
+            } catch (err) {
+                showToast('Sync-Fehler: ' + err.message, '❌');
             }
         }
 
