@@ -3285,19 +3285,30 @@
             top: 100% !important;
             right: 0 !important;
             margin-top: 0.5rem !important;
-            z-index: 9999 !important;
-            max-height: calc(75vh - 20px) !important;
-            max-width: calc(100vw - 1.5rem) !important;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.15) !important;
-            backdrop-filter: blur(24px) !important;
-            -webkit-backdrop-filter: blur(24px) !important;
-            background-color: #0f172a !important;
+            z-index: 99999 !important;
+            max-height: min(72vh, 480px) !important;
+            width: min(340px, calc(100vw - 2rem)) !important;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.18) !important;
+            backdrop-filter: blur(28px) !important;
+            -webkit-backdrop-filter: blur(28px) !important;
+            background-color: #0b1120 !important;
             -webkit-overflow-scrolling: touch !important;
             overscroll-behavior-y: contain !important;
             transform-origin: top right !important;
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+            border-radius: 1.25rem !important;
         }
         #lyrics-settings-menu:not(.settings-opening):not(.settings-closing) {
             display: none !important;
+        }
+
+        
+        body.battery-chill .blob-container,
+        body.battery-chill .blob,
+        body.battery-chill .mesh-gradient::before,
+        body.battery-chill .mesh-gradient::after {
+            animation-play-state: paused !important;
         }
 
         /* Global Standalone Settings Modal (Fixed top right) */
@@ -4391,7 +4402,8 @@
              plausibel "Handy wird schon beim bloßen Öffnen der Seite heiß" - dieses Element
              existiert ja auf jeder einzelnen Seitenansicht. will-change jetzt nur noch, wenn
              die Lyrics-Ansicht tatsächlich offen ist (per bestehender lyrics-open-Klasse). -->
-        #lyrics-overlay, #lyrics-container { overflow: hidden; border-radius: inherit; }
+        #lyrics-overlay { border-radius: inherit; }
+        #lyrics-container { overflow: hidden; border-radius: inherit; }
         #main-music-card.lyrics-open #lyrics-overlay,
         #main-music-card.lyrics-open #lyrics-container { will-change: transform, opacity; }
         #lyrics-container { overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
@@ -5339,7 +5351,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.141.0 · 2026-09-07';
+        const SITE_VERSION = 'v24.142.0 · 2026-09-07';
 
         // =========================================================
         // NEU v24.118: Automatischer Reset veralteter Cached Flags bei Versionswechsel
@@ -5991,10 +6003,8 @@
                                         <p id="lyrics-style-preview-text" class="lyric-line active text-[11px] sm:text-xs font-bold leading-tight !m-0 !max-w-full !p-0"></p>
                                     </div>
 
-                                    <!-- Schriftgröße & Lesefokus -->
+                                    <!-- Lesefokus (Dimming) -->
                                     <div class="h-px w-full bg-slate-700/70 my-0.5"></div>
-                                    
-
                                     <div class="flex justify-between items-center px-1 mb-1">
                                         <p class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-slate-400">Lese-Fokus (Dimming)</p>
                                     </div>
@@ -6436,7 +6446,7 @@
                 <div id="footer-expandable-menu" class="hidden absolute bottom-full mb-3 left-1/2 -translate-x-1/2 z-50 p-3 rounded-2xl bg-slate-900/95 border border-slate-700/80 shadow-2xl backdrop-blur-xl min-w-[280px] max-w-[92vw] text-xs space-y-2 animate-in fade-in duration-200">
                     <div class="flex items-center justify-between px-1 pb-1 border-b border-white/10">
                         <span class="font-bold text-slate-400 text-[10px] uppercase tracking-wider">Navigation &amp; Rechtliches</span>
-                        <span id="footer-menu-hint" class="text-[9px] text-slate-500 font-mono">v24.140.0</span>
+                        <span id="footer-menu-hint" class="text-[9px] text-slate-500 font-mono">v24.142.0</span>
                     </div>
                     <div class="grid grid-cols-2 gap-2 text-left">
                         <button onclick="openChangelogModal(); toggleFooterMenu(false)" id="footer-whats-new-btn" class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/90 text-blue-400 font-bold flex items-center gap-1.5 transition-all active:scale-95">
@@ -6470,7 +6480,7 @@
                 <div class="inline-flex items-center gap-2 sm:gap-2.5 px-4 py-2 rounded-full bg-slate-900/85 backdrop-blur-xl border border-white/15 shadow-xl text-[11px] sm:text-xs text-slate-300">
                     <span id="footer-established" class="font-bold tracking-tight text-slate-300">© 2026 GAMINGPIG</span>
                     <span class="text-white/20 select-none">•</span>
-                    <span id="footer-version-label" class="font-mono font-bold text-pink-400">v24.140.0</span>
+                    <span id="footer-version-label" class="font-mono font-bold text-pink-400">v24.142.0</span>
                     <span class="text-white/20 select-none">•</span>
                     <button id="footer-menu-toggle-btn" onclick="toggleFooterMenu()" class="text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1 transition-colors px-1 py-0.5 rounded hover:bg-white/5 active:scale-95" aria-expanded="false" aria-label="Mehr Menü öffnen">
                         <span id="footer-more-label">Mehr</span>
@@ -6782,75 +6792,93 @@
 <!-- ========================================================= -->
 <!-- 🏆 INTERACTIVE TUTORIAL QUEST HUD (V5)                    -->
 <!-- ========================================================= -->
-<div id="interactive-quest-hud" class="hidden fixed bottom-5 sm:bottom-7 left-1/2 -translate-x-1/2 z-[10001] w-[92vw] max-w-lg transition-all duration-300 select-none animate-fadeInUp">
-    <div class="relative rounded-3xl bg-slate-900/95 border-2 border-purple-500/40 shadow-2xl backdrop-blur-2xl p-4 sm:p-5 text-white overflow-hidden">
-        <!-- Gradient top line glow -->
-        <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500"></div>
+<div id="interactive-quest-hud" class="hidden fixed top-20 sm:top-24 right-3 sm:right-6 z-[10001] w-[92vw] sm:w-[360px] max-w-sm transition-all duration-300 select-none animate-fadeIn">
+    <div class="relative rounded-3xl bg-slate-900/95 border-2 border-purple-500/50 shadow-2xl shadow-purple-950/60 backdrop-blur-2xl p-3.5 sm:p-4 text-white overflow-hidden">
+        <!-- Animated top energy bar -->
+        <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 animate-pulse"></div>
         
         <!-- Header -->
-        <div class="flex items-center justify-between gap-3 mb-3">
-            <div class="flex items-center gap-2.5">
-                <div class="w-9 h-9 rounded-2xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-lg shadow-inner">
-                    🎯
+        <div class="flex items-center justify-between gap-2 mb-2.5">
+            <div class="flex items-center gap-2 min-w-0">
+                <div class="w-8 h-8 rounded-xl bg-purple-500/20 border border-purple-400/40 flex items-center justify-center text-base shadow-inner shrink-0 animate-bounce">
+                    🎮
                 </div>
-                <div>
+                <div class="min-w-0">
                     <h3 class="text-xs sm:text-sm font-black uppercase tracking-wider text-white flex items-center gap-1.5">
-                        <span>Entdecker-Mission</span>
-                        <span id="quest-badge-count" class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-500/30 text-purple-200 border border-purple-400/30">0/4</span>
+                        <span class="truncate">Gamingpig Quest</span>
+                        <span id="quest-badge-count" class="text-[9px] font-mono px-1.5 py-0.5 rounded-full bg-purple-500/30 text-purple-200 border border-purple-400/30 shrink-0">0/4</span>
                     </h3>
-                    <p class="text-[10px] sm:text-xs text-slate-400 font-medium">Learning by Doing: Schließe alle Aufgaben ab!</p>
+                    <p id="quest-xp-display" class="text-[10px] text-amber-300 font-extrabold flex items-center gap-1">
+                        <span>⚡ 0 XP</span> <span class="text-slate-400 font-medium">• Lvl 1 Entdecker</span>
+                    </p>
                 </div>
             </div>
-            <div class="flex items-center gap-1.5">
-                <button onclick="toggleQuestHudCollapse()" id="btn-quest-collapse" class="p-1.5 sm:p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-all text-xs font-bold active:scale-95" title="Einklappen / Ausklappen">
-                    <span id="quest-collapse-icon">▼</span>
+            <div class="flex items-center gap-1 shrink-0">
+                <button onclick="toggleQuestHudPosition()" id="btn-quest-position" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-all text-xs font-bold active:scale-95" title="Oben/Unten umschalten">
+                    <span id="quest-pos-icon">↕️</span>
                 </button>
-                <button onclick="dismissInteractiveQuest()" class="p-1.5 sm:p-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 hover:text-rose-200 border border-rose-500/20 transition-all text-xs font-bold active:scale-95" title="Tutorial beenden">
+                <button onclick="toggleQuestHudCollapse()" id="btn-quest-collapse" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-all text-xs font-bold active:scale-95" title="Einklappen">
+                    <span id="quest-collapse-icon">▲</span>
+                </button>
+                <button onclick="dismissInteractiveQuest()" class="p-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 transition-all text-xs font-bold active:scale-95" title="Schließen">
                     ✕
                 </button>
             </div>
         </div>
 
-        <!-- Progress Bar -->
-        <div class="w-full bg-slate-800/80 rounded-full h-2 mb-3.5 overflow-hidden border border-white/5">
-            <div id="quest-progress-bar" class="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 h-full rounded-full transition-all duration-500 w-0"></div>
+        <!-- Progress Bar & XP -->
+        <div class="w-full bg-slate-800/90 rounded-full h-2 mb-2.5 overflow-hidden border border-white/10 p-0.5">
+            <div id="quest-progress-bar" class="bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 h-full rounded-full transition-all duration-500 w-0 shadow-lg shadow-purple-500/50"></div>
         </div>
 
         <!-- Quest List (Collapsible Container) -->
-        <div id="quest-tasks-container" class="space-y-2">
-            <div id="quest-item-card" class="flex items-center justify-between p-2 sm:p-2.5 rounded-xl bg-white/5 border border-white/5 transition-all">
-                <div class="flex items-center gap-2.5">
-                    <span class="text-base">🎴</span>
-                    <span class="text-xs font-bold text-slate-200">Öffne eine Real-Talk-Karte</span>
+        <div id="quest-tasks-container" class="space-y-1.5 max-h-[50vh] overflow-y-auto pr-0.5">
+            <div id="quest-item-card" class="flex items-center justify-between p-2 rounded-xl bg-white/5 border border-white/10 transition-all cursor-pointer hover:bg-white/10" onclick="scrollToId('real-talk'); haptic(20);">
+                <div class="flex items-center gap-2 min-w-0">
+                    <span class="text-sm shrink-0">🎴</span>
+                    <div class="min-w-0">
+                        <div class="text-[11px] font-bold text-slate-200 truncate">1. Real-Talk Karte antippen</div>
+                        <div class="text-[9px] text-amber-300/80 font-mono">+250 XP</div>
+                    </div>
                 </div>
-                <span id="quest-status-card" class="text-xs font-mono font-bold px-2 py-0.5 rounded-lg bg-slate-800 text-slate-400 border border-white/5">Offen</span>
+                <span id="quest-status-card" class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-lg bg-slate-800 text-slate-400 border border-white/5 shrink-0">Offen</span>
             </div>
 
-            <div id="quest-item-settings" class="flex items-center justify-between p-2 sm:p-2.5 rounded-xl bg-white/5 border border-white/5 transition-all">
-                <div class="flex items-center gap-2.5">
-                    <span class="text-base">⚙️</span>
-                    <span class="text-xs font-bold text-slate-200">Öffne die Einstellungen</span>
+            <div id="quest-item-settings" class="flex items-center justify-between p-2 rounded-xl bg-white/5 border border-white/10 transition-all cursor-pointer hover:bg-white/10" onclick="toggleStandaloneSettings(); haptic(20);">
+                <div class="flex items-center gap-2 min-w-0">
+                    <span class="text-sm shrink-0">⚙️</span>
+                    <div class="min-w-0">
+                        <div class="text-[11px] font-bold text-slate-200 truncate">2. Einstellungen öffnen</div>
+                        <div class="text-[9px] text-amber-300/80 font-mono">+250 XP</div>
+                    </div>
                 </div>
-                <span id="quest-status-settings" class="text-xs font-mono font-bold px-2 py-0.5 rounded-lg bg-slate-800 text-slate-400 border border-white/5">Offen</span>
+                <span id="quest-status-settings" class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-lg bg-slate-800 text-slate-400 border border-white/5 shrink-0">Offen</span>
             </div>
 
-            <div id="quest-item-search" class="flex items-center justify-between p-2 sm:p-2.5 rounded-xl bg-white/5 border border-white/5 transition-all">
-                <div class="flex items-center gap-2.5">
-                    <span class="text-base">🔍</span>
-                    <span class="text-xs font-bold text-slate-200">Teste die Suche (⌘K)</span>
+            <div id="quest-item-search" class="flex items-center justify-between p-2 rounded-xl bg-white/5 border border-white/10 transition-all cursor-pointer hover:bg-white/10" onclick="openCommandPalette(); haptic(20);">
+                <div class="flex items-center gap-2 min-w-0">
+                    <span class="text-sm shrink-0">🔍</span>
+                    <div class="min-w-0">
+                        <div class="text-[11px] font-bold text-slate-200 truncate">3. Hyper-Suche (⌘K / Suchen)</div>
+                        <div class="text-[9px] text-amber-300/80 font-mono">+250 XP</div>
+                    </div>
                 </div>
-                <span id="quest-status-search" class="text-xs font-mono font-bold px-2 py-0.5 rounded-lg bg-slate-800 text-slate-400 border border-white/5">Offen</span>
+                <span id="quest-status-search" class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-lg bg-slate-800 text-slate-400 border border-white/5 shrink-0">Offen</span>
             </div>
 
-            <div id="quest-item-music" class="flex items-center justify-between p-2 sm:p-2.5 rounded-xl bg-white/5 border border-white/5 transition-all">
-                <div class="flex items-center gap-2.5">
-                    <span class="text-base">🎵</span>
-                    <span class="text-xs font-bold text-slate-200">Starte StandBy oder Musik</span>
+            <div id="quest-item-music" class="flex items-center justify-between p-2 rounded-xl bg-white/5 border border-white/10 transition-all cursor-pointer hover:bg-white/10" onclick="toggleStandBy(); haptic(20);">
+                <div class="flex items-center gap-2 min-w-0">
+                    <span class="text-sm shrink-0">🌙</span>
+                    <div class="min-w-0">
+                        <div class="text-[11px] font-bold text-slate-200 truncate">4. StandBy / Ambient starten</div>
+                        <div class="text-[9px] text-amber-300/80 font-mono">+250 XP</div>
+                    </div>
                 </div>
-                <span id="quest-status-music" class="text-xs font-mono font-bold px-2 py-0.5 rounded-lg bg-slate-800 text-slate-400 border border-white/5">Offen</span>
+                <span id="quest-status-music" class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-lg bg-slate-800 text-slate-400 border border-white/5 shrink-0">Offen</span>
             </div>
         </div>
     </div>
+</div>
 </div>
 
     <script>
@@ -11048,10 +11076,13 @@
             if (!isDashboardOpen || standByActive) return;
             if (mainMusicCard && mainMusicCard.classList.contains('lyrics-open')) return;
             if (deviceTiltRafPending) return;
+            const now = performance.now();
+            if (window._lastTiltProcessTime && (now - window._lastTiltProcessTime < 45)) return; // Max ~22fps for sensors
             const gamma = Math.max(-24, Math.min(24, e.gamma || 0));
             const beta = Math.max(-24, Math.min(24, (e.beta || 0) - 45));
-            if (Math.abs(gamma - lastTiltX) < 0.6 && Math.abs(beta - lastTiltY) < 0.6) return;
+            if (Math.abs(gamma - lastTiltX) < 1.2 && Math.abs(beta - lastTiltY) < 1.2) return;
             lastTiltX = gamma; lastTiltY = beta;
+            window._lastTiltProcessTime = now;
             deviceTiltRafPending = true;
             requestAnimationFrame(() => {
                 deviceTiltRafPending = false;
@@ -13366,6 +13397,13 @@ window.generateShareCard = function() {
             const pBar = document.getElementById('quest-progress-bar');
             if (pBar) pBar.style.width = pct + '%';
 
+            const xpDisplay = document.getElementById('quest-xp-display');
+            if (xpDisplay) {
+                const xp = completedCount * 250;
+                const level = completedCount >= 4 ? 'Meister 👑' : (completedCount >= 2 ? 'Explorer 🌟' : 'Entdecker 🚀');
+                xpDisplay.innerHTML = '<span>⚡ ' + xp + ' XP</span> <span class="text-slate-400 font-medium">• Lvl ' + (completedCount + 1) + ' ' + level + '</span>';
+            }
+
             const mapping = {
                 card_opened: { item: 'quest-item-card', status: 'quest-status-card' },
                 settings_opened: { item: 'quest-item-settings', status: 'quest-status-settings' },
@@ -13391,6 +13429,21 @@ window.generateShareCard = function() {
             }
         }
 
+        let isQuestHudTop = true;
+        window.toggleQuestHudPosition = function() {
+            const hud = document.getElementById('interactive-quest-hud');
+            if (!hud) return;
+            isQuestHudTop = !isQuestHudTop;
+            if (isQuestHudTop) {
+                hud.classList.remove('bottom-5', 'sm:bottom-7', 'left-1/2', '-translate-x-1/2');
+                hud.classList.add('top-20', 'sm:top-24', 'right-3', 'sm:right-6');
+            } else {
+                hud.classList.remove('top-20', 'sm:top-24', 'right-3', 'sm:right-6');
+                hud.classList.add('bottom-5', 'sm:bottom-7', 'left-1/2', '-translate-x-1/2');
+            }
+            haptic(20);
+        };
+
         window.toggleQuestHudCollapse = function() {
             isQuestHudCollapsed = !isQuestHudCollapsed;
             const container = document.getElementById('quest-tasks-container');
@@ -13398,12 +13451,13 @@ window.generateShareCard = function() {
             if (container) {
                 if (isQuestHudCollapsed) {
                     container.classList.add('hidden');
-                    if (icon) icon.innerText = '▲';
+                    if (icon) icon.innerText = '▼';
                 } else {
                     container.classList.remove('hidden');
-                    if (icon) icon.innerText = '▼';
+                    if (icon) icon.innerText = '▲';
                 }
             }
+            haptic(20);
         };
 
         window.dismissInteractiveQuest = function() {
@@ -13411,7 +13465,7 @@ window.generateShareCard = function() {
             const hud = document.getElementById('interactive-quest-hud');
             if (hud) hud.classList.add('hidden');
             localStorage.setItem('tutorialCompletedV5', 'true');
-            showToast('Tutorial abgeschlossen ✓', 2500);
+            showToast('Quest pausiert (im Menü jederzeit neustartbar) ✓', 2500);
         };
 
         window.triggerTutorialEvent = function(eventName) {
@@ -13650,7 +13704,7 @@ window.generateShareCard = function() {
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
-    { version: "v24.141.0", date: "7. September 2026", type: "feature", items: {
+    { version: "v24.142.0", date: "7. September 2026", type: "feature", items: {
                 de: [
                     "✨ Juicy Spring-Animation: Das Einstellungsmenü im Songtext springt nun mit lebendiger Federphysik und weichem Pop-Effekt auf",
                     "🕶️ Kino-Fokus (Zeilen-Dimming): Wähle im Lyrics-Menü zwischen sanfter Dimmung oder fokussiertem Kinomodus mit Weichzeichner",
@@ -13664,7 +13718,7 @@ window.generateShareCard = function() {
                     "🇩🇪 Language Selection in Imprint: Seamless switching between German and English for speech output"
                 ]
             }},
-            { version: 'v24.140.0', date: "7. September 2026", type: 'feature', items: {
+            { version: 'v24.142.0', date: "7. September 2026", type: 'feature', items: {
                 de: [
                     "👁️ Intelligentes Viewport-Rendering: 20% Puffer-Zone oben/unten pausiert inaktive Offscreen-Sektionen und spart massiv Akku",
                     "🏝️ Smarte Dynamic Island Notiz: Informiert transparent beim Öffnen des Musik-Dashboards mit 'Nicht mehr anzeigen'-Schalter",
@@ -18246,5 +18300,25 @@ window.setLyricsStyle = function(style) {
             applyLanguage(currentLang);
         }
     </script>
+<script>
+        // PIXEL THERMAL WATCHDOG: Pausiere schwere CSS-Blob-Animationen nach 8s Inaktivität
+        (function setupThermalGuard() {
+            let idleTimer = null;
+            function wakeBlobs() {
+                document.body.classList.remove('battery-chill');
+                clearTimeout(idleTimer);
+                idleTimer = setTimeout(() => {
+                    // Wenn kein Dialog/Audio aktiv interagiert wird, schone CPU & Akku
+                    if (!document.hidden) {
+                        document.body.classList.add('battery-chill');
+                    }
+                }, 8000);
+            }
+            ['scroll', 'touchstart', 'mousemove', 'click', 'keydown'].forEach(evt => {
+                window.addEventListener(evt, wakeBlobs, { passive: true });
+            });
+            wakeBlobs();
+        })();
+</script>
 </body>
 </html>
