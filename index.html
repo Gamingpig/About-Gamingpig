@@ -3279,8 +3279,29 @@
             color: #ffffff;
         }
 
-        /* Settings menu (standalone and lyrics overlay) */
+        /* Lyrics Settings Menu (Dropdown anchored directly in lyrics center header) */
         #lyrics-settings-menu {
+            position: absolute !important;
+            top: 100% !important;
+            right: 0 !important;
+            margin-top: 0.5rem !important;
+            z-index: 9999 !important;
+            max-height: calc(75vh - 20px) !important;
+            max-width: calc(100vw - 1.5rem) !important;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.15) !important;
+            backdrop-filter: blur(24px) !important;
+            -webkit-backdrop-filter: blur(24px) !important;
+            background-color: #0f172a !important;
+            -webkit-overflow-scrolling: touch !important;
+            overscroll-behavior-y: contain !important;
+            transform-origin: top right !important;
+        }
+        #lyrics-settings-menu:not(.settings-opening):not(.settings-closing) {
+            display: none !important;
+        }
+
+        /* Global Standalone Settings Modal (Fixed top right) */
+        #global-settings-menu {
             position: fixed !important;
             top: calc(env(safe-area-inset-top, 0px) + 4.5rem) !important;
             right: 1rem !important;
@@ -3289,13 +3310,32 @@
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.15) !important;
             backdrop-filter: blur(24px) !important;
             -webkit-backdrop-filter: blur(24px) !important;
+            background-color: #0f172a !important;
+            -webkit-overflow-scrolling: touch !important;
+            overscroll-behavior-y: contain !important;
+            transform-origin: top right !important;
         }
-        #lyrics-settings-menu:not(.settings-opening):not(.settings-closing) {
+        #global-settings-menu:not(.settings-opening):not(.settings-closing) {
             display: none !important;
         }
+        #global-settings-menu.settings-opening {
+            display: flex !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            pointer-events: auto !important;
+            animation: lyrics-menu-in 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+            transform-origin: top right;
+        }
+        #global-settings-menu.settings-closing {
+            display: flex !important;
+            visibility: visible !important;
+            pointer-events: none !important;
+            animation: lyrics-menu-out 0.15s ease-out forwards !important;
+            transform-origin: top right;
+        }
         @media (max-width: 640px) {
-            #lyrics-settings-menu {
-                right: 0.75rem !important;
+            #lyrics-settings-menu, #global-settings-menu {
+                right: 0.5rem !important;
                 left: auto !important;
                 max-width: calc(100vw - 1.5rem) !important;
             }
@@ -5906,7 +5946,80 @@
                                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-4 xxs:h-4 sm:w-5 sm:h-5"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/></svg>
                                 </button>
                                     
-                                    <!-- Das Settings Menü Fenster -->
+                                <!-- Das Lyrics Settings Menü Fenster (Direkt am Button im Lyrics Center verankert!) -->
+                                <div id="lyrics-settings-menu" class="absolute top-full right-0 mt-2 xxs:mt-3 bg-[#0f172a] border border-slate-700/80 rounded-2xl p-2.5 xxs:p-3 sm:p-3.5 shadow-2xl hidden flex flex-col gap-2 w-[285px] xxs:w-[315px] sm:w-[345px] max-w-[calc(100vw-1.5rem)] z-[9999] origin-top-right max-h-[75vh] sm:max-h-[460px] overflow-y-auto" style="-webkit-overflow-scrolling: touch; overscroll-behavior-y: contain;" onclick="event.stopPropagation()">
+                                    <!-- Header -->
+                                    <div class="flex items-center justify-between pb-1.5 mb-0.5 border-b border-white/10">
+                                        <span class="text-xs font-black uppercase tracking-wider text-slate-200 flex items-center gap-1.5">
+                                            <span>🎵</span> <span>Songtext &amp; Player</span>
+                                        </span>
+                                        <button onclick="toggleLyricsSettings(event)" class="p-1 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-colors text-xs font-bold" aria-label="Schließen">✕</button>
+                                    </div>
+
+                                    <!-- Animation Style Auswahl & Live-Vorschau -->
+                                    <p id="label-animation-style" class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-slate-400 px-1 sticky top-0 bg-[#0f172a] py-0.5 z-10">Animation Style</p>
+                                    <select id="lyrics-style-select" onchange="setLyricsStyle(this.value)" class="w-full bg-slate-800 text-white text-[10px] xxs:text-xs sm:text-sm px-2.5 py-2 rounded-xl border border-slate-600 focus:outline-none focus:border-blue-500 mb-0.5"></select>
+                                    
+                                    <div id="lyrics-style-preview-box" class="w-full bg-black/50 rounded-xl p-2 sm:p-2.5 overflow-hidden text-center min-h-[48px] sm:min-h-[52px] flex items-center justify-center select-none border border-white/5">
+                                        <p id="lyrics-style-preview-text" class="lyric-line active text-[11px] sm:text-xs font-bold leading-tight !m-0 !max-w-full !p-0"></p>
+                                    </div>
+
+                                    <!-- Live Sync Offset -->
+                                    <div class="h-px w-full bg-slate-700/70 my-0.5"></div>
+                                    <div class="flex justify-between items-center px-1 mb-0.5">
+                                        <p id="label-live-sync" class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-blue-400">Live Sync Offset</p>
+                                        <button onclick="resetSyncOffset(this)" id="btn-resync" class="text-[7px] xxs:text-[8px] bg-blue-500/20 hover:bg-blue-500/40 text-blue-300 px-1.5 py-0.5 rounded transition-colors uppercase font-bold tracking-wider active:scale-95">Re-Sync</button>
+                                    </div>
+                                    <div class="px-1 py-1 flex items-center gap-2">
+                                        <input type="range" id="sync-slider" min="-5000" max="5000" step="50" value="-800" class="w-full h-1 bg-slate-600 rounded-lg appearance-none cursor-pointer">
+                                        <span id="sync-value" class="text-[8px] xxs:text-[10px] text-white font-mono w-6 xxs:w-8 text-right">-800</span>
+                                    </div>
+
+                                    <!-- TTS Vorlesen -->
+                                    <div class="h-px w-full bg-slate-700/70 my-0.5"></div>
+                                    <div class="w-full flex flex-col gap-1 mt-0.5 relative">
+                                        <div class="inline-flex items-center w-full rounded-xl bg-cyan-500/15 border border-cyan-500/20">
+                                            <button onclick="speakLyrics(this)" id="btn-speak-lyrics" class="flex-1 text-center text-[10px] xxs:text-xs text-cyan-300 px-2.5 py-2 hover:bg-cyan-500/25 transition-all font-bold active:scale-95 flex items-center justify-center gap-1.5 rounded-l-xl">
+                                                <span>📢</span> <span>Songtext vorlesen</span>
+                                            </button>
+                                            <button onclick="toggleTtsSpeedMenu('tts-speed-menu-lyrics')" class="px-2 py-2 text-cyan-400 hover:bg-cyan-500/25 rounded-r-xl border-l border-cyan-500/20 text-[10px] xxs:text-xs font-mono font-bold transition-colors" title="Tempo anpassen">
+                                                <span class="tts-speed-indicator-lyrics">Auto</span>
+                                            </button>
+                                        </div>
+                                        <div id="tts-speed-menu-lyrics" class="hidden absolute top-full left-0 right-0 mt-1 z-50 p-2 rounded-xl bg-slate-900/95 border border-slate-700 shadow-2xl backdrop-blur-xl">
+                                            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 py-1 flex items-center justify-between">
+                                                <span>Tempo</span>
+                                                <button onclick="speechSynthesis.cancel(); ttsSetButtonState(document.getElementById('btn-speak-lyrics'), 'idle'); toggleTtsSpeedMenu('tts-speed-menu-lyrics', false);" class="text-rose-400 hover:text-rose-300 transition-colors font-sans">⏹ Stopp</button>
+                                            </div>
+                                            <div class="mt-1.5 px-1 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20 text-center">
+                                                <span class="text-[10px] font-bold text-blue-400 font-mono">⚡ Tempo: Auto (Echtzeit-Sync)</span>
+                                                <p class="text-[8px] text-slate-400 mt-0.5">Wird dynamisch an den Songtakt angepasst</p>
+                                            </div>
+                                        </div>
+                                        <select id="tts-voice-select" onchange="setTtsVoiceId(this.value)" class="w-full bg-slate-800 text-white text-[10px] xxs:text-xs px-2.5 py-2 rounded-xl border border-slate-700 mt-1"></select>
+                                    </div>
+
+                                    <!-- Player & Dashboard Features -->
+                                    <div class="h-px w-full bg-slate-700/70 my-0.5"></div>
+                                    <p id="label-features" class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-slate-400 px-1">Player &amp; Dashboard Features</p>
+                                    <div class="grid grid-cols-2 gap-1.5 w-full">
+                                        <button onclick="toggleCanvasVideo()" id="btn-toggle-canvas" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-green-400 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold whitespace-nowrap active:scale-95">Canvas: AN</button>
+                                        <button onclick="toggleAmbientColor()" id="btn-toggle-ambient" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-cyan-400 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold whitespace-nowrap active:scale-95">Ambient: AN</button>
+                                        <button onclick="toggleColorFrame()" id="btn-toggle-color-frame" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-cyan-400 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold whitespace-nowrap active:scale-95">Farbrahmen: AN</button>
+                                        <button onclick="toggleGlowEffect()" id="btn-toggle-glow" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-orange-400 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold whitespace-nowrap active:scale-95">Glow-Effekt: AN</button>
+                                        <button onclick="toggleCoverGlow()" id="btn-toggle-cover-glow" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-yellow-400 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold whitespace-nowrap active:scale-95">Cover-Glow: AN</button>
+                                        <button onclick="toggleTilt()" id="btn-toggle-tilt" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-purple-400 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold whitespace-nowrap active:scale-95">Spatial Tilt: AN</button>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-1.5 w-full mt-0.5">
+                                        <button onclick="generateShareCard()" id="btn-share-card" class="text-center text-[10px] xxs:text-xs text-pink-300 px-2 py-2 rounded-xl bg-pink-500/15 hover:bg-pink-500/25 border border-pink-500/20 transition-all font-bold truncate active:scale-95">🎴 Share Card</button>
+                                        <button onclick="quickExportSongCard()" id="btn-quick-export" class="text-center text-[10px] xxs:text-xs text-pink-300 px-2 py-2 rounded-xl bg-pink-500/15 hover:bg-pink-500/25 border border-pink-500/20 transition-all font-bold truncate active:scale-95">📸 Export</button>
+                                    </div>
+
+                                    <!-- Shortcut zu Website-Einstellungen -->
+                                    <button onclick="openGlobalSettingsFromLyrics(event)" class="w-full text-center text-[9px] xxs:text-[10px] text-slate-400 hover:text-white py-1.5 rounded-xl hover:bg-white/5 border border-white/5 font-bold transition-all mt-1 flex items-center justify-center gap-1">
+                                        <span>⚙️</span> <span>Zu den Website-Einstellungen ➔</span>
+                                    </button>
+                                </div>
                                     
                                     
                                     <button onclick="toggleLyrics(false)" id="btn-lyrics-close" aria-label="Lyrics schließen" class="p-1 xxs:p-1.5 sm:p-2 hover:bg-white/10 rounded-full transition-colors text-white shrink-0">
@@ -6485,222 +6598,142 @@
     </div>
 </div>
 
-<!-- Global Standalone & Lyrics Settings Modal -->
-<div id="lyrics-settings-menu" class="fixed bg-[#0f172a] border border-slate-700/80 rounded-2xl p-2.5 xxs:p-3 sm:p-3.5 shadow-2xl hidden flex-col gap-2 w-[295px] xxs:w-[325px] sm:w-[355px] max-w-[calc(100vw-1.5rem)] z-[10000] origin-top-right overflow-y-auto" style="-webkit-overflow-scrolling: touch; overscroll-behavior-y: contain;" onclick="event.stopPropagation()">
-    <!-- Header with dynamic title & close -->
+<!-- Global Standalone Website Settings Modal -->
+<div id="global-settings-menu" class="fixed top-[calc(env(safe-area-inset-top,0px)+4.5rem)] right-3 sm:right-5 bg-[#0f172a] border border-slate-700/80 rounded-2xl p-2.5 xxs:p-3 sm:p-3.5 shadow-2xl hidden flex flex-col gap-2 w-[295px] xxs:w-[325px] sm:w-[355px] max-w-[calc(100vw-1.5rem)] z-[10000] origin-top-right max-h-[85vh] overflow-y-auto" style="-webkit-overflow-scrolling: touch; overscroll-behavior-y: contain;" onclick="event.stopPropagation()">
+    <!-- Header -->
     <div class="flex items-center justify-between pb-1.5 mb-0.5 border-b border-white/10">
-        <span id="settings-modal-title" class="text-xs font-black uppercase tracking-wider text-slate-200 flex items-center gap-1.5">
-            <span>⚙️</span> <span>Einstellungen</span>
+        <span class="text-xs font-black uppercase tracking-wider text-slate-200 flex items-center gap-1.5">
+            <span>⚙️</span> <span>Website-Einstellungen</span>
         </span>
-        <button onclick="toggleLyricsSettings(event)" class="p-1 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-colors text-xs font-bold" aria-label="Schließen">✕</button>
+        <button onclick="toggleStandaloneSettings(event)" class="p-1 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-colors text-xs font-bold" aria-label="Schließen">✕</button>
     </div>
 
-    <!-- Context Switcher Tabs -->
-    <div class="flex items-center gap-1 p-1 bg-slate-800/70 rounded-xl border border-white/5 mb-1">
-        <button id="tab-btn-global" onclick="switchSettingsTab('global')" class="flex-1 py-1.5 px-2 rounded-lg text-[10px] xxs:text-xs font-bold transition-all flex items-center justify-center gap-1.5 bg-blue-600 text-white shadow-md">
-            <span>⚙️</span> <span>Website</span>
+    <!-- Darstellungs-Größe (Zoom / Skalierung) -->
+    <div class="p-2.5 rounded-xl bg-slate-800/50 border border-white/5">
+        <div class="flex items-center justify-between mb-1.5">
+            <label for="app-zoom-slider" class="text-[10px] sm:text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                <span>🔍</span> <span>Darstellungs-Größe</span>
+            </label>
+            <div class="flex items-center gap-1.5">
+                <span id="app-zoom-val" class="text-[10px] sm:text-xs font-mono font-bold text-purple-400 bg-purple-500/15 px-2 py-0.5 rounded-md border border-purple-500/25">100%</span>
+                <button onclick="resetAppZoom()" class="text-[9px] px-2 py-0.5 rounded bg-white/10 hover:bg-white/20 text-slate-300 font-bold transition-colors">100%</button>
+            </div>
+        </div>
+        <input type="range" id="app-zoom-slider" min="0.85" max="1.40" step="0.05" value="1.0" oninput="changeAppZoom(this.value)" class="w-full accent-purple-500 cursor-pointer">
+        <div class="flex justify-between text-[8px] text-slate-400 font-mono mt-0.5 px-0.5">
+            <span>85%</span>
+            <span>100% (Standard)</span>
+            <span>140%</span>
+        </div>
+    </div>
+
+    <!-- Design & Leistung -->
+    <p class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-slate-400 px-1 mt-0.5">Design &amp; Leistung</p>
+    <div class="grid grid-cols-2 gap-1.5 w-full">
+        <button onclick="toggleSiteTheme()" id="btn-toggle-theme" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-blue-300 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-blue-500/25 transition-all font-bold truncate active:scale-95 flex items-center justify-center gap-1">
+            <span>🌙</span> <span>Dunkel</span>
         </button>
-        <button id="tab-btn-lyrics" onclick="switchSettingsTab('lyrics')" class="flex-1 py-1.5 px-2 rounded-lg text-[10px] xxs:text-xs font-bold transition-all flex items-center justify-center gap-1.5 bg-transparent text-slate-400 hover:text-white">
-            <span>🎵</span> <span>Songtext</span>
+        <button onclick="toggleSitePerf()" id="btn-toggle-perf" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-green-400 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-green-500/25 transition-all font-bold truncate active:scale-95 flex items-center justify-center gap-1">
+            <span>🚀</span> <span>60 FPS</span>
         </button>
-    </div>
-
-    <!-- ========================================================= -->
-    <!-- TAB 1: ALLGEMEINE WEBSITE-EINSTELLUNGEN                  -->
-    <!-- ========================================================= -->
-    <div id="settings-tab-global" class="flex flex-col gap-2 w-full">
-        <!-- Darstellungs-Größe (Zoom / Skalierung) -->
-        <div class="p-2.5 rounded-xl bg-slate-800/50 border border-white/5">
-            <div class="flex items-center justify-between mb-1.5">
-                <label for="app-zoom-slider" class="text-[10px] sm:text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                    <span>🔍</span> <span>Darstellungs-Größe</span>
-                </label>
-                <div class="flex items-center gap-1.5">
-                    <span id="app-zoom-val" class="text-[10px] sm:text-xs font-mono font-bold text-purple-400 bg-purple-500/15 px-2 py-0.5 rounded-md border border-purple-500/25">100%</span>
-                    <button onclick="resetAppZoom()" class="text-[9px] px-2 py-0.5 rounded bg-white/10 hover:bg-white/20 text-slate-300 font-bold transition-colors">100%</button>
-                </div>
-            </div>
-            <input type="range" id="app-zoom-slider" min="0.85" max="1.40" step="0.05" value="1.0" oninput="changeAppZoom(this.value)" class="w-full accent-purple-500 cursor-pointer">
-            <div class="flex justify-between text-[8px] text-slate-400 font-mono mt-0.5 px-0.5">
-                <span>85%</span>
-                <span>100% (Standard)</span>
-                <span>140%</span>
-            </div>
-        </div>
-
-        <!-- Design, Themes & Leistung -->
-        <p class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-slate-400 px-1 mt-0.5">Design &amp; Leistung</p>
-        <div class="grid grid-cols-2 gap-1.5 w-full">
-            <button onclick="toggleSiteTheme()" id="btn-toggle-theme" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-blue-300 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-blue-500/25 transition-all font-bold truncate active:scale-95 flex items-center justify-center gap-1">
-                <span>🌙</span> <span>Dunkel</span>
-            </button>
-            <button onclick="toggleSitePerf()" id="btn-toggle-perf" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-green-400 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-green-500/25 transition-all font-bold truncate active:scale-95 flex items-center justify-center gap-1">
-                <span>🚀</span> <span>60 FPS</span>
-            </button>
-            <button onclick="toggleSiteLiquid()" id="btn-toggle-liquid" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-cyan-300 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold truncate active:scale-95 flex items-center justify-center gap-1">
-                <span>💧</span> <span>Liquid Glass</span>
-            </button>
-            <button onclick="toggleUiSoundEnabled()" id="btn-toggle-sound" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-teal-400 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold whitespace-nowrap active:scale-95">UI-Sounds: AN</button>
-            <button onclick="toggleHapticEnabled()" id="btn-toggle-haptic" class="col-span-2 text-center text-[9px] xxs:text-[10px] sm:text-xs text-teal-400 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold whitespace-nowrap active:scale-95">Haptik: AN</button>
-        </div>
-
-        <div class="h-px w-full bg-slate-700/70 my-0.5"></div>
-
-        <!-- StandBy & Sperrbildschirm -->
-        <p class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-slate-400 px-1">StandBy-Modus (Lockscreen)</p>
-        <div class="px-1">
-            <label for="standby-design-select" id="label-standby-design" class="text-[9px] xxs:text-[10px] sm:text-xs font-bold text-slate-300 block mb-1">StandBy-Design</label>
-            <select id="standby-design-select" onchange="changeStandbyDesign(this.value)" class="w-full text-[10px] xxs:text-xs bg-slate-800 text-teal-400 border border-slate-700 rounded-xl px-2.5 py-2 font-bold">
-                <option value="classic" id="opt-standby-design-classic">Classic</option>
-                <option value="minimal" id="opt-standby-design-minimal">Minimal</option>
-                <option value="cover-focus" id="opt-standby-design-cover-focus">Cover-Fokus</option>
-                <option value="clock-only" id="opt-standby-design-clock-only">Nur Uhr</option>
-                <option value="vinyl" id="opt-standby-design-vinyl">Vinyl</option>
-                <option value="split" id="opt-standby-design-split">Split</option>
-                <option value="typography" id="opt-standby-design-typography">Typografie</option>
-                <option value="edge-glow" id="opt-standby-design-edge-glow">Edge-Glow</option>
-                <option value="compact" id="opt-standby-design-compact">Kompakt</option>
-                <option value="poster" id="opt-standby-design-poster">Poster</option>
-                <option value="frame" id="opt-standby-design-frame">Rahmen</option>
-                <option value="neon" id="opt-standby-design-neon">Neon</option>
-                <option value="polaroid" id="opt-standby-design-polaroid">Polaroid</option>
-                <option value="bar" id="opt-standby-design-bar">Leiste</option>
-                <option value="grid" id="opt-standby-design-grid">Raster</option>
-                <option value="transparent" id="opt-standby-design-transparent">Transparent</option>
-                <option value="giant-clock" id="opt-standby-design-giant-clock">Riesen-Uhr</option>
-                <option value="zen" id="opt-standby-design-zen">Zen</option>
-                <option value="stacked" id="opt-standby-design-stacked">Gestapelt</option>
-                <option value="contrast" id="opt-standby-design-contrast">Kontrast</option>
-                <option value="cyberpunk" id="opt-standby-design-cyberpunk">Cyberpunk</option>
-                <option value="cassette" id="opt-standby-design-cassette">Retro-Kassette</option>
-                <option value="ambient-orb" id="opt-standby-design-ambient-orb">Ambient-Orb</option>
-                <option value="hologram" id="opt-standby-design-hologram">Hologram</option>
-                <option value="studio" id="opt-standby-design-studio">Studio</option>
-            </select>
-        </div>
-
-        <div class="px-1 py-1">
-            <div class="flex items-center justify-between mb-1">
-                <label for="standby-opacity-slider" id="label-standby-opacity" class="text-[9px] xxs:text-[10px] sm:text-xs font-bold text-slate-300">StandBy-Bild schärfer</label>
-                <span id="standby-opacity-value" class="text-[9px] xxs:text-[10px] font-mono text-slate-400">0%</span>
-            </div>
-            <input type="range" id="standby-opacity-slider" min="0" max="100" step="5" value="0" class="w-full accent-blue-500" oninput="updateStandbyOpacity(this.value)">
-        </div>
-
-        <div class="px-1 py-1">
-            <div class="flex items-center justify-between mb-1">
-                <label for="standby-scale-slider" id="label-standby-scale" class="text-[9px] xxs:text-[10px] sm:text-xs font-bold text-slate-300">StandBy-Größe</label>
-                <span id="standby-scale-label" class="text-[9px] xxs:text-[10px] text-teal-400 font-mono">100%</span>
-            </div>
-            <input type="range" id="standby-scale-slider" min="0.6" max="1.3" step="0.05" value="1" oninput="changeStandbyManualScale(this.value)" class="w-full">
-            <p id="settings-standby-scale-hint" class="text-left text-[8px] xxs:text-[9px] text-slate-500 leading-snug mt-1">Passt sich automatisch an deinen Bildschirm an - hier nur bei Bedarf feinjustieren.</p>
-        </div>
-
-        <button onclick="toggleStandbyWakeLock()" id="btn-toggle-wakelock" class="text-left text-[10px] xxs:text-xs text-teal-400 px-2 py-1.5 rounded-xl hover:bg-slate-800 transition-colors font-bold">Bildschirm an (StandBy): AN</button>
-        <p id="settings-wakelock-hint" class="text-left text-[8px] xxs:text-[9px] text-slate-500 px-2 leading-snug -mt-1 mb-0.5">Hält den Bildschirm nur wach, solange Musik läuft - pausiert sie, darf das Handy normal einschlafen.</p>
-
-        <div class="px-1 py-1 flex items-center gap-2">
-            <label for="standby-accent-input" id="label-standby-accent" class="text-[9px] xxs:text-[10px] sm:text-xs font-bold text-slate-300 flex-1">Akzentfarbe</label>
-            <input type="color" id="standby-accent-input" value="#ffffff" onchange="changeStandbyAccent(this.value)" class="h-7 w-10 rounded border border-slate-700 bg-slate-800 cursor-pointer">
-        </div>
-
-        <div class="px-1 py-1">
-            <div class="flex items-center justify-between mb-1">
-                <label for="standby-radius-slider" id="label-standby-radius" class="text-[9px] xxs:text-[10px] sm:text-xs font-bold text-slate-300">Eckenradius</label>
-                <span id="standby-radius-label" class="text-[9px] xxs:text-[10px] text-teal-400 font-mono">32px</span>
-            </div>
-            <input type="range" id="standby-radius-slider" min="0" max="48" step="2" value="32" oninput="changeStandbyRadius(this.value)" class="w-full">
-        </div>
-
-        <div class="px-1 py-1">
-            <p id="label-standby-design-code" class="text-[9px] xxs:text-[10px] sm:text-xs font-bold text-slate-300 mb-1">Design-Code teilen</p>
-            <div class="flex gap-1.5">
-                <input type="text" id="standby-design-code-input" placeholder="Code hier einfügen..." class="flex-1 min-w-0 text-[9px] xxs:text-[10px] bg-slate-800 text-slate-300 border border-slate-700 rounded-xl px-2 py-1.5 font-mono">
-                <button onclick="copyStandbyDesignCode()" id="btn-standby-design-copy" class="shrink-0 text-[9px] xxs:text-[10px] bg-teal-700 hover:bg-teal-600 text-white rounded-xl px-2 py-1.5 font-bold transition-colors">Kopieren</button>
-                <button onclick="loadStandbyDesignCode()" id="btn-standby-design-load" class="shrink-0 text-[9px] xxs:text-[10px] bg-slate-700 hover:bg-slate-600 text-white rounded-xl px-2 py-1.5 font-bold transition-colors">Laden</button>
-            </div>
-            <p id="settings-design-code-hint" class="text-left text-[8px] xxs:text-[9px] text-slate-500 leading-snug mt-1">Kopiere deinen StandBy-Look als Code und schick ihn Freunden.</p>
-        </div>
-
-        <div class="h-px w-full bg-slate-700/70 my-0.5"></div>
-
-        <!-- Benachrichtigungen -->
-        <button onclick="requestNotificationPermissionManually()" id="btn-notification-permission" class="text-left text-[10px] xxs:text-xs text-teal-400 px-2 py-1.5 rounded-xl hover:bg-slate-800 transition-colors font-bold">Benachrichtigungen: nicht eingerichtet</button>
-        <p id="settings-notification-hint" class="text-left text-[8px] xxs:text-[9px] text-slate-500 px-2 leading-snug -mt-1 mb-1">Für die "Willkommen zurück"-Meldung, falls Musik pausiert war während du weg warst.</p>
-
-        <!-- Shortcut zu Songtext -->
-        <div class="p-2 rounded-xl bg-gradient-to-r from-blue-900/30 to-purple-900/30 border border-blue-500/20 mt-1 flex items-center justify-between">
-            <span class="text-[9px] xxs:text-[10px] font-bold text-slate-200">🎵 Songtext &amp; Animationen</span>
-            <button onclick="switchSettingsTab('lyrics')" class="text-[9px] xxs:text-[10px] px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold transition-all">Anpassen ➔</button>
-        </div>
-
-        <p id="settings-version-label" class="text-left text-[9px] xxs:text-[10px] text-slate-500 px-2 py-1 font-mono select-all">Version —</p>
-    </div>
-
-    <!-- ========================================================= -->
-    <!-- TAB 2: SONGTEXT & MUSIK-DASHBOARD                        -->
-    <!-- ========================================================= -->
-    <div id="settings-tab-lyrics" class="hidden flex-col gap-2 w-full">
-        <p id="label-animation-style" class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-slate-400 px-1 sticky top-0 bg-[#0f172a] py-0.5 z-10">Animation Style</p>
-        <select id="lyrics-style-select" onchange="setLyricsStyle(this.value)" class="w-full bg-slate-800 text-white text-[10px] xxs:text-xs sm:text-sm px-2.5 py-2 rounded-xl border border-slate-600 focus:outline-none focus:border-blue-500 mb-0.5"></select>
-        
-        <div id="lyrics-style-preview-box" class="w-full bg-black/50 rounded-xl p-2 sm:p-2.5 overflow-hidden text-center min-h-[48px] sm:min-h-[52px] flex items-center justify-center select-none border border-white/5">
-            <p id="lyrics-style-preview-text" class="lyric-line active text-[11px] sm:text-xs font-bold leading-tight !m-0 !max-w-full !p-0"></p>
-        </div>
-
-        <div class="h-px w-full bg-slate-700/70 my-0.5"></div>
-        <div class="flex justify-between items-center px-1 mb-0.5">
-            <p id="label-live-sync" class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-blue-400">Live Sync Offset</p>
-            <button onclick="resetSyncOffset(this)" id="btn-resync" class="text-[7px] xxs:text-[8px] bg-blue-500/20 hover:bg-blue-500/40 text-blue-300 px-1.5 py-0.5 rounded transition-colors uppercase font-bold tracking-wider active:scale-95">Re-Sync</button>
-        </div>
-        <div class="px-1 py-1 flex items-center gap-2">
-            <input type="range" id="sync-slider" min="-5000" max="5000" step="50" value="-800" class="w-full h-1 bg-slate-600 rounded-lg appearance-none cursor-pointer">
-            <span id="sync-value" class="text-[8px] xxs:text-[10px] text-white font-mono w-6 xxs:w-8 text-right">-800</span>
-        </div>
-
-        <div class="h-px w-full bg-slate-700/70 my-0.5"></div>
-        <div class="w-full flex flex-col gap-1 mt-0.5 relative">
-            <div class="inline-flex items-center w-full rounded-xl bg-cyan-500/15 border border-cyan-500/20">
-                <button onclick="speakLyrics(this)" id="btn-speak-lyrics" class="flex-1 text-center text-[10px] xxs:text-xs text-cyan-300 px-2.5 py-2 hover:bg-cyan-500/25 transition-all font-bold active:scale-95 flex items-center justify-center gap-1.5 rounded-l-xl">
-                    <span>📢</span> <span>Songtext vorlesen</span>
-                </button>
-                <button onclick="toggleTtsSpeedMenu('tts-speed-menu-lyrics')" class="px-2 py-2 text-cyan-400 hover:bg-cyan-500/25 rounded-r-xl border-l border-cyan-500/20 text-[10px] xxs:text-xs font-mono font-bold transition-colors" title="Tempo anpassen">
-                    <span class="tts-speed-indicator-lyrics">Auto</span>
-                </button>
-            </div>
-            <!-- Mini-Menü Lyrics -->
-            <div id="tts-speed-menu-lyrics" class="hidden absolute top-full left-0 right-0 mt-1 z-50 p-2 rounded-xl bg-slate-900/95 border border-slate-700 shadow-2xl backdrop-blur-xl">
-                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 py-1 flex items-center justify-between">
-                    <span>Tempo</span>
-                    <button onclick="speechSynthesis.cancel(); ttsSetButtonState(document.getElementById('btn-speak-lyrics'), 'idle'); toggleTtsSpeedMenu('tts-speed-menu-lyrics', false);" class="text-rose-400 hover:text-rose-300 transition-colors font-sans">⏹ Stopp</button>
-                </div>
-                <div class="mt-1.5 px-1 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20 text-center">
-                    <span class="text-[10px] font-bold text-blue-400 font-mono">⚡ Tempo: Auto (Echtzeit-Sync)</span>
-                    <p class="text-[8px] text-slate-400 mt-0.5">Wird dynamisch an den Songtakt angepasst</p>
-                </div>
-            </div>
-            <select id="tts-voice-select" onchange="setTtsVoiceId(this.value)" class="w-full bg-slate-800 text-white text-[10px] xxs:text-xs px-2.5 py-2 rounded-xl border border-slate-700 mt-1"></select>
-        </div>
-
-        <div class="h-px w-full bg-slate-700/70 my-0.5"></div>
-        <p id="label-features" class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-slate-400 px-1">Player &amp; Dashboard Features</p>
-        <div class="grid grid-cols-2 gap-1.5 w-full">
-            <button onclick="toggleCanvasVideo()" id="btn-toggle-canvas" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-green-400 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold whitespace-nowrap active:scale-95">Canvas: AN</button>
-            <button onclick="toggleAmbientColor()" id="btn-toggle-ambient" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-cyan-400 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold whitespace-nowrap active:scale-95">Ambient: AN</button>
-            <button onclick="toggleColorFrame()" id="btn-toggle-color-frame" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-cyan-400 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold whitespace-nowrap active:scale-95">Farbrahmen: AN</button>
-            <button onclick="toggleGlowEffect()" id="btn-toggle-glow" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-orange-400 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold whitespace-nowrap active:scale-95">Glow-Effekt: AN</button>
-            <button onclick="toggleCoverGlow()" id="btn-toggle-cover-glow" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-yellow-400 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold whitespace-nowrap active:scale-95">Cover-Glow: AN</button>
-            <button onclick="toggleTilt()" id="btn-toggle-tilt" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-purple-400 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold whitespace-nowrap active:scale-95">Spatial Tilt: AN</button>
-        </div>
-        <div class="grid grid-cols-2 gap-1.5 w-full mt-0.5">
-            <button onclick="generateShareCard()" id="btn-share-card" class="text-center text-[10px] xxs:text-xs text-pink-300 px-2 py-2 rounded-xl bg-pink-500/15 hover:bg-pink-500/25 border border-pink-500/20 transition-all font-bold truncate active:scale-95">🎴 Share Card</button>
-            <button onclick="quickExportSongCard()" id="btn-quick-export" class="text-center text-[10px] xxs:text-xs text-pink-300 px-2 py-2 rounded-xl bg-pink-500/15 hover:bg-pink-500/25 border border-pink-500/20 transition-all font-bold truncate active:scale-95">📸 Export</button>
-        </div>
-
-        <button onclick="switchSettingsTab('global')" class="w-full text-center text-[9px] xxs:text-[10px] text-slate-400 hover:text-white py-1.5 rounded-lg hover:bg-white/5 border border-white/5 font-bold transition-all mt-1">
-            ⚙️ Zu allen Website-Einstellungen ➔
+        <button onclick="toggleSiteLiquid()" id="btn-toggle-liquid" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-cyan-300 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold truncate active:scale-95 flex items-center justify-center gap-1">
+            <span>💧</span> <span>Liquid Glass</span>
         </button>
+        <button onclick="toggleUiSoundEnabled()" id="btn-toggle-sound" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-teal-400 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold whitespace-nowrap active:scale-95">UI-Sounds: AN</button>
+        <button onclick="toggleHapticEnabled()" id="btn-toggle-haptic" class="col-span-2 text-center text-[9px] xxs:text-[10px] sm:text-xs text-teal-400 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold whitespace-nowrap active:scale-95">Haptik: AN</button>
     </div>
+
+    <div class="h-px w-full bg-slate-700/70 my-0.5"></div>
+
+    <!-- StandBy-Modus (Lockscreen) -->
+    <p class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-slate-400 px-1">StandBy-Modus (Lockscreen)</p>
+    <div class="px-1">
+        <label for="standby-design-select" id="label-standby-design" class="text-[9px] xxs:text-[10px] sm:text-xs font-bold text-slate-300 block mb-1">StandBy-Design</label>
+        <select id="standby-design-select" onchange="changeStandbyDesign(this.value)" class="w-full text-[10px] xxs:text-xs bg-slate-800 text-teal-400 border border-slate-700 rounded-xl px-2.5 py-2 font-bold">
+            <option value="classic" id="opt-standby-design-classic">Classic</option>
+            <option value="minimal" id="opt-standby-design-minimal">Minimal</option>
+            <option value="cover-focus" id="opt-standby-design-cover-focus">Cover-Fokus</option>
+            <option value="clock-only" id="opt-standby-design-clock-only">Nur Uhr</option>
+            <option value="vinyl" id="opt-standby-design-vinyl">Vinyl</option>
+            <option value="split" id="opt-standby-design-split">Split</option>
+            <option value="typography" id="opt-standby-design-typography">Typografie</option>
+            <option value="edge-glow" id="opt-standby-design-edge-glow">Edge-Glow</option>
+            <option value="compact" id="opt-standby-design-compact">Kompakt</option>
+            <option value="poster" id="opt-standby-design-poster">Poster</option>
+            <option value="frame" id="opt-standby-design-frame">Rahmen</option>
+            <option value="neon" id="opt-standby-design-neon">Neon</option>
+            <option value="polaroid" id="opt-standby-design-polaroid">Polaroid</option>
+            <option value="bar" id="opt-standby-design-bar">Leiste</option>
+            <option value="grid" id="opt-standby-design-grid">Raster</option>
+            <option value="transparent" id="opt-standby-design-transparent">Transparent</option>
+            <option value="giant-clock" id="opt-standby-design-giant-clock">Riesen-Uhr</option>
+            <option value="zen" id="opt-standby-design-zen">Zen</option>
+            <option value="stacked" id="opt-standby-design-stacked">Gestapelt</option>
+            <option value="contrast" id="opt-standby-design-contrast">Kontrast</option>
+            <option value="cyberpunk" id="opt-standby-design-cyberpunk">Cyberpunk</option>
+            <option value="cassette" id="opt-standby-design-cassette">Retro-Kassette</option>
+            <option value="ambient-orb" id="opt-standby-design-ambient-orb">Ambient-Orb</option>
+            <option value="hologram" id="opt-standby-design-hologram">Hologram</option>
+            <option value="studio" id="opt-standby-design-studio">Studio</option>
+        </select>
+    </div>
+
+    <div class="px-1 py-1">
+        <div class="flex items-center justify-between mb-1">
+            <label for="standby-opacity-slider" id="label-standby-opacity" class="text-[9px] xxs:text-[10px] sm:text-xs font-bold text-slate-300">StandBy-Bild schärfer</label>
+            <span id="standby-opacity-value" class="text-[9px] xxs:text-[10px] font-mono text-slate-400">0%</span>
+        </div>
+        <input type="range" id="standby-opacity-slider" min="0" max="100" step="5" value="0" class="w-full accent-blue-500" oninput="updateStandbyOpacity(this.value)">
+    </div>
+
+    <div class="px-1 py-1">
+        <div class="flex items-center justify-between mb-1">
+            <label for="standby-scale-slider" id="label-standby-scale" class="text-[9px] xxs:text-[10px] sm:text-xs font-bold text-slate-300">StandBy-Größe</label>
+            <span id="standby-scale-label" class="text-[9px] xxs:text-[10px] text-teal-400 font-mono">100%</span>
+        </div>
+        <input type="range" id="standby-scale-slider" min="0.6" max="1.3" step="0.05" value="1" oninput="changeStandbyManualScale(this.value)" class="w-full">
+        <p id="settings-standby-scale-hint" class="text-left text-[8px] xxs:text-[9px] text-slate-500 leading-snug mt-1">Passt sich automatisch an deinen Bildschirm an - hier nur bei Bedarf feinjustieren.</p>
+    </div>
+
+    <button onclick="toggleStandbyWakeLock()" id="btn-toggle-wakelock" class="text-left text-[10px] xxs:text-xs text-teal-400 px-2 py-1.5 rounded-xl hover:bg-slate-800 transition-colors font-bold">Bildschirm an (StandBy): AN</button>
+    <p id="settings-wakelock-hint" class="text-left text-[8px] xxs:text-[9px] text-slate-500 px-2 leading-snug -mt-1 mb-0.5">Hält den Bildschirm nur wach, solange Musik läuft - pausiert sie, darf das Handy normal einschlafen.</p>
+
+    <div class="px-1 py-1 flex items-center gap-2">
+        <label for="standby-accent-input" id="label-standby-accent" class="text-[9px] xxs:text-[10px] sm:text-xs font-bold text-slate-300 flex-1">Akzentfarbe</label>
+        <input type="color" id="standby-accent-input" value="#ffffff" onchange="changeStandbyAccent(this.value)" class="h-7 w-10 rounded border border-slate-700 bg-slate-800 cursor-pointer">
+    </div>
+
+    <div class="px-1 py-1">
+        <div class="flex items-center justify-between mb-1">
+            <label for="standby-radius-slider" id="label-standby-radius" class="text-[9px] xxs:text-[10px] sm:text-xs font-bold text-slate-300">Eckenradius</label>
+            <span id="standby-radius-label" class="text-[9px] xxs:text-[10px] text-teal-400 font-mono">32px</span>
+        </div>
+        <input type="range" id="standby-radius-slider" min="0" max="48" step="2" value="32" oninput="changeStandbyRadius(this.value)" class="w-full">
+    </div>
+
+    <div class="px-1 py-1">
+        <p id="label-standby-design-code" class="text-[9px] xxs:text-[10px] sm:text-xs font-bold text-slate-300 mb-1">Design-Code teilen</p>
+        <div class="flex gap-1.5">
+            <input type="text" id="standby-design-code-input" placeholder="Code hier einfügen..." class="flex-1 min-w-0 text-[9px] xxs:text-[10px] bg-slate-800 text-slate-300 border border-slate-700 rounded-xl px-2 py-1.5 font-mono">
+            <button onclick="copyStandbyDesignCode()" id="btn-standby-design-copy" class="shrink-0 text-[9px] xxs:text-[10px] bg-teal-700 hover:bg-teal-600 text-white rounded-xl px-2 py-1.5 font-bold transition-colors">Kopieren</button>
+            <button onclick="loadStandbyDesignCode()" id="btn-standby-design-load" class="shrink-0 text-[9px] xxs:text-[10px] bg-slate-700 hover:bg-slate-600 text-white rounded-xl px-2 py-1.5 font-bold transition-colors">Laden</button>
+        </div>
+        <p id="settings-design-code-hint" class="text-left text-[8px] xxs:text-[9px] text-slate-500 leading-snug mt-1">Kopiere deinen StandBy-Look als Code und schick ihn Freunden.</p>
+    </div>
+
+    <div class="h-px w-full bg-slate-700/70 my-0.5"></div>
+
+    <!-- Benachrichtigungen -->
+    <button onclick="requestNotificationPermissionManually()" id="btn-notification-permission" class="text-left text-[10px] xxs:text-xs text-teal-400 px-2 py-1.5 rounded-xl hover:bg-slate-800 transition-colors font-bold">Benachrichtigungen: nicht eingerichtet</button>
+    <p id="settings-notification-hint" class="text-left text-[8px] xxs:text-[9px] text-slate-500 px-2 leading-snug -mt-1 mb-1">Für die "Willkommen zurück"-Meldung, falls Musik pausiert war während du weg warst.</p>
+
+    <!-- Shortcut zu Lyrics-Einstellungen -->
+    <div class="p-2 rounded-xl bg-gradient-to-r from-blue-900/30 to-purple-900/30 border border-blue-500/20 mt-1 flex items-center justify-between">
+        <span class="text-[9px] xxs:text-[10px] font-bold text-slate-200">🎵 Songtext &amp; Animationen</span>
+        <button onclick="openLyricsSettingsFromGlobal(event)" class="text-[9px] xxs:text-[10px] px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold transition-all">Öffnen ➔</button>
+    </div>
+
+    <p id="settings-version-label" class="text-left text-[9px] xxs:text-[10px] text-slate-500 px-2 py-1 font-mono select-all">Version —</p>
 </div>
 
 <!-- ========================================================= -->
@@ -15833,28 +15866,33 @@ window.generateShareCard = function() {
             updateSettingsStatusButtons();
         };
 
-        window.toggleLyricsSettings = function(event, isStandalone = false) {
+        // Clean Separate Handlers for Lyrics Settings & Global Settings
+        let globalSettingsTimeout = null;
+        let isGlobalSettingsOpen = false;
+
+        window.toggleLyricsSettings = function(event) {
             if (event) event.stopPropagation();
-            isLyricsSettingsOpen = !isLyricsSettingsOpen;
-            if (!lyricsSettingsMenu) return;
+            const lyricsMenu = document.getElementById('lyrics-settings-menu');
+            if (!lyricsMenu) return;
+            
             clearTimeout(lyricsSettingsTimeout);
+            isLyricsSettingsOpen = !isLyricsSettingsOpen;
+
             if (isLyricsSettingsOpen) {
-                const isFromLyrics = !isStandalone && (mainMusicCard && mainMusicCard.classList.contains('lyrics-open'));
-                switchSettingsTab(isFromLyrics ? 'lyrics' : 'global');
-                if (isStandalone || !isFromLyrics) {
-                    lyricsSettingsMenu.classList.add('standalone-settings');
-                } else {
-                    lyricsSettingsMenu.classList.remove('standalone-settings');
-                }
-                lyricsSettingsMenu.classList.remove('hidden', 'settings-closing');
-                lyricsSettingsMenu.classList.add('settings-opening');
+                if (isGlobalSettingsOpen) window.toggleStandaloneSettings();
+                lyricsMenu.classList.remove('hidden', 'settings-closing');
+                lyricsMenu.classList.add('settings-opening');
+                setTimeout(() => {
+                    populateLyricsStyleDropdown();
+                    updateLyricsStylePreview(currentLyricsStyle);
+                }, 20);
             } else {
                 stopLyricsStylePreviewLoop();
-                lyricsSettingsMenu.classList.remove('settings-opening');
-                lyricsSettingsMenu.classList.add('settings-closing');
+                lyricsMenu.classList.remove('settings-opening');
+                lyricsMenu.classList.add('settings-closing');
                 lyricsSettingsTimeout = setTimeout(() => {
-                    lyricsSettingsMenu.classList.add('hidden');
-                    lyricsSettingsMenu.classList.remove('settings-closing', 'standalone-settings');
+                    lyricsMenu.classList.add('hidden');
+                    lyricsMenu.classList.remove('settings-closing');
                 }, 180);
             }
         };
@@ -15862,16 +15900,60 @@ window.generateShareCard = function() {
         window.toggleStandaloneSettings = function(event) {
             if (typeof triggerTutorialEvent === "function") triggerTutorialEvent("settings_opened");
             if (event) event.stopPropagation();
-            toggleLyricsSettings(event, true);
+            const globalMenu = document.getElementById('global-settings-menu');
+            if (!globalMenu) return;
+
+            clearTimeout(globalSettingsTimeout);
+            isGlobalSettingsOpen = !isGlobalSettingsOpen;
+
+            if (isGlobalSettingsOpen) {
+                if (isLyricsSettingsOpen) window.toggleLyricsSettings();
+                globalMenu.classList.remove('hidden', 'settings-closing');
+                globalMenu.classList.add('settings-opening');
+                updateSettingsStatusButtons();
+            } else {
+                globalMenu.classList.remove('settings-opening');
+                globalMenu.classList.add('settings-closing');
+                globalSettingsTimeout = setTimeout(() => {
+                    globalMenu.classList.add('hidden');
+                    globalMenu.classList.remove('settings-closing');
+                }, 180);
+            }
         };
 
+        window.openGlobalSettingsFromLyrics = function(event) {
+            if (event) event.stopPropagation();
+            if (isLyricsSettingsOpen) window.toggleLyricsSettings();
+            setTimeout(() => {
+                if (!isGlobalSettingsOpen) window.toggleStandaloneSettings();
+            }, 100);
+        };
+
+        window.openLyricsSettingsFromGlobal = function(event) {
+            if (event) event.stopPropagation();
+            if (isGlobalSettingsOpen) window.toggleStandaloneSettings();
+            setTimeout(() => {
+                if (typeof toggleLyrics === 'function' && (!mainMusicCard || !mainMusicCard.classList.contains('lyrics-open'))) {
+                    toggleLyrics(true);
+                }
+                setTimeout(() => {
+                    if (!isLyricsSettingsOpen) window.toggleLyricsSettings();
+                }, 150);
+            }, 100);
+        };
+
+        // Click outside listener for both menus
         document.addEventListener('click', (e) => {
             if (isLyricsSettingsOpen && 
                 !e.target.closest('#lyrics-settings-menu') && 
-                !e.target.closest('#btn-lyrics-settings') && 
+                !e.target.closest('#btn-lyrics-settings')) {
+                window.toggleLyricsSettings(e);
+            }
+            if (isGlobalSettingsOpen && 
+                !e.target.closest('#global-settings-menu') && 
                 !e.target.closest('#settings-global-toggle') && 
                 !e.target.closest('#footer-settings-btn')) {
-                toggleLyricsSettings(e);
+                window.toggleStandaloneSettings(e);
             }
         });
 
