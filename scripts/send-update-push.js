@@ -25,7 +25,7 @@ async function sendNotificationToAll() {
     }
 
     const payload = {
-        title: '🚀 Update v24.144.0 Live – Gamingpig',
+        title: '🚀 Update v24.145.0 Live – Gamingpig',
         body: '5-Stufen Erstbesuch-Pipeline & epische Was-ist-neu Zeitreise über alle Versionen sind live!',
         broadcastId: 'update_v24_144_0_' + Date.now(),
         url: 'https://gamingpig.github.io/About-Gamingpig/release.html',
@@ -60,7 +60,7 @@ async function sendNotificationToAll() {
             await fetch(`https://ntfy.sh/${topic}`, {
                 method: 'POST',
                 headers: {
-                    'Title': 'Gamingpig v24.144.0 Update Live',
+                    'Title': 'Gamingpig v24.145.0 Update Live',
                     'Priority': 'default',
                     'Tags': 'tada,rocket',
                     'Click': 'https://gamingpig.github.io/About-Gamingpig/release.html'

@@ -5371,7 +5371,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.144.0 · 2026-09-07';
+        const SITE_VERSION = 'v24.145.0 · 2026-09-07';
 
         // =========================================================
         // NEU v24.118: Automatischer Reset veralteter Cached Flags bei Versionswechsel
@@ -5536,7 +5536,7 @@
 
     <!-- NEW: Dynamic Island 2.0 -->
     <!-- NEW: Sprachauswahl (wie Android/iOS Einrichtungsassistent), nur beim ersten Besuch -->
-    <div id="language-picker-overlay" class="hidden" onclick="if(event.target===this)closeLanguagePicker()">
+    <div id="language-picker-overlay" class="hidden" onclick="if(event.target===this && (!window.OnboardingCoordinator || !window.OnboardingCoordinator.isOnboarding))closeLanguagePicker()">
         <div id="language-picker-box" class="relative">
             <button onclick="closeLanguagePicker()" id="lang-picker-close-btn" class="absolute -top-3 -right-2 sm:-top-4 sm:-right-4 w-9 h-9 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white/80 hover:text-white transition-all text-sm font-bold border border-white/10 shadow-lg active:scale-95 z-20" aria-label="Schließen / Close">✕</button>
             <div id="lang-picker-titles">
@@ -8208,6 +8208,10 @@
             renderLanguagePicker();
             const overlay = document.getElementById('language-picker-overlay');
             if (!overlay) return;
+            const closeBtn = document.getElementById('lang-picker-close-btn');
+            if (closeBtn) {
+                closeBtn.style.display = (!isManual && (window.OnboardingCoordinator && window.OnboardingCoordinator.isOnboarding)) ? 'none' : 'flex';
+            }
             overlay.classList.remove('hidden');
             void overlay.offsetWidth;
             requestAnimationFrame(() => overlay.classList.add('lp-active'));
@@ -11368,7 +11372,7 @@
         }
 
         window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
+                navigator.serviceWorker.register('sw.js?v=24.145.0', { updateViaCache: 'none' })
                     .then((reg) => {
                         // Prüfe beim Laden direkt auf Updates
                         if (reg) {
@@ -13631,6 +13635,8 @@ window.generateShareCard = function() {
         };
 
         function showTutorialCompletionModal() {
+            const modalOverlay = document.getElementById('modal-overlay');
+            const modalBody = document.getElementById('modal-body');
             if (!modalOverlay || !modalBody) {
                 showToast('🏆 Großartig! Du hast alle interaktiven Quests gemeistert! 🎉', 5000);
                 return;
@@ -13666,6 +13672,8 @@ window.generateShareCard = function() {
         }
 
         function showTutorialModeChoiceModal() {
+            const modalOverlay = document.getElementById('modal-overlay');
+            const modalBody = document.getElementById('modal-body');
             if (!modalOverlay || !modalBody) {
                 runClassicTutorial();
                 return;
@@ -15275,6 +15283,9 @@ window.generateShareCard = function() {
             if (window._tutorialChoiceModalOpen) {
                 localStorage.setItem('tutorialCompletedV5', 'skipped');
                 window._tutorialChoiceModalOpen = false;
+                if (window.OnboardingCoordinator && window.OnboardingCoordinator.isOnboarding) {
+                    window.OnboardingCoordinator.step3_whatsNew();
+                }
             }
             ttsQueueActive = false;
             if (typeof hybridPlayer !== 'undefined') hybridPlayer.stop();
@@ -16081,6 +16092,13 @@ window.generateShareCard = function() {
                 if ('caches' in window) {
                     const keys = await caches.keys();
                     await Promise.all(keys.map(k => caches.delete(k)));
+                }
+            } catch(e) {}
+
+            try {
+                if ('serviceWorker' in navigator) {
+                    const regs = await navigator.serviceWorker.getRegistrations();
+                    await Promise.all(regs.map(r => r.unregister()));
                 }
             } catch(e) {}
 
