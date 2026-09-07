@@ -3650,45 +3650,60 @@
         }
 
         /* Dedizierte, extrem flüssige Dropdown-Animationen für Einstellungen */
-        @keyframes lyrics-menu-in {
-            0% {
-                opacity: 0;
-                transform: scale(0.92) translateY(-8px);
-                filter: blur(4px);
-            }
-            100% {
-                opacity: 1;
-                transform: scale(1) translateY(0);
-                filter: blur(0px);
-            }
-        }
-        @keyframes lyrics-menu-out {
-            0% {
-                opacity: 1;
-                transform: scale(1) translateY(0);
-                filter: blur(0px);
-            }
-            100% {
-                opacity: 0;
-                transform: scale(0.94) translateY(-6px);
-                filter: blur(3px);
-            }
-        }
-        #lyrics-settings-menu.settings-opening {
-            display: flex !important;
-            visibility: visible !important;
-            opacity: 1 !important;
-            pointer-events: auto !important;
-            animation: lyrics-menu-in 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
-            transform-origin: top right;
-        }
-        #lyrics-settings-menu.settings-closing {
-            display: flex !important;
-            visibility: visible !important;
-            pointer-events: none !important;
-            animation: lyrics-menu-out 0.18s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
-            transform-origin: top right;
-        }
+        @keyframes lyrics-menu-pop-in {
+    0% {
+        opacity: 0;
+        transform: scale(0.72) translateY(-16px);
+        filter: blur(10px);
+    }
+    55% {
+        opacity: 1;
+        transform: scale(1.04) translateY(2px);
+        filter: blur(0px);
+    }
+    78% {
+        transform: scale(0.98) translateY(-1px);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+        filter: blur(0px);
+    }
+}
+@keyframes lyrics-menu-pop-out {
+    0% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+        filter: blur(0px);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(0.8) translateY(-12px);
+        filter: blur(8px);
+    }
+}
+#lyrics-settings-menu.settings-opening {
+    animation: lyrics-menu-pop-in 0.38s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards !important;
+}
+#lyrics-settings-menu.settings-closing {
+    animation: lyrics-menu-pop-out 0.22s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
+}
+
+/* Font Size Scaling */
+#lyrics-container.lyrics-size-s .lyric-word { font-size: 0.85em; }
+#lyrics-container.lyrics-size-l .lyric-word { font-size: 1.22em; }
+
+/* Focus Dimming */
+#lyrics-container.lyrics-dim-deep .lyric-line:not(.active) {
+    opacity: 0.12 !important;
+    filter: blur(1.5px);
+    transition: opacity 0.35s ease, filter 0.35s ease;
+}
+#lyrics-container.lyrics-dim-soft .lyric-line:not(.active) {
+    opacity: 0.38 !important;
+    filter: blur(0px);
+    transition: opacity 0.35s ease, filter 0.35s ease;
+}
         #lyrics-settings-menu {
             background-color: #0f172a !important;
             -webkit-overflow-scrolling: touch !important;
@@ -5978,6 +5993,36 @@
                                     
                                     <div id="lyrics-style-preview-box" class="w-full bg-black/50 rounded-xl p-2 sm:p-2.5 overflow-hidden text-center min-h-[48px] sm:min-h-[52px] flex items-center justify-center select-none border border-white/5">
                                         <p id="lyrics-style-preview-text" class="lyric-line active text-[11px] sm:text-xs font-bold leading-tight !m-0 !max-w-full !p-0"></p>
+                                    </div>
+
+                                    <!-- Schriftgröße & Lesefokus -->
+                                    <div class="h-px w-full bg-slate-700/70 my-0.5"></div>
+                                    <div class="flex justify-between items-center px-1 mb-1">
+                                        <p class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-slate-400">Schriftgröße</p>
+                                        <span id="lyrics-font-badge" class="text-[8px] xxs:text-[9px] text-blue-400 font-mono font-bold">Normal</span>
+                                    </div>
+                                    <div class="grid grid-cols-3 gap-1.5 px-0.5 mb-1.5">
+                                        <button type="button" onclick="setLyricsFontSize('s')" data-size="s" class="lyrics-size-btn flex items-center justify-center py-1.5 px-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/80 transition-all active:scale-95 text-[10px] font-bold">
+                                            S <span class="text-[8px] opacity-60 ml-1">Klein</span>
+                                        </button>
+                                        <button type="button" onclick="setLyricsFontSize('m')" data-size="m" class="lyrics-size-btn active flex items-center justify-center py-1.5 px-2 rounded-xl bg-blue-600/30 text-blue-300 border border-blue-500/50 transition-all active:scale-95 text-[10px] font-bold">
+                                            M <span class="text-[8px] opacity-60 ml-1">Normal</span>
+                                        </button>
+                                        <button type="button" onclick="setLyricsFontSize('l')" data-size="l" class="lyrics-size-btn flex items-center justify-center py-1.5 px-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/80 transition-all active:scale-95 text-[10px] font-bold">
+                                            L <span class="text-[8px] opacity-60 ml-1">Groß</span>
+                                        </button>
+                                    </div>
+
+                                    <div class="flex justify-between items-center px-1 mb-1">
+                                        <p class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-slate-400">Lese-Fokus (Dimming)</p>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-1.5 px-0.5 mb-1.5">
+                                        <button type="button" onclick="setLyricsDimMode('soft')" data-dim="soft" class="lyrics-dim-btn active flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-xl bg-blue-600/30 text-blue-300 border border-blue-500/50 transition-all active:scale-95 text-[10px] font-semibold">
+                                            <span>☁️</span> <span>Sanft</span>
+                                        </button>
+                                        <button type="button" onclick="setLyricsDimMode('deep')" data-dim="deep" class="lyrics-dim-btn flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/80 transition-all active:scale-95 text-[10px] font-semibold">
+                                            <span>🎯</span> <span>Kino (Stark)</span>
+                                        </button>
                                     </div>
 
                                     <!-- Live Sync Offset -->
@@ -13607,6 +13652,20 @@ window.generateShareCard = function() {
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+    {
+        version: "v3.6.0",
+        date: "07. September 2026",
+        title: "Lyrics Pro & Spring Dynamics",
+        badge: "Neu",
+        description: "Das Lyrics-Erlebnis wurde verfeinert mit lebendiger Apple-Spring-Animation, nützlichen Personalisierungs-Einstellungen und phonetischer Aussprache-Optimierung.",
+        changes: [
+            "✨ <b>Juicy Spring-Animation:</b> Das Einstellungsmenü im Songtext öffnet sich nun mit eleganter Federphysik und spürbarem Pop-Effekt wie früher.",
+            "🔤 <b>Lyrics-Schriftgrößen-Skalierung:</b> Wähle zwischen Klein (S), Normal (M) und Groß (L) für optimale Lesbarkeit auf allen Bildschirmen.",
+            "🕶️ <b>Kino-Fokus (Zeilen-Dimming):</b> Wähle zwischen sanfter Dimmung oder extrem fokussiertem Kinomodus mit Weichzeichner für inaktive Textzeilen.",
+            "🗣️ <b>Phonetische Aussprache-Optimierung:</b> Read-Aloud / TTS spricht 'Gamingpig' nun akzentfrei und sauber als 'Gaming Pigg' aus.",
+            "🇩🇪 <b>Sprachauswahl im Impressum:</b> Schnelles, nahtloses Umschalten zwischen Deutsch und Englisch bei der Sprachausgabe."
+        ]
+    },
             { version: 'v24.140.0', date: "7. September 2026", type: 'feature', items: {
                 de: [
                     "👁️ Intelligentes Viewport-Rendering: 20% Puffer-Zone oben/unten pausiert inaktive Offscreen-Sektionen und spart massiv Akku",
@@ -15915,7 +15974,7 @@ window.generateShareCard = function() {
                 lyricsSettingsTimeout = setTimeout(() => {
                     lyricsMenu.classList.add('hidden');
                     lyricsMenu.classList.remove('settings-closing');
-                }, 180);
+                }, 220);
             }
         };
 
@@ -16011,7 +16070,69 @@ window.generateShareCard = function() {
             }, { passive: true });
         }
 
-        window.setLyricsStyle = function(style) {
+        window.setLyricsFontSize = function(size) {
+    const validSizes = ['s', 'm', 'l'];
+    if (!validSizes.includes(size)) size = 'm';
+    const container = document.getElementById('lyrics-container');
+    if (container) {
+        container.classList.remove('lyrics-size-s', 'lyrics-size-m', 'lyrics-size-l');
+        if (size !== 'm') container.classList.add('lyrics-size-' + size);
+    }
+    document.querySelectorAll('.lyrics-size-btn').forEach(btn => {
+        const isActive = btn.getAttribute('data-size') === size;
+        btn.classList.toggle('active', isActive);
+        if (isActive) {
+            btn.className = 'lyrics-size-btn active flex items-center justify-center py-1.5 px-2 rounded-xl bg-blue-600/30 text-blue-300 border border-blue-500/50 transition-all active:scale-95 text-[10px] font-bold';
+        } else {
+            btn.className = 'lyrics-size-btn flex items-center justify-center py-1.5 px-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/80 transition-all active:scale-95 text-[10px] font-bold';
+        }
+    });
+    const badge = document.getElementById('lyrics-font-badge');
+    if (badge) {
+        badge.textContent = size === 's' ? 'Klein' : size === 'l' ? 'Groß' : 'Normal';
+    }
+    try { localStorage.setItem('gp_lyrics_font_size', size); } catch(e) {}
+    if (window.showAppToast) window.showAppToast('Schriftgröße: ' + (size === 's' ? 'Klein' : size === 'l' ? 'Groß' : 'Normal'));
+};
+
+window.setLyricsDimMode = function(mode) {
+    if (mode !== 'deep') mode = 'soft';
+    const container = document.getElementById('lyrics-container');
+    if (container) {
+        container.classList.remove('lyrics-dim-soft', 'lyrics-dim-deep');
+        container.classList.add('lyrics-dim-' + mode);
+    }
+    document.querySelectorAll('.lyrics-dim-btn').forEach(btn => {
+        const isActive = btn.getAttribute('data-dim') === mode;
+        btn.classList.toggle('active', isActive);
+        if (isActive) {
+            btn.className = 'lyrics-dim-btn active flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-xl bg-blue-600/30 text-blue-300 border border-blue-500/50 transition-all active:scale-95 text-[10px] font-semibold';
+        } else {
+            btn.className = 'lyrics-dim-btn flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/80 transition-all active:scale-95 text-[10px] font-semibold';
+        }
+    });
+    try { localStorage.setItem('gp_lyrics_dim_mode', mode); } catch(e) {}
+    if (window.showAppToast) window.showAppToast('Fokus: ' + (mode === 'deep' ? 'Kino (Stark)' : 'Sanft'));
+};
+
+// Initialize lyrics settings from localStorage
+(function initLyricsSettingsAddons() {
+    try {
+        const savedSize = localStorage.getItem('gp_lyrics_font_size') || 'm';
+        const savedDim = localStorage.getItem('gp_lyrics_dim_mode') || 'soft';
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                window.setLyricsFontSize(savedSize);
+                window.setLyricsDimMode(savedDim);
+            });
+        } else {
+            window.setLyricsFontSize(savedSize);
+            window.setLyricsDimMode(savedDim);
+        }
+    } catch(e) {}
+})();
+
+window.setLyricsStyle = function(style) {
             currentLyricsStyle = style;
             localStorage.setItem('lyricsStyle', style);
             
