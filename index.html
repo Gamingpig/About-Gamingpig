@@ -3136,8 +3136,52 @@
         try {
             const savedAppLang = localStorage.getItem('selectedLanguage');
             if (savedAppLang) document.documentElement.setAttribute('lang', savedAppLang);
+            
+            // 🛡️ INSTANT ONBOARDING SHIELD (v24.149.0)
+            // Prüfe Version & Onboarding-Status VOR dem Rendern der Seite
+            const _currVer = 'v24.149.0 · 2026-09-07';
+            const _installedVer = localStorage.getItem('site_version_installed');
+            if (_installedVer !== _currVer) {
+                localStorage.setItem('site_version_installed', _currVer);
+                localStorage.setItem('onboarding_completed', '0');
+            }
+            const _onbCompleted = (localStorage.getItem('onboarding_completed') === '1');
+            const _urlP = new URLSearchParams(window.location.search);
+            const _forceStart = _urlP.has('first_visit') || _urlP.has('onboarding') || _urlP.has('tutorial');
+            
+            if (!_onbCompleted || _forceStart) {
+                document.documentElement.classList.add('needs-onboarding');
+            }
+            
+            // Force PWA cache refresh in background
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(regs => {
+                    regs.forEach(r => r.update());
+                }).catch(() => {});
+            }
         } catch(e) {}
     </script>
+    <style id="onboarding-shield-style">
+        /* 🛡️ Sofort-Blockade: Onboarding-Schritt 1 (Sprachauswahl) erzwingen ohne Flackern */
+        html.needs-onboarding #language-picker-overlay {
+            display: flex !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+            z-index: 100005 !important;
+            pointer-events: auto !important;
+        }
+        html.needs-onboarding #language-picker-overlay.hidden {
+            display: flex !important;
+        }
+        html.needs-onboarding #language-picker-box {
+            opacity: 1 !important;
+            transform: translateY(0) scale(1) !important;
+            pointer-events: auto !important;
+        }
+        html.needs-onboarding #lang-picker-close-btn {
+            display: none !important;
+        }
+    </style>
     <meta name="description" content="Gamingpigs persönliches Portfolio über Fachinformatik, Homelab, Projekte und Musik.">
     <meta name="author" content="Gamingpig">
     <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -5371,7 +5415,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.148.0 · 2026-09-07';
+        const SITE_VERSION = 'v24.149.0 · 2026-09-07';
 
         // =========================================================
         // NEU v24.118: Automatischer Reset veralteter Cached Flags bei Versionswechsel
@@ -8258,6 +8302,7 @@
             } catch (e) {
                 console.error('applyLanguage error:', e);
             }
+            document.documentElement.classList.remove('needs-onboarding');
             window.closeLanguagePicker();
             // NEW: Bugfix - Tutorial-Autostart darf erst NACH der Sprachauswahl kommen,
             // nie gleichzeitig (siehe Kommentar bei der alten if-Abfrage weiter unten).
@@ -16156,6 +16201,7 @@ window.generateShareCard = function() {
         };
 
         window.resetOnboarding = function() {
+            document.documentElement.classList.add('needs-onboarding');
             window.OnboardingTracker.reset();
             if (typeof toggleStandaloneSettings === 'function' && typeof isGlobalSettingsOpen !== 'undefined' && isGlobalSettingsOpen) {
                 toggleStandaloneSettings();

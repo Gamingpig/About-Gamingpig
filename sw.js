@@ -1,5 +1,5 @@
 // ==============================================================================
-// Gamingpig Portfolio PWA Service Worker (v24.148.0)
+// Gamingpig Portfolio PWA Service Worker (v24.149.0)
 // Robust Update- & Cache-Strategie:
 // - HTML / Navigation: ECHTES Network-First mit Offline-Fallback
 // - Statische Assets (Bilder, Icons, Manifest): Stale-While-Revalidate mit Cache-Fallback
@@ -7,7 +7,7 @@
 // - Sofortige Übernahme: self.skipWaiting() & clients.claim()
 // ==============================================================================
 
-const SW_VERSION = "24.148.0";
+const SW_VERSION = "24.149.0";
 const CACHE_NAME = `gamingpig-cache-v${SW_VERSION}`;
 const CACHE_PREFIX = "gamingpig-cache-";
 
@@ -44,13 +44,9 @@ self.addEventListener("activate", (event) => {
         caches.keys().then((keys) => {
             return Promise.all(
                 keys.map((key) => {
-                    // Lösche alte Versionen dieses Portfolios, fremde Caches nicht anfassen
-                    if (key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME) {
-                        console.log("[SW] Lösche veralteten Cache:", key);
-                        return caches.delete(key);
-                    }
-                    if (key.startsWith("gamingpig-portfolio-")) {
-                        console.log("[SW] Lösche alten Legacy-Cache:", key);
+                    // Lösche ausnahmslos alle alten Caches bei Versionswechsel
+                    if (key !== CACHE_NAME) {
+                        console.log("[SW] Wische alten Cache für sofortige Aktualisierung:", key);
                         return caches.delete(key);
                     }
                     return Promise.resolve();
