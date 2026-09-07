@@ -3132,6 +3132,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Gamingpig | Portfolio</title>
+    <script src="js/read-aloud-service.js"></script>
+    <script src="js/i18n-manager.js"></script>
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -8236,10 +8238,12 @@
             }
         };
 
+        if (window.I18nManager) { window.I18nManager.setTranslations(translations); }
         let currentLang = (function() { try { return localStorage.getItem('app_language') || localStorage.getItem('selectedLanguage') || null; } catch(e) { return null; } })();
         function t(key, ...args) {
-            const langDict = translations[currentLang || 'de'] || translations.de;
-            const val = langDict[key] !== undefined ? langDict[key] : translations.de[key];
+            if (window.I18nManager) return window.I18nManager.t(key, ...args);
+            const langDict = translations[currentLang || 'de'] || translations.de || {};
+            const val = langDict[key] !== undefined ? langDict[key] : (translations.de ? translations.de[key] : undefined);
             if (typeof val === 'function') return val(...args);
             return val !== undefined ? val : key;
         }
@@ -8337,12 +8341,16 @@
         function applyLanguage(lang) {
             if (!translations[lang]) lang = 'de';
             currentLang = lang;
-            try {
-                localStorage.setItem('app_language', lang);
-                localStorage.setItem('selectedLanguage', lang);
-            } catch(e) {}
-            syncLangToIndexedDB(lang);
-            document.documentElement.setAttribute('lang', lang);
+            if (window.I18nManager) {
+                window.I18nManager.setLanguage(lang);
+            } else {
+                try {
+                    localStorage.setItem('app_language', lang);
+                    localStorage.setItem('selectedLanguage', lang);
+                } catch(e) {}
+                syncLangToIndexedDB(lang);
+                document.documentElement.setAttribute('lang', lang);
+            }
 
             const cpInput = document.getElementById('cp-input');
             if (cpInput && !document.getElementById('command-palette-overlay').classList.contains('cp-active')) {
@@ -10568,6 +10576,23 @@
         function ttsSpeak(text, btnEl, optLang) {
             if (!text || !text.trim()) return;
 
+            if (window.ReadAloudService) {
+                if (window.ReadAloudService.isPlaying()) {
+                    window.ReadAloudService.stop();
+                    ttsSetButtonState(btnEl, 'idle');
+                    return;
+                }
+                const activeLang = optLang || (window.I18nManager ? window.I18nManager.getLanguage() : currentLang) || 'de';
+                window.ReadAloudService.setSpeed(currentTtsSpeed || 1.0);
+                ttsSetButtonState(btnEl, 'speaking');
+                window.ReadAloudService.speak(text, activeLang, {
+                    onStart: () => ttsSetButtonState(btnEl, 'speaking'),
+                    onEnd: () => ttsSetButtonState(btnEl, 'idle'),
+                    onError: () => ttsSetButtonState(btnEl, 'idle')
+                });
+                return;
+            }
+
             if (typeof speechSynthesis === 'undefined') {
                 if (typeof showToast === 'function') showToast('Sprachausgabe nicht unterstützt.', '⚠️');
                 return;
@@ -10581,11 +10606,8 @@
                 return;
             }
 
-            // Reset any stuck speech state
             speechSynthesis.cancel();
-            if (speechSynthesis.paused) {
-                speechSynthesis.resume();
-            }
+            if (speechSynthesis.paused) speechSynthesis.resume();
 
             const activeLang = optLang || currentLang || 'de';
             const voice = ttsPickVoice(activeLang);
@@ -18891,9 +18913,7 @@ window.setLyricsStyle = function(style) {
             // oder ignoriert es, wird nie wieder gefragt. HINWEIS: In der installierten
             // Android-App (TWA) greift das erst nach einem eigenen App-Rebuild + Play-Store-
             // Upload, ein reiner Website-Deploy reicht dafür laut Projektdoku nicht.
-            if ('Notification' in window && Notification.permission === 'default') {
-                Notification.requestPermission().catch(() => {});
-            }
+            // Navigation & Permission Guard: Keine automatischen Popups beim Laden
             // NEU v24.105: StandBy nach einem automatischen Max-Session-Neustart (siehe
             // scheduleStandbyMaxSession()) von selbst wieder öffnen - der Nutzer merkt vom
             // ganzen Vorgang im besten Fall nur ein kurzes Bildschirm-Flackern, StandBy läuft

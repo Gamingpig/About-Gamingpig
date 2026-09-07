@@ -6,494 +6,146 @@
 <title>Impressum / Legal Notice – Gamingpig Portfolio</title>
 <link rel="icon" type="image/png" href="icon-192.png">
 <script>
-  try {
-    const savedAppLang = localStorage.getItem('selectedLanguage');
-    if (savedAppLang) document.documentElement.setAttribute('lang', savedAppLang);
-  } catch(e) {}
-</script>
-<style>
-  :root{
-    --bg:#0d0d12;
-    --card:#16161d;
-    --text:#e8e8ee;
-    --muted:#9a9aa8;
-    --accent:#6c5ce7;
-    --border:#26262f;
-  }
-  *{box-sizing:border-box;}
-  body{
-    margin:0;
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    background:var(--bg);
-    color:var(--text);
-    line-height:1.6;
-    padding:0 20px 80px;
-  }
-  .wrap{max-width:720px;margin:0 auto;}
-  header{
-    padding:40px 0 20px;
-    border-bottom:1px solid var(--border);
-    margin-bottom:28px;
-  }
-  header h1{
-    font-size:1.7rem;
-    margin:0 0 8px;
-  }
-  header p{
-    color:var(--muted);
-    margin:0;
-    font-size:0.95rem;
-  }
-  h2{
-    font-size:1.15rem;
-    margin:32px 0 10px;
-    color:var(--text);
-  }
-  p, li{
-    color:#d3d3dc;
-    font-size:0.97rem;
-  }
-  ul{padding-left:20px;}
-  .card{
-    background:var(--card);
-    border:1px solid var(--border);
-    border-radius:14px;
-    padding:20px 22px;
-    margin:20px 0;
-  }
-  a{color:var(--accent);text-decoration:none;}
-  a:hover{text-decoration:underline;}
-  footer{
-    margin-top:48px;
-    padding-top:20px;
-    border-top:1px solid var(--border);
-    color:var(--muted);
-    font-size:0.85rem;
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    flex-wrap:wrap;
-    gap:12px;
-  }
-  .lang-switcher{
-    display:flex; flex-wrap:wrap; gap:6px; padding:16px 0 0;
-  }
-  .lang-btn{
-    background:var(--card); border:1px solid var(--border); color:var(--muted);
-    padding:6px 12px; border-radius:20px; font-size:0.8rem; cursor:pointer;
-    font-family:inherit; transition:all 0.15s ease;
-  }
-  .lang-btn:hover{ color:var(--text); border-color:var(--accent); }
-  .lang-btn.active{ background:var(--accent); color:#fff; border-color:var(--accent); }
-  .back-btn{
-    display:inline-flex; align-items:center; gap:6px;
-    background:var(--card); border:1px solid var(--border);
-    color:var(--text); padding:8px 14px; border-radius:12px;
-    font-size:0.85rem; font-weight:600; text-decoration:none;
-    margin-bottom:16px; transition:all 0.15s ease;
-  }
-  .back-btn:hover{ border-color:var(--accent); color:#fff; text-decoration:none; }
-  .tts-btn-group{
-    display:inline-flex; align-items:center; background:var(--card); border:1px solid var(--border);
-    border-radius:12px; overflow:hidden; font-family:inherit; transition:border-color 0.15s ease;
-  }
-  .tts-btn-group:hover{ border-color:var(--accent); }
-  .tts-play-btn{
-    background:transparent; border:none; color:var(--text); padding:8px 12px; font-size:0.85rem;
-    font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px; font-family:inherit;
-    transition:all 0.15s ease;
-  }
-  .tts-play-btn:hover{ color:var(--accent); }
-  .tts-play-btn.speaking{ background:rgba(239, 68, 68, 0.2); color:#ef4444; }
-  .tts-speed-trigger{
-    background:transparent; border:none; border-left:1px solid var(--border); color:var(--accent);
-    padding:8px 10px; font-size:0.8rem; font-family:ui-monospace, monospace; font-weight:700;
-    cursor:pointer; transition:background 0.15s ease;
-  }
-  .tts-speed-trigger:hover{ background:rgba(255,255,255,0.05); }
-  .tts-menu{
-    position:absolute; top:calc(100% + 6px); right:0; z-index:100; background:var(--card);
-    border:1px solid var(--border); border-radius:12px; padding:8px; box-shadow:0 12px 30px rgba(0,0,0,0.5);
-    min-width:180px; backdrop-filter:blur(16px);
-  }
-  .tts-menu.hidden{ display:none; }
-  .tts-menu-header{
-    display:flex; justify-content:space-between; align-items:center; font-size:0.75rem;
-    font-weight:700; color:var(--muted); text-transform:uppercase; margin-bottom:6px;
-  }
-  .tts-pill-grid{ display:grid; grid-template-columns:repeat(5, 1fr); gap:4px; }
-  .tts-pill{
-    background:rgba(255,255,255,0.05); border:1px solid transparent; color:var(--muted);
-    border-radius:6px; padding:4px 0; font-size:0.75rem; font-family:ui-monospace, monospace;
-    font-weight:700; cursor:pointer; text-align:center;
-  }
-  .tts-pill.active{ background:var(--accent); color:#fff; }
-</style>
-</head>
-<body>
-<div class="wrap">
-  <div style="padding-top:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-    <a href="index.html" class="back-btn" style="margin-bottom:0;">← Hauptseite</a>
-    
-    <div style="position:relative; display:inline-block;">
-      <div class="tts-btn-group">
-        <button id="imp-tts-btn" onclick="toggleImpressumSpeech()" class="tts-play-btn">
-          <span>🔊</span> <span id="imp-tts-label">Vorlesen</span>
-        </button>
-        <button onclick="toggleImpressumTtsMenu()" class="tts-speed-trigger" title="Tempo anpassen">
-          <span id="imp-tts-speed-val">1.0x</span>
-        </button>
-      </div>
-
-      <div id="imp-tts-menu" class="tts-menu hidden">
-        <div class="tts-menu-header">
-          <span>Tempo</span>
-          <button onclick="stopImpressumSpeech()" style="background:none; border:none; color:#f87171; cursor:pointer; font-size:0.75rem; font-weight:700;">⏹ Stopp</button>
-        </div>
-        <div class="tts-pill-grid">
-          <button onclick="setImpressumTtsSpeed(0.8)" data-speed="0.8" class="tts-pill">0.8x</button>
-          <button onclick="setImpressumTtsSpeed(1.0)" data-speed="1.0" class="tts-pill active">1.0x</button>
-          <button onclick="setImpressumTtsSpeed(1.2)" data-speed="1.2" class="tts-pill">1.2x</button>
-          <button onclick="setImpressumTtsSpeed(1.5)" data-speed="1.5" class="tts-pill">1.5x</button>
-          <button onclick="setImpressumTtsSpeed(2.0)" data-speed="2.0" class="tts-pill">2.0x</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="lang-switcher">
-      <button class="lang-btn" data-lang="de" onclick="setImpressumLang('de')">Deutsch</button>
-      <button class="lang-btn" data-lang="en" onclick="setImpressumLang('en')">English</button>
-      <button class="lang-btn" data-lang="es" onclick="setImpressumLang('es')">Español</button>
-      <button class="lang-btn" data-lang="fr" onclick="setImpressumLang('fr')">Français</button>
-      <button class="lang-btn" data-lang="pt" onclick="setImpressumLang('pt')">Português</button>
-      <button class="lang-btn" data-lang="tr" onclick="setImpressumLang('tr')">Türkçe</button>
-  </div>
-
-  <!-- DEUTSCH -->
-  <div class="lang-block" data-lang="de">
-    <header>
-      <h1>Impressum</h1>
-      <p>Angaben gemäß § 5 Digitale-Dienste-Gesetz (DDG) / § 18 Abs. 2 MStV</p>
-    </header>
-
-    <div class="card">
-      <p><strong>Betreiber und Verantwortlicher:</strong><br>
-      Gamingpig<br>
-      E-Mail: <a href="mailto:gamingpig.support@gmail.com">gamingpig.support@gmail.com</a><br>
-      Discord Support &amp; Community: <a href="https://discord.gg/E8BS9BDAst" target="_blank" rel="noopener noreferrer">discord.gg/E8BS9BDAst</a><br>
-      GitHub: <a href="https://github.com/Gamingpig" target="_blank" rel="noopener noreferrer">github.com/Gamingpig</a></p>
-    </div>
-
-    <h2>Zweck und Art des Webangebots</h2>
-    <p>
-      Dieses Projekt ist ein rein privates, nicht-kommerzielles Portfolio zur Präsentation von Softwareentwicklung, Web-Technologien, System-Telemetrie und Musik-Integrationen. Es werden keinerlei kostenpflichtige Dienstleistungen angeboten und keine kommerziellen Einnahmen erzielt.
-    </p>
-
-    <h2>Haftung für Inhalte</h2>
-    <p>
-      Als Diensteanbieter sind wir gemäß § 7 Abs. 1 DDG für eigene Inhalte auf diesen Seiten nach den allgemeinen Gesetzen verantwortlich. Nach §§ 8 bis 10 DDG sind wir als Diensteanbieter jedoch nicht verpflichtet, übermittelte oder gespeicherte fremde Informationen zu überwachen oder nach Umständen zu forschen, die auf eine rechtswidrige Tätigkeit hinweisen.
-    </p>
-
-    <h2>Haftung für externe Links</h2>
-    <p>
-      Unser Angebot enthält Links zu externen Websites Dritter (z.&nbsp;B. GitHub, Spotify, Discord, TikTok, YouTube, LrcLib), auf deren Inhalte wir keinen Einfluss haben. Deshalb können wir für diese fremden Inhalte auch keine Gewähr übernehmen. Für die Inhalte der verlinkten Seiten ist stets der jeweilige Anbieter oder Betreiber der Seiten verantwortlich.
-    </p>
-
-    <h2>Barrierefreiheit &amp; Vorlesefunktion (TTS)</h2>
-    <p>
-      Zur Förderung der Barrierefreiheit bietet dieses Portfolio eine integrierte Vorlesefunktion (Text-to-Speech) mit dynamischer Spracherkennung, konfigurierbarer Lesegeschwindigkeit und synchronisierter Textbegleitung. Die Verarbeitung erfolgt direkt clientseitig über die Web Speech API des Endgeräts.
-    </p>
-
-    <h2>Urheberrecht</h2>
-    <p>
-      Die durch die Seitenbetreiber erstellten Inhalte und Werke auf diesen Seiten unterliegen dem deutschen Urheberrecht. Die Vervielfältigung, Bearbeitung, Verbreitung und jede Art der Verwertung außerhalb der Grenzen des Urheberrechtes bedürfen der vorherigen schriftlichen Zustimmung des jeweiligen Autors bzw. Erstellers.
-    </p>
-  </div>
-
-  <!-- ENGLISH -->
-  <div class="lang-block" data-lang="en" style="display:none;">
-    <header>
-      <h1>Legal Notice / Impressum</h1>
-      <p>Information pursuant to § 5 German Digital Services Act (DDG)</p>
-    </header>
-
-    <div class="card">
-      <p><strong>Publisher &amp; Operator:</strong><br>
-      Gamingpig<br>
-      Email: <a href="mailto:gamingpig.support@gmail.com">gamingpig.support@gmail.com</a><br>
-      Discord: <a href="https://discord.gg/E8BS9BDAst" target="_blank" rel="noopener noreferrer">discord.gg/E8BS9BDAst</a><br>
-      GitHub: <a href="https://github.com/Gamingpig" target="_blank" rel="noopener noreferrer">github.com/Gamingpig</a></p>
-    </div>
-
-    <h2>Nature of this Website</h2>
-    <p>
-      This website is a personal, strictly non-commercial developer portfolio demonstrating modern web technologies, music telemetry, and interactive applications. No commercial transactions are performed.
-    </p>
-
-    <h2>Liability for Content</h2>
-    <p>
-      As a service provider, we are responsible for our own content on these pages under general laws. We are not obliged to monitor transmitted or stored third-party information.
-    </p>
-
-    <h2>Liability for External Links</h2>
-    <p>
-      Our website contains links to external third-party sites (e.g., Spotify, GitHub, Discord, YouTube, TikTok). We have no influence on the contents of these sites and accept no liability for them.
-    </p>
-
-    <h2>Accessibility &amp; Read-Aloud Feature (TTS)</h2>
-    <p>
-      To improve accessibility, this portfolio provides built-in read-aloud features (Text-to-Speech) with dynamic language detection, real-time speed adjustment, and synchronized audio-visual tracking. Speech synthesis is executed client-side via the browser's Web Speech API.
-    </p>
-
-    <h2>Copyright</h2>
-    <p>
-      The content and code created by the site operator on these pages are subject to copyright law.
-    </p>
-  </div>
-
-  <!-- ESPAÑOL -->
-  <div class="lang-block" data-lang="es" style="display:none;">
-    <header>
-      <h1>Aviso Legal / Impressum</h1>
-      <p>Información según el § 5 de la Ley alemana de Servicios Digitales (DDG)</p>
-    </header>
-    <div class="card">
-      <p><strong>Responsable:</strong> Gamingpig<br>
-      Correo electrónico: <a href="mailto:gamingpig.support@gmail.com">gamingpig.support@gmail.com</a><br>
-      Discord: <a href="https://discord.gg/E8BS9BDAst" target="_blank">discord.gg/E8BS9BDAst</a></p>
-    </div>
-    <p>Este sitio web es un portafolio de desarrollo de software totalmente personal y sin fines comerciales.</p>
-  </div>
-
-  <!-- FRANÇAIS -->
-  <div class="lang-block" data-lang="fr" style="display:none;">
-    <header>
-      <h1>Mentions Légales / Impressum</h1>
-      <p>Informations conformément au § 5 de la loi allemande sur les services numériques (DDG)</p>
-    </header>
-    <div class="card">
-      <p><strong>Responsable :</strong> Gamingpig<br>
-      E-mail : <a href="mailto:gamingpig.support@gmail.com">gamingpig.support@gmail.com</a><br>
-      Discord : <a href="https://discord.gg/E8BS9BDAst" target="_blank">discord.gg/E8BS9BDAst</a></p>
-    </div>
-    <p>Ce site est un portfolio de développement strictement personnel et non-commercial.</p>
-  </div>
-
-  <!-- PORTUGUÊS -->
-  <div class="lang-block" data-lang="pt" style="display:none;">
-    <header>
-      <h1>Aviso Legal / Impressum</h1>
-      <p>Informações de acordo com o § 5 da Lei de Serviços Digitais (DDG)</p>
-    </header>
-    <div class="card">
-      <p><strong>Responsável:</strong> Gamingpig<br>
-      E-mail: <a href="mailto:gamingpig.support@gmail.com">gamingpig.support@gmail.com</a><br>
-      Discord: <a href="https://discord.gg/E8BS9BDAst" target="_blank">discord.gg/E8BS9BDAst</a></p>
-    </div>
-    <p>Este site é um portfólio de software estritamente pessoal e não comercial.</p>
-  </div>
-
-  <!-- TÜRKÇE -->
-  <div class="lang-block" data-lang="tr" style="display:none;">
-    <header>
-      <h1>Künye / Impressum</h1>
-      <p>Alman Dijital Hizmetler Yasası (DDG) § 5 uyarınca bilgiler</p>
-    </header>
-    <div class="card">
-      <p><strong>Sorumlu:</strong> Gamingpig<br>
-      E-posta: <a href="mailto:gamingpig.support@gmail.com">gamingpig.support@gmail.com</a><br>
-      Discord: <a href="https://discord.gg/E8BS9BDAst" target="_blank">discord.gg/E8BS9BDAst</a></p>
-    </div>
-    <p>Bu site kişisel ve tamamen ticari olmayan bir geliştirici portföyüdür.</p>
-  </div>
-
-  <footer>
-    <span>© 2026 Gamingpig</span>
-    <div style="display:flex; gap:16px;">
-      <a href="privacy.html">Datenschutz</a>
-      <a href="status.html">Live-Status</a>
-      <a href="release.html">Release Notes</a>
-    </div>
-  </footer>
-</div>
-
-<script>
-function ttsPreparePhonetics(str) {
-  if (!str) return '';
-  return str
-    .replace(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/gi, (email) => email.replace(/gamingpig/gi, 'gaming-pigg'))
-    .replace(/gaming[\s\-_]*pigs?\b/gi, 'Gaming Pigg')
-    .replace(/gaming[\s\-_]*pig/gi, 'Gaming Pigg');
-}
-
-const TTS_LANG_BCP47 = {
-  de: 'de-DE',
-  en: 'en-US',
-  es: 'es-ES',
-  fr: 'fr-FR',
-  pt: 'pt-BR',
-  tr: 'tr-TR'
+const IMP_I18N = {
+  de: { readAloud: "Vorlesen", stop: "Stoppen", back: "← Hauptseite", speed: "Tempo" },
+  en: { readAloud: "Read Aloud", stop: "Stop", back: "← Main Page", speed: "Speed" },
+  es: { readAloud: "Leer en voz alta", stop: "Detener", back: "← Página Principal", speed: "Velocidad" },
+  fr: { readAloud: "Lire à voix haute", stop: "Arrêter", back: "← Page Principale", speed: "Vitesse" },
+  pt: { readAloud: "Ler em voz alta", stop: "Parar", back: "← Página Principal", speed: "Velocidade" },
+  tr: { readAloud: "Sesli Oku", stop: "Durdur", back: "← Ana Sayfa", speed: "Hız" }
 };
 
-function ensureVoicesLoaded() {
-  return new Promise(resolve => {
-    if (typeof speechSynthesis === 'undefined') return resolve([]);
-    const existing = speechSynthesis.getVoices();
-    if (existing.length > 0) return resolve(existing);
-    let resolved = false;
-    speechSynthesis.onvoiceschanged = () => {
-      if (resolved) return;
-      resolved = true;
-      resolve(speechSynthesis.getVoices());
-    };
-    setTimeout(() => {
-      if (!resolved) {
-        resolved = true;
-        resolve(speechSynthesis.getVoices());
-      }
-    }, 1500);
+function updateImpressumUI(lang) {
+  const code = (lang || (window.I18nManager ? window.I18nManager.getLanguage() : "de")).toLowerCase();
+  
+  document.querySelectorAll(".lang-block").forEach(b => {
+    b.style.display = (b.getAttribute("data-lang") === code) ? "block" : "none";
   });
-}
+  document.querySelectorAll(".lang-btn").forEach(btn => {
+    btn.classList.toggle("active", btn.getAttribute("data-lang") === code);
+  });
+  document.documentElement.setAttribute("lang", code);
 
-function getVoicesForLang(langCode) {
-  if (typeof speechSynthesis === 'undefined') return [];
-  const all = speechSynthesis.getVoices();
-  const target = (langCode || 'de').toLowerCase();
-  return all.filter(v => v.lang && v.lang.toLowerCase().startsWith(target));
+  const ttsStrings = IMP_I18N[code] || IMP_I18N.de;
+  const backBtn = document.querySelector(".back-btn");
+  if (backBtn) backBtn.textContent = ttsStrings.back;
+
+  const label = document.getElementById("imp-tts-label");
+  if (label && (!window.ReadAloudService || !window.ReadAloudService.isPlaying())) {
+    label.textContent = ttsStrings.readAloud;
+  }
 }
 
 function setImpressumLang(lang) {
-  document.querySelectorAll('.lang-block').forEach(b => {
-    b.style.display = (b.getAttribute('data-lang') === lang) ? 'block' : 'none';
-  });
-  document.querySelectorAll('.lang-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.getAttribute('data-lang') === lang);
-  });
-  document.documentElement.setAttribute('lang', lang);
-  try { localStorage.setItem('selectedLanguage', lang); } catch(e) {}
-  
-  // Wenn gerade vorgelesen wird: Sofort mit der neuen Sprache und Stimme neu starten
-  if (impSpeaking) {
+  if (window.I18nManager) {
+    window.I18nManager.setLanguage(lang);
+  } else {
+    try {
+      localStorage.setItem("app_language", lang);
+      localStorage.setItem("selectedLanguage", lang);
+    } catch(e) {}
+    updateImpressumUI(lang);
+  }
+
+  // If reading aloud, restart with new language
+  if (window.ReadAloudService && window.ReadAloudService.isPlaying()) {
     toggleImpressumSpeech(true);
   }
 }
 
-(function init() {
-  let lang = 'de';
-  try {
-    const saved = localStorage.getItem('selectedLanguage');
-    if (saved && ['de','en','es','fr','pt','tr'].includes(saved)) {
-      lang = saved;
-    } else if (navigator.language) {
-      const code = navigator.language.slice(0,2).toLowerCase();
-      if (['de','en','es','fr','pt','tr'].includes(code)) lang = code;
-    }
-  } catch(e) {}
-  setImpressumLang(lang);
-})();
+window.addEventListener("app:languageChanged", (e) => {
+  updateImpressumUI(e.detail.lang);
+});
 
-// Stimmen im Hintergrund frühzeitig vorladen
-if (typeof speechSynthesis !== 'undefined') {
-  ensureVoicesLoaded();
-}
-
-let impTtsSpeed = parseFloat(localStorage.getItem('gp_tts_speed')) || 1.0;
-let impSpeaking = false;
-let impUtterances = [];
+window.addEventListener("storage", (e) => {
+  if (e.key === "app_language" || e.key === "selectedLanguage") {
+    if (e.newValue) updateImpressumUI(e.newValue);
+  }
+});
 
 function updateImpressumTtsSpeedUI() {
-  const el = document.getElementById('imp-tts-speed-val');
-  if (el) el.innerText = impTtsSpeed.toFixed(1) + 'x';
-  document.querySelectorAll('.tts-pill').forEach(btn => {
-    btn.classList.toggle('active', Math.abs(parseFloat(btn.dataset.speed) - impTtsSpeed) < 0.05);
+  const speed = window.ReadAloudService ? window.ReadAloudService.getSpeed() : (parseFloat(localStorage.getItem("gp_tts_speed")) || 1.0);
+  const el = document.getElementById("imp-tts-speed-val");
+  if (el) el.innerText = speed.toFixed(1) + "x";
+  document.querySelectorAll(".tts-pill").forEach(btn => {
+    btn.classList.toggle("active", Math.abs(parseFloat(btn.dataset.speed) - speed) < 0.05);
   });
 }
 
 function setImpressumTtsSpeed(rate) {
-  impTtsSpeed = parseFloat(rate) || 1.0;
-  try { localStorage.setItem('gp_tts_speed', impTtsSpeed.toString()); } catch(e) {}
+  if (window.ReadAloudService) {
+    window.ReadAloudService.setSpeed(rate);
+  } else {
+    try { localStorage.setItem("gp_tts_speed", rate.toString()); } catch(e) {}
+  }
   updateImpressumTtsSpeedUI();
-  if (impSpeaking) {
+  if (window.ReadAloudService && window.ReadAloudService.isPlaying()) {
     toggleImpressumSpeech(true);
   }
 }
 
 function toggleImpressumTtsMenu() {
-  const menu = document.getElementById('imp-tts-menu');
-  if (menu) menu.classList.toggle('hidden');
+  const menu = document.getElementById("imp-tts-menu");
+  if (menu) menu.classList.toggle("hidden");
 }
 
 function stopImpressumSpeech() {
-  if (typeof speechSynthesis !== 'undefined') {
-    speechSynthesis.cancel();
+  if (window.ReadAloudService) {
+    window.ReadAloudService.stop();
   }
-  impSpeaking = false;
-  impUtterances = [];
-  const btn = document.getElementById('imp-tts-btn');
-  const label = document.getElementById('imp-tts-label');
-  if (btn) btn.classList.remove('speaking');
-  if (label) label.innerText = 'Vorlesen';
-  const menu = document.getElementById('imp-tts-menu');
-  if (menu) menu.classList.add('hidden');
+  const btn = document.getElementById("imp-tts-btn");
+  const label = document.getElementById("imp-tts-label");
+  const lang = (window.I18nManager ? window.I18nManager.getLanguage() : "de");
+  const strings = IMP_I18N[lang] || IMP_I18N.de;
+
+  if (btn) btn.classList.remove("speaking");
+  if (label) label.innerText = strings.readAloud;
+  const menu = document.getElementById("imp-tts-menu");
+  if (menu) menu.classList.add("hidden");
 }
 
 async function toggleImpressumSpeech(forceRestart) {
-  if (typeof speechSynthesis === 'undefined') {
-    alert('Sprachausgabe wird in diesem Browser leider nicht unterstützt.');
+  if (!window.ReadAloudService) {
+    alert("Sprachausgabe wird in diesem Browser leider nicht unterstützt.");
     return;
   }
-  if (impSpeaking && !forceRestart) {
+
+  if (window.ReadAloudService.isPlaying() && !forceRestart) {
     stopImpressumSpeech();
     return;
   }
 
-  speechSynthesis.cancel();
-  if (speechSynthesis.paused) {
-    speechSynthesis.resume();
-  }
-
-  const allBlocks = Array.from(document.querySelectorAll('.lang-block'));
-  const activeBlock = allBlocks.find(b => b.style.display !== 'none');
+  const allBlocks = Array.from(document.querySelectorAll(".lang-block"));
+  const activeBlock = allBlocks.find(b => b.style.display !== "none");
   if (!activeBlock) return;
 
-  const textToRead = activeBlock.innerText || '';
-  if (!textToRead.trim()) return;
+  const currentLang = (window.I18nManager ? window.I18nManager.getLanguage() : activeBlock.getAttribute("data-lang")) || "de";
+  const strings = IMP_I18N[currentLang] || IMP_I18N.de;
 
-  const currentLangCode = activeBlock.getAttribute('data-lang') || 'de';
-  const targetBcp47 = TTS_LANG_BCP47[currentLangCode] || 'de-DE';
+  const btn = document.getElementById("imp-tts-btn");
+  const label = document.getElementById("imp-tts-label");
 
-  await ensureVoicesLoaded();
-  const matchingVoices = getVoicesForLang(currentLangCode);
-  const matchingVoice = matchingVoices[0] || null;
-
-  const chunks = textToRead.match(/[^.!?\n]+[.!?\n]*/g) || [textToRead];
-  impSpeaking = true;
-  impUtterances = [];
-
-  const btn = document.getElementById('imp-tts-btn');
-  const label = document.getElementById('imp-tts-label');
-  if (btn) btn.classList.add('speaking');
-  if (label) label.innerText = 'Stoppen';
-
-  chunks.forEach((chunk, i) => {
-    const trimmed = chunk.trim();
-    if (!trimmed) return;
-    const spokenChunk = ttsPreparePhonetics(trimmed);
-    const u = new SpeechSynthesisUtterance(spokenChunk);
-    if (matchingVoice) u.voice = matchingVoice;
-    u.lang = targetBcp47;
-    u.rate = impTtsSpeed;
-    if (i === chunks.length - 1) {
-      u.onend = stopImpressumSpeech;
+  await window.ReadAloudService.speak(activeBlock, currentLang, {
+    onStart: () => {
+      if (btn) btn.classList.add("speaking");
+      if (label) label.innerText = strings.stop;
+    },
+    onEnd: () => {
+      if (btn) btn.classList.remove("speaking");
+      if (label) label.innerText = strings.readAloud;
+    },
+    onError: () => {
+      if (btn) btn.classList.remove("speaking");
+      if (label) label.innerText = strings.readAloud;
     }
-    u.onerror = stopImpressumSpeech;
-    impUtterances.push(u);
-    speechSynthesis.speak(u);
   });
 }
 
-updateImpressumTtsSpeedUI();
+(function init() {
+  const initialLang = window.I18nManager ? window.I18nManager.getLanguage() : "de";
+  updateImpressumUI(initialLang);
+  updateImpressumTtsSpeedUI();
+})();
 </script>
 </body>
 </html>
