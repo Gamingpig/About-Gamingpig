@@ -10296,6 +10296,16 @@
             return (saved && voices.find(v => v.name === saved)) || voices[0];
         }
 
+        function ttsPreparePhonetics(str) {
+            if (!str) return '';
+            // Wandelt "Gamingpig" (egal in welcher Schreibweise, auch mit Bindestrich, Genitiv etc.)
+            // für die Sprachausgabe zuverlässig in "Gaming Pigg" um, damit die Engine nicht "Gamingpich" spricht.
+            return str
+                .replace(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/gi, (email) => email.replace(/gamingpig/gi, 'gaming-pigg'))
+                .replace(/gaming[\s\-_]*pigs?\b/gi, 'Gaming Pigg')
+                .replace(/gaming[\s\-_]*pig/gi, 'Gaming Pigg');
+        }
+
         function splitIntoSpeechChunks(text, maxLen = 180) {
             const sentences = text.split(/(?<=[.!?])\s+/);
             const chunks = [];
@@ -10354,9 +10364,7 @@
 
             chunks.forEach((chunk, index) => {
                 const targetLangCode = TTS_LANG_BCP47[activeLang] || TTS_LANG_BCP47[currentLang || 'de'] || 'de-DE';
-                const spokenChunk = targetLangCode.startsWith('de')
-                    ? chunk.replace(/\bGamingpig\b/gi, 'Gaming Pigg')
-                    : chunk;
+                const spokenChunk = ttsPreparePhonetics(chunk);
                 const u = new SpeechSynthesisUtterance(spokenChunk);
                 if (voice) u.voice = voice;
                 u.lang = targetLangCode;
@@ -10431,9 +10439,7 @@
                 if (typeof speechSynthesis === 'undefined') return resolve();
                 const activeLang = optLang || currentLang || 'de';
                 const targetLangCode = TTS_LANG_BCP47[activeLang] || TTS_LANG_BCP47[currentLang || 'de'] || 'de-DE';
-                const spokenText = targetLangCode.startsWith('de')
-                    ? text.replace(/\bGamingpig\b/gi, 'Gaming Pigg')
-                    : text;
+                const spokenText = ttsPreparePhonetics(text);
                 const u = new SpeechSynthesisUtterance(spokenText);
                 if (voice) u.voice = voice;
                 u.lang = targetLangCode;
