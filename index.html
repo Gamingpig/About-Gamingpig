@@ -3635,6 +3635,20 @@
         #lyrics-style-preview-box {
             contain: paint layout !important;
             transform: translate3d(0, 0, 0) !important;
+            max-width: 100% !important;
+            overflow: hidden !important;
+        }
+        #lyrics-style-preview-text {
+            font-size: 11px !important;
+            line-height: 1.35 !important;
+            max-width: 100% !important;
+            letter-spacing: -0.01em !important;
+            white-space: nowrap !important;
+        }
+        @media (min-width: 640px) {
+            #lyrics-style-preview-text {
+                font-size: 12px !important;
+            }
         }
 
         body.liquid-glass-active .dashboard-opening #main-music-card { animation: ext-dashboard-in 1.2s var(--liquid-fluid) forwards !important; transform-origin: top center; will-change: transform, opacity; }
@@ -8043,9 +8057,9 @@
             const isCharStyle = CHAR_LEVEL_STYLES.has(style);
             const isLowEnd = document.body.classList.contains('low-end');
 
-            // Responsive desktop & mobile sizing
-            box.className = `w-full bg-black/50 rounded-xl p-3 mb-1 overflow-hidden text-center min-h-[60px] flex items-center justify-center select-none lyrics-style-${style} relative border border-white/10`;
-            textEl.className = 'lyric-line active text-xs sm:text-sm md:text-base font-bold leading-snug !m-0 !max-w-full !p-0';
+            // Responsive desktop & mobile sizing - compact font so it fits comfortably on desktop
+            box.className = `w-full bg-black/50 rounded-xl p-2 sm:p-2.5 mb-1 overflow-hidden text-center min-h-[48px] sm:min-h-[52px] flex items-center justify-center select-none lyrics-style-${style} relative border border-white/10`;
+            textEl.className = 'lyric-line active text-[11px] sm:text-xs font-bold leading-tight !m-0 !max-w-full !p-0';
 
             // Type badge & performance explanation
             let badgeEl = document.getElementById('lyrics-preview-mode-badge');
@@ -8068,13 +8082,19 @@
                 '<span class="px-2 py-0.5 rounded-full font-bold border text-[9px] font-mono ' + badgeColor + '">' + badgeType + '</span>' +
             '</div>' + lowEndNotice;
 
-            lyricsPreviewStep = 0;
-
+            // Prepare DOM elements
+            let allCharRefs = []; // Flat array of { wi, ci, el } for true letter-by-letter animation
             if (isCharStyle) {
                 textEl.innerHTML = LYRICS_PREVIEW_WORDS.map((w, wi) => {
                     const chars = w.split('').map((c, ci) => `<span id="prev-char-${wi}-${ci}" class="lyric-char">${escapeHTML(c)}</span>`).join('');
                     return `<span id="prev-word-${wi}" class="lyric-word inline-block mx-1" style="--fill-percent:0%; --word-hold-scale:1.14;">${chars}</span>`;
                 }).join(' ');
+
+                for (let wi = 0; wi < LYRICS_PREVIEW_WORDS.length; wi++) {
+                    for (let ci = 0; ci < LYRICS_PREVIEW_WORDS[wi].length; ci++) {
+                        allCharRefs.push({ wi, ci, id: `prev-char-${wi}-${ci}` });
+                    }
+                }
             } else {
                 textEl.innerHTML = LYRICS_PREVIEW_WORDS.map((w, wi) => {
                     return `<span id="prev-word-${wi}" class="lyric-word inline-block mx-1" style="--fill-percent:0%; --word-hold-scale:1.14;">${escapeHTML(w)}</span>`;
@@ -8082,91 +8102,132 @@
             }
 
             const totalWords = LYRICS_PREVIEW_WORDS.length;
-            const totalSteps = totalWords + 2;
+            const totalChars = allCharRefs.length;
 
-            function tickPreviewStep(step) {
-                for (let wi = 0; wi < totalWords; wi++) {
-                    const wSpan = document.getElementById(`prev-word-${wi}`);
-                    if (!wSpan) continue;
-                    const wordLen = LYRICS_PREVIEW_WORDS[wi].length;
+            // Character-level stepper (letter by letter)
+            function tickCharStep(step) {
+                if (step < totalChars) {
+                    const activeChar = allCharRefs[step];
+                    for (let i = 0; i < totalChars; i++) {
+                        const ref = allCharRefs[i];
+                        const cSpan = document.getElementById(ref.id);
+                        if (!cSpan) continue;
+                        if (i < step) {
+                            cSpan.classList.remove('char-active');
+                            cSpan.classList.add('char-passed');
+                        } else if (i === step) {
+                            cSpan.classList.remove('char-passed');
+                            cSpan.classList.add('char-active');
+                        } else {
+                            cSpan.classList.remove('char-active', 'char-passed');
+                        }
+                    }
 
-                    if (step < totalWords) {
-                        if (wi < step) {
+                    // Update word containers
+                    for (let wi = 0; wi < totalWords; wi++) {
+                        const wSpan = document.getElementById(`prev-word-${wi}`);
+                        if (!wSpan) continue;
+                        if (wi < activeChar.wi) {
                             wSpan.classList.remove('word-active');
                             wSpan.classList.add('word-passed');
                             wSpan.style.setProperty('--fill-percent', '100%');
-                            if (isCharStyle) {
-                                for (let ci = 0; ci < wordLen; ci++) {
-                                    const cSpan = document.getElementById(`prev-char-${wi}-${ci}`);
-                                    if (cSpan) {
-                                        cSpan.classList.remove('char-active');
-                                        cSpan.classList.add('char-passed');
-                                    }
-                                }
-                            }
-                        } else if (wi === step) {
+                        } else if (wi === activeChar.wi) {
                             wSpan.classList.remove('word-passed');
                             wSpan.classList.add('word-active');
-                            wSpan.style.setProperty('--fill-percent', '100%');
-                            if (isCharStyle) {
-                                for (let ci = 0; ci < wordLen; ci++) {
-                                    const cSpan = document.getElementById(`prev-char-${wi}-${ci}`);
-                                    if (cSpan) {
-                                        cSpan.classList.remove('char-passed');
-                                        cSpan.classList.add('char-active');
-                                    }
-                                }
-                            }
+                            const wordChars = LYRICS_PREVIEW_WORDS[wi].length;
+                            const wordPct = Math.round(((activeChar.ci + 1) / wordChars) * 100);
+                            wSpan.style.setProperty('--fill-percent', wordPct + '%');
                         } else {
                             wSpan.classList.remove('word-active', 'word-passed');
                             wSpan.style.setProperty('--fill-percent', '0%');
-                            if (isCharStyle) {
-                                for (let ci = 0; ci < wordLen; ci++) {
-                                    const cSpan = document.getElementById(`prev-char-${wi}-${ci}`);
-                                    if (cSpan) {
-                                        cSpan.classList.remove('char-active', 'char-passed');
-                                    }
-                                }
-                            }
                         }
-                    } else if (step === totalWords) {
-                        wSpan.classList.remove('word-active');
-                        wSpan.classList.add('word-passed');
-                        wSpan.style.setProperty('--fill-percent', '100%');
-                        if (isCharStyle) {
-                            for (let ci = 0; ci < wordLen; ci++) {
-                                const cSpan = document.getElementById(`prev-char-${wi}-${ci}`);
-                                if (cSpan) {
-                                    cSpan.classList.remove('char-active');
-                                    cSpan.classList.add('char-passed');
-                                }
-                            }
+                    }
+                } else if (step === totalChars) {
+                    // Hold completed state
+                    allCharRefs.forEach(ref => {
+                        const cSpan = document.getElementById(ref.id);
+                        if (cSpan) {
+                            cSpan.classList.remove('char-active');
+                            cSpan.classList.add('char-passed');
                         }
-                    } else {
-                        wSpan.classList.remove('word-active', 'word-passed');
-                        wSpan.style.setProperty('--fill-percent', '0%');
-                        if (isCharStyle) {
-                            for (let ci = 0; ci < wordLen; ci++) {
-                                const cSpan = document.getElementById(`prev-char-${wi}-${ci}`);
-                                if (cSpan) {
-                                    cSpan.classList.remove('char-active', 'char-passed');
-                                }
-                            }
+                    });
+                    for (let wi = 0; wi < totalWords; wi++) {
+                        const wSpan = document.getElementById(`prev-word-${wi}`);
+                        if (wSpan) {
+                            wSpan.classList.remove('word-active');
+                            wSpan.classList.add('word-passed');
+                            wSpan.style.setProperty('--fill-percent', '100%');
+                        }
+                    }
+                } else {
+                    // Reset pause
+                    allCharRefs.forEach(ref => {
+                        const cSpan = document.getElementById(ref.id);
+                        if (cSpan) {
+                            cSpan.classList.remove('char-active', 'char-passed');
+                        }
+                    });
+                    for (let wi = 0; wi < totalWords; wi++) {
+                        const wSpan = document.getElementById(`prev-word-${wi}`);
+                        if (wSpan) {
+                            wSpan.classList.remove('word-active', 'word-passed');
+                            wSpan.style.setProperty('--fill-percent', '0%');
                         }
                     }
                 }
             }
 
-            tickPreviewStep(0);
+            // Word-level stepper (line / word by word)
+            function tickWordStep(step) {
+                for (let wi = 0; wi < totalWords; wi++) {
+                    const wSpan = document.getElementById(`prev-word-${wi}`);
+                    if (!wSpan) continue;
+                    if (step < totalWords) {
+                        if (wi < step) {
+                            wSpan.classList.remove('word-active');
+                            wSpan.classList.add('word-passed');
+                            wSpan.style.setProperty('--fill-percent', '100%');
+                        } else if (wi === step) {
+                            wSpan.classList.remove('word-passed');
+                            wSpan.classList.add('word-active');
+                            wSpan.style.setProperty('--fill-percent', '100%');
+                        } else {
+                            wSpan.classList.remove('word-active', 'word-passed');
+                            wSpan.style.setProperty('--fill-percent', '0%');
+                        }
+                    } else if (step === totalWords) {
+                        wSpan.classList.remove('word-active');
+                        wSpan.classList.add('word-passed');
+                        wSpan.style.setProperty('--fill-percent', '100%');
+                    } else {
+                        wSpan.classList.remove('word-active', 'word-passed');
+                        wSpan.style.setProperty('--fill-percent', '0%');
+                    }
+                }
+            }
 
             clearInterval(lyricsPreviewLoopInterval);
             lyricsPreviewLoopInterval = null;
 
-            if (typeof isLyricsSettingsOpen !== 'undefined' && isLyricsSettingsOpen && !document.hidden) {
-                lyricsPreviewLoopInterval = setInterval(() => {
-                    lyricsPreviewStep = (lyricsPreviewStep + 1) % totalSteps;
-                    tickPreviewStep(lyricsPreviewStep);
-                }, 550);
+            lyricsPreviewStep = 0;
+            if (isCharStyle) {
+                tickCharStep(0);
+                const totalCharSteps = totalChars + 3;
+                if (typeof isLyricsSettingsOpen !== 'undefined' && isLyricsSettingsOpen && !document.hidden) {
+                    lyricsPreviewLoopInterval = setInterval(() => {
+                        lyricsPreviewStep = (lyricsPreviewStep + 1) % totalCharSteps;
+                        tickCharStep(lyricsPreviewStep);
+                    }, 180); // Quick, natural letter-by-letter cadence
+                }
+            } else {
+                tickWordStep(0);
+                const totalWordSteps = totalWords + 2;
+                if (typeof isLyricsSettingsOpen !== 'undefined' && isLyricsSettingsOpen && !document.hidden) {
+                    lyricsPreviewLoopInterval = setInterval(() => {
+                        lyricsPreviewStep = (lyricsPreviewStep + 1) % totalWordSteps;
+                        tickWordStep(lyricsPreviewStep);
+                    }, 550);
+                }
             }
         }
 
@@ -17514,8 +17575,8 @@ window.generateShareCard = function() {
 <div class="flex items-center justify-between pb-1 mb-0.5 border-b border-white/10"><span class="text-xs font-black uppercase tracking-wider text-slate-200 flex items-center gap-1.5"><span>⚙️</span> <span>Einstellungen</span></span><button onclick="toggleLyricsSettings(event)" class="p-1 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-colors text-xs font-bold">✕</button></div>
                                         <p id="label-animation-style" class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-slate-400 px-1 sticky top-0 bg-[#0f172a] py-0.5 z-10">Animation Style</p>
                                         <select id="lyrics-style-select" onchange="setLyricsStyle(this.value)" class="w-full bg-slate-800 text-white text-[10px] xxs:text-xs sm:text-sm px-2.5 py-2 rounded-xl border border-slate-600 focus:outline-none focus:border-blue-500 mb-0.5"></select>
-                                        <div id="lyrics-style-preview-box" class="w-full bg-black/50 rounded-xl p-2.5 overflow-hidden text-center min-h-[56px] flex items-center justify-center select-none border border-white/5">
-                                            <p id="lyrics-style-preview-text" class="lyric-line active text-sm xxs:text-base font-bold leading-snug !m-0 !max-w-full !p-0"></p>
+                                        <div id="lyrics-style-preview-box" class="w-full bg-black/50 rounded-xl p-2 sm:p-2.5 overflow-hidden text-center min-h-[48px] sm:min-h-[52px] flex items-center justify-center select-none border border-white/5">
+                                            <p id="lyrics-style-preview-text" class="lyric-line active text-[11px] sm:text-xs font-bold leading-tight !m-0 !max-w-full !p-0"></p>
                                         </div>
 
                                         <div class="h-px w-full bg-slate-700/70 my-0.5"></div>
