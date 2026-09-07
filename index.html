@@ -5339,7 +5339,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.140.0 · 2026-09-07';
+        const SITE_VERSION = 'v24.141.0 · 2026-09-07';
 
         // =========================================================
         // NEU v24.118: Automatischer Reset veralteter Cached Flags bei Versionswechsel
@@ -13487,7 +13487,12 @@ window.generateShareCard = function() {
                         '<div class="text-[10px] text-slate-500 dark:text-slate-400 font-medium mt-1">Geführte Schritt-für-Schritt Tour durch alle Kontrollzentren.</div>' +
                     '</button>' +
                 '</div>' +
+            '</div>' +
+            '<button onclick="skipTutorialChoice()" class="mt-2 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 transition-colors py-1">Jetzt nicht überspringen</button>' +
             '</div>';
+
+            // Mark that the tutorial choice modal is currently open
+            window._tutorialChoiceModalOpen = true;
 
             if (modalOverlay) {
                 modalOverlay.classList.remove('hidden');
@@ -13495,7 +13500,17 @@ window.generateShareCard = function() {
             }
         }
 
+        window.skipTutorialChoice = function() {
+            window._tutorialChoiceModalOpen = false;
+            localStorage.setItem('tutorialCompletedV5', 'skipped');
+            if (modalOverlay) {
+                modalOverlay.classList.remove('flex');
+                modalOverlay.classList.add('hidden');
+            }
+        };
+
         window.startInteractiveLearning = function() {
+            window._tutorialChoiceModalOpen = false;
             if (modalOverlay) {
                 modalOverlay.classList.remove('flex');
                 modalOverlay.classList.add('hidden');
@@ -13506,6 +13521,7 @@ window.generateShareCard = function() {
         };
 
         function runClassicTutorial() {
+            window._tutorialChoiceModalOpen = false;
             if (modalOverlay) {
                 modalOverlay.classList.remove('flex');
                 modalOverlay.classList.add('hidden');
@@ -15045,6 +15061,12 @@ window.generateShareCard = function() {
 
         if (closeModal) {
             closeModal.addEventListener('click', () => {
+                // FIX: Wenn Tutorial-Auswahl-Modal geschlossen wird (ohne Wahl), als 'skipped'
+                // markieren → verhindert Re-Trigger beim nächsten Tastendruck / Interaktion.
+                if (window._tutorialChoiceModalOpen) {
+                    localStorage.setItem('tutorialCompletedV5', 'skipped');
+                    window._tutorialChoiceModalOpen = false;
+                }
                 // Stoppe laufende Vorlese-Wiedergabe (egal ob WASM oder native SpeechSynthesis)
                 ttsQueueActive = false;
                 if (typeof hybridPlayer !== 'undefined') hybridPlayer.stop();
