@@ -283,7 +283,7 @@
                     <div class="flex items-center justify-between pt-3 border-t border-white/10">
                         <span class="text-[10px] font-mono text-slate-400">Kategorie: Motorsport</span>
                         <button onclick="voteFeature(1, this)" class="vote-btn px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold transition-all flex items-center gap-1.5 active:scale-95">
-                            <span>▲</span> <span class="vote-count">142</span> Votes
+                            <span>▲</span> <span class="vote-count" data-feature-id="1">0</span> Votes
                         </button>
                     </div>
                 </div>
@@ -307,7 +307,7 @@
                     <div class="flex items-center justify-between pt-3 border-t border-white/10">
                         <span class="text-[10px] font-mono text-slate-400">Kategorie: Sound & Audio</span>
                         <button onclick="voteFeature(2, this)" class="vote-btn px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold transition-all flex items-center gap-1.5 active:scale-95">
-                            <span>▲</span> <span class="vote-count">218</span> Votes
+                            <span>▲</span> <span class="vote-count" data-feature-id="2">0</span> Votes
                         </button>
                     </div>
                 </div>
@@ -331,7 +331,7 @@
                     <div class="flex items-center justify-between pt-3 border-t border-white/10">
                         <span class="text-[10px] font-mono text-slate-400">Kategorie: Gaming</span>
                         <button onclick="voteFeature(3, this)" class="vote-btn px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold transition-all flex items-center gap-1.5 active:scale-95">
-                            <span>▲</span> <span class="vote-count">304</span> Votes
+                            <span>▲</span> <span class="vote-count" data-feature-id="3">0</span> Votes
                         </button>
                     </div>
                 </div>
@@ -355,7 +355,7 @@
                     <div class="flex items-center justify-between pt-3 border-t border-white/10">
                         <span class="text-[10px] font-mono text-slate-400">Kategorie: Mobile PWA</span>
                         <button onclick="voteFeature(4, this)" class="vote-btn px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold transition-all flex items-center gap-1.5 active:scale-95">
-                            <span>▲</span> <span class="vote-count">189</span> Votes
+                            <span>▲</span> <span class="vote-count" data-feature-id="4">0</span> Votes
                         </button>
                     </div>
                 </div>
@@ -379,7 +379,7 @@
                     <div class="flex items-center justify-between pt-3 border-t border-white/10">
                         <span class="text-[10px] font-mono text-slate-400">Kategorie: Community</span>
                         <button onclick="voteFeature(5, this)" class="vote-btn px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold transition-all flex items-center gap-1.5 active:scale-95">
-                            <span>▲</span> <span class="vote-count">276</span> Votes
+                            <span>▲</span> <span class="vote-count" data-feature-id="5">0</span> Votes
                         </button>
                     </div>
                 </div>
@@ -403,7 +403,7 @@
                     <div class="flex items-center justify-between pt-3 border-t border-white/10">
                         <span class="text-[10px] font-mono text-slate-400">Kategorie: KI & Stimme</span>
                         <button onclick="voteFeature(6, this)" class="vote-btn px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold transition-all flex items-center gap-1.5 active:scale-95">
-                            <span>▲</span> <span class="vote-count">195</span> Votes
+                            <span>▲</span> <span class="vote-count" data-feature-id="6">0</span> Votes
                         </button>
                     </div>
                 </div>
@@ -919,26 +919,83 @@
         }
 
         // Voting System
-        function voteFeature(id, btn) {
+        // ── GitHub-backed Roadmap Config ──────────────────────────────────
+        // Set ROADMAP_PAT to a GitHub Fine-Grained PAT with contents:write
+        // on repo Gamingpig/About-Gamingpig (no other permissions needed).
+        // Create at: https://github.com/settings/tokens?type=beta
+        const ROADMAP_PAT = window.ROADMAP_PAT || '';
+        const ROADMAP_REPO = 'Gamingpig/About-Gamingpig';
+        const VOTES_URL = `https://raw.githubusercontent.com/${ROADMAP_REPO}/main/data/votes.json?t=${Date.now()}`;
+        const WISHES_URL = `https://raw.githubusercontent.com/${ROADMAP_REPO}/main/data/wishes.json?t=${Date.now()}`;
+
+        async function dispatchRoadmapEvent(eventType, payload) {
+            if (!ROADMAP_PAT) {
+                console.warn('[Roadmap] No ROADMAP_PAT set – using localStorage only');
+                return false;
+            }
+            try {
+                const res = await fetch(`https://api.github.com/repos/${ROADMAP_REPO}/dispatches`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${ROADMAP_PAT}`,
+                        'Accept': 'application/vnd.github+json',
+                        'X-GitHub-Api-Version': '2022-11-28',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ event_type: eventType, client_payload: payload })
+                });
+                return res.status === 204;
+            } catch (err) {
+                console.warn('[Roadmap] dispatch error:', err);
+                return false;
+            }
+        }
+
+        async function loadVotes() {
+            try {
+                const res = await fetch(VOTES_URL);
+                if (!res.ok) return;
+                const votes = await res.json();
+                document.querySelectorAll('[data-feature-id]').forEach(el => {
+                    const id = el.getAttribute('data-feature-id');
+                    if (votes[id] !== undefined) el.textContent = votes[id];
+                });
+            } catch(e) { console.warn('[Roadmap] loadVotes error:', e); }
+        }
+
+        async function loadWishes() {
+            try {
+                const res = await fetch(WISHES_URL);
+                if (!res.ok) return;
+                const wishes = await res.json();
+                _renderWishList(wishes);
+            } catch(e) { console.warn('[Roadmap] loadWishes error:', e); }
+        }
+
+        async function voteFeature(id, btn) {
             const votedKey = 'gp_roadmap_voted_' + id;
             const countEl = btn.querySelector('.vote-count');
-            let currentCount = parseInt(countEl.innerText, 10);
+            let currentCount = parseInt(countEl.textContent, 10) || 0;
+            const alreadyVoted = !!localStorage.getItem(votedKey);
+            const delta = alreadyVoted ? -1 : 1;
 
-            if (localStorage.getItem(votedKey)) {
-                currentCount--;
-                countEl.innerText = currentCount;
+            // Optimistic UI update
+            currentCount += delta;
+            countEl.textContent = currentCount;
+            if (alreadyVoted) {
                 localStorage.removeItem(votedKey);
                 btn.classList.remove('bg-purple-600', 'text-white');
                 btn.classList.add('bg-slate-800', 'text-slate-200');
                 showToast('Vote zurückgezogen');
             } else {
-                currentCount++;
-                countEl.innerText = currentCount;
                 localStorage.setItem(votedKey, 'true');
                 btn.classList.remove('bg-slate-800', 'text-slate-200');
                 btn.classList.add('bg-purple-600', 'text-white');
                 showToast('Danke für deinen Vote! 🎉');
             }
+
+            // Persist to GitHub via Actions
+            await dispatchRoadmapEvent('roadmap-vote', { feature_id: id, delta });
         }
 
         function restoreVotes() {
@@ -952,7 +1009,7 @@
         }
 
         // Community Wish Submission
-        function submitWish(e) {
+        async function submitWish(e) {
             e.preventDefault();
             const author = document.getElementById('wish-author').value.trim();
             const category = document.getElementById('wish-category').value;
@@ -964,7 +1021,10 @@
                 return;
             }
 
-            const newWish = {
+            const btn = e.target.querySelector('button[type=submit]');
+            if (btn) { btn.disabled = true; btn.textContent = 'Wird gesendet…'; }
+
+            const wish = {
                 id: Date.now(),
                 author,
                 category,
@@ -973,46 +1033,52 @@
                 date: new Date().toLocaleDateString('de-DE')
             };
 
-            const existing = JSON.parse(localStorage.getItem('gp_community_wishes') || '[]');
-            existing.unshift(newWish);
-            localStorage.setItem('gp_community_wishes', JSON.stringify(existing));
+            const dispatched = await dispatchRoadmapEvent('roadmap-wish', wish);
 
+            if (btn) { btn.disabled = false; btn.textContent = 'Wunsch einreichen 🚀'; }
             e.target.reset();
-            renderUserWishes();
-            showToast('Wunsch erfolgreich übermittelt! 🚀');
+
+            if (dispatched) {
+                showToast('Wunsch wurde auf GitHub gespeichert! 🚀');
+            } else {
+                showToast('Wunsch lokal gespeichert (kein Token konfiguriert) 📝');
+                const existing = JSON.parse(localStorage.getItem('gp_community_wishes') || '[]');
+                existing.unshift(wish);
+                localStorage.setItem('gp_community_wishes', JSON.stringify(existing));
+            }
+
+            // Reload wishes list from GitHub after short delay for Actions to process
+            setTimeout(loadWishes, 500);
         }
 
-        function renderUserWishes() {
+        function _renderWishList(wishes) {
             const container = document.getElementById('community-wishes-container');
             const list = document.getElementById('user-wishes-list');
             if (!container || !list) return;
-
-            const existing = JSON.parse(localStorage.getItem('gp_community_wishes') || '[]');
-            if (existing.length === 0) {
+            if (!wishes || wishes.length === 0) {
                 container.classList.add('hidden');
                 return;
             }
-
             container.classList.remove('hidden');
             list.innerHTML = '';
-
-            existing.forEach(wish => {
+            wishes.forEach(wish => {
                 const item = document.createElement('div');
                 item.className = 'p-3.5 rounded-2xl bg-white/5 border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3';
-                item.innerHTML = 
-                    '<div>' +
-                        '<div class="flex items-center gap-2 mb-1">' +
-                            '<span class="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 font-bold">' + wish.category + '</span>' +
-                            '<span class="text-[10px] text-slate-400">von ' + wish.author + ' am ' + wish.date + '</span>' +
-                        '</div>' +
-                        '<h4 class="text-sm font-bold text-white">' + wish.title + '</h4>' +
-                        '<p class="text-xs text-slate-300 mt-0.5">' + wish.desc + '</p>' +
-                    '</div>' +
-                    '<button onclick="shareWishToClipboard(\'' + encodeURIComponent(wish.title) + '\', \'' + encodeURIComponent(wish.desc) + '\')" class="shrink-0 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300 transition-colors flex items-center gap-1.5 active:scale-95">' +
-                        '<span>📋</span> <span>Teilen</span>' +
-                    '</button>';
+                item.innerHTML = `<div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap mb-1">
+                        <span class="text-xs font-bold text-purple-400">${wish.category || ''}</span>
+                        <span class="text-[10px] text-slate-500">${wish.date || ''}</span>
+                        <span class="text-[10px] text-slate-400">von ${wish.author || 'Anonym'}</span>
+                    </div>
+                    <div class="font-bold text-sm text-white truncate">${wish.title || ''}</div>
+                    <div class="text-xs text-slate-400 mt-0.5 line-clamp-2">${wish.desc || ''}</div>
+                </div>`;
                 list.appendChild(item);
             });
+        }
+
+        function renderUserWishes() {
+            loadWishes();
         }
 
         function shareWishToClipboard(encodedTitle, encodedDesc) {
@@ -1038,6 +1104,8 @@
         // Initialize
         window.addEventListener('DOMContentLoaded', () => {
             restoreVotes();
+            loadVotes();
+            loadWishes();
             renderUserWishes();
             updateTtsSpeedUI();
             const selectEl = document.getElementById('lang-select');
