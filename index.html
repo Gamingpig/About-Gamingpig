@@ -5371,7 +5371,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.146.0 · 2026-09-07';
+        const SITE_VERSION = 'v24.147.0 · 2026-09-07';
 
         // =========================================================
         // NEU v24.118: Automatischer Reset veralteter Cached Flags bei Versionswechsel
@@ -5384,8 +5384,15 @@
                 const storedVer = localStorage.getItem('site_version_installed');
                 if (storedVer !== SITE_VERSION) {
                     localStorage.setItem('site_version_installed', SITE_VERSION);
-                    localStorage.removeItem('onboarding_completed');
-                    localStorage.removeItem('onboarding_v24_146_done');
+                    if (typeof window !== 'undefined' && window.OnboardingTracker) {
+                        window.OnboardingTracker.resetCounter();
+                    } else {
+                        localStorage.setItem('gp_onboarding_completion_count', '0');
+                        localStorage.setItem('gp_onboarding_status', 'pending');
+                        localStorage.removeItem('onboarding_completed');
+                        localStorage.removeItem('onboarding_v24_146_done');
+                        localStorage.removeItem('onboarding_v24_147_done');
+                    }
                 }
             } catch (e) {}
         })();
@@ -6865,19 +6872,44 @@
         <button onclick="openLyricsSettingsFromGlobal(event)" class="text-[9px] xxs:text-[10px] px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold transition-all">Öffnen ➔</button>
     </div>
 
-        <!-- Reset & Erstbesuch Zone -->
-    <div class="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/25 mt-2 flex flex-col gap-2">
+        <!-- 🎯 ONBOARDING & STATUS-COUNTER ZONE -->
+    <div class="p-3 rounded-2xl bg-gradient-to-br from-purple-900/25 to-blue-900/25 border border-purple-500/35 mt-2 flex flex-col gap-2">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <span class="text-base">🎯</span>
+                <div>
+                    <div class="text-[11px] font-black uppercase tracking-wider text-purple-300">Onboarding-Status</div>
+                    <div id="onboarding-status-badge" class="text-[9px] font-bold text-amber-400">Ausstehend (0x)</div>
+                </div>
+            </div>
+            <span id="onboarding-counter-badge" class="px-2.5 py-0.5 rounded-full bg-purple-500/20 border border-purple-400/40 text-purple-300 font-mono text-[10px] font-black">0x</span>
+        </div>
+
+        <div class="flex items-center justify-between text-[8px] text-slate-400 px-1 py-1 rounded-lg bg-black/30 font-mono">
+            <span>Gestartet: <b id="onboarding-started-stat" class="text-slate-200">0x</b></span>
+            <span>Gemeistert: <b id="onboarding-completed-stat" class="text-slate-200">0x</b></span>
+        </div>
+
+        <div class="flex flex-col gap-1 pt-1 border-t border-white/10">
+            <button onclick="window.OnboardingTracker.resetCounterAndRelaunch()" id="btn-reset-onboarding-counter" class="w-full py-2 px-2.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 font-extrabold text-[10px] sm:text-xs transition-all active:scale-95 flex items-center justify-center gap-1.5 border border-amber-500/40">
+                <span>🔄</span> <span>Counter zurücksetzen &amp; Onboarding starten</span>
+            </button>
+            <button onclick="window.restartOnboarding()" class="w-full py-1.5 px-2.5 rounded-xl bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 font-bold text-[9px] sm:text-[11px] transition-all active:scale-95 flex items-center justify-center gap-1.5 border border-purple-500/30">
+                <span>🚀</span> <span>Onboarding jetzt wiederholen</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Reset & Erstbesuch Zone -->
+    <div class="p-2.5 rounded-2xl bg-rose-500/10 border border-rose-500/25 mt-1 flex flex-col gap-1.5">
         <div class="flex items-center gap-2">
-            <span class="text-base">⚠️</span>
+            <span class="text-sm">⚠️</span>
             <div>
-                <div class="text-[11px] font-black uppercase tracking-wider text-rose-300">Erstbesuch &amp; Reset</div>
-                <div class="text-[9px] text-slate-400 leading-tight">Setzt Zähler, Sprache, Tutorial &amp; Einstellungen zurück</div>
+                <div class="text-[10px] font-black uppercase tracking-wider text-rose-300">Komplett-Reset</div>
+                <div class="text-[8px] text-slate-400 leading-tight">Löscht Speicher &amp; startet wie ein allererster Webseiten-Besuch</div>
             </div>
         </div>
-        <button onclick="window.restartOnboarding()" class="w-full py-2 px-3 rounded-xl bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 font-bold text-[10px] sm:text-xs transition-all active:scale-95 flex items-center justify-center gap-1.5 border border-purple-500/30 mb-1">
-            <span>🚀</span> <span>Onboarding jetzt starten</span>
-        </button>
-        <button onclick="resetEverythingToFirstVisit()" class="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-extrabold text-[10px] sm:text-xs shadow-lg shadow-rose-950/50 transition-all active:scale-95 flex items-center justify-center gap-1.5 border border-rose-400/30">
+        <button onclick="resetEverythingToFirstVisit()" class="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-extrabold text-[10px] sm:text-xs shadow-lg shadow-rose-950/50 transition-all active:scale-95 flex items-center justify-center gap-1.5 border border-rose-400/30">
             <span>🔄</span> <span>Auf Erstbesuch zurücksetzen</span>
         </button>
     </div>
@@ -11383,7 +11415,7 @@
         }
 
         window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js?v=24.146.0', { updateViaCache: 'none' })
+                navigator.serviceWorker.register('sw.js?v=24.147.0', { updateViaCache: 'none' })
                     .then((reg) => {
                         // Prüfe beim Laden direkt auf Updates
                         if (reg) {
@@ -16081,12 +16113,120 @@ window.generateShareCard = function() {
         // ========================================================= //
         // 🔄 COMPLETE FIRST VISIT RESET ENGINE                     //
         // ========================================================= //
+        // ========================================================= //
+        // 📊 ONBOARDING TRACKER & PERSISTENT COMPLETION COUNTER    //
+        // ========================================================= //
+        window.OnboardingTracker = {
+            STORAGE_COUNT_KEY: 'gp_onboarding_completion_count',
+            STORAGE_STARTED_KEY: 'gp_onboarding_started_count',
+            STORAGE_STATUS_KEY: 'gp_onboarding_status',
+            STORAGE_TIMESTAMP_KEY: 'gp_onboarding_last_completed_at',
+
+            getCompletionCount() {
+                try {
+                    const count = parseInt(localStorage.getItem(this.STORAGE_COUNT_KEY) || '0', 10);
+                    return isNaN(count) ? 0 : Math.max(0, count);
+                } catch(e) { return 0; }
+            },
+
+            getStartedCount() {
+                try {
+                    const count = parseInt(localStorage.getItem(this.STORAGE_STARTED_KEY) || '0', 10);
+                    return isNaN(count) ? 0 : Math.max(0, count);
+                } catch(e) { return 0; }
+            },
+
+            isCompleted() {
+                try {
+                    const count = this.getCompletionCount();
+                    const status = localStorage.getItem(this.STORAGE_STATUS_KEY);
+                    return count > 0 && status === 'completed';
+                } catch(e) { return false; }
+            },
+
+            recordStart() {
+                try {
+                    const current = this.getStartedCount();
+                    localStorage.setItem(this.STORAGE_STARTED_KEY, String(current + 1));
+                    this.updateUI();
+                } catch(e) {}
+            },
+
+            recordCompletion() {
+                try {
+                    const current = this.getCompletionCount();
+                    const newCount = current + 1;
+                    localStorage.setItem(this.STORAGE_COUNT_KEY, String(newCount));
+                    localStorage.setItem(this.STORAGE_STATUS_KEY, 'completed');
+                    localStorage.setItem(this.STORAGE_TIMESTAMP_KEY, new Date().toISOString());
+                    localStorage.setItem('onboarding_completed', 'true');
+                    localStorage.setItem('onboarding_v24_147_done', 'true');
+                    this.updateUI();
+                } catch(e) {}
+            },
+
+            resetCounter() {
+                try {
+                    localStorage.setItem(this.STORAGE_COUNT_KEY, '0');
+                    localStorage.setItem(this.STORAGE_STATUS_KEY, 'pending');
+                    localStorage.removeItem(this.STORAGE_TIMESTAMP_KEY);
+                    localStorage.removeItem('onboarding_completed');
+                    localStorage.removeItem('onboarding_v24_146_done');
+                    localStorage.removeItem('onboarding_v24_147_done');
+                    this.updateUI();
+                } catch(e) {}
+            },
+
+            resetCounterAndRelaunch() {
+                this.resetCounter();
+                if (typeof haptic === 'function') haptic([40, 40, 60]);
+                if (typeof showToast === 'function') {
+                    showToast('🔄 Counter auf 0x zurückgesetzt! Onboarding startet...', 3500);
+                }
+                if (typeof toggleStandaloneSettings === 'function' && typeof isGlobalSettingsOpen !== 'undefined' && isGlobalSettingsOpen) {
+                    toggleStandaloneSettings();
+                }
+                setTimeout(() => {
+                    if (window.OnboardingCoordinator && typeof window.OnboardingCoordinator.step1_language === 'function') {
+                        window.OnboardingCoordinator.step1_language();
+                    }
+                }, 200);
+            },
+
+            updateUI() {
+                const count = this.getCompletionCount();
+                const started = this.getStartedCount();
+                const completed = this.isCompleted();
+
+                const badge = document.getElementById('onboarding-counter-badge');
+                if (badge) {
+                    badge.textContent = `${count}x`;
+                    badge.className = count > 0 
+                        ? 'px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 font-mono text-[10px] font-black animate-pulse'
+                        : 'px-2.5 py-0.5 rounded-full bg-purple-500/20 border border-purple-400/40 text-purple-300 font-mono text-[10px] font-black';
+                }
+
+                const statusEl = document.getElementById('onboarding-status-badge');
+                if (statusEl) {
+                    if (completed) {
+                        statusEl.textContent = `✓ Abgeschlossen (${count}x gemeistert)`;
+                        statusEl.className = 'text-[9px] font-bold text-emerald-400';
+                    } else {
+                        statusEl.textContent = `⏳ Ausstehend (${count}x abgeschlossen)`;
+                        statusEl.className = 'text-[9px] font-bold text-amber-400';
+                    }
+                }
+
+                const startedStat = document.getElementById('onboarding-started-stat');
+                if (startedStat) startedStat.textContent = `${started}x`;
+
+                const completedStat = document.getElementById('onboarding-completed-stat');
+                if (completedStat) completedStat.textContent = `${count}x`;
+            }
+        };
+
         window.restartOnboarding = function() {
-            try {
-                localStorage.removeItem('onboarding_completed');
-                localStorage.removeItem('onboarding_v24_146_done');
-            } catch(e) {}
-            if (typeof toggleStandaloneSettings === 'function' && typeof isSettingsOpen !== 'undefined' && isSettingsOpen) {
+            if (typeof toggleStandaloneSettings === 'function' && typeof isGlobalSettingsOpen !== 'undefined' && isGlobalSettingsOpen) {
                 toggleStandaloneSettings();
             }
             if (window.OnboardingCoordinator && typeof window.OnboardingCoordinator.step1_language === 'function') {
@@ -16095,6 +16235,9 @@ window.generateShareCard = function() {
         };
 
         window.resetEverythingToFirstVisit = async function() {
+            if (window.OnboardingTracker) {
+                window.OnboardingTracker.resetCounter();
+            }
             const confirmed = confirm('⚠️ KOMPLETTEN ERSTBESUCH SIMULIEREN?\n\nDadurch werden alle Website-Daten, Zähler, Einstellungen, Sprache und das Tutorial unwiderruflich zurückgesetzt.\n\nDie Seite startet danach komplett neu wie beim allerersten Besuch!');
             if (!confirmed) return;
 
@@ -16175,8 +16318,12 @@ window.generateShareCard = function() {
             step5_finished() {
                 this.isOnboarding = false;
                 try {
-                    localStorage.setItem('onboarding_completed', 'true');
-                    localStorage.setItem('onboarding_v24_146_done', 'true');
+                    if (window.OnboardingTracker) {
+                        window.OnboardingTracker.recordCompletion();
+                    } else {
+                        localStorage.setItem('onboarding_completed', 'true');
+                        localStorage.setItem('onboarding_v24_147_done', 'true');
+                    }
                     localStorage.setItem('tutorialCompletedV5', 'true');
                     localStorage.setItem('accepted_privacy_version', PRIVACY_POLICY_VERSION);
                     localStorage.setItem('whatsNewSeenVersion', SITE_VERSION);
@@ -16582,6 +16729,7 @@ window.generateShareCard = function() {
                 globalMenu.classList.remove('hidden', 'settings-closing');
                 globalMenu.classList.add('settings-opening');
                 updateSettingsStatusButtons();
+                if (window.OnboardingTracker) window.OnboardingTracker.updateUI();
             } else {
                 globalMenu.classList.remove('settings-opening');
                 globalMenu.classList.add('settings-closing');
@@ -18827,12 +18975,24 @@ window.setLyricsStyle = function(style) {
         const _urlParams = new URLSearchParams(window.location.search);
         const _forceOnboarding = _urlParams.has('first_visit') || _urlParams.has('onboarding') || _urlParams.has('tutorial');
 
-        if (_forceOnboarding || !localStorage.getItem('onboarding_v24_146_done') || !localStorage.getItem('onboarding_completed') || !currentLang) {
+        if (window.OnboardingTracker) {
+            window.OnboardingTracker.updateUI();
+        }
+
+        // AUTOSTART ENGINE:
+        // Startet garantiert automatisch, wenn das Onboarding noch nicht abgeschlossen ist
+        // (Counter == 0 oder isCompleted() == false) oder per URL-Parameter angefordert wurde.
+        const _needsOnboarding = _forceOnboarding || (!window.OnboardingTracker || !window.OnboardingTracker.isCompleted()) || !currentLang;
+
+        if (_needsOnboarding) {
+            if (window.OnboardingTracker) {
+                window.OnboardingTracker.recordStart();
+            }
             setTimeout(() => {
                 if (window.OnboardingCoordinator && typeof window.OnboardingCoordinator.step1_language === 'function') {
                     window.OnboardingCoordinator.step1_language();
                 }
-            }, 100);
+            }, 120);
         } else {
             applyLanguage(currentLang || 'de');
         }
