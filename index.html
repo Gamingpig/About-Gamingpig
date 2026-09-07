@@ -3689,10 +3689,6 @@
     animation: lyrics-menu-pop-out 0.22s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
 }
 
-/* Font Size Scaling */
-#lyrics-container.lyrics-size-s .lyric-word { font-size: 0.85em; }
-#lyrics-container.lyrics-size-l .lyric-word { font-size: 1.22em; }
-
 /* Focus Dimming */
 #lyrics-container.lyrics-dim-deep .lyric-line:not(.active) {
     opacity: 0.12 !important;
@@ -5997,21 +5993,7 @@
 
                                     <!-- Schriftgröße & Lesefokus -->
                                     <div class="h-px w-full bg-slate-700/70 my-0.5"></div>
-                                    <div class="flex justify-between items-center px-1 mb-1">
-                                        <p class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-slate-400">Schriftgröße</p>
-                                        <span id="lyrics-font-badge" class="text-[8px] xxs:text-[9px] text-blue-400 font-mono font-bold">Normal</span>
-                                    </div>
-                                    <div class="grid grid-cols-3 gap-1.5 px-0.5 mb-1.5">
-                                        <button type="button" onclick="setLyricsFontSize('s')" data-size="s" class="lyrics-size-btn flex items-center justify-center py-1.5 px-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/80 transition-all active:scale-95 text-[10px] font-bold">
-                                            S <span class="text-[8px] opacity-60 ml-1">Klein</span>
-                                        </button>
-                                        <button type="button" onclick="setLyricsFontSize('m')" data-size="m" class="lyrics-size-btn active flex items-center justify-center py-1.5 px-2 rounded-xl bg-blue-600/30 text-blue-300 border border-blue-500/50 transition-all active:scale-95 text-[10px] font-bold">
-                                            M <span class="text-[8px] opacity-60 ml-1">Normal</span>
-                                        </button>
-                                        <button type="button" onclick="setLyricsFontSize('l')" data-size="l" class="lyrics-size-btn flex items-center justify-center py-1.5 px-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/80 transition-all active:scale-95 text-[10px] font-bold">
-                                            L <span class="text-[8px] opacity-60 ml-1">Groß</span>
-                                        </button>
-                                    </div>
+                                    
 
                                     <div class="flex justify-between items-center px-1 mb-1">
                                         <p class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-slate-400">Lese-Fokus (Dimming)</p>
@@ -13652,20 +13634,20 @@ window.generateShareCard = function() {
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
-    {
-        version: "v3.6.0",
-        date: "07. September 2026",
-        title: "Lyrics Pro & Spring Dynamics",
-        badge: "Neu",
-        description: "Das Lyrics-Erlebnis wurde verfeinert mit lebendiger Apple-Spring-Animation, nützlichen Personalisierungs-Einstellungen und phonetischer Aussprache-Optimierung.",
-        changes: [
-            "✨ <b>Juicy Spring-Animation:</b> Das Einstellungsmenü im Songtext öffnet sich nun mit eleganter Federphysik und spürbarem Pop-Effekt wie früher.",
-            "🔤 <b>Lyrics-Schriftgrößen-Skalierung:</b> Wähle zwischen Klein (S), Normal (M) und Groß (L) für optimale Lesbarkeit auf allen Bildschirmen.",
-            "🕶️ <b>Kino-Fokus (Zeilen-Dimming):</b> Wähle zwischen sanfter Dimmung oder extrem fokussiertem Kinomodus mit Weichzeichner für inaktive Textzeilen.",
-            "🗣️ <b>Phonetische Aussprache-Optimierung:</b> Read-Aloud / TTS spricht 'Gamingpig' nun akzentfrei und sauber als 'Gaming Pigg' aus.",
-            "🇩🇪 <b>Sprachauswahl im Impressum:</b> Schnelles, nahtloses Umschalten zwischen Deutsch und Englisch bei der Sprachausgabe."
-        ]
-    },
+    { version: "v24.141.0", date: "7. September 2026", type: "feature", items: {
+                de: [
+                    "✨ Juicy Spring-Animation: Das Einstellungsmenü im Songtext springt nun mit lebendiger Federphysik und weichem Pop-Effekt auf",
+                    "🕶️ Kino-Fokus (Zeilen-Dimming): Wähle im Lyrics-Menü zwischen sanfter Dimmung oder fokussiertem Kinomodus mit Weichzeichner",
+                    "🗣️ Phonetische Aussprache: Read-Aloud / TTS spricht Gamingpig nun akzentfrei und sauber als Gaming Pigg aus",
+                    "🇩🇪 Sprachauswahl im Impressum: Nahtloses Umschalten zwischen Deutsch und Englisch bei der Sprachausgabe"
+                ],
+                en: [
+                    "✨ Juicy Spring Animation: Lyrics settings menu opens with expressive spring physics and smooth pop effect",
+                    "🕶️ Cinema Focus (Line Dimming): Choose between subtle dimming or focused cinema blur for inactive lines",
+                    "🗣️ Phonetic Pronunciation: Read-Aloud / TTS now correctly pronounces Gamingpig cleanly as Gaming Pigg",
+                    "🇩🇪 Language Selection in Imprint: Seamless switching between German and English for speech output"
+                ]
+            }},
             { version: 'v24.140.0', date: "7. September 2026", type: 'feature', items: {
                 de: [
                     "👁️ Intelligentes Viewport-Rendering: 20% Puffer-Zone oben/unten pausiert inaktive Offscreen-Sektionen und spart massiv Akku",
@@ -16070,32 +16052,7 @@ window.generateShareCard = function() {
             }, { passive: true });
         }
 
-        window.setLyricsFontSize = function(size) {
-    const validSizes = ['s', 'm', 'l'];
-    if (!validSizes.includes(size)) size = 'm';
-    const container = document.getElementById('lyrics-container');
-    if (container) {
-        container.classList.remove('lyrics-size-s', 'lyrics-size-m', 'lyrics-size-l');
-        if (size !== 'm') container.classList.add('lyrics-size-' + size);
-    }
-    document.querySelectorAll('.lyrics-size-btn').forEach(btn => {
-        const isActive = btn.getAttribute('data-size') === size;
-        btn.classList.toggle('active', isActive);
-        if (isActive) {
-            btn.className = 'lyrics-size-btn active flex items-center justify-center py-1.5 px-2 rounded-xl bg-blue-600/30 text-blue-300 border border-blue-500/50 transition-all active:scale-95 text-[10px] font-bold';
-        } else {
-            btn.className = 'lyrics-size-btn flex items-center justify-center py-1.5 px-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/80 transition-all active:scale-95 text-[10px] font-bold';
-        }
-    });
-    const badge = document.getElementById('lyrics-font-badge');
-    if (badge) {
-        badge.textContent = size === 's' ? 'Klein' : size === 'l' ? 'Groß' : 'Normal';
-    }
-    try { localStorage.setItem('gp_lyrics_font_size', size); } catch(e) {}
-    if (window.showAppToast) window.showAppToast('Schriftgröße: ' + (size === 's' ? 'Klein' : size === 'l' ? 'Groß' : 'Normal'));
-};
-
-window.setLyricsDimMode = function(mode) {
+        window.setLyricsDimMode = function(mode) {
     if (mode !== 'deep') mode = 'soft';
     const container = document.getElementById('lyrics-container');
     if (container) {
@@ -16118,15 +16075,12 @@ window.setLyricsDimMode = function(mode) {
 // Initialize lyrics settings from localStorage
 (function initLyricsSettingsAddons() {
     try {
-        const savedSize = localStorage.getItem('gp_lyrics_font_size') || 'm';
         const savedDim = localStorage.getItem('gp_lyrics_dim_mode') || 'soft';
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => {
-                window.setLyricsFontSize(savedSize);
                 window.setLyricsDimMode(savedDim);
             });
         } else {
-            window.setLyricsFontSize(savedSize);
             window.setLyricsDimMode(savedDim);
         }
     } catch(e) {}
