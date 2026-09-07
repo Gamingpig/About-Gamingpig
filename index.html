@@ -3138,7 +3138,7 @@
             if (savedAppLang) document.documentElement.setAttribute('lang', savedAppLang);
             
             // 🛡️ INSTANT ONBOARDING SHIELD (v24.151.0)
-            const _currVer = 'v24.151.0 · 2026-09-07';
+            const _currVer = 'v24.152.0 · 2026-09-07';
             const _installedVer = localStorage.getItem('site_version_installed');
             if (_installedVer !== _currVer) {
                 localStorage.setItem('site_version_installed', _currVer);
@@ -5478,54 +5478,51 @@
 <!-- ========================================================= -->
 <!-- 🚀 EPIC "WAS IST NEU" SHOWCASE & TIMELINE (ALLE VERSIONEN)-->
 <!-- ========================================================= -->
-<div id="whats-new-epic-modal" class="fixed inset-0 z-[100000] bg-black/85 backdrop-blur-2xl hidden flex items-center justify-center p-3 sm:p-6 opacity-0 transition-opacity duration-300" role="dialog" aria-modal="true">
-    <div class="relative w-full max-w-2xl bg-slate-900/95 border-2 border-purple-500/40 rounded-3xl p-4 sm:p-7 shadow-2xl shadow-purple-950/70 text-white overflow-hidden flex flex-col max-h-[92vh]">
-        <!-- Animated top gradient glow -->
-        <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-cyan-400 via-purple-500 via-pink-500 to-amber-400 animate-pulse"></div>
-        
+<div id="whats-new-epic-modal" class="fixed inset-0 z-[100000] bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-3 sm:p-4 opacity-0 transition-opacity duration-200" role="dialog" aria-modal="true" aria-labelledby="whats-new-modal-title">
+    <div class="relative w-full max-w-xl bg-slate-900/95 border border-white/10 rounded-2xl p-4 sm:p-6 shadow-2xl text-white overflow-hidden flex flex-col max-h-[88vh]">
         <!-- Header -->
-        <div class="flex items-center justify-between gap-3 mb-3 pb-3 border-b border-white/10 shrink-0">
-            <div class="flex items-center gap-2.5">
-                <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-purple-600 to-pink-600 text-white flex items-center justify-center text-xl shadow-lg shadow-purple-500/30 shrink-0 animate-bounce">
-                    🚀
+        <div class="flex items-center justify-between pb-3 mb-3 border-b border-white/10 shrink-0">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center justify-center text-sm font-semibold shrink-0">
+                    📜
                 </div>
                 <div>
-                    <div class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-300 border border-pink-400/30 text-[9px] font-black uppercase tracking-wider">
-                        <span>Schritt 3 von 5</span> • <span>📜 Was ist neu? (Alle Versionen)</span>
+                    <div id="whatsnew-step-badge" class="hidden inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/5 text-slate-400 border border-white/10 text-[10px] font-medium uppercase tracking-wider mb-0.5">
+                        <span>Schritt 3 von 5</span> • <span>Neuerungen</span>
                     </div>
-                    <h2 class="text-base sm:text-xl font-black text-white leading-tight mt-0.5">Was ist neu im Gamingpig-Universum?</h2>
+                    <h2 id="whats-new-modal-title" class="text-base sm:text-lg font-bold text-white tracking-tight">Was ist neu?</h2>
                 </div>
             </div>
-            <button onclick="closeEpicWhatsNewTour()" class="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-all text-xs font-bold active:scale-95" title="Schließen">✕</button>
+            <button onclick="closeEpicWhatsNewTour()" class="w-8 h-8 flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors text-xs font-semibold" aria-label="Schließen">✕</button>
         </div>
 
-        <!-- Slide Stage (Interactive Milestone Carousel) -->
-        <div id="epic-slides-stage" class="flex-1 overflow-y-auto pr-1 space-y-3 min-h-[260px]">
+        <!-- Slide Stage / Changelog View -->
+        <div id="epic-slides-stage" class="flex-1 overflow-y-auto pr-1 space-y-3 min-h-[220px]">
             <!-- Injected dynamically by JS -->
         </div>
 
         <!-- Slide Controls & Indicator -->
-        <div class="flex items-center justify-between pt-3 mt-2 border-t border-white/10 shrink-0 gap-2">
-            <button onclick="prevEpicSlide()" id="btn-epic-prev" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-all text-xs font-bold flex items-center gap-1.5 active:scale-95">
-                <span>⬅</span> <span>Zurück</span>
+        <div id="whatsnew-carousel-controls" class="flex items-center justify-between pt-3 mt-2 border-t border-white/10 shrink-0 gap-2">
+            <button onclick="prevEpicSlide()" id="btn-epic-prev" class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition-colors text-xs font-medium flex items-center gap-1">
+                <span>Zurück</span>
             </button>
 
             <div class="flex items-center gap-1.5" id="epic-dots-container">
                 <!-- Dots injected dynamically -->
             </div>
 
-            <button onclick="nextEpicSlide()" id="btn-epic-next" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-all text-xs font-bold flex items-center gap-1.5 active:scale-95">
-                <span>Weiter</span> <span>➔</span>
+            <button onclick="nextEpicSlide()" id="btn-epic-next" class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition-colors text-xs font-medium flex items-center gap-1">
+                <span>Weiter</span>
             </button>
         </div>
 
-        <!-- Action Bar (Toggle all versions & Advance to Privacy button) -->
+        <!-- Action Bar -->
         <div class="pt-3 mt-1 flex flex-col sm:flex-row items-center gap-2 shrink-0">
-            <button onclick="toggleAllVersionsChangelog()" id="btn-toggle-all-versions" class="w-full sm:w-auto flex-1 py-2.5 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 text-xs font-bold transition-all active:scale-95 text-center truncate">
-                📜 Alle Versionen im Detail anzeigen
+            <button onclick="toggleAllVersionsChangelog()" id="btn-toggle-all-versions" class="w-full sm:w-auto flex-1 py-2 px-3 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-slate-200 border border-white/10 text-xs font-medium transition-colors text-center truncate">
+                Vollständiges Logbuch anzeigen
             </button>
-            <button onclick="advanceFromWhatsNewToPrivacy()" id="btn-whatsnew-next-step" class="w-full sm:w-auto flex-1 py-2 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition-all active:scale-[0.98] text-center flex items-center justify-center gap-1.5 border border-blue-400/30">
-                <span>Weiter zum Datenschutz</span> <span>➔</span>
+            <button onclick="advanceFromWhatsNewToPrivacy()" id="btn-whatsnew-next-step" class="w-full sm:w-auto flex-1 py-2 px-4 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition-all active:scale-[0.98] text-center flex items-center justify-center gap-1 border border-blue-400/30">
+                <span>Fertig</span>
             </button>
         </div>
     </div>
@@ -6569,8 +6566,8 @@
                         <span id="footer-menu-hint" class="text-[9px] text-slate-500 font-mono">v24.144.0</span>
                     </div>
                     <div class="grid grid-cols-2 gap-2 text-left">
-                        <button onclick="openEpicWhatsNewTour(false); toggleFooterMenu(false)" id="footer-whats-new-btn" class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/90 text-blue-400 font-bold flex items-center gap-1.5 transition-all active:scale-95">
-                            <span>✨</span> <span class="truncate">Was ist neu?</span>
+                        <button onclick="openEpicWhatsNewTour(false); toggleFooterMenu(false)" id="footer-whats-new-btn" class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/90 text-slate-200 hover:text-white font-medium flex items-center gap-2 transition-colors active:scale-[0.98]">
+                            <span class="text-blue-400">📜</span> <span class="truncate">Was ist neu?</span>
                         </button>
                         <a href="status.html" id="footer-status-link" class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/90 text-emerald-400 font-bold flex items-center gap-1.5 transition-all active:scale-95">
                             <span>🟢</span> <span class="truncate">Live-Status</span>
@@ -16331,87 +16328,39 @@ window.generateShareCard = function() {
         // ========================================================= //
         const EPIC_MILESTONES = [
             {
-                tag: 'v24.143 - Next-Gen Quests',
-                title: 'Interaktives RPG-Quest System & 1-Klick Erstbesuch-Reset',
-                icon: '🎮',
-                color: 'from-purple-500 to-indigo-500',
+                tag: 'v24.152',
+                title: 'Clean UI & Onboarding Refinement',
                 highlights: [
-                    'Smarte RPG-Quests mit 1.000 XP & Level-Rängen (Entdecker ➔ Explorer ➔ Meister 👑)',
-                    '1-Klick-Erstbesuch-Reset in den Einstellungen: Setzt alle Daten & Zähler sauber auf Anfang',
-                    'Pulsierende Neon-Auren an den Ziel-Elementen & schwebende XP-Partikel bei jedem Meilenstein',
-                    'Echte GitHub-basierte Community-Roadmap mit Live-Votings & Wunscheinreichung'
+                    'Schlichtes, professionelles Design ohne kitschige Farbverläufe oder Dekorationen',
+                    'Dauerhafte Speicherung aller Einstellungen und des Onboarding-Status',
+                    'Zuverlässiger Sofort-Start beim Erstbesuch und sauberes Schließen aller Dialoge'
                 ]
             },
             {
-                tag: 'v24.140 - Monument-Umbau',
-                title: 'Das 26.250+ Zeilen Software-Monument im laufenden Betrieb bezwungen',
-                icon: '🏛️',
-                color: 'from-pink-500 to-rose-500',
+                tag: 'v24.143',
+                title: 'Interaktive Erkundung & System-Reset',
                 highlights: [
-                    'Über 17.200 Zeilen Frontend-Logik & 26.250 Zeilen im Gesamtsystem (über 650 gedruckte Seiten!)',
-                    'Eiskalte CPU-Architektur: Keine Überhitzung mehr auf Google Pixel & 120Hz-Displays',
-                    'Intelligente Speichermüllabfuhr & automatische Drosselung bei Inaktivität',
-                    'Butterweiche 120 FPS Reaktionszeit auf allen modernen Bildschirmen'
+                    'Interaktive Meilenstein-Erkundung für neue Besucher',
+                    '1-Klick-Erstbesuch-Reset in den Website-Einstellungen',
+                    'Optimierte Performance und Akkuschonung bei Inaktivität'
                 ]
             },
             {
-                tag: 'v24.130 - Juicy Physics',
-                title: 'Spring-Physik, Kino-Dimming & Phonetische KI-Sprachausgabe',
-                icon: '🎨',
-                color: 'from-amber-500 to-orange-500',
+                tag: 'v24.130',
+                title: 'Audio-Player & Lyrics Steuerung',
                 highlights: [
-                    'Juicy Spring-Animationen: Alle Einstellungsmenüs springen mit lebendiger Federphysik auf',
-                    'Lese-Fokus (Kino-Dimming): Hintergrundzeilen sanft oder stark ausblenden für perfekten Lesekomfort',
-                    'Phonetische Aussprache-Korrektur: Liest Gamingpig sauber und akzentfrei vor',
-                    'Nahtlose Sprachunterstützung im gesamten Audio-Player'
+                    'Präzise Federungs-Animationen für das Einstellungsmenü',
+                    'Lese-Fokus im Songtext mit dezentem Hintergrund-Dimming',
+                    'Verbesserte Text-to-Speech Aussprache für alle unterstützten Sprachen'
                 ]
             },
             {
-                tag: 'v24.100 - Cover Engine',
-                title: 'Unfehlbare 4-Stufen HD Cover-Engine mit Anti-Glitch Garantie',
-                icon: '🖼️',
-                color: 'from-cyan-500 to-blue-500',
+                tag: 'v24.100',
+                title: 'Album-Cover & StandBy Engine',
                 highlights: [
-                    '4-fache Turbo-Pipeline: Apple Music ID ➔ Spotify oEmbed ➔ iTunes Search ➔ Deezer',
-                    'Gestochen scharfe 640x640px Album-Art ab Millisekunde Eins ohne Songwechsel',
-                    '100% Anti-Glitch Schutz selbst bei schnellem Durchskippen von 30 Tracks',
-                    'Automatisches Ambilight & Farbrahmen passend zur aktuellen Cover-Farbpalette'
-                ]
-            },
-            {
-                tag: 'v24.80 - StandBy Next-Gen',
-                title: 'StandBy Next-Gen & Interaktives Dynamic Island',
-                icon: '🌙',
-                color: 'from-indigo-500 to-purple-500',
-                highlights: [
-                    '20 mathematisch pixelgenau zentrierte StandBy-Designs für alle Displays',
-                    'Echter Akku-Schutz: Bildschirm schläft im Ruhezustand ganz normal ein',
-                    'OLED Anti-Burn-in Pixel-Shift für unbeschwerten Dauerbetrieb',
-                    'Interaktives Dynamic Island mit Live-Musikring & Gestensteuerung'
-                ]
-            },
-            {
-                tag: 'v24.50 - Audio-Visualizer',
-                title: 'Echtzeit-Wellenform & Immersiver Ambient-Zen-Modus',
-                icon: '🎛️',
-                color: 'from-emerald-500 to-teal-500',
-                highlights: [
-                    'Pulsierende Audio-Equalizer-Wellen visualisieren deinen Sound in Echtzeit',
-                    'Spatial 3D-Tilt: Album-Cover reagiert dynamisch auf Geräte-Neigung und Maus',
-                    'Nahtloser Ambient-Ruhezustand beim Pausieren ohne Störgeräusche',
-                    'Dynamische Canvas-Videohintergründe passend zur Musikstimmung'
-                ]
-            },
-            {
-                tag: 'v24.0 - PWA & Zero-Tracker',
-                title: 'Multi-Language PWA & 100% Lokale Datenhaltung',
-                icon: '📱',
-                color: 'from-blue-600 to-violet-600',
-                highlights: [
-                    '6 Weltsprachen (Deutsch, Englisch, Spanisch, Französisch, Portugiesisch, Türkisch)',
-                    'Offline-First Service Worker mit Sofortlade-Garantie',
-                    'Null externe Tracker, keine Datenübertragung, keine Werbe-Skripte',
-                    'Web-Push-Alarme für System-Status & exklusive Updates'
+                    '4-stufige HD Cover-Pipeline für blitzschnelle Anzeige',
+                    '20 zentrierte StandBy-Designs mit OLED-Einbrennschutz',
+                    'Interaktives Dynamic Island mit Status- und Musik-Anzeige'
                 ]
             }
         ];
@@ -16422,50 +16371,50 @@ window.generateShareCard = function() {
         window.renderEpicSlide = function(index) {
             const stage = document.getElementById('epic-slides-stage');
             const dots = document.getElementById('epic-dots-container');
+            const carouselControls = document.getElementById('whatsnew-carousel-controls');
             if (!stage) return;
 
             if (isAllVersionsOpen) {
-                // Render detailed full changelog
-                let html = '<div class="space-y-2.5 py-1 text-left">';
-                html += '<div class="p-3 rounded-2xl bg-purple-950/40 border border-purple-500/30 flex items-center justify-between">';
-                html += '<div><span class="text-xs font-black text-purple-300 uppercase tracking-wider">Komplette Historie</span><p class="text-[10px] text-slate-400">Alle Versionen aus dem offiziellen Logbuch</p></div>';
-                html += '<button onclick="toggleAllVersionsChangelog()" class="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-purple-500/20 text-purple-200 hover:bg-purple-500/40 transition-colors">Zurück zur Übersicht ➔</button>';
+                if (carouselControls) carouselControls.classList.add('hidden');
+                let html = '<div class="space-y-2 py-1 text-left">';
+                html += '<div class="p-2.5 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between mb-2">';
+                html += '<div><span class="text-xs font-semibold text-white">Vollständiges Changelog</span><p class="text-[10px] text-slate-400">Chronologische Übersicht aller Releases</p></div>';
+                html += '<button onclick="toggleAllVersionsChangelog()" class="text-xs font-medium px-2.5 py-1 rounded-lg bg-white/10 text-slate-300 hover:text-white transition-colors">Zurück ➔</button>';
                 html += '</div>';
 
                 const lang = currentLang || 'de';
                 PUBLIC_CHANGELOG.forEach(entry => {
                     const items = (entry.items && entry.items[lang]) || (entry.items && entry.items.de) || [];
-                    html += '<div class="p-3 rounded-2xl bg-white/5 border border-white/5 hover:border-purple-500/30 transition-all">';
+                    html += '<div class="p-3 rounded-xl bg-white/5 border border-white/5 text-left">';
                     html += '<div class="flex items-center justify-between mb-1.5">';
-                    html += '<span class="text-xs font-black text-white font-mono">' + escapeHTML(entry.version) + '</span>';
-                    html += '<span class="text-[9px] text-slate-400 font-mono">' + escapeHTML(entry.date || '') + '</span>';
+                    html += '<span class="text-xs font-bold text-white font-mono">' + escapeHTML(entry.version) + '</span>';
+                    html += '<span class="text-[10px] text-slate-400 font-mono">' + escapeHTML(entry.date || '') + '</span>';
                     html += '</div>';
-                    html += '<ul class="space-y-1 text-[10px] sm:text-xs text-slate-300">';
+                    html += '<ul class="space-y-1 text-xs text-slate-300">';
                     items.forEach(it => {
-                        html += '<li class="flex items-start gap-1.5"><span class="text-purple-400 font-bold shrink-0">•</span><span>' + escapeHTML(it) + '</span></li>';
+                        html += '<li class="flex items-start gap-1.5"><span class="text-blue-400 font-bold shrink-0">•</span><span>' + escapeHTML(it) + '</span></li>';
                     });
                     html += '</ul></div>';
                 });
                 html += '</div>';
                 stage.innerHTML = html;
-                if (dots) dots.innerHTML = '<span class="text-[10px] font-mono text-purple-300 font-bold">140+ Versionen</span>';
                 return;
             }
 
-            const item = EPIC_MILESTONES[index] || EPIC_MILESTONES[0];
-            let html = '<div class="p-4 sm:p-5 rounded-2xl bg-gradient-to-br ' + item.color + '/10 border border-white/10 text-left animate-fadeIn">';
-            html += '<div class="flex items-center gap-3 mb-3">';
-            html += '<div class="w-12 h-12 rounded-2xl bg-gradient-to-tr ' + item.color + ' text-white flex items-center justify-center text-2xl shadow-lg shrink-0">' + item.icon + '</div>';
-            html += '<div>';
-            html += '<span class="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/10 text-slate-200 border border-white/10">' + item.tag + '</span>';
-            html += '<h3 class="text-sm sm:text-base font-black text-white mt-1 leading-snug">' + item.title + '</h3>';
-            html += '</div></div>';
+            if (carouselControls) carouselControls.classList.remove('hidden');
 
-            html += '<ul class="space-y-2 text-xs sm:text-sm text-slate-200 font-medium">';
+            const item = EPIC_MILESTONES[index] || EPIC_MILESTONES[0];
+            let html = '<div class="p-4 rounded-xl bg-white/5 border border-white/10 text-left">';
+            html += '<div class="flex items-center justify-between mb-2">';
+            html += '<span class="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 font-mono">' + item.tag + '</span>';
+            html += '</div>';
+            html += '<h3 class="text-sm sm:text-base font-bold text-white mb-3 tracking-tight">' + item.title + '</h3>';
+
+            html += '<ul class="space-y-1.5 text-xs text-slate-300">';
             item.highlights.forEach(h => {
-                html += '<li class="flex items-start gap-2 p-2.5 rounded-xl bg-black/40 border border-white/5">';
-                html += '<span class="text-emerald-400 font-bold shrink-0">✓</span>';
-                html += '<span>' + h + '</span>';
+                html += '<li class="flex items-start gap-2 p-2 rounded-lg bg-white/5 border border-white/5">';
+                html += '<span class="text-blue-400 font-semibold shrink-0">•</span>';
+                html += '<span class="leading-relaxed">' + h + '</span>';
                 html += '</li>';
             });
             html += '</ul></div>';
@@ -16477,15 +16426,10 @@ window.generateShareCard = function() {
                 let dotsHtml = '';
                 for (let i = 0; i < EPIC_MILESTONES.length; i++) {
                     const active = i === index;
-                    dotsHtml += '<button onclick="goToEpicSlide(' + i + ')" class="h-2 rounded-full transition-all ' + (active ? 'w-6 bg-gradient-to-r from-purple-400 to-pink-400 shadow-md shadow-purple-500/50' : 'w-2 bg-slate-700 hover:bg-slate-600') + '" aria-label="Folie ' + (i + 1) + '"></button>';
+                    dotsHtml += '<button onclick="goToEpicSlide(' + i + ')" class="h-1.5 rounded-full transition-all ' + (active ? 'w-4 bg-blue-400' : 'w-1.5 bg-white/20 hover:bg-white/40') + '" aria-label="Folie ' + (i + 1) + '"></button>';
                 }
                 dots.innerHTML = dotsHtml;
             }
-
-            const btnPrev = document.getElementById('btn-epic-prev');
-            const btnNext = document.getElementById('btn-epic-next');
-            if (btnPrev) btnPrev.style.visibility = index === 0 ? 'hidden' : 'visible';
-            if (btnNext) btnNext.style.visibility = index === EPIC_MILESTONES.length - 1 ? 'hidden' : 'visible';
         };
 
         window.prevEpicSlide = function() {
@@ -16528,9 +16472,23 @@ window.generateShareCard = function() {
             currentEpicSlideIndex = 0;
             renderEpicSlide(0);
 
+            const stepBadge = document.getElementById('whatsnew-step-badge');
+            if (stepBadge) {
+                if (isOnboarding) {
+                    stepBadge.classList.remove('hidden');
+                } else {
+                    stepBadge.classList.add('hidden');
+                }
+            }
+
             const nextBtn = document.getElementById('btn-whatsnew-next-step');
             if (nextBtn) {
-                nextBtn.innerHTML = isOnboarding ? '<span>Weiter zum Datenschutz</span> <span>➔</span>' : '<span>Fertig</span> <span>✓</span>';
+                nextBtn.innerHTML = isOnboarding ? '<span>Weiter zum Datenschutz</span> <span>➔</span>' : '<span>Schließen</span>';
+            }
+
+            const toggleBtn = document.getElementById('btn-toggle-all-versions');
+            if (toggleBtn) {
+                toggleBtn.textContent = 'Vollständiges Logbuch anzeigen';
             }
 
             modal.classList.remove('hidden');
