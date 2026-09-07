@@ -3137,14 +3137,13 @@
             const savedAppLang = localStorage.getItem('selectedLanguage');
             if (savedAppLang) document.documentElement.setAttribute('lang', savedAppLang);
             
-            // 🛡️ INSTANT ONBOARDING SHIELD (v24.150.0)
-            // Prüfe Version & Onboarding-Status VOR dem Rendern der Seite
-            const _currVer = 'v24.150.0 · 2026-09-07';
+            // 🛡️ INSTANT ONBOARDING SHIELD (v24.151.0)
+            const _currVer = 'v24.151.0 · 2026-09-07';
             const _installedVer = localStorage.getItem('site_version_installed');
             if (_installedVer !== _currVer) {
                 localStorage.setItem('site_version_installed', _currVer);
             }
-            // Onboarding startet NUR wenn es noch NIE abgeschlossen wurde ODER per URL erzwungen wird
+            // Onboarding startet NUR wenn noch NIE abgeschlossen oder per URL erzwungen
             const _onbCompleted = (localStorage.getItem('onboarding_completed') === '1');
             const _urlP = new URLSearchParams(window.location.search);
             const _forceStart = _urlP.has('first_visit') || _urlP.has('onboarding') || _urlP.has('tutorial');
@@ -3162,16 +3161,13 @@
         } catch(e) {}
     </script>
     <style id="onboarding-shield-style">
-        /* 🛡️ Sofort-Blockade: Onboarding-Schritt 1 (Sprachauswahl) erzwingen ohne Flackern */
-        html.needs-onboarding #language-picker-overlay {
+        /* 🛡️ Sofort-Blockade: Onboarding-Schritt 1 (Sprachauswahl) - Clean Native iOS/Android Style */
+        html.needs-onboarding #language-picker-overlay:not(.hidden) {
             display: flex !important;
             opacity: 1 !important;
             visibility: visible !important;
             z-index: 100005 !important;
             pointer-events: auto !important;
-        }
-        html.needs-onboarding #language-picker-overlay.hidden {
-            display: flex !important;
         }
         html.needs-onboarding #language-picker-box {
             opacity: 1 !important;
@@ -4746,36 +4742,40 @@
         /* --- NEW: SPRACHAUSWAHL (Setup-Assistent-Stil) ------------ */
         /* ========================================================= */
         #language-picker-overlay {
-            position: fixed; inset: 0; z-index: 100005 !important; background: #05060a;
+            position: fixed; inset: 0; z-index: 100005 !important; background: rgba(10, 14, 23, 0.92);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
             display: flex; align-items: center; justify-content: center; padding: 16px;
             overflow-y: auto; -webkit-overflow-scrolling: touch;
-            opacity: 1; transition: opacity 0.3s ease;
+            opacity: 1; transition: opacity 0.25s ease;
         }
         #language-picker-overlay.lp-active { opacity: 1; }
         #language-picker-overlay.hidden { display: none !important; }
         #language-picker-box {
-            width: min(94vw, 460px); text-align: center; margin: auto; max-height: 96vh;
+            width: min(92vw, 420px); text-align: center; margin: auto; max-height: 94vh;
             display: flex; flex-direction: column; justify-content: center;
-            transform: translateY(14px); opacity: 0; transition: transform 0.6s var(--apple-bounce) 0.1s, opacity 0.5s ease 0.1s;
+            background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 28px; padding: 28px 22px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+            transform: translateY(8px); opacity: 0; transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
         }
         #language-picker-overlay.lp-active #language-picker-box { transform: translateY(0); opacity: 1; }
-        #lang-picker-titles { margin-bottom: 20px; }
+        #lang-picker-titles { margin-bottom: 18px; }
         #lang-picker-titles p {
-            color: rgba(255,255,255,0.95); font-weight: 800; font-size: clamp(1rem, 3.8vw, 1.4rem);
-            line-height: 1.35; margin: 0 0 2px 0;
+            color: #f8fafc; font-weight: 700; font-size: 1.25rem;
+            line-height: 1.3; margin: 0 0 2px 0; letter-spacing: -0.02em;
         }
-        #lang-picker-titles p:not(:first-child) { color: rgba(255,255,255,0.4); font-size: clamp(0.78rem, 2.7vw, 0.95rem); font-weight: 600; }
+        #lang-picker-titles p:not(:first-child) { color: #64748b; font-size: 0.82rem; font-weight: 500; }
         #lang-picker-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; width: 100%; }
         .lang-picker-btn {
-            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
-            background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.16);
-            border-radius: 16px; padding: 14px 8px; cursor: pointer; color: #fff;
-            min-height: 70px;
-            transition: transform 0.2s var(--apple-bounce), background 0.2s ease, border-color 0.2s ease;
+            display: flex; align-items: center; gap: 12px;
+            background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px; padding: 12px 14px; cursor: pointer; color: #f1f5f9;
+            min-height: 52px; text-align: left;
+            transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        .lang-picker-btn:hover, .lang-picker-btn:active { background: rgba(59,130,246,0.22); border-color: rgba(59,130,246,0.6); transform: translateY(-2px) scale(1.02); }
-        .lang-picker-btn .lang-flag { font-size: 30px; line-height: 1; }
-        .lang-picker-btn .lang-name { font-size: 13px; font-weight: 700; }
+        .lang-picker-btn:hover, .lang-picker-btn:active { background: rgba(59, 130, 246, 0.14); border-color: rgba(59, 130, 246, 0.4); transform: translateY(-1px); }
+        .lang-picker-btn .lang-flag { font-size: 22px; line-height: 1; shrink-0: 0; }
+        .lang-picker-btn .lang-name { font-size: 13px; font-weight: 600; color: #e2e8f0; }
         body.low-end #language-picker-box, body.low-end .lang-picker-btn { transition: none !important; }
         @keyframes di-idle-pulse {
             0% { opacity: 0.55; transform: translateX(-50%) scale(1); }
@@ -5524,7 +5524,7 @@
             <button onclick="toggleAllVersionsChangelog()" id="btn-toggle-all-versions" class="w-full sm:w-auto flex-1 py-2.5 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 text-xs font-bold transition-all active:scale-95 text-center truncate">
                 📜 Alle Versionen im Detail anzeigen
             </button>
-            <button onclick="advanceFromWhatsNewToPrivacy()" id="btn-whatsnew-next-step" class="w-full sm:w-auto flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 hover:brightness-110 text-white font-black text-xs shadow-xl shadow-purple-500/30 transition-all active:scale-95 text-center flex items-center justify-center gap-1.5 border border-purple-400/30">
+            <button onclick="advanceFromWhatsNewToPrivacy()" id="btn-whatsnew-next-step" class="w-full sm:w-auto flex-1 py-2 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition-all active:scale-[0.98] text-center flex items-center justify-center gap-1.5 border border-blue-400/30">
                 <span>Weiter zum Datenschutz</span> <span>➔</span>
             </button>
         </div>
@@ -5533,7 +5533,7 @@
 
     <div id="privacy-update-modal" class="fixed inset-0 z-[100000] bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4 animate-fadeIn" role="dialog" aria-modal="true">
         <div class="glass-card max-w-md w-full p-5 sm:p-6 rounded-3xl border border-blue-500/30 shadow-2xl bg-slate-900/95 text-left relative overflow-hidden">
-            <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 text-[10px] font-black uppercase tracking-wider mb-2 border border-cyan-500/30"><span>Schritt 4 von 5</span> • <span>⚖️ Datenschutz</span></div>
+            <div class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white/5 text-slate-400 text-[10px] font-semibold uppercase tracking-wider mb-2 border border-white/10"><span>Schritt 4 von 5</span> • <span>Datenschutz</span></div>
             <div class="flex items-center gap-3 mb-3">
                 <div class="w-10 h-10 rounded-2xl bg-blue-500/20 text-blue-400 flex items-center justify-center text-xl shrink-0 font-bold border border-blue-500/30">
                     ⚖️
@@ -5581,18 +5581,14 @@
     <div id="global-emp-shockwave"></div>
 
     <!-- NEW: Dynamic Island 2.0 -->
-    <!-- NEW: Sprachauswahl (wie Android/iOS Einrichtungsassistent), nur beim ersten Besuch -->
+    <!-- NEW: Sprachauswahl (Clean iOS/Android Native Setup Style) -->
     <div id="language-picker-overlay" class="hidden" onclick="if(event.target===this && (!window.OnboardingCoordinator || !window.OnboardingCoordinator.isOnboarding))closeLanguagePicker()">
         <div id="language-picker-box" class="relative">
-            <button onclick="closeLanguagePicker()" id="lang-picker-close-btn" class="absolute -top-3 -right-2 sm:-top-4 sm:-right-4 w-9 h-9 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white/80 hover:text-white transition-all text-sm font-bold border border-white/10 shadow-lg active:scale-95 z-20" aria-label="Schließen / Close">✕</button>
-            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/20 text-blue-400 text-[10px] font-black uppercase tracking-wider mb-3 border border-blue-500/30 mx-auto"><span>Schritt 1 von 5</span> • <span>🌐 Sprache / Language</span></div>
+            <button onclick="closeLanguagePicker()" id="lang-picker-close-btn" class="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-all text-xs font-semibold border border-white/10 active:scale-95 z-20" aria-label="Schließen / Close">✕</button>
+            <div class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/5 text-slate-400 text-[10px] font-semibold uppercase tracking-wider mb-3 border border-white/10 mx-auto"><span>Schritt 1 von 5</span> • <span>Sprache</span></div>
             <div id="lang-picker-titles">
-                <p>Wähle deine Sprache</p>
-                <p>Choose your language</p>
-                <p>Elige tu idioma</p>
-                <p>Choisis ta langue</p>
-                <p>Escolha seu idioma</p>
-                <p>Dilini seç</p>
+                <p>Sprache wählen</p>
+                <p>Select Language</p>
             </div>
             <div id="lang-picker-grid">
                 <button class="lang-picker-btn" onclick="selectLanguage('de')">
@@ -8259,15 +8255,14 @@
         }
 
         window.closeLanguagePicker = function() {
+            document.documentElement.classList.remove('needs-onboarding');
             const overlay = document.getElementById('language-picker-overlay');
             if (!overlay) return;
             overlay.classList.remove('lp-active');
+            overlay.classList.add('hidden');
+            overlay.style.display = 'none';
             overlay.style.opacity = '0';
-            setTimeout(() => {
-                overlay.classList.add('hidden');
-                overlay.style.display = 'none';
-                overlay.style.visibility = 'hidden';
-            }, 300);
+            overlay.style.visibility = 'hidden';
         };
 
         window.openLanguagePicker = function(isManual = false) {
@@ -8295,11 +8290,20 @@
                 console.error('applyLanguage error:', e);
             }
             document.documentElement.classList.remove('needs-onboarding');
-            window.closeLanguagePicker();
-            // NEW: Bugfix - Tutorial-Autostart darf erst NACH der Sprachauswahl kommen,
-            // nie gleichzeitig (siehe Kommentar bei der alten if-Abfrage weiter unten).
-            if (window.OnboardingCoordinator.isOnboarding || (!localStorage.getItem('onboarding_completed') && !window._manualLangChange)) {
-                window.OnboardingCoordinator.step2_tutorial();
+            const overlay = document.getElementById('language-picker-overlay');
+            if (overlay) {
+                overlay.classList.add('hidden');
+                overlay.classList.remove('lp-active');
+                overlay.style.display = 'none';
+            }
+            
+            const isFirstFlow = (window.OnboardingCoordinator && window.OnboardingCoordinator.isOnboarding) || 
+                                (localStorage.getItem('onboarding_completed') !== '1' && !window._manualLangChange);
+            
+            if (isFirstFlow) {
+                if (window.OnboardingCoordinator) {
+                    window.OnboardingCoordinator.step2_tutorial();
+                }
             } else if (!localStorage.getItem('tutorialCompletedV5') && !window._manualLangChange) {
                 setTimeout(startTutorial, 500);
             }
@@ -13712,27 +13716,13 @@ window.generateShareCard = function() {
                 showToast('🏆 Großartig! Du hast alle interaktiven Quests gemeistert! 🎉', 5000);
                 return;
             }
-            modalBody.innerHTML = '<div class="flex flex-col items-center text-center p-4 sm:p-7 relative overflow-hidden">' +
-                '<div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 text-[10px] font-black uppercase tracking-wider mb-3 border border-purple-500/30"><span>Schritt 2 von 5</span> • <span>🎮 Quests gemeistert!</span></div>' +
-                '<div class="relative mb-4">' +
-                    '<div class="absolute -inset-4 bg-gradient-to-r from-purple-600 via-pink-600 to-amber-400 rounded-full blur-xl opacity-70 animate-pulse"></div>' +
-                    '<div class="relative w-24 h-24 rounded-3xl bg-gradient-to-tr from-amber-400 via-rose-500 to-purple-600 text-white flex items-center justify-center text-5xl shadow-2xl shadow-rose-500/50 animate-bounce">' +
-                        '🏆' +
-                    '</div>' +
-                '</div>' +
-                '<div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-400/20 border border-amber-400/30 text-amber-300 text-xs font-black uppercase tracking-widest mb-3 animate-pulse">' +
-                    '<span>⚡ 1.000 XP FREIGESCHALTET</span> • <span>RANG: MEISTER 👑</span>' +
-                '</div>' +
-                '<h2 class="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white mb-2 tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-300 bg-clip-text">Alle Quests gemeistert!</h2>' +
-                '<p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 max-w-md mb-6 leading-relaxed">Epischer Erfolg! Du hast alle Stationen des Gamingpig-Universums erfolgreich entdeckt: Real-Talk-Karten, Website-Settings, Hyper-Suche & StandBy/Musik. Dein Erlebnis ist jetzt vollständig optimiert!</p>' +
-                '<div class="flex flex-col sm:flex-row gap-3 w-full max-w-md">' +
-                    '<button onclick="window.closeModal(); window.OnboardingCoordinator.step3_whatsNew();" class="flex-1 py-3.5 px-4 rounded-2xl bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 hover:brightness-110 text-white font-black text-xs text-center shadow-xl shadow-purple-500/30 transition-all active:scale-95 flex items-center justify-center gap-1.5 border border-purple-400/30">' +
-                        '<span>🚀 Weiter: Was ist neu?</span> <span>➔</span>' +
-                    '</button>' +
-                    '<button onclick="window.closeModal(); if(window.OnboardingCoordinator.isOnboarding) window.OnboardingCoordinator.step3_whatsNew();" class="py-3.5 px-4 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 font-black text-xs transition-all active:scale-95 shadow-lg shadow-black/40 flex items-center justify-center gap-1.5">' +
-                        '<span>✨</span> <span>Weiter</span>' +
-                    '</button>' +
-                '</div>' +
+            modalBody.innerHTML = '<div class="flex flex-col items-center text-center p-4 sm:p-6">' +
+                '<div class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-800 text-slate-400 text-[10px] font-semibold uppercase tracking-wider mb-4 border border-white/10"><span>Schritt 2 von 5</span> • <span>Einführung abgeschlossen</span></div>' +
+                '<h2 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white mb-2 tracking-tight">Erkundung abgeschlossen</h2>' +
+                '<p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-md mb-6 leading-relaxed">Du hast alle Stationen des Portfolios erfolgreich kennengelernt.</p>' +
+                '<button onclick="window.closeModal(); if(window.OnboardingCoordinator) window.OnboardingCoordinator.step3_whatsNew();" class="w-full max-w-xs py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs text-center transition-all active:scale-[0.98] border border-blue-400/30 mx-auto">' +
+                    'Weiter zu Neuerungen ➔' +
+                '</button>' +
             '</div>';
             modalOverlay.classList.remove('hidden');
             modalOverlay.classList.add('flex');
@@ -13752,24 +13742,22 @@ window.generateShareCard = function() {
             }
             
             modalBody.innerHTML = '<div class="flex flex-col items-center text-center p-2 sm:p-4">' +
-                '<div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 text-[10px] font-black uppercase tracking-wider mb-3 border border-purple-500/30"><span>Schritt 2 von 5</span> • <span>🎮 Tutorial</span></div>' +
-                '<div class="w-16 h-16 rounded-3xl bg-gradient-to-tr from-purple-500 to-pink-500 text-white flex items-center justify-center text-3xl shadow-xl shadow-purple-500/20 mb-4 animate-bounce">🚀</div>' +
-                '<h2 class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mb-2">Wie möchtest du starten?</h2>' +
-                '<p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 max-w-md mb-6 leading-relaxed">Wähle dein bevorzugtes Erlebnis: Entdecke die Funktionen spielerisch durch Ausprobieren mit Event-Meilensteinen oder lehn dich bei einem klassischen geführten Rundgang zurück.</p>' +
+                '<div class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-800 text-slate-400 text-[10px] font-semibold uppercase tracking-wider mb-4 border border-white/10"><span>Schritt 2 von 5</span> • <span>Einführung</span></div>' +
+                '<h2 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white mb-2 tracking-tight">Erlebnis wählen</h2>' +
+                '<p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-md mb-6 leading-relaxed">Wähle, wie du das Portfolio kennenlernen möchtest.</p>' +
                 '<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-md">' +
-                    '<button onclick="startInteractiveLearning()" class="p-4 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white text-left font-bold shadow-lg hover:shadow-blue-500/25 transition-all active:scale-95 group border border-blue-400/30">' +
-                        '<div class="text-2xl mb-1">🎮</div>' +
-                        '<div class="text-sm font-extrabold group-hover:translate-x-0.5 transition-transform">Interaktives Self-Learning</div>' +
-                        '<div class="text-[10px] text-blue-100/80 font-medium mt-1">Learning by Doing: Klicke Karten, teste Suche & sammle Konfetti!</div>' +
+                    '<button onclick="startInteractiveLearning()" class="p-4 rounded-2xl bg-blue-600/10 hover:bg-blue-600/20 text-white text-left border border-blue-500/30 transition-all active:scale-[0.98] group">' +
+                        '<div class="text-xs font-semibold text-blue-400 uppercase tracking-wider mb-1">Interaktiv</div>' +
+                        '<div class="text-sm font-bold text-white mb-1">Selbst erkunden</div>' +
+                        '<div class="text-[11px] text-slate-400 leading-snug">Erkunde das Portfolio mit Meilensteinen in eigenem Tempo.</div>' +
                     '</button>' +
-                    '<button onclick="runClassicTutorial()" class="p-4 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white text-left font-bold shadow-md hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95 group border border-slate-300 dark:border-slate-700">' +
-                        '<div class="text-2xl mb-1">📖</div>' +
-                        '<div class="text-sm font-extrabold group-hover:translate-x-0.5 transition-transform">Klassischer Rundgang</div>' +
-                        '<div class="text-[10px] text-slate-500 dark:text-slate-400 font-medium mt-1">Geführte Schritt-für-Schritt Tour durch alle Kontrollzentren.</div>' +
+                    '<button onclick="runClassicTutorial()" class="p-4 rounded-2xl bg-white/5 hover:bg-white/10 text-white text-left border border-white/10 transition-all active:scale-[0.98] group">' +
+                        '<div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Geführt</div>' +
+                        '<div class="text-sm font-bold text-white mb-1">Kurze Tour</div>' +
+                        '<div class="text-[11px] text-slate-400 leading-snug">Ein kompakter Überblick über alle wichtigen Bereiche.</div>' +
                     '</button>' +
                 '</div>' +
-            '</div>' +
-            '<button onclick="skipTutorialChoice()" class="mt-2 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 transition-colors py-1">Jetzt nicht überspringen</button>' +
+                '<button onclick="skipTutorialChoice()" class="mt-5 text-xs text-slate-400 hover:text-slate-300 transition-colors py-1">Überspringen</button>' +
             '</div>';
 
             // Mark that the tutorial choice modal is currently open
@@ -16318,31 +16306,22 @@ window.generateShareCard = function() {
                 }
                 if (typeof haptic === 'function') haptic([50, 40, 80, 50, 100]);
                 
-                // 🌟 EPISCHES ABSCHLUSS-MODAL FÜR SCHRITT 5
+                // Clean Abschluss-Modal für Schritt 5
                 const modalOverlay = document.getElementById('modal-overlay');
                 const modalBody = document.getElementById('modal-body');
                 if (modalOverlay && modalBody) {
-                    modalBody.innerHTML = '<div class="flex flex-col items-center text-center p-4 sm:p-7 relative overflow-hidden">' +
-                        '<div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-black uppercase tracking-wider mb-3 border border-emerald-500/30"><span>Schritt 5 von 5</span> • <span>🎉 Onboarding abgeschlossen!</span></div>' +
-                        '<div class="relative mb-4">' +
-                            '<div class="absolute -inset-4 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-400 rounded-full blur-xl opacity-70 animate-pulse"></div>' +
-                            '<div class="relative w-24 h-24 rounded-3xl bg-gradient-to-tr from-emerald-400 via-teal-500 to-cyan-500 text-white flex items-center justify-center text-5xl shadow-2xl shadow-emerald-500/50 animate-bounce">' +
-                                '🌟' +
-                            '</div>' +
-                        '</div>' +
-                        '<div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-400/20 border border-emerald-400/30 text-emerald-300 text-xs font-black uppercase tracking-widest mb-3">' +
-                            '<span>STATUS: 5 / 5 VOLLSTÄNDIG ✓</span>' +
-                        '</div>' +
-                        '<h2 class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mb-2 tracking-tight">Willkommen an Bord!</h2>' +
-                        '<p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 max-w-md mb-6 leading-relaxed">Du hast alle 5 Schritte erfolgreich durchlaufen. Deine Einstellungen und Sprache wurden dauerhaft gespeichert. Du wirst beim nächsten Öffnen direkt auf die Seite weitergeleitet!</p>' +
-                        '<button onclick="window.closeModal()" class="w-full max-w-xs py-3.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs text-center shadow-xl shadow-emerald-500/30 transition-all active:scale-95 flex items-center justify-center gap-2 border border-emerald-400/30 mx-auto">' +
-                            '<span>🚀 Jetzt loslegen!</span>' +
+                    modalBody.innerHTML = '<div class="flex flex-col items-center text-center p-4 sm:p-6">' +
+                        '<div class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-semibold uppercase tracking-wider mb-4 border border-emerald-500/20"><span>Schritt 5 von 5</span> • <span>Bereit</span></div>' +
+                        '<h2 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white mb-2 tracking-tight">Alles eingerichtet</h2>' +
+                        '<p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-md mb-6 leading-relaxed">Deine Konfiguration wurde dauerhaft gespeichert. Viel Spaß beim Erkunden!</p>' +
+                        '<button onclick="window.closeModal()" class="w-full max-w-xs py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs text-center transition-all active:scale-[0.98] border border-blue-400/30 mx-auto">' +
+                            'Starten ➔' +
                         '</button>' +
                     '</div>';
                     modalOverlay.classList.remove('hidden');
                     modalOverlay.classList.add('flex');
                 } else {
-                    showToast('🎉 Perfekt! Willkommen im Gamingpig-Universum! Alles ist bereit.', 5000);
+                    showToast('Alles eingerichtet und gespeichert!', 3000);
                 }
             }
         };
