@@ -319,6 +319,50 @@
 </div>
 
 <script>
+function ttsPreparePhonetics(str) {
+  if (!str) return '';
+  return str
+    .replace(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/gi, (email) => email.replace(/gamingpig/gi, 'gaming-pigg'))
+    .replace(/gaming[\s\-_]*pigs?\b/gi, 'Gaming Pigg')
+    .replace(/gaming[\s\-_]*pig/gi, 'Gaming Pigg');
+}
+
+const TTS_LANG_BCP47 = {
+  de: 'de-DE',
+  en: 'en-US',
+  es: 'es-ES',
+  fr: 'fr-FR',
+  pt: 'pt-BR',
+  tr: 'tr-TR'
+};
+
+function ensureVoicesLoaded() {
+  return new Promise(resolve => {
+    if (typeof speechSynthesis === 'undefined') return resolve([]);
+    const existing = speechSynthesis.getVoices();
+    if (existing.length > 0) return resolve(existing);
+    let resolved = false;
+    speechSynthesis.onvoiceschanged = () => {
+      if (resolved) return;
+      resolved = true;
+      resolve(speechSynthesis.getVoices());
+    };
+    setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        resolve(speechSynthesis.getVoices());
+      }
+    }, 1500);
+  });
+}
+
+function getVoicesForLang(langCode) {
+  if (typeof speechSynthesis === 'undefined') return [];
+  const all = speechSynthesis.getVoices();
+  const target = (langCode || 'de').toLowerCase();
+  return all.filter(v => v.lang && v.lang.toLowerCase().startsWith(target));
+}
+
 function setImpressumLang(lang) {
   document.querySelectorAll('.lang-block').forEach(b => {
     b.style.display = (b.getAttribute('data-lang') === lang) ? 'block' : 'none';
@@ -328,20 +372,31 @@ function setImpressumLang(lang) {
   });
   document.documentElement.setAttribute('lang', lang);
   try { localStorage.setItem('selectedLanguage', lang); } catch(e) {}
+  
+  // Wenn gerade vorgelesen wird: Sofort mit der neuen Sprache und Stimme neu starten
+  if (impSpeaking) {
+    toggleImpressumSpeech(true);
+  }
 }
 
 (function init() {
   let lang = 'de';
   try {
     const saved = localStorage.getItem('selectedLanguage');
-    if (saved && ['de','en','es','fr','pt','tr'].includes(saved)) lang = saved;
-    else if (navigator.language) {
+    if (saved && ['de','en','es','fr','pt','tr'].includes(saved)) {
+      lang = saved;
+    } else if (navigator.language) {
       const code = navigator.language.slice(0,2).toLowerCase();
       if (['de','en','es','fr','pt','tr'].includes(code)) lang = code;
     }
   } catch(e) {}
   setImpressumLang(lang);
 })();
+
+// Stimmen im Hintergrund frühzeitig vorladen
+if (typeof speechSynthesis !== 'undefined') {
+  ensureVoicesLoaded();
+}
 
 let impTtsSpeed = parseFloat(localStorage.getItem('gp_tts_speed')) || 1.0;
 let impSpeaking = false;
@@ -383,7 +438,7 @@ function stopImpressumSpeech() {
   if (menu) menu.classList.add('hidden');
 }
 
-function toggleImpressumSpeech(forceRestart) {
+async function toggleImpressumSpeech(forceRestart) {
   if (typeof speechSynthesis === 'undefined') {
     alert('Sprachausgabe wird in diesem Browser leider nicht unterstützt.');
     return;
@@ -394,6 +449,10 @@ function toggleImpressumSpeech(forceRestart) {
   }
 
   speechSynthesis.cancel();
+  if (speechSynthesis.paused) {
+    speechSynthesis.resume();
+  }
+
   const allBlocks = Array.from(document.querySelectorAll('.lang-block'));
   const activeBlock = allBlocks.find(b => b.style.display !== 'none');
   if (!activeBlock) return;
@@ -402,8 +461,11 @@ function toggleImpressumSpeech(forceRestart) {
   if (!textToRead.trim()) return;
 
   const currentLangCode = activeBlock.getAttribute('data-lang') || 'de';
-  const voices = speechSynthesis.getVoices() || [];
-  const matchingVoice = voices.find(v => v.lang.toLowerCase().startsWith(currentLangCode)) || voices[0];
+  const targetBcp47 = TTS_LANG_BCP47[currentLangCode] || 'de-DE';
+
+  await ensureVoicesLoaded();
+  const matchingVoices = getVoicesForLang(currentLangCode);
+  const matchingVoice = matchingVoices[0] || null;
 
   const chunks = textToRead.match(/[^.!?\n]+[.!?\n]*/g) || [textToRead];
   impSpeaking = true;
@@ -417,8 +479,10 @@ function toggleImpressumSpeech(forceRestart) {
   chunks.forEach((chunk, i) => {
     const trimmed = chunk.trim();
     if (!trimmed) return;
-    const u = new SpeechSynthesisUtterance(trimmed);
+    const spokenChunk = ttsPreparePhonetics(trimmed);
+    const u = new SpeechSynthesisUtterance(spokenChunk);
     if (matchingVoice) u.voice = matchingVoice;
+    u.lang = targetBcp47;
     u.rate = impTtsSpeed;
     if (i === chunks.length - 1) {
       u.onend = stopImpressumSpeech;
