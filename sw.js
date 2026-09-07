@@ -7,7 +7,7 @@
 // - Sofortige Übernahme: self.skipWaiting() & clients.claim()
 // ==============================================================================
 
-const SW_VERSION = "24.152.0";
+const SW_VERSION = "24.152.1";
 const CURRENT_CACHE_VERSION = `gamingpig-cache-v${SW_VERSION}`;
 const CACHE_NAME = CURRENT_CACHE_VERSION;
 
@@ -20,6 +20,9 @@ const PRECACHE_URLS = [
     "./release.html",
     "./release-v24-115.html",
     "./privacy.html",
+    "./impressum.html",
+    "./js/read-aloud-service.js",
+    "./js/i18n-manager.js",
     "./manifest.json",
     "./icon-192.png",
     "./icon-512.png",
