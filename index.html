@@ -6486,148 +6486,222 @@
 </div>
 
 <!-- Global Standalone & Lyrics Settings Modal -->
-<div id="lyrics-settings-menu" class="fixed bg-[#0f172a] border border-slate-700/80 rounded-2xl p-2.5 xxs:p-3 sm:p-3.5 shadow-2xl hidden flex-col gap-2 w-[285px] xxs:w-[315px] sm:w-[345px] max-w-[calc(100vw-1.5rem)] z-[10000] origin-top-right overflow-y-auto" style="-webkit-overflow-scrolling: touch; overscroll-behavior-y: contain;">
-<div class="flex items-center justify-between pb-1 mb-0.5 border-b border-white/10"><span class="text-xs font-black uppercase tracking-wider text-slate-200 flex items-center gap-1.5"><span>⚙️</span> <span>Einstellungen</span></span><button onclick="toggleLyricsSettings(event)" class="p-1 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-colors text-xs font-bold">✕</button></div>
-                                        <p id="label-animation-style" class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-slate-400 px-1 sticky top-0 bg-[#0f172a] py-0.5 z-10">Animation Style</p>
-                                        <select id="lyrics-style-select" onchange="setLyricsStyle(this.value)" class="w-full bg-slate-800 text-white text-[10px] xxs:text-xs sm:text-sm px-2.5 py-2 rounded-xl border border-slate-600 focus:outline-none focus:border-blue-500 mb-0.5"></select>
-                                        <div id="lyrics-style-preview-box" class="w-full bg-black/50 rounded-xl p-2 sm:p-2.5 overflow-hidden text-center min-h-[48px] sm:min-h-[52px] flex items-center justify-center select-none border border-white/5">
-                                            <p id="lyrics-style-preview-text" class="lyric-line active text-[11px] sm:text-xs font-bold leading-tight !m-0 !max-w-full !p-0"></p>
-                                        </div>
+<div id="lyrics-settings-menu" class="fixed bg-[#0f172a] border border-slate-700/80 rounded-2xl p-2.5 xxs:p-3 sm:p-3.5 shadow-2xl hidden flex-col gap-2 w-[295px] xxs:w-[325px] sm:w-[355px] max-w-[calc(100vw-1.5rem)] z-[10000] origin-top-right overflow-y-auto" style="-webkit-overflow-scrolling: touch; overscroll-behavior-y: contain;" onclick="event.stopPropagation()">
+    <!-- Header with dynamic title & close -->
+    <div class="flex items-center justify-between pb-1.5 mb-0.5 border-b border-white/10">
+        <span id="settings-modal-title" class="text-xs font-black uppercase tracking-wider text-slate-200 flex items-center gap-1.5">
+            <span>⚙️</span> <span>Einstellungen</span>
+        </span>
+        <button onclick="toggleLyricsSettings(event)" class="p-1 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-colors text-xs font-bold" aria-label="Schließen">✕</button>
+    </div>
 
-                                        <div class="h-px w-full bg-slate-700/70 my-0.5"></div>
-                                        <p id="label-features" class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-slate-400 px-1">Features</p>
-                                        <div class="grid grid-cols-2 gap-1.5 w-full">
-                                            <button onclick="toggleCanvasVideo()" id="btn-toggle-canvas" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-green-400 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold whitespace-nowrap active:scale-95">Canvas: AN</button>
-                                            <button onclick="toggleAmbientColor()" id="btn-toggle-ambient" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-cyan-400 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold whitespace-nowrap active:scale-95">Ambient: AN</button>
-                                            <button onclick="toggleColorFrame()" id="btn-toggle-color-frame" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-cyan-400 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold whitespace-nowrap active:scale-95">Farbrahmen: AN</button>
-                                            <button onclick="toggleGlowEffect()" id="btn-toggle-glow" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-orange-400 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold whitespace-nowrap active:scale-95">Glow-Effekt: AN</button>
-                                            <button onclick="toggleCoverGlow()" id="btn-toggle-cover-glow" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-yellow-400 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold whitespace-nowrap active:scale-95">Cover-Glow: AN</button>
-                                            <button onclick="toggleTilt()" id="btn-toggle-tilt" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-purple-400 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold whitespace-nowrap active:scale-95">Spatial Tilt: AN</button>
-                                            <button onclick="toggleUiSoundEnabled()" id="btn-toggle-sound" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-teal-400 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold whitespace-nowrap active:scale-95">UI-Sounds: AN</button>
-                                            <button onclick="toggleHapticEnabled()" id="btn-toggle-haptic" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-teal-400 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold whitespace-nowrap active:scale-95">Haptik: AN</button>
-                                        </div>
-                                        <div class="grid grid-cols-2 gap-1.5 w-full mt-0.5">
-                                            <button onclick="generateShareCard()" id="btn-share-card" class="text-center text-[10px] xxs:text-xs text-pink-300 px-2 py-2 rounded-xl bg-pink-500/15 hover:bg-pink-500/25 border border-pink-500/20 transition-all font-bold truncate active:scale-95">🎴 Share Card</button>
-                                            <button onclick="quickExportSongCard()" id="btn-quick-export" class="text-center text-[10px] xxs:text-xs text-pink-300 px-2 py-2 rounded-xl bg-pink-500/15 hover:bg-pink-500/25 border border-pink-500/20 transition-all font-bold truncate active:scale-95">📸 Export</button>
-                                        </div>
-                                        <div class="w-full flex flex-col gap-1 mt-0.5 relative">
-                                            <div class="inline-flex items-center w-full rounded-xl bg-cyan-500/15 border border-cyan-500/20">
-                                                <button onclick="speakLyrics(this)" id="btn-speak-lyrics" class="flex-1 text-center text-[10px] xxs:text-xs text-cyan-300 px-2.5 py-2 hover:bg-cyan-500/25 transition-all font-bold active:scale-95 flex items-center justify-center gap-1.5 rounded-l-xl">
-                                                    <span>📢</span> <span>Songtext vorlesen</span>
-                                                </button>
-                                                <button onclick="toggleTtsSpeedMenu('tts-speed-menu-lyrics')" class="px-2 py-2 text-cyan-400 hover:bg-cyan-500/25 rounded-r-xl border-l border-cyan-500/20 text-[10px] xxs:text-xs font-mono font-bold transition-colors" title="Tempo anpassen">
-                                                    <span class="tts-speed-indicator-lyrics">Auto</span>
-                                                </button>
-                                            </div>
-                                            <!-- Mini-Menü Lyrics -->
-                                            <div id="tts-speed-menu-lyrics" class="hidden absolute top-full left-0 right-0 mt-1 z-50 p-2 rounded-xl bg-slate-900/95 border border-slate-700 shadow-2xl backdrop-blur-xl">
-                                                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 py-1 flex items-center justify-between">
-                                                    <span>Tempo</span>
-                                                    <button onclick="speechSynthesis.cancel(); ttsSetButtonState(document.getElementById('btn-speak-lyrics'), 'idle'); toggleTtsSpeedMenu('tts-speed-menu-lyrics', false);" class="text-rose-400 hover:text-rose-300 transition-colors font-sans">⏹ Stopp</button>
-                                                </div>
-                                                <div class="mt-1.5 px-1 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20 text-center">
-                                                    <span class="text-[10px] font-bold text-blue-400 font-mono">⚡ Tempo: Auto (Echtzeit-Sync)</span>
-                                                    <p class="text-[8px] text-slate-400 mt-0.5">Wird dynamisch an den Songtakt angepasst</p>
-                                                </div>
-                                            </div>
-                                            <select id="tts-voice-select" onchange="setTtsVoiceId(this.value)" class="w-full bg-slate-800 text-white text-[10px] xxs:text-xs px-2.5 py-2 rounded-xl border border-slate-700 mt-1"></select>
-                                        </div>
-                                        <!-- NEW: StandBy-Transparenz-Regler - steuert, wie blickdicht der schwarze
-                                             Hintergrund im StandBy-/Lockscreen-Modus ist. -->
-                                        <div class="px-2 py-1.5">
-                                            <div class="flex items-center justify-between mb-1">
-                                                <label for="standby-opacity-slider" id="label-standby-opacity" class="text-[9px] xxs:text-[10px] sm:text-xs font-bold text-slate-300">StandBy-Bild schärfer</label>
-                                                <span id="standby-opacity-value" class="text-[9px] xxs:text-[10px] font-mono text-slate-400">0%</span>
-                                            </div>
-                                            <input type="range" id="standby-opacity-slider" min="0" max="100" step="5" value="0" class="w-full accent-blue-500" oninput="updateStandbyOpacity(this.value)">
-                                        </div>
-                                        <!-- NEW: Bildschirm-an-Regler für StandBy (Screen Wake Lock API) -->
-                                        <button onclick="toggleStandbyWakeLock()" id="btn-toggle-wakelock" class="text-left text-[10px] xxs:text-xs sm:text-sm text-teal-400 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">Bildschirm an (StandBy): AN</button>
-                                        <!-- NEU v24.74: Nutzer wünschte sich bessere Aufklärung darüber, was diese
-                                             Einstellung eigentlich tut, statt nur "AN/AUS" ohne Kontext. -->
-                                        <p id="settings-wakelock-hint" class="text-left text-[8px] xxs:text-[9px] text-slate-500 px-2 leading-snug -mt-1 mb-1">Hält den Bildschirm nur wach, solange Musik läuft - pausiert sie, darf das Handy normal einschlafen.</p>
-                                        <!-- NEU v24.80: StandBy-Design-Auswahl - Nutzerwunsch nach mehreren
-                                             wählbaren visuellen Varianten für den Lockscreen. -->
-                                        <div class="px-2 py-1">
-                                            <label for="standby-design-select" id="label-standby-design" class="text-[9px] xxs:text-[10px] sm:text-xs font-bold text-slate-300 block mb-1">StandBy-Design</label>
-                                            <select id="standby-design-select" onchange="changeStandbyDesign(this.value)" class="w-full text-[10px] xxs:text-xs bg-slate-800 text-teal-400 border border-slate-700 rounded px-2 py-1.5 font-bold">
-                                                <option value="classic" id="opt-standby-design-classic">Classic</option>
-                                                <option value="minimal" id="opt-standby-design-minimal">Minimal</option>
-                                                <option value="cover-focus" id="opt-standby-design-cover-focus">Cover-Fokus</option>
-                                                <option value="clock-only" id="opt-standby-design-clock-only">Nur Uhr</option>
-                                                <option value="vinyl" id="opt-standby-design-vinyl">Vinyl</option>
-                                                <option value="split" id="opt-standby-design-split">Split</option>
-                                                <option value="typography" id="opt-standby-design-typography">Typografie</option>
-                                                <option value="edge-glow" id="opt-standby-design-edge-glow">Edge-Glow</option>
-                                                <option value="compact" id="opt-standby-design-compact">Kompakt</option>
-                                                <option value="poster" id="opt-standby-design-poster">Poster</option>
-                                                <option value="frame" id="opt-standby-design-frame">Rahmen</option>
-                                                <option value="neon" id="opt-standby-design-neon">Neon</option>
-                                                <option value="polaroid" id="opt-standby-design-polaroid">Polaroid</option>
-                                                <option value="bar" id="opt-standby-design-bar">Leiste</option>
-                                                <option value="grid" id="opt-standby-design-grid">Raster</option>
-                                                <option value="transparent" id="opt-standby-design-transparent">Transparent</option>
-                                                <option value="giant-clock" id="opt-standby-design-giant-clock">Riesen-Uhr</option>
-                                                <option value="zen" id="opt-standby-design-zen">Zen</option>
-                                                <option value="stacked" id="opt-standby-design-stacked">Gestapelt</option>
-                                                <option value="contrast" id="opt-standby-design-contrast">Kontrast</option>
-                                                <option value="cyberpunk" id="opt-standby-design-cyberpunk">Cyberpunk</option>
-                                                <option value="cassette" id="opt-standby-design-cassette">Retro-Kassette</option>
-                                                <option value="ambient-orb" id="opt-standby-design-ambient-orb">Ambient-Orb</option>
-                                                <option value="hologram" id="opt-standby-design-hologram">Hologram</option>
-                                                <option value="studio" id="opt-standby-design-studio">Studio</option>
-                                            </select>
-                                        </div>
-                                        <!-- NEU v24.88: Manuelle Nachjustierung der Auto-Fit-Größe. -->
-                                        <div class="px-2 py-1.5">
-                                            <div class="flex items-center justify-between mb-1">
-                                                <label for="standby-scale-slider" id="label-standby-scale" class="text-[9px] xxs:text-[10px] sm:text-xs font-bold text-slate-300">StandBy-Größe</label>
-                                                <span id="standby-scale-label" class="text-[9px] xxs:text-[10px] text-teal-400 font-mono">100%</span>
-                                            </div>
-                                            <input type="range" id="standby-scale-slider" min="0.6" max="1.3" step="0.05" value="1" oninput="changeStandbyManualScale(this.value)" class="w-full">
-                                            <p id="settings-standby-scale-hint" class="text-left text-[8px] xxs:text-[9px] text-slate-500 leading-snug mt-1">Passt sich automatisch an deinen Bildschirm an - hier nur bei Bedarf feinjustieren.</p>
-                                        </div>
-                                        <!-- NEU v24.81: Design-Baukasten (Akzentfarbe + Eckenradius) + Design-Code
-                                             zum Teilen mit anderen. -->
-                                        <div class="px-2 py-1.5 flex items-center gap-2">
-                                            <label for="standby-accent-input" id="label-standby-accent" class="text-[9px] xxs:text-[10px] sm:text-xs font-bold text-slate-300 flex-1">Akzentfarbe</label>
-                                            <input type="color" id="standby-accent-input" value="#ffffff" onchange="changeStandbyAccent(this.value)" class="h-7 w-10 rounded border border-slate-700 bg-slate-800 cursor-pointer">
-                                        </div>
-                                        <div class="px-2 py-1.5">
-                                            <div class="flex items-center justify-between mb-1">
-                                                <label for="standby-radius-slider" id="label-standby-radius" class="text-[9px] xxs:text-[10px] sm:text-xs font-bold text-slate-300">Eckenradius</label>
-                                                <span id="standby-radius-label" class="text-[9px] xxs:text-[10px] text-teal-400 font-mono">32px</span>
-                                            </div>
-                                            <input type="range" id="standby-radius-slider" min="0" max="48" step="2" value="32" oninput="changeStandbyRadius(this.value)" class="w-full">
-                                        </div>
-                                        <div class="px-2 py-1.5">
-                                            <p id="label-standby-design-code" class="text-[9px] xxs:text-[10px] sm:text-xs font-bold text-slate-300 mb-1">Design-Code teilen</p>
-                                            <div class="flex gap-1.5">
-                                                <input type="text" id="standby-design-code-input" placeholder="Code hier einfügen..." class="flex-1 min-w-0 text-[9px] xxs:text-[10px] bg-slate-800 text-slate-300 border border-slate-700 rounded px-2 py-1.5 font-mono">
-                                                <button onclick="copyStandbyDesignCode()" id="btn-standby-design-copy" class="shrink-0 text-[9px] xxs:text-[10px] bg-teal-700 hover:bg-teal-600 text-white rounded px-2 py-1.5 font-bold transition-colors">Kopieren</button>
-                                                <button onclick="loadStandbyDesignCode()" id="btn-standby-design-load" class="shrink-0 text-[9px] xxs:text-[10px] bg-slate-700 hover:bg-slate-600 text-white rounded px-2 py-1.5 font-bold transition-colors">Laden</button>
-                                            </div>
-                                            <p id="settings-design-code-hint" class="text-left text-[8px] xxs:text-[9px] text-slate-500 leading-snug mt-1">Kopiere deinen StandBy-Look als Code und schick ihn Freunden - die laden ihn hier ein und haben genau denselben Style.</p>
-                                        </div>
-                                        <!-- NEU v24.77: Nutzer meldete - Benachrichtigungen kommen nie an. Root Cause:
-                                             Browser blockieren Berechtigungsanfragen ohne echten Klick oft komplett,
-                                             lautlos, ganz ohne sichtbaren Dialog. Dieser Button ist an einen echten
-                                             Klick gekoppelt und zeigt den System-Dialog dadurch zuverlässig. -->
-                                        <button onclick="requestNotificationPermissionManually()" id="btn-notification-permission" class="text-left text-[10px] xxs:text-xs sm:text-sm text-teal-400 px-2 py-1.5 rounded hover:bg-slate-700 transition-colors font-bold">Benachrichtigungen: nicht eingerichtet</button>
-                                        <p id="settings-notification-hint" class="text-left text-[8px] xxs:text-[9px] text-slate-500 px-2 leading-snug -mt-1 mb-1">Für die "Willkommen zurück"-Meldung, falls Musik pausiert war während du weg warst.</p>
-                                        <p id="settings-version-label" class="text-left text-[9px] xxs:text-[10px] text-slate-500 px-2 py-1.5 font-mono select-all">Version —</p>
-                                        
-                                        <div class="h-px w-full bg-slate-700 my-1"></div>
-                                        <div class="flex justify-between items-center px-1 mb-1">
-                                            <p id="label-live-sync" class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-blue-400">Live Sync Offset</p>
-                                            <button onclick="resetSyncOffset(this)" id="btn-resync" class="text-[7px] xxs:text-[8px] bg-blue-500/20 hover:bg-blue-500/40 text-blue-300 px-1.5 py-0.5 rounded transition-colors uppercase font-bold tracking-wider active:scale-95">Re-Sync</button>
-                                        </div>
-                                        <div class="px-2 py-1 flex items-center gap-2">
-                                            <input type="range" id="sync-slider" min="-5000" max="5000" step="50" value="-800" class="w-full h-1 bg-slate-600 rounded-lg appearance-none cursor-pointer">
-                                            <span id="sync-value" class="text-[8px] xxs:text-[10px] text-white font-mono w-6 xxs:w-8 text-right">-800</span>
-                                        </div>
-                                    </div>
+    <!-- Context Switcher Tabs -->
+    <div class="flex items-center gap-1 p-1 bg-slate-800/70 rounded-xl border border-white/5 mb-1">
+        <button id="tab-btn-global" onclick="switchSettingsTab('global')" class="flex-1 py-1.5 px-2 rounded-lg text-[10px] xxs:text-xs font-bold transition-all flex items-center justify-center gap-1.5 bg-blue-600 text-white shadow-md">
+            <span>⚙️</span> <span>Website</span>
+        </button>
+        <button id="tab-btn-lyrics" onclick="switchSettingsTab('lyrics')" class="flex-1 py-1.5 px-2 rounded-lg text-[10px] xxs:text-xs font-bold transition-all flex items-center justify-center gap-1.5 bg-transparent text-slate-400 hover:text-white">
+            <span>🎵</span> <span>Songtext</span>
+        </button>
+    </div>
 
+    <!-- ========================================================= -->
+    <!-- TAB 1: ALLGEMEINE WEBSITE-EINSTELLUNGEN                  -->
+    <!-- ========================================================= -->
+    <div id="settings-tab-global" class="flex flex-col gap-2 w-full">
+        <!-- Darstellungs-Größe (Zoom / Skalierung) -->
+        <div class="p-2.5 rounded-xl bg-slate-800/50 border border-white/5">
+            <div class="flex items-center justify-between mb-1.5">
+                <label for="app-zoom-slider" class="text-[10px] sm:text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                    <span>🔍</span> <span>Darstellungs-Größe</span>
+                </label>
+                <div class="flex items-center gap-1.5">
+                    <span id="app-zoom-val" class="text-[10px] sm:text-xs font-mono font-bold text-purple-400 bg-purple-500/15 px-2 py-0.5 rounded-md border border-purple-500/25">100%</span>
+                    <button onclick="resetAppZoom()" class="text-[9px] px-2 py-0.5 rounded bg-white/10 hover:bg-white/20 text-slate-300 font-bold transition-colors">100%</button>
+                </div>
+            </div>
+            <input type="range" id="app-zoom-slider" min="0.85" max="1.40" step="0.05" value="1.0" oninput="changeAppZoom(this.value)" class="w-full accent-purple-500 cursor-pointer">
+            <div class="flex justify-between text-[8px] text-slate-400 font-mono mt-0.5 px-0.5">
+                <span>85%</span>
+                <span>100% (Standard)</span>
+                <span>140%</span>
+            </div>
+        </div>
+
+        <!-- Design, Themes & Leistung -->
+        <p class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-slate-400 px-1 mt-0.5">Design &amp; Leistung</p>
+        <div class="grid grid-cols-2 gap-1.5 w-full">
+            <button onclick="toggleSiteTheme()" id="btn-toggle-theme" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-blue-300 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-blue-500/25 transition-all font-bold truncate active:scale-95 flex items-center justify-center gap-1">
+                <span>🌙</span> <span>Dunkel</span>
+            </button>
+            <button onclick="toggleSitePerf()" id="btn-toggle-perf" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-green-400 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-green-500/25 transition-all font-bold truncate active:scale-95 flex items-center justify-center gap-1">
+                <span>🚀</span> <span>60 FPS</span>
+            </button>
+            <button onclick="toggleSiteLiquid()" id="btn-toggle-liquid" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-cyan-300 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold truncate active:scale-95 flex items-center justify-center gap-1">
+                <span>💧</span> <span>Liquid Glass</span>
+            </button>
+            <button onclick="toggleUiSoundEnabled()" id="btn-toggle-sound" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-teal-400 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold whitespace-nowrap active:scale-95">UI-Sounds: AN</button>
+            <button onclick="toggleHapticEnabled()" id="btn-toggle-haptic" class="col-span-2 text-center text-[9px] xxs:text-[10px] sm:text-xs text-teal-400 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold whitespace-nowrap active:scale-95">Haptik: AN</button>
+        </div>
+
+        <div class="h-px w-full bg-slate-700/70 my-0.5"></div>
+
+        <!-- StandBy & Sperrbildschirm -->
+        <p class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-slate-400 px-1">StandBy-Modus (Lockscreen)</p>
+        <div class="px-1">
+            <label for="standby-design-select" id="label-standby-design" class="text-[9px] xxs:text-[10px] sm:text-xs font-bold text-slate-300 block mb-1">StandBy-Design</label>
+            <select id="standby-design-select" onchange="changeStandbyDesign(this.value)" class="w-full text-[10px] xxs:text-xs bg-slate-800 text-teal-400 border border-slate-700 rounded-xl px-2.5 py-2 font-bold">
+                <option value="classic" id="opt-standby-design-classic">Classic</option>
+                <option value="minimal" id="opt-standby-design-minimal">Minimal</option>
+                <option value="cover-focus" id="opt-standby-design-cover-focus">Cover-Fokus</option>
+                <option value="clock-only" id="opt-standby-design-clock-only">Nur Uhr</option>
+                <option value="vinyl" id="opt-standby-design-vinyl">Vinyl</option>
+                <option value="split" id="opt-standby-design-split">Split</option>
+                <option value="typography" id="opt-standby-design-typography">Typografie</option>
+                <option value="edge-glow" id="opt-standby-design-edge-glow">Edge-Glow</option>
+                <option value="compact" id="opt-standby-design-compact">Kompakt</option>
+                <option value="poster" id="opt-standby-design-poster">Poster</option>
+                <option value="frame" id="opt-standby-design-frame">Rahmen</option>
+                <option value="neon" id="opt-standby-design-neon">Neon</option>
+                <option value="polaroid" id="opt-standby-design-polaroid">Polaroid</option>
+                <option value="bar" id="opt-standby-design-bar">Leiste</option>
+                <option value="grid" id="opt-standby-design-grid">Raster</option>
+                <option value="transparent" id="opt-standby-design-transparent">Transparent</option>
+                <option value="giant-clock" id="opt-standby-design-giant-clock">Riesen-Uhr</option>
+                <option value="zen" id="opt-standby-design-zen">Zen</option>
+                <option value="stacked" id="opt-standby-design-stacked">Gestapelt</option>
+                <option value="contrast" id="opt-standby-design-contrast">Kontrast</option>
+                <option value="cyberpunk" id="opt-standby-design-cyberpunk">Cyberpunk</option>
+                <option value="cassette" id="opt-standby-design-cassette">Retro-Kassette</option>
+                <option value="ambient-orb" id="opt-standby-design-ambient-orb">Ambient-Orb</option>
+                <option value="hologram" id="opt-standby-design-hologram">Hologram</option>
+                <option value="studio" id="opt-standby-design-studio">Studio</option>
+            </select>
+        </div>
+
+        <div class="px-1 py-1">
+            <div class="flex items-center justify-between mb-1">
+                <label for="standby-opacity-slider" id="label-standby-opacity" class="text-[9px] xxs:text-[10px] sm:text-xs font-bold text-slate-300">StandBy-Bild schärfer</label>
+                <span id="standby-opacity-value" class="text-[9px] xxs:text-[10px] font-mono text-slate-400">0%</span>
+            </div>
+            <input type="range" id="standby-opacity-slider" min="0" max="100" step="5" value="0" class="w-full accent-blue-500" oninput="updateStandbyOpacity(this.value)">
+        </div>
+
+        <div class="px-1 py-1">
+            <div class="flex items-center justify-between mb-1">
+                <label for="standby-scale-slider" id="label-standby-scale" class="text-[9px] xxs:text-[10px] sm:text-xs font-bold text-slate-300">StandBy-Größe</label>
+                <span id="standby-scale-label" class="text-[9px] xxs:text-[10px] text-teal-400 font-mono">100%</span>
+            </div>
+            <input type="range" id="standby-scale-slider" min="0.6" max="1.3" step="0.05" value="1" oninput="changeStandbyManualScale(this.value)" class="w-full">
+            <p id="settings-standby-scale-hint" class="text-left text-[8px] xxs:text-[9px] text-slate-500 leading-snug mt-1">Passt sich automatisch an deinen Bildschirm an - hier nur bei Bedarf feinjustieren.</p>
+        </div>
+
+        <button onclick="toggleStandbyWakeLock()" id="btn-toggle-wakelock" class="text-left text-[10px] xxs:text-xs text-teal-400 px-2 py-1.5 rounded-xl hover:bg-slate-800 transition-colors font-bold">Bildschirm an (StandBy): AN</button>
+        <p id="settings-wakelock-hint" class="text-left text-[8px] xxs:text-[9px] text-slate-500 px-2 leading-snug -mt-1 mb-0.5">Hält den Bildschirm nur wach, solange Musik läuft - pausiert sie, darf das Handy normal einschlafen.</p>
+
+        <div class="px-1 py-1 flex items-center gap-2">
+            <label for="standby-accent-input" id="label-standby-accent" class="text-[9px] xxs:text-[10px] sm:text-xs font-bold text-slate-300 flex-1">Akzentfarbe</label>
+            <input type="color" id="standby-accent-input" value="#ffffff" onchange="changeStandbyAccent(this.value)" class="h-7 w-10 rounded border border-slate-700 bg-slate-800 cursor-pointer">
+        </div>
+
+        <div class="px-1 py-1">
+            <div class="flex items-center justify-between mb-1">
+                <label for="standby-radius-slider" id="label-standby-radius" class="text-[9px] xxs:text-[10px] sm:text-xs font-bold text-slate-300">Eckenradius</label>
+                <span id="standby-radius-label" class="text-[9px] xxs:text-[10px] text-teal-400 font-mono">32px</span>
+            </div>
+            <input type="range" id="standby-radius-slider" min="0" max="48" step="2" value="32" oninput="changeStandbyRadius(this.value)" class="w-full">
+        </div>
+
+        <div class="px-1 py-1">
+            <p id="label-standby-design-code" class="text-[9px] xxs:text-[10px] sm:text-xs font-bold text-slate-300 mb-1">Design-Code teilen</p>
+            <div class="flex gap-1.5">
+                <input type="text" id="standby-design-code-input" placeholder="Code hier einfügen..." class="flex-1 min-w-0 text-[9px] xxs:text-[10px] bg-slate-800 text-slate-300 border border-slate-700 rounded-xl px-2 py-1.5 font-mono">
+                <button onclick="copyStandbyDesignCode()" id="btn-standby-design-copy" class="shrink-0 text-[9px] xxs:text-[10px] bg-teal-700 hover:bg-teal-600 text-white rounded-xl px-2 py-1.5 font-bold transition-colors">Kopieren</button>
+                <button onclick="loadStandbyDesignCode()" id="btn-standby-design-load" class="shrink-0 text-[9px] xxs:text-[10px] bg-slate-700 hover:bg-slate-600 text-white rounded-xl px-2 py-1.5 font-bold transition-colors">Laden</button>
+            </div>
+            <p id="settings-design-code-hint" class="text-left text-[8px] xxs:text-[9px] text-slate-500 leading-snug mt-1">Kopiere deinen StandBy-Look als Code und schick ihn Freunden.</p>
+        </div>
+
+        <div class="h-px w-full bg-slate-700/70 my-0.5"></div>
+
+        <!-- Benachrichtigungen -->
+        <button onclick="requestNotificationPermissionManually()" id="btn-notification-permission" class="text-left text-[10px] xxs:text-xs text-teal-400 px-2 py-1.5 rounded-xl hover:bg-slate-800 transition-colors font-bold">Benachrichtigungen: nicht eingerichtet</button>
+        <p id="settings-notification-hint" class="text-left text-[8px] xxs:text-[9px] text-slate-500 px-2 leading-snug -mt-1 mb-1">Für die "Willkommen zurück"-Meldung, falls Musik pausiert war während du weg warst.</p>
+
+        <!-- Shortcut zu Songtext -->
+        <div class="p-2 rounded-xl bg-gradient-to-r from-blue-900/30 to-purple-900/30 border border-blue-500/20 mt-1 flex items-center justify-between">
+            <span class="text-[9px] xxs:text-[10px] font-bold text-slate-200">🎵 Songtext &amp; Animationen</span>
+            <button onclick="switchSettingsTab('lyrics')" class="text-[9px] xxs:text-[10px] px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold transition-all">Anpassen ➔</button>
+        </div>
+
+        <p id="settings-version-label" class="text-left text-[9px] xxs:text-[10px] text-slate-500 px-2 py-1 font-mono select-all">Version —</p>
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- TAB 2: SONGTEXT & MUSIK-DASHBOARD                        -->
+    <!-- ========================================================= -->
+    <div id="settings-tab-lyrics" class="hidden flex-col gap-2 w-full">
+        <p id="label-animation-style" class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-slate-400 px-1 sticky top-0 bg-[#0f172a] py-0.5 z-10">Animation Style</p>
+        <select id="lyrics-style-select" onchange="setLyricsStyle(this.value)" class="w-full bg-slate-800 text-white text-[10px] xxs:text-xs sm:text-sm px-2.5 py-2 rounded-xl border border-slate-600 focus:outline-none focus:border-blue-500 mb-0.5"></select>
+        
+        <div id="lyrics-style-preview-box" class="w-full bg-black/50 rounded-xl p-2 sm:p-2.5 overflow-hidden text-center min-h-[48px] sm:min-h-[52px] flex items-center justify-center select-none border border-white/5">
+            <p id="lyrics-style-preview-text" class="lyric-line active text-[11px] sm:text-xs font-bold leading-tight !m-0 !max-w-full !p-0"></p>
+        </div>
+
+        <div class="h-px w-full bg-slate-700/70 my-0.5"></div>
+        <div class="flex justify-between items-center px-1 mb-0.5">
+            <p id="label-live-sync" class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-blue-400">Live Sync Offset</p>
+            <button onclick="resetSyncOffset(this)" id="btn-resync" class="text-[7px] xxs:text-[8px] bg-blue-500/20 hover:bg-blue-500/40 text-blue-300 px-1.5 py-0.5 rounded transition-colors uppercase font-bold tracking-wider active:scale-95">Re-Sync</button>
+        </div>
+        <div class="px-1 py-1 flex items-center gap-2">
+            <input type="range" id="sync-slider" min="-5000" max="5000" step="50" value="-800" class="w-full h-1 bg-slate-600 rounded-lg appearance-none cursor-pointer">
+            <span id="sync-value" class="text-[8px] xxs:text-[10px] text-white font-mono w-6 xxs:w-8 text-right">-800</span>
+        </div>
+
+        <div class="h-px w-full bg-slate-700/70 my-0.5"></div>
+        <div class="w-full flex flex-col gap-1 mt-0.5 relative">
+            <div class="inline-flex items-center w-full rounded-xl bg-cyan-500/15 border border-cyan-500/20">
+                <button onclick="speakLyrics(this)" id="btn-speak-lyrics" class="flex-1 text-center text-[10px] xxs:text-xs text-cyan-300 px-2.5 py-2 hover:bg-cyan-500/25 transition-all font-bold active:scale-95 flex items-center justify-center gap-1.5 rounded-l-xl">
+                    <span>📢</span> <span>Songtext vorlesen</span>
+                </button>
+                <button onclick="toggleTtsSpeedMenu('tts-speed-menu-lyrics')" class="px-2 py-2 text-cyan-400 hover:bg-cyan-500/25 rounded-r-xl border-l border-cyan-500/20 text-[10px] xxs:text-xs font-mono font-bold transition-colors" title="Tempo anpassen">
+                    <span class="tts-speed-indicator-lyrics">Auto</span>
+                </button>
+            </div>
+            <!-- Mini-Menü Lyrics -->
+            <div id="tts-speed-menu-lyrics" class="hidden absolute top-full left-0 right-0 mt-1 z-50 p-2 rounded-xl bg-slate-900/95 border border-slate-700 shadow-2xl backdrop-blur-xl">
+                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 py-1 flex items-center justify-between">
+                    <span>Tempo</span>
+                    <button onclick="speechSynthesis.cancel(); ttsSetButtonState(document.getElementById('btn-speak-lyrics'), 'idle'); toggleTtsSpeedMenu('tts-speed-menu-lyrics', false);" class="text-rose-400 hover:text-rose-300 transition-colors font-sans">⏹ Stopp</button>
+                </div>
+                <div class="mt-1.5 px-1 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20 text-center">
+                    <span class="text-[10px] font-bold text-blue-400 font-mono">⚡ Tempo: Auto (Echtzeit-Sync)</span>
+                    <p class="text-[8px] text-slate-400 mt-0.5">Wird dynamisch an den Songtakt angepasst</p>
+                </div>
+            </div>
+            <select id="tts-voice-select" onchange="setTtsVoiceId(this.value)" class="w-full bg-slate-800 text-white text-[10px] xxs:text-xs px-2.5 py-2 rounded-xl border border-slate-700 mt-1"></select>
+        </div>
+
+        <div class="h-px w-full bg-slate-700/70 my-0.5"></div>
+        <p id="label-features" class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-slate-400 px-1">Player &amp; Dashboard Features</p>
+        <div class="grid grid-cols-2 gap-1.5 w-full">
+            <button onclick="toggleCanvasVideo()" id="btn-toggle-canvas" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-green-400 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold whitespace-nowrap active:scale-95">Canvas: AN</button>
+            <button onclick="toggleAmbientColor()" id="btn-toggle-ambient" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-cyan-400 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold whitespace-nowrap active:scale-95">Ambient: AN</button>
+            <button onclick="toggleColorFrame()" id="btn-toggle-color-frame" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-cyan-400 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold whitespace-nowrap active:scale-95">Farbrahmen: AN</button>
+            <button onclick="toggleGlowEffect()" id="btn-toggle-glow" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-orange-400 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold whitespace-nowrap active:scale-95">Glow-Effekt: AN</button>
+            <button onclick="toggleCoverGlow()" id="btn-toggle-cover-glow" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-yellow-400 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold whitespace-nowrap active:scale-95">Cover-Glow: AN</button>
+            <button onclick="toggleTilt()" id="btn-toggle-tilt" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-purple-400 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold whitespace-nowrap active:scale-95">Spatial Tilt: AN</button>
+        </div>
+        <div class="grid grid-cols-2 gap-1.5 w-full mt-0.5">
+            <button onclick="generateShareCard()" id="btn-share-card" class="text-center text-[10px] xxs:text-xs text-pink-300 px-2 py-2 rounded-xl bg-pink-500/15 hover:bg-pink-500/25 border border-pink-500/20 transition-all font-bold truncate active:scale-95">🎴 Share Card</button>
+            <button onclick="quickExportSongCard()" id="btn-quick-export" class="text-center text-[10px] xxs:text-xs text-pink-300 px-2 py-2 rounded-xl bg-pink-500/15 hover:bg-pink-500/25 border border-pink-500/20 transition-all font-bold truncate active:scale-95">📸 Export</button>
+        </div>
+
+        <button onclick="switchSettingsTab('global')" class="w-full text-center text-[9px] xxs:text-[10px] text-slate-400 hover:text-white py-1.5 rounded-lg hover:bg-white/5 border border-white/5 font-bold transition-all mt-1">
+            ⚙️ Zu allen Website-Einstellungen ➔
+        </button>
+    </div>
+</div>
 
 <!-- ========================================================= -->
 <!-- 🏆 INTERACTIVE TUTORIAL QUEST HUD (V5)                    -->
@@ -8364,6 +8438,9 @@
             'applemusic', 'applemusicpro', 'binary', 'flagwave', 'matrix', 'typewriter',
             'wave-char', 'zoom-char'
         ]);
+        const LINE_LEVEL_STYLES = new Set([
+            'cinematic', 'paperfold', 'static'
+        ]);
         // PERF-FIX v24.17: merkt sich, ob die AKTUELL gerenderte DOM Zeichen-Spans enthält -
         // nötig, damit ein Stilwechsel MITTEN im Song (ohne Songwechsel) erkennt, wenn die
         // vorhandene DOM nicht zum neu gewählten Stil passt, und dann gezielt neu rendert.
@@ -8441,13 +8518,15 @@
             if (!box || !textEl) return;
 
             const isCharStyle = CHAR_LEVEL_STYLES.has(style);
+            const isLineStyle = typeof LINE_LEVEL_STYLES !== 'undefined' && LINE_LEVEL_STYLES.has(style);
+            const isWordStyle = !isCharStyle && !isLineStyle;
             const isLowEnd = document.body.classList.contains('low-end');
 
-            // Responsive desktop & mobile sizing - compact font so it fits comfortably on desktop
+            // Responsive desktop & mobile sizing
             box.className = `w-full bg-black/50 rounded-xl p-2 sm:p-2.5 mb-1 overflow-hidden text-center min-h-[48px] sm:min-h-[52px] flex items-center justify-center select-none lyrics-style-${style} relative border border-white/10`;
             textEl.className = 'lyric-line active text-[11px] sm:text-xs font-bold leading-tight !m-0 !max-w-full !p-0';
 
-            // Type badge & performance explanation
+            // Accurate 3-level animation mode badge
             let badgeEl = document.getElementById('lyrics-preview-mode-badge');
             if (!badgeEl) {
                 badgeEl = document.createElement('div');
@@ -8455,21 +8534,29 @@
                 box.parentNode.insertBefore(badgeEl, box.nextSibling);
             }
 
-            const badgeType = isCharStyle ? '🔤 Buchstabe für Buchstabe' : '📄 Zeile für Zeile';
-            const badgeColor = isCharStyle ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40' : 'bg-slate-700/60 text-slate-300 border-slate-600/40';
+            let badgeType = '💬 Wort für Wort';
+            let badgeColor = 'bg-purple-500/20 text-purple-300 border-purple-500/40';
+
+            if (isCharStyle) {
+                badgeType = '🔤 Buchstabe für Buchstabe';
+                badgeColor = 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40';
+            } else if (isLineStyle) {
+                badgeType = '📄 Ganze Zeile';
+                badgeColor = 'bg-slate-700/60 text-slate-300 border-slate-600/40';
+            }
 
             let lowEndNotice = '';
             if (isLowEnd) {
-                lowEndNotice = '<div class="text-[9px] text-amber-400/90 font-medium mt-1 leading-tight text-left px-1">⚠️ Low-End Modus: Rendering läuft zeilenweise ohne GPU-Shader zur Schonung des Akkus.</div>';
+                lowEndNotice = '<div class="text-[9px] text-amber-400/90 font-medium mt-1 leading-tight text-left px-1">⚠️ Low-End Modus: GPU-Shader deaktiviert zur Schonung des Akkus.</div>';
             }
 
             badgeEl.innerHTML = '<div class="flex items-center justify-between gap-2 px-1 mt-1 mb-1 text-[9px] sm:text-[10px]">' +
-                '<span class="font-bold text-slate-400">Art der Animation:</span>' +
+                '<span class="font-bold text-slate-400">Animations-Typ:</span>' +
                 '<span class="px-2 py-0.5 rounded-full font-bold border text-[9px] font-mono ' + badgeColor + '">' + badgeType + '</span>' +
             '</div>' + lowEndNotice;
 
             // Prepare DOM elements
-            let allCharRefs = []; // Flat array of { wi, ci, el } for true letter-by-letter animation
+            let allCharRefs = [];
             if (isCharStyle) {
                 textEl.innerHTML = LYRICS_PREVIEW_WORDS.map((w, wi) => {
                     const chars = w.split('').map((c, ci) => `<span id="prev-char-${wi}-${ci}" class="lyric-char">${escapeHTML(c)}</span>`).join('');
@@ -8509,7 +8596,6 @@
                         }
                     }
 
-                    // Update word containers
                     for (let wi = 0; wi < totalWords; wi++) {
                         const wSpan = document.getElementById(`prev-word-${wi}`);
                         if (!wSpan) continue;
@@ -8529,7 +8615,6 @@
                         }
                     }
                 } else if (step === totalChars) {
-                    // Hold completed state
                     allCharRefs.forEach(ref => {
                         const cSpan = document.getElementById(ref.id);
                         if (cSpan) {
@@ -8546,7 +8631,6 @@
                         }
                     }
                 } else {
-                    // Reset pause
                     allCharRefs.forEach(ref => {
                         const cSpan = document.getElementById(ref.id);
                         if (cSpan) {
@@ -8563,7 +8647,7 @@
                 }
             }
 
-            // Word-level stepper (line / word by word)
+            // Word-level stepper (word by word)
             function tickWordStep(step) {
                 for (let wi = 0; wi < totalWords; wi++) {
                     const wSpan = document.getElementById(`prev-word-${wi}`);
@@ -8592,6 +8676,38 @@
                 }
             }
 
+            // Line-level stepper (ganze Zeile)
+            function tickLineStep(step) {
+                if (step === 0) {
+                    textEl.classList.add('active');
+                    for (let wi = 0; wi < totalWords; wi++) {
+                        const wSpan = document.getElementById(`prev-word-${wi}`);
+                        if (wSpan) {
+                            wSpan.classList.add('word-active');
+                            wSpan.classList.remove('word-passed');
+                            wSpan.style.setProperty('--fill-percent', '100%');
+                        }
+                    }
+                } else if (step === 1) {
+                    for (let wi = 0; wi < totalWords; wi++) {
+                        const wSpan = document.getElementById(`prev-word-${wi}`);
+                        if (wSpan) {
+                            wSpan.classList.remove('word-active');
+                            wSpan.classList.add('word-passed');
+                        }
+                    }
+                } else {
+                    textEl.classList.remove('active');
+                    for (let wi = 0; wi < totalWords; wi++) {
+                        const wSpan = document.getElementById(`prev-word-${wi}`);
+                        if (wSpan) {
+                            wSpan.classList.remove('word-active', 'word-passed');
+                            wSpan.style.setProperty('--fill-percent', '0%');
+                        }
+                    }
+                }
+            }
+
             clearInterval(lyricsPreviewLoopInterval);
             lyricsPreviewLoopInterval = null;
 
@@ -8603,7 +8719,15 @@
                     lyricsPreviewLoopInterval = setInterval(() => {
                         lyricsPreviewStep = (lyricsPreviewStep + 1) % totalCharSteps;
                         tickCharStep(lyricsPreviewStep);
-                    }, 180); // Quick, natural letter-by-letter cadence
+                    }, 180);
+                }
+            } else if (isLineStyle) {
+                tickLineStep(0);
+                if (typeof isLyricsSettingsOpen !== 'undefined' && isLyricsSettingsOpen && !document.hidden) {
+                    lyricsPreviewLoopInterval = setInterval(() => {
+                        lyricsPreviewStep = (lyricsPreviewStep + 1) % 3;
+                        tickLineStep(lyricsPreviewStep);
+                    }, 950);
                 }
             } else {
                 tickWordStep(0);
@@ -8612,7 +8736,7 @@
                     lyricsPreviewLoopInterval = setInterval(() => {
                         lyricsPreviewStep = (lyricsPreviewStep + 1) % totalWordSteps;
                         tickWordStep(lyricsPreviewStep);
-                    }, 550);
+                    }, 480);
                 }
             }
         }
@@ -14910,8 +15034,18 @@ window.generateShareCard = function() {
             let currentAppZoom = 1.0;
             const mainContentEl = document.getElementById('main-content');
             
+            function updateZoomUI(val) {
+                const slider = document.getElementById('app-zoom-slider');
+                const label = document.getElementById('app-zoom-val');
+                if (slider) slider.value = val;
+                if (label) label.textContent = Math.round(val * 100) + '%';
+            }
+
             function setAppZoom(scale) {
-                currentAppZoom = Math.min(1.5, Math.max(0.85, scale));
+                currentAppZoom = Math.min(1.40, Math.max(0.85, Math.round(scale * 100) / 100));
+                try {
+                    localStorage.setItem('app-zoom', currentAppZoom.toString());
+                } catch(e) {}
                 document.documentElement.style.setProperty('--app-zoom', currentAppZoom);
                 if (mainContentEl) {
                     if (Math.abs(currentAppZoom - 1.0) < 0.01) {
@@ -14920,16 +15054,27 @@ window.generateShareCard = function() {
                         mainContentEl.style.transform = 'scale(' + currentAppZoom + ')';
                     }
                 }
+                updateZoomUI(currentAppZoom);
             }
 
             window.setAppZoom = setAppZoom;
+            window.changeAppZoom = (val) => setAppZoom(parseFloat(val));
             window.resetAppZoom = () => setAppZoom(1.0);
 
-            // Safe manual zoom API - no accidental background tap hijacking!
-            // Double-tap listener completely removed so random taps never trigger or reset zoom.
+            // Restore saved zoom level
+            try {
+                const saved = localStorage.getItem('app-zoom');
+                if (saved) {
+                    const parsed = parseFloat(saved);
+                    if (!isNaN(parsed) && parsed >= 0.85 && parsed <= 1.40) {
+                        currentAppZoom = parsed;
+                        setAppZoom(currentAppZoom);
+                    }
+                }
+            } catch(e) {}
         })();
 
-                // Versteckt die Dynamic Island automatisch wenn der Musik-Bereich/Player im Blickfeld ist
+        // Versteckt die Dynamic Island automatisch wenn der Musik-Bereich/Player im Blickfeld ist
         const musicSectionEl = document.getElementById('music-section');
         if (musicSectionEl && 'IntersectionObserver' in window) {
             const diMusicObserver = new IntersectionObserver((entries) => {
@@ -15574,20 +15719,135 @@ window.generateShareCard = function() {
         // und dessen Ausbreitung gestoppt (stopPropagation) - kann den Listener dadurch
         // kategorisch nie mehr im selben Klick erreichen, unabhängig vom genauen
         // Auslöse-Szenario (Mobilgerät, Touch-Events, o.ä.).
+        // ========================================================= //
+        // --- CONTEXTUAL SETTINGS TABS & STATUS HELPERS ----------- //
+        // ========================================================= //
+        window.switchSettingsTab = function(tabName) {
+            const tabGlobal = document.getElementById('settings-tab-global');
+            const tabLyrics = document.getElementById('settings-tab-lyrics');
+            const btnGlobal = document.getElementById('tab-btn-global');
+            const btnLyrics = document.getElementById('tab-btn-lyrics');
+            const titleEl = document.getElementById('settings-modal-title');
+            
+            if (tabName === 'lyrics') {
+                if (tabGlobal) tabGlobal.classList.add('hidden');
+                if (tabLyrics) tabLyrics.classList.remove('hidden');
+                if (btnGlobal) {
+                    btnGlobal.classList.remove('bg-blue-600', 'text-white', 'shadow-md');
+                    btnGlobal.classList.add('bg-transparent', 'text-slate-400');
+                }
+                if (btnLyrics) {
+                    btnLyrics.classList.add('bg-blue-600', 'text-white', 'shadow-md');
+                    btnLyrics.classList.remove('bg-transparent', 'text-slate-400');
+                }
+                if (titleEl) titleEl.innerHTML = '<span>🎵</span> <span>Songtext &amp; Player</span>';
+                updateLyricsStylePreview(currentLyricsStyle);
+            } else {
+                if (tabGlobal) tabGlobal.classList.remove('hidden');
+                if (tabLyrics) tabLyrics.classList.add('hidden');
+                if (btnGlobal) {
+                    btnGlobal.classList.add('bg-blue-600', 'text-white', 'shadow-md');
+                    btnGlobal.classList.remove('bg-transparent', 'text-slate-400');
+                }
+                if (btnLyrics) {
+                    btnLyrics.classList.remove('bg-blue-600', 'text-white', 'shadow-md');
+                    btnLyrics.classList.add('bg-transparent', 'text-slate-400');
+                }
+                if (titleEl) titleEl.innerHTML = '<span>⚙️</span> <span>Website-Einstellungen</span>';
+                stopLyricsStylePreviewLoop();
+            }
+            updateSettingsStatusButtons();
+        };
+
+        window.updateSettingsStatusButtons = function() {
+            const isDark = document.documentElement.classList.contains('dark');
+            const isLowEnd = document.body.classList.contains('low-end');
+            const isLiquid = document.body.classList.contains('liquid-glass-active');
+            
+            const btnTheme = document.getElementById('btn-toggle-theme');
+            if (btnTheme) {
+                btnTheme.innerHTML = isDark ? '<span>🌙</span> <span>Dunkel</span>' : '<span>☀️</span> <span>Hell</span>';
+                btnTheme.className = `text-center text-[9px] xxs:text-[10px] sm:text-xs px-2 py-2 rounded-xl border font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95 ${isDark ? 'text-blue-300 bg-slate-800/80 border-blue-500/30' : 'text-amber-500 bg-amber-500/10 border-amber-500/30'}`;
+            }
+            
+            const btnPerf = document.getElementById('btn-toggle-perf');
+            if (btnPerf) {
+                btnPerf.innerHTML = isLowEnd ? '<span>🔋</span> <span>Spar-Modus</span>' : '<span>🚀</span> <span>60 FPS</span>';
+                btnPerf.className = `text-center text-[9px] xxs:text-[10px] sm:text-xs px-2 py-2 rounded-xl border font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95 ${isLowEnd ? 'text-green-400 bg-green-500/15 border-green-500/30' : 'text-slate-300 bg-slate-800/80 border-white/5'}`;
+            }
+
+            const btnLiquid = document.getElementById('btn-toggle-liquid');
+            if (btnLiquid) {
+                btnLiquid.innerHTML = isLiquid ? '<span>💧</span> <span>Liquid: AN</span>' : '<span>🧊</span> <span>Liquid: AUS</span>';
+                btnLiquid.className = `text-center text-[9px] xxs:text-[10px] sm:text-xs px-2 py-2 rounded-xl border font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95 ${isLiquid ? 'text-cyan-300 bg-cyan-500/15 border-cyan-500/30' : 'text-slate-400 bg-slate-800/80 border-white/5'}`;
+            }
+
+            const btnSound = document.getElementById('btn-toggle-sound');
+            if (btnSound && typeof uiSoundEnabled !== 'undefined') {
+                btnSound.textContent = (typeof t === 'function' ? (t('settings_sound') || 'UI-Sounds') : 'UI-Sounds') + ': ' + (uiSoundEnabled ? 'AN' : 'AUS');
+                btnSound.className = `text-center text-[9px] xxs:text-[10px] sm:text-xs px-2 py-2 rounded-xl border font-bold transition-all active:scale-95 ${uiSoundEnabled ? 'text-teal-400 bg-teal-500/15 border-teal-500/30' : 'text-slate-400 bg-slate-800/80 border-white/5'}`;
+            }
+
+            const btnHaptic = document.getElementById('btn-toggle-haptic');
+            if (btnHaptic && typeof hapticEnabled !== 'undefined') {
+                btnHaptic.textContent = (typeof t === 'function' ? (t('settings_haptic') || 'Haptik') : 'Haptik') + ': ' + (hapticEnabled ? 'AN' : 'AUS');
+                btnHaptic.className = `col-span-2 text-center text-[9px] xxs:text-[10px] sm:text-xs px-2 py-2 rounded-xl border font-bold transition-all active:scale-95 ${hapticEnabled ? 'text-teal-400 bg-teal-500/15 border-teal-500/30' : 'text-slate-400 bg-slate-800/80 border-white/5'}`;
+            }
+
+            const btnWake = document.getElementById('btn-toggle-wakelock');
+            if (btnWake && typeof standbyWakeLockEnabled !== 'undefined') {
+                btnWake.textContent = (typeof t === 'function' ? t('settings_wakelock') : 'Bildschirm an (StandBy)') + ': ' + (standbyWakeLockEnabled ? 'AN' : 'AUS');
+            }
+
+            const sliderZoom = document.getElementById('app-zoom-slider');
+            const labelZoom = document.getElementById('app-zoom-val');
+            const currentScale = parseFloat(document.documentElement.style.getPropertyValue('--app-zoom')) || 1.0;
+            if (sliderZoom) sliderZoom.value = currentScale;
+            if (labelZoom) labelZoom.textContent = Math.round(currentScale * 100) + '%';
+        };
+
+        window.toggleSiteTheme = function() {
+            if (typeof themeToggle !== 'undefined' && themeToggle) {
+                themeToggle.click();
+            } else {
+                document.documentElement.classList.toggle('dark');
+            }
+            updateSettingsStatusButtons();
+        };
+
+        window.toggleSitePerf = function() {
+            if (typeof perfToggle !== 'undefined' && perfToggle) {
+                perfToggle.click();
+            } else {
+                document.body.classList.toggle('low-end');
+            }
+            updateSettingsStatusButtons();
+        };
+
+        window.toggleSiteLiquid = function() {
+            if (typeof liquidGlassToggle !== 'undefined' && liquidGlassToggle) {
+                liquidGlassToggle.click();
+            } else {
+                document.body.classList.toggle('liquid-glass-active');
+            }
+            updateSettingsStatusButtons();
+        };
+
         window.toggleLyricsSettings = function(event, isStandalone = false) {
             if (event) event.stopPropagation();
             isLyricsSettingsOpen = !isLyricsSettingsOpen;
             if (!lyricsSettingsMenu) return;
             clearTimeout(lyricsSettingsTimeout);
             if (isLyricsSettingsOpen) {
-                if (isStandalone || (!mainMusicCard?.classList.contains('lyrics-open'))) {
+                const isFromLyrics = !isStandalone && (mainMusicCard && mainMusicCard.classList.contains('lyrics-open'));
+                switchSettingsTab(isFromLyrics ? 'lyrics' : 'global');
+                if (isStandalone || !isFromLyrics) {
                     lyricsSettingsMenu.classList.add('standalone-settings');
                 } else {
                     lyricsSettingsMenu.classList.remove('standalone-settings');
                 }
                 lyricsSettingsMenu.classList.remove('hidden', 'settings-closing');
                 lyricsSettingsMenu.classList.add('settings-opening');
-                updateLyricsStylePreview(currentLyricsStyle);
             } else {
                 stopLyricsStylePreviewLoop();
                 lyricsSettingsMenu.classList.remove('settings-opening');
@@ -15599,7 +15859,8 @@ window.generateShareCard = function() {
             }
         };
 
-        window.toggleStandaloneSettings = function(event) { if (typeof triggerTutorialEvent === "function") triggerTutorialEvent("settings_opened");
+        window.toggleStandaloneSettings = function(event) {
+            if (typeof triggerTutorialEvent === "function") triggerTutorialEvent("settings_opened");
             if (event) event.stopPropagation();
             toggleLyricsSettings(event, true);
         };
@@ -15614,7 +15875,7 @@ window.generateShareCard = function() {
             }
         });
 
-        const lyricsStyleSelectEl = document.getElementById('lyrics-style-select');
+                const lyricsStyleSelectEl = document.getElementById('lyrics-style-select');
         if (lyricsStyleSelectEl) {
             lyricsStyleSelectEl.addEventListener('focus', () => {
                 stopLyricsStylePreviewLoop();
