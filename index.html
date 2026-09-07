@@ -3137,14 +3137,14 @@
             const savedAppLang = localStorage.getItem('selectedLanguage');
             if (savedAppLang) document.documentElement.setAttribute('lang', savedAppLang);
             
-            // 🛡️ INSTANT ONBOARDING SHIELD (v24.149.0)
+            // 🛡️ INSTANT ONBOARDING SHIELD (v24.150.0)
             // Prüfe Version & Onboarding-Status VOR dem Rendern der Seite
-            const _currVer = 'v24.149.0 · 2026-09-07';
+            const _currVer = 'v24.150.0 · 2026-09-07';
             const _installedVer = localStorage.getItem('site_version_installed');
             if (_installedVer !== _currVer) {
                 localStorage.setItem('site_version_installed', _currVer);
-                localStorage.setItem('onboarding_completed', '0');
             }
+            // Onboarding startet NUR wenn es noch NIE abgeschlossen wurde ODER per URL erzwungen wird
             const _onbCompleted = (localStorage.getItem('onboarding_completed') === '1');
             const _urlP = new URLSearchParams(window.location.search);
             const _forceStart = _urlP.has('first_visit') || _urlP.has('onboarding') || _urlP.has('tutorial');
@@ -5422,21 +5422,13 @@
         // Behaelt Sprache ('selectedLanguage') und Haupt-Tutorial ('tutorialCompletedV5')
         // unberuehrt, leert aber alle veralteten Cover-/Layout-/State-Caches.
         // =========================================================
-        // FIX v24.132: Behalte alle Nutzer-Präferenzen sicher bei Versionswechsel
+        // FIX v24.150: Behalte alle Nutzer-Präferenzen und Onboarding-Status sicher bei Versionswechsel
         (function enforceVersionFreshness() {
             try {
                 const storedVer = localStorage.getItem('site_version_installed');
                 if (storedVer !== SITE_VERSION) {
                     localStorage.setItem('site_version_installed', SITE_VERSION);
-                    if (typeof window !== 'undefined' && window.OnboardingTracker) {
-                        window.OnboardingTracker.resetCounter();
-                    } else {
-                        localStorage.setItem('gp_onboarding_completion_count', '0');
-                        localStorage.setItem('gp_onboarding_status', 'pending');
-                        localStorage.removeItem('onboarding_completed');
-                        localStorage.removeItem('onboarding_v24_146_done');
-                        localStorage.removeItem('onboarding_v24_147_done');
-                    }
+                    // Onboarding-Status NICHT löschen bei Versionswechsel!
                 }
             } catch (e) {}
         })();
@@ -13721,7 +13713,7 @@ window.generateShareCard = function() {
                 return;
             }
             modalBody.innerHTML = '<div class="flex flex-col items-center text-center p-4 sm:p-7 relative overflow-hidden">' +
-                '<div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-black uppercase tracking-wider mb-3 border border-emerald-500/30"><span>Schritt 5 von 5</span> • <span>🎉 Fertig!</span></div>' +
+                '<div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 text-[10px] font-black uppercase tracking-wider mb-3 border border-purple-500/30"><span>Schritt 2 von 5</span> • <span>🎮 Quests gemeistert!</span></div>' +
                 '<div class="relative mb-4">' +
                     '<div class="absolute -inset-4 bg-gradient-to-r from-purple-600 via-pink-600 to-amber-400 rounded-full blur-xl opacity-70 animate-pulse"></div>' +
                     '<div class="relative w-24 h-24 rounded-3xl bg-gradient-to-tr from-amber-400 via-rose-500 to-purple-600 text-white flex items-center justify-center text-5xl shadow-2xl shadow-rose-500/50 animate-bounce">' +
@@ -16183,6 +16175,10 @@ window.generateShareCard = function() {
                 } catch(e) {}
             },
 
+            resetCounter() {
+                this.reset();
+            },
+
             updateUI() {
                 const completed = this.isCompleted();
                 const badge = document.getElementById('onboarding-counter-badge');
@@ -16306,13 +16302,14 @@ window.generateShareCard = function() {
                     if (window.OnboardingTracker) {
                         window.OnboardingTracker.recordCompletion();
                     } else {
-                        localStorage.setItem('onboarding_completed', 'true');
-                        localStorage.setItem('onboarding_v24_147_done', 'true');
+                        localStorage.setItem('onboarding_completed', '1');
                     }
                     localStorage.setItem('tutorialCompletedV5', 'true');
                     localStorage.setItem('accepted_privacy_version', PRIVACY_POLICY_VERSION);
                     localStorage.setItem('whatsNewSeenVersion', SITE_VERSION);
                 } catch(e) {}
+
+                document.documentElement.classList.remove('needs-onboarding');
 
                 if (typeof launchConfetti === 'function') {
                     launchConfetti();
@@ -16320,7 +16317,33 @@ window.generateShareCard = function() {
                     setTimeout(launchConfetti, 850);
                 }
                 if (typeof haptic === 'function') haptic([50, 40, 80, 50, 100]);
-                showToast('🎉 Perfekt! Willkommen im Gamingpig-Universum! Alles ist bereit.', 5000);
+                
+                // 🌟 EPISCHES ABSCHLUSS-MODAL FÜR SCHRITT 5
+                const modalOverlay = document.getElementById('modal-overlay');
+                const modalBody = document.getElementById('modal-body');
+                if (modalOverlay && modalBody) {
+                    modalBody.innerHTML = '<div class="flex flex-col items-center text-center p-4 sm:p-7 relative overflow-hidden">' +
+                        '<div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-black uppercase tracking-wider mb-3 border border-emerald-500/30"><span>Schritt 5 von 5</span> • <span>🎉 Onboarding abgeschlossen!</span></div>' +
+                        '<div class="relative mb-4">' +
+                            '<div class="absolute -inset-4 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-400 rounded-full blur-xl opacity-70 animate-pulse"></div>' +
+                            '<div class="relative w-24 h-24 rounded-3xl bg-gradient-to-tr from-emerald-400 via-teal-500 to-cyan-500 text-white flex items-center justify-center text-5xl shadow-2xl shadow-emerald-500/50 animate-bounce">' +
+                                '🌟' +
+                            '</div>' +
+                        '</div>' +
+                        '<div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-400/20 border border-emerald-400/30 text-emerald-300 text-xs font-black uppercase tracking-widest mb-3">' +
+                            '<span>STATUS: 5 / 5 VOLLSTÄNDIG ✓</span>' +
+                        '</div>' +
+                        '<h2 class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mb-2 tracking-tight">Willkommen an Bord!</h2>' +
+                        '<p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 max-w-md mb-6 leading-relaxed">Du hast alle 5 Schritte erfolgreich durchlaufen. Deine Einstellungen und Sprache wurden dauerhaft gespeichert. Du wirst beim nächsten Öffnen direkt auf die Seite weitergeleitet!</p>' +
+                        '<button onclick="window.closeModal()" class="w-full max-w-xs py-3.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs text-center shadow-xl shadow-emerald-500/30 transition-all active:scale-95 flex items-center justify-center gap-2 border border-emerald-400/30 mx-auto">' +
+                            '<span>🚀 Jetzt loslegen!</span>' +
+                        '</button>' +
+                    '</div>';
+                    modalOverlay.classList.remove('hidden');
+                    modalOverlay.classList.add('flex');
+                } else {
+                    showToast('🎉 Perfekt! Willkommen im Gamingpig-Universum! Alles ist bereit.', 5000);
+                }
             }
         };
 
@@ -18965,16 +18988,17 @@ window.setLyricsStyle = function(style) {
         }
 
         // GARANTIERTER AUTOSTART:
-        // Startet sofort und vollautomatisch, wenn onboarding_completed !== "1" oder per URL erzwungen
+        // Startet NUR dann, wenn onboarding_completed !== "1" ODER per URL erzwungen wird.
+        // Wenn abgeschlossen, wird KEINE Sprachauswahl mehr aufgerufen!
         const _isCompleted = (localStorage.getItem('onboarding_completed') === '1');
-        if (!_isCompleted || _forceOnboarding || !currentLang) {
+        if (!_isCompleted || _forceOnboarding) {
             setTimeout(() => {
                 if (window.OnboardingCoordinator && typeof window.OnboardingCoordinator.step1_language === 'function') {
                     window.OnboardingCoordinator.step1_language();
                 }
             }, 100);
         } else {
-            applyLanguage(currentLang || 'de');
+            applyLanguage(currentLang || localStorage.getItem('selectedLanguage') || 'de');
         }
     </script>
 <script>
