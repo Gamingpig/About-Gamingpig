@@ -25,9 +25,9 @@ async function sendNotificationToAll() {
     }
 
     const payload = {
-        title: '🎯 Update v24.147.0 Live – Gamingpig',
+        title: '🎯 Update v24.148.0 Live – Gamingpig',
         body: 'Onboarding-Autostart & zurücksetzbarer Status-Counter sind jetzt live!',
-        broadcastId: 'update_v24_147_0_' + Date.now(),
+        broadcastId: 'update_v24_148_0_' + Date.now(),
         url: 'https://gamingpig.github.io/About-Gamingpig/release.html',
         timestamp: Date.now()
     };
@@ -60,7 +60,7 @@ async function sendNotificationToAll() {
             await fetch(`https://ntfy.sh/${topic}`, {
                 method: 'POST',
                 headers: {
-                    'Title': 'Gamingpig v24.147.0 Update Live',
+                    'Title': 'Gamingpig v24.148.0 Update Live',
                     'Priority': 'default',
                     'Tags': 'tada,rocket',
                     'Click': 'https://gamingpig.github.io/About-Gamingpig/release.html'
