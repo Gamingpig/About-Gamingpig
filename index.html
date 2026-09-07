@@ -3617,11 +3617,16 @@
         }
         #lyrics-settings-menu.settings-opening {
             display: flex !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            pointer-events: auto !important;
             animation: lyrics-menu-in 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
             transform-origin: top right;
         }
         #lyrics-settings-menu.settings-closing {
             display: flex !important;
+            visibility: visible !important;
+            pointer-events: none !important;
             animation: lyrics-menu-out 0.15s ease-out forwards !important;
             transform-origin: top right;
         }
@@ -14539,23 +14544,8 @@ window.generateShareCard = function() {
             window.setAppZoom = setAppZoom;
             window.resetAppZoom = () => setAppZoom(1.0);
 
-            // Double tap on mobile background to toggle 1.15x readable zoom
-            let lastTapTime = 0;
-            document.addEventListener('touchend', (e) => {
-                if (e.target.closest('button, input, select, a, #modal-overlay, #lyrics-overlay, #standby-overlay, #tutorial-wrapper')) return;
-                const now = Date.now();
-                if (now - lastTapTime < 300) {
-                    e.preventDefault();
-                    if (currentAppZoom > 1.05) {
-                        setAppZoom(1.0);
-                        if (typeof showToast === 'function') showToast('🔍 Zoom zurückgesetzt (100%)', 1800);
-                    } else {
-                        setAppZoom(1.15);
-                        if (typeof showToast === 'function') showToast('🔍 Zoom aktiviert (115%)', 1800);
-                    }
-                }
-                lastTapTime = now;
-            }, { passive: false });
+            // Safe manual zoom API - no accidental background tap hijacking!
+            // Double-tap listener completely removed so random taps never trigger or reset zoom.
         })();
 
                 // Versteckt die Dynamic Island automatisch wenn der Musik-Bereich/Player im Blickfeld ist
@@ -15239,7 +15229,7 @@ window.generateShareCard = function() {
                 !e.target.closest('#btn-lyrics-settings') && 
                 !e.target.closest('#settings-global-toggle') && 
                 !e.target.closest('#footer-settings-btn')) {
-                toggleLyricsSettings();
+                toggleLyricsSettings(e);
             }
         });
 
@@ -17571,7 +17561,7 @@ window.generateShareCard = function() {
 </div>
 
 <!-- Global Standalone & Lyrics Settings Modal -->
-<div id="lyrics-settings-menu" class="absolute top-full right-0 mt-2 xxs:mt-3 bg-[#0f172a] border border-slate-700/80 rounded-2xl p-2.5 xxs:p-3 sm:p-3.5 shadow-2xl hidden flex flex-col gap-2 w-[285px] xxs:w-[315px] sm:w-[345px] max-w-[calc(100vw-1.5rem)] z-[9999] origin-top-right max-h-[390px] overflow-y-auto" style="-webkit-overflow-scrolling: touch; overscroll-behavior-y: contain;">
+<div id="lyrics-settings-menu" class="fixed bg-[#0f172a] border border-slate-700/80 rounded-2xl p-2.5 xxs:p-3 sm:p-3.5 shadow-2xl hidden flex-col gap-2 w-[285px] xxs:w-[315px] sm:w-[345px] max-w-[calc(100vw-1.5rem)] z-[10000] origin-top-right overflow-y-auto" style="-webkit-overflow-scrolling: touch; overscroll-behavior-y: contain;">
 <div class="flex items-center justify-between pb-1 mb-0.5 border-b border-white/10"><span class="text-xs font-black uppercase tracking-wider text-slate-200 flex items-center gap-1.5"><span>⚙️</span> <span>Einstellungen</span></span><button onclick="toggleLyricsSettings(event)" class="p-1 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-colors text-xs font-bold">✕</button></div>
                                         <p id="label-animation-style" class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-slate-400 px-1 sticky top-0 bg-[#0f172a] py-0.5 z-10">Animation Style</p>
                                         <select id="lyrics-style-select" onchange="setLyricsStyle(this.value)" class="w-full bg-slate-800 text-white text-[10px] xxs:text-xs sm:text-sm px-2.5 py-2 rounded-xl border border-slate-600 focus:outline-none focus:border-blue-500 mb-0.5"></select>
