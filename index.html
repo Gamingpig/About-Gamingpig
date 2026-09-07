@@ -4702,13 +4702,13 @@
         /* --- NEW: SPRACHAUSWAHL (Setup-Assistent-Stil) ------------ */
         /* ========================================================= */
         #language-picker-overlay {
-            position: fixed; inset: 0; z-index: 1000; background: #05060a;
+            position: fixed; inset: 0; z-index: 100005 !important; background: #05060a;
             display: flex; align-items: center; justify-content: center; padding: 16px;
             overflow-y: auto; -webkit-overflow-scrolling: touch;
-            opacity: 0; transition: opacity 0.5s ease;
+            opacity: 1; transition: opacity 0.3s ease;
         }
         #language-picker-overlay.lp-active { opacity: 1; }
-        #language-picker-overlay.hidden { display: none; }
+        #language-picker-overlay.hidden { display: none !important; }
         #language-picker-box {
             width: min(94vw, 460px); text-align: center; margin: auto; max-height: 96vh;
             display: flex; flex-direction: column; justify-content: center;
@@ -5371,7 +5371,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.145.0 · 2026-09-07';
+        const SITE_VERSION = 'v24.146.0 · 2026-09-07';
 
         // =========================================================
         // NEU v24.118: Automatischer Reset veralteter Cached Flags bei Versionswechsel
@@ -5384,6 +5384,8 @@
                 const storedVer = localStorage.getItem('site_version_installed');
                 if (storedVer !== SITE_VERSION) {
                     localStorage.setItem('site_version_installed', SITE_VERSION);
+                    localStorage.removeItem('onboarding_completed');
+                    localStorage.removeItem('onboarding_v24_146_done');
                 }
             } catch (e) {}
         })();
@@ -6872,6 +6874,9 @@
                 <div class="text-[9px] text-slate-400 leading-tight">Setzt Zähler, Sprache, Tutorial &amp; Einstellungen zurück</div>
             </div>
         </div>
+        <button onclick="window.restartOnboarding()" class="w-full py-2 px-3 rounded-xl bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 font-bold text-[10px] sm:text-xs transition-all active:scale-95 flex items-center justify-center gap-1.5 border border-purple-500/30 mb-1">
+            <span>🚀</span> <span>Onboarding jetzt starten</span>
+        </button>
         <button onclick="resetEverythingToFirstVisit()" class="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-extrabold text-[10px] sm:text-xs shadow-lg shadow-rose-950/50 transition-all active:scale-95 flex items-center justify-center gap-1.5 border border-rose-400/30">
             <span>🔄</span> <span>Auf Erstbesuch zurücksetzen</span>
         </button>
@@ -8198,8 +8203,11 @@
             const overlay = document.getElementById('language-picker-overlay');
             if (!overlay) return;
             overlay.classList.remove('lp-active');
+            overlay.style.opacity = '0';
             setTimeout(() => {
                 overlay.classList.add('hidden');
+                overlay.style.display = 'none';
+                overlay.style.visibility = 'hidden';
             }, 300);
         };
 
@@ -8213,8 +8221,11 @@
                 closeBtn.style.display = (!isManual && (window.OnboardingCoordinator && window.OnboardingCoordinator.isOnboarding)) ? 'none' : 'flex';
             }
             overlay.classList.remove('hidden');
-            void overlay.offsetWidth;
-            requestAnimationFrame(() => overlay.classList.add('lp-active'));
+            overlay.style.display = 'flex';
+            overlay.style.opacity = '1';
+            overlay.style.visibility = 'visible';
+            overlay.style.zIndex = '100005';
+            overlay.classList.add('lp-active');
         };
 
         window.selectLanguage = function(code) {
@@ -11372,7 +11383,7 @@
         }
 
         window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js?v=24.145.0', { updateViaCache: 'none' })
+                navigator.serviceWorker.register('sw.js?v=24.146.0', { updateViaCache: 'none' })
                     .then((reg) => {
                         // Prüfe beim Laden direkt auf Updates
                         if (reg) {
@@ -16070,6 +16081,19 @@ window.generateShareCard = function() {
         // ========================================================= //
         // 🔄 COMPLETE FIRST VISIT RESET ENGINE                     //
         // ========================================================= //
+        window.restartOnboarding = function() {
+            try {
+                localStorage.removeItem('onboarding_completed');
+                localStorage.removeItem('onboarding_v24_146_done');
+            } catch(e) {}
+            if (typeof toggleStandaloneSettings === 'function' && typeof isSettingsOpen !== 'undefined' && isSettingsOpen) {
+                toggleStandaloneSettings();
+            }
+            if (window.OnboardingCoordinator && typeof window.OnboardingCoordinator.step1_language === 'function') {
+                window.OnboardingCoordinator.step1_language();
+            }
+        };
+
         window.resetEverythingToFirstVisit = async function() {
             const confirmed = confirm('⚠️ KOMPLETTEN ERSTBESUCH SIMULIEREN?\n\nDadurch werden alle Website-Daten, Zähler, Einstellungen, Sprache und das Tutorial unwiderruflich zurückgesetzt.\n\nDie Seite startet danach komplett neu wie beim allerersten Besuch!');
             if (!confirmed) return;
@@ -16152,6 +16176,7 @@ window.generateShareCard = function() {
                 this.isOnboarding = false;
                 try {
                     localStorage.setItem('onboarding_completed', 'true');
+                    localStorage.setItem('onboarding_v24_146_done', 'true');
                     localStorage.setItem('tutorialCompletedV5', 'true');
                     localStorage.setItem('accepted_privacy_version', PRIVACY_POLICY_VERSION);
                     localStorage.setItem('whatsNewSeenVersion', SITE_VERSION);
@@ -18799,10 +18824,17 @@ window.setLyricsStyle = function(style) {
         positionDynamicIsland();
         setTimeout(positionDynamicIsland, 400); // Nachlauf, falls Fonts/Layout sich noch verschieben
 
-        if (!currentLang || !localStorage.getItem('onboarding_completed')) {
-            window.OnboardingCoordinator.step1_language();
+        const _urlParams = new URLSearchParams(window.location.search);
+        const _forceOnboarding = _urlParams.has('first_visit') || _urlParams.has('onboarding') || _urlParams.has('tutorial');
+
+        if (_forceOnboarding || !localStorage.getItem('onboarding_v24_146_done') || !localStorage.getItem('onboarding_completed') || !currentLang) {
+            setTimeout(() => {
+                if (window.OnboardingCoordinator && typeof window.OnboardingCoordinator.step1_language === 'function') {
+                    window.OnboardingCoordinator.step1_language();
+                }
+            }, 100);
         } else {
-            applyLanguage(currentLang);
+            applyLanguage(currentLang || 'de');
         }
     </script>
 <script>

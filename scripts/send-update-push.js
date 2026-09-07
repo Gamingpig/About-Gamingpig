@@ -25,9 +25,9 @@ async function sendNotificationToAll() {
     }
 
     const payload = {
-        title: '🚀 Update v24.145.0 Live – Gamingpig',
-        body: '5-Stufen Erstbesuch-Pipeline & epische Was-ist-neu Zeitreise über alle Versionen sind live!',
-        broadcastId: 'update_v24_144_0_' + Date.now(),
+        title: '🚀 Update v24.146.0 Live – Gamingpig',
+        body: 'Fix: Erstbesuch & Onboarding starten ab sofort garantiert fehlerfrei bei jedem Aufruf!',
+        broadcastId: 'update_v24_146_0_' + Date.now(),
         url: 'https://gamingpig.github.io/About-Gamingpig/release.html',
         timestamp: Date.now()
     };
@@ -60,12 +60,12 @@ async function sendNotificationToAll() {
             await fetch(`https://ntfy.sh/${topic}`, {
                 method: 'POST',
                 headers: {
-                    'Title': 'Gamingpig v24.145.0 Update Live',
+                    'Title': 'Gamingpig v24.146.0 Update Live',
                     'Priority': 'default',
                     'Tags': 'tada,rocket',
                     'Click': 'https://gamingpig.github.io/About-Gamingpig/release.html'
                 },
-                body: '5-Stufen Erstbesuch-Pipeline & epische Was-ist-neu Zeitreise über alle Versionen live auf main!'
+                body: 'Fix: Erstbesuch & Onboarding starten ab sofort garantiert fehlerfrei bei jedem Aufruf!'
             });
             console.log(`✓ Dispatched to ntfy topic: ${topic}`);
         } catch(e) {
