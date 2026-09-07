@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="de" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>🚀 Zukunfts-Roadmap & Wunsch-Zentrale – Gamingpig</title>
+    <link rel="icon" href="icon-192.png" type="image/png">
+    <script>
+        try {
+            const savedAppLang = localStorage.getItem('selectedLanguage');
+            if (savedAppLang) document.documentElement.setAttribute('lang', savedAppLang);
+        } catch(e) {}
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: '#3b82f6',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800;900&display=swap');
+        
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #03050c;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(168, 85, 247, 0.22) 0px, transparent 45%),
+                radial-gradient(at 100% 0%, rgba(59, 130, 246, 0.25) 0px, transparent 50%),
+                radial-gradient(at 50% 50%, rgba(236, 72, 153, 0.18) 0px, transparent 55%),
+                radial-gradient(at 50% 100%, rgba(16, 185, 129, 0.15) 0px, transparent 50%);
+            background-attachment: fixed;
+        }
+
+        .glow-card {
+            background: rgba(10, 15, 30, 0.85);
+            backdrop-filter: blur(28px);
+            -webkit-backdrop-filter: blur(28px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .glow-card:hover {
+            border-color: rgba(255, 255, 255, 0.28);
+            transform: translateY(-3px) scale-[1.008];
+            box-shadow: 0 30px 60px -10px rgba(0, 0, 0, 0.95), 0 0 30px rgba(168, 85, 247, 0.2);
+        }
+
+        .hero-glow-badge {
+            background: linear-gradient(135deg, #a855f7, #3b82f6, #06b6d4);
+            box-shadow: 0 0 35px rgba(168, 85, 247, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+        }
+
+        .vote-btn.voted {
+            background: rgba(168, 85, 247, 0.25) !important;
+            border-color: rgba(168, 85, 247, 0.6) !important;
+            color: #d8b4fe !important;
+        }
+    </style>
+</head>
+<body class="text-slate-100 min-h-screen flex flex-col items-center justify-between p-3.5 sm:p-6 md:p-10 selection:bg-purple-500/40">
+
+    <!-- Top Navigation Bar -->
+    <header class="max-w-4xl w-full flex items-center justify-between py-3.5 px-4 sm:px-6 rounded-2xl bg-slate-900/85 border border-slate-800 backdrop-blur-xl mb-6 sm:mb-8 shadow-2xl">
+        <a href="index.html" class="flex items-center gap-2 text-white hover:text-purple-400 font-extrabold text-xs sm:text-sm transition-colors group">
+            <span class="p-1.5 rounded-lg bg-purple-500/10 text-purple-400 group-hover:-translate-x-1 transition-transform">←</span>
+            <span id="nav-back">Hauptseite</span>
+        </a>
+
+        <div class="flex items-center gap-2 sm:gap-3">
+            <!-- TTS Button & Speed -->
+            <button id="tts-toggle-btn" onclick="toggleReadAloud()" class="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs sm:text-sm font-bold transition-all shadow-md active:scale-95">
+                <span id="tts-icon">🔊</span>
+                <span id="tts-label">Vorlesen</span>
+            </button>
+
+            <!-- Language Dropdown -->
+            <div class="relative">
+                <select id="lang-select" onchange="changeLanguage(this.value)" class="bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs sm:text-sm py-1.5 px-2.5 sm:py-2 sm:px-3 rounded-xl border border-slate-700 cursor-pointer outline-none focus:ring-2 focus:ring-purple-500 transition-all shadow-md">
+                    <option value="de">🇩🇪 Deutsch</option>
+                    <option value="en">🇬🇧 English</option>
+                    <option value="es">🇪🇸 Español</option>
+                    <option value="fr">🇫🇷 Français</option>
+                    <option value="pt">🇧🇷 Português</option>
+                    <option value="tr">🇹🇷 Türkçe</option>
+                </select>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="max-w-4xl w-full my-auto pb-12 space-y-8 sm:space-y-10">
+
+        <!-- Hero Header -->
+        <div class="text-center">
+            <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full hero-glow-badge text-white text-[10px] sm:text-xs font-black uppercase tracking-widest mb-4">
+                <span>🔮 WAS WIR ALS NÄCHSTES PLANEN</span>
+                <span>•</span>
+                <span>COMMUNITY ROADMAP</span>
+            </div>
+
+            <h1 id="hero-title" class="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight text-white mb-4 uppercase font-mono">
+                Zukunfts-Roadmap <br>
+                <span class="bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-300 bg-clip-text text-transparent drop-shadow">
+                    & Wunsch-Zentrale 🚀
+                </span>
+            </h1>
+
+            <p id="hero-subtitle" class="text-slate-200 text-sm sm:text-lg max-w-2xl mx-auto font-medium leading-relaxed drop-shadow">
+                Hier siehst du schwarz auf weiß, welche Features, Sound-Upgrades und Plattform-Meilensteine wir als Nächstes bauen – und du kannst direkt für deine Favoriten abstimmen oder eigene Ideen einreichen!
+            </p>
+        </div>
+
+        <!-- Filter & Status Bar -->
+        <div class="flex items-center justify-between gap-3 flex-wrap px-1">
+            <div class="inline-flex rounded-xl bg-slate-900/90 border border-slate-800 p-1 text-xs font-bold" id="filter-tabs">
+                <button onclick="filterRoadmap('all')" class="tab-btn px-3 py-1.5 rounded-lg bg-purple-600 text-white shadow" data-tab="all">Alle (6)</button>
+                <button onclick="filterRoadmap('in_progress')" class="tab-btn px-3 py-1.5 rounded-lg text-slate-400 hover:text-white" data-tab="in_progress">🔨 In Arbeit</button>
+                <button onclick="filterRoadmap('planned')" class="tab-btn px-3 py-1.5 rounded-lg text-slate-400 hover:text-white" data-tab="planned">📋 Geplant</button>
+                <button onclick="filterRoadmap('research')" class="tab-btn px-3 py-1.5 rounded-lg text-slate-400 hover:text-white" data-tab="research">💡 Konzept</button>
+            </div>
+            
+            <a href="#wish-form-section" class="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white font-black text-xs shadow-lg hover:shadow-purple-500/25 active:scale-95 transition-all flex items-center gap-1.5">
+                <span>✨</span> <span>Eigenen Wunsch einreichen</span>
+            </a>
+        </div>
+
+        <!-- Roadmap Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="roadmap-grid">
+
+            <!-- Card 1 -->
+            <div class="glow-card p-5 sm:p-6 rounded-2xl sm:rounded-3xl border-l-4 border-l-amber-500 flex flex-col justify-between" data-category="in_progress">
+                <div>
+                    <div class="flex items-center justify-between gap-2 mb-3">
+                        <span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1">
+                            <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span> In Arbeit
+                        </span>
+                        <span class="text-xs font-mono text-slate-400">Ziel: v24.145</span>
+                    </div>
+                    <h3 class="text-lg font-black text-white mb-2 flex items-center gap-2">
+                        <span>🏎️</span> <span>Echtzeit Kartbahn Telemetrie & Live-Tracker</span>
+                    </h3>
+                    <p class="text-xs sm:text-sm text-slate-300 leading-relaxed mb-4">
+                        Integration von echten Rundenzeiten, Renn-Statistiken, Track-Karten und Live-Ergebnissen direkt aus der Kart-Community – synchronisiert im Portfolio-Dashboard.
+                    </p>
+                </div>
+                <div class="flex items-center justify-between pt-3 border-t border-white/10">
+                    <span class="text-[10px] font-mono text-slate-400">Kategorie: Motorsport</span>
+                    <button onclick="voteFeature(1, this)" class="vote-btn px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold transition-all flex items-center gap-1.5 active:scale-95">
+                        <span>▲</span> <span class="vote-count">142</span> Votes
+                    </button>
+                </div>
+            </div>
+
+            <!-- Card 2 -->
+            <div class="glow-card p-5 sm:p-6 rounded-2xl sm:rounded-3xl border-l-4 border-l-cyan-500 flex flex-col justify-between" data-category="in_progress">
+                <div>
+                    <div class="flex items-center justify-between gap-2 mb-3">
+                        <span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 flex items-center gap-1">
+                            <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span> In Arbeit
+                        </span>
+                        <span class="text-xs font-mono text-slate-400">Ziel: v24.150</span>
+                    </div>
+                    <h3 class="text-lg font-black text-white mb-2 flex items-center gap-2">
+                        <span>🎚️</span> <span>KI-DJ & Nahtlose 3D Audio-Transitionen</span>
+                    </h3>
+                    <p class="text-xs sm:text-sm text-slate-300 leading-relaxed mb-4">
+                        Crossfader-Algorithmus mit Tonhöhen- und Beat-Angleichung zwischen Songs, animierte 3D-Kassetten und Raumklang-Visualisierung über Web Audio API.
+                    </p>
+                </div>
+                <div class="flex items-center justify-between pt-3 border-t border-white/10">
+                    <span class="text-[10px] font-mono text-slate-400">Kategorie: Sound & Audio</span>
+                    <button onclick="voteFeature(2, this)" class="vote-btn px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold transition-all flex items-center gap-1.5 active:scale-95">
+                        <span>▲</span> <span class="vote-count">218</span> Votes
+                    </button>
+                </div>
+            </div>
+
+            <!-- Card 3 -->
+            <div class="glow-card p-5 sm:p-6 rounded-2xl sm:rounded-3xl border-l-4 border-l-purple-500 flex flex-col justify-between" data-category="planned">
+                <div>
+                    <div class="flex items-center justify-between gap-2 mb-3">
+                        <span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                            📋 Geplant
+                        </span>
+                        <span class="text-xs font-mono text-slate-400">Ziel: Herbst 2026</span>
+                    </div>
+                    <h3 class="text-lg font-black text-white mb-2 flex items-center gap-2">
+                        <span>🎮</span> <span>Community Mini-Game (Retro Arcade)</span>
+                    </h3>
+                    <p class="text-xs sm:text-sm text-slate-300 leading-relaxed mb-4">
+                        Ein spielbares Pixel-Art Mini-Game direkt im Browser mit globaler Highscore-Liste und freischaltbaren Secret-Songs für Spotify & Soundcloud.
+                    </p>
+                </div>
+                <div class="flex items-center justify-between pt-3 border-t border-white/10">
+                    <span class="text-[10px] font-mono text-slate-400">Kategorie: Gaming</span>
+                    <button onclick="voteFeature(3, this)" class="vote-btn px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold transition-all flex items-center gap-1.5 active:scale-95">
+                        <span>▲</span> <span class="vote-count">304</span> Votes
+                    </button>
+                </div>
+            </div>
+
+            <!-- Card 4 -->
+            <div class="glow-card p-5 sm:p-6 rounded-2xl sm:rounded-3xl border-l-4 border-l-purple-500 flex flex-col justify-between" data-category="planned">
+                <div>
+                    <div class="flex items-center justify-between gap-2 mb-3">
+                        <span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                            📋 Geplant
+                        </span>
+                        <span class="text-xs font-mono text-slate-400">Ziel: Herbst 2026</span>
+                    </div>
+                    <h3 class="text-lg font-black text-white mb-2 flex items-center gap-2">
+                        <span>📲</span> <span>Interaktive Widgets für iOS & Android Homescreen</span>
+                    </h3>
+                    <p class="text-xs sm:text-sm text-slate-300 leading-relaxed mb-4">
+                        Now-Playing Lockscreen-Widgets, StandBy-Shortcuts und konfigurierbare Live-Activities für das Smartphone ohne Installation aus dem App Store.
+                    </p>
+                </div>
+                <div class="flex items-center justify-between pt-3 border-t border-white/10">
+                    <span class="text-[10px] font-mono text-slate-400">Kategorie: Mobile PWA</span>
+                    <button onclick="voteFeature(4, this)" class="vote-btn px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold transition-all flex items-center gap-1.5 active:scale-95">
+                        <span>▲</span> <span class="vote-count">189</span> Votes
+                    </button>
+                </div>
+            </div>
+
+            <!-- Card 5 -->
+            <div class="glow-card p-5 sm:p-6 rounded-2xl sm:rounded-3xl border-l-4 border-l-blue-500 flex flex-col justify-between" data-category="research">
+                <div>
+                    <div class="flex items-center justify-between gap-2 mb-3">
+                        <span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                            💡 Konzept
+                        </span>
+                        <span class="text-xs font-mono text-slate-400">Machbarkeitsphase</span>
+                    </div>
+                    <h3 class="text-lg font-black text-white mb-2 flex items-center gap-2">
+                        <span>🌐</span> <span>Community Discord Synchronized Listening Room</span>
+                    </h3>
+                    <p class="text-xs sm:text-sm text-slate-300 leading-relaxed mb-4">
+                        Gemeinsam mit Freunden auf der Website Musik hören in synchronem Takt – mit Live-Chat und gemeinsamer Song-Warteschlange für den Discord-Server.
+                    </p>
+                </div>
+                <div class="flex items-center justify-between pt-3 border-t border-white/10">
+                    <span class="text-[10px] font-mono text-slate-400">Kategorie: Community</span>
+                    <button onclick="voteFeature(5, this)" class="vote-btn px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold transition-all flex items-center gap-1.5 active:scale-95">
+                        <span>▲</span> <span class="vote-count">276</span> Votes
+                    </button>
+                </div>
+            </div>
+
+            <!-- Card 6 -->
+            <div class="glow-card p-5 sm:p-6 rounded-2xl sm:rounded-3xl border-l-4 border-l-blue-500 flex flex-col justify-between" data-category="research">
+                <div>
+                    <div class="flex items-center justify-between gap-2 mb-3">
+                        <span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                            💡 Konzept
+                        </span>
+                        <span class="text-xs font-mono text-slate-400">Community-Vorschlag</span>
+                    </div>
+                    <h3 class="text-lg font-black text-white mb-2 flex items-center gap-2">
+                        <span>🎙️</span> <span>Eigene KI-Stimmen für Songtext-Vorlesen</span>
+                    </h3>
+                    <p class="text-xs sm:text-sm text-slate-300 leading-relaxed mb-4">
+                        Individuell wählbare Custom Voices mit natürlichen Stimmfarben und Akzenten, die sich noch harmonischer an Rap, Pop und Rock-Lyrics anpassen.
+                    </p>
+                </div>
+                <div class="flex items-center justify-between pt-3 border-t border-white/10">
+                    <span class="text-[10px] font-mono text-slate-400">Kategorie: KI & Stimme</span>
+                    <button onclick="voteFeature(6, this)" class="vote-btn px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold transition-all flex items-center gap-1.5 active:scale-95">
+                        <span>▲</span> <span class="vote-count">195</span> Votes
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Community Wish Submission Section -->
+        <section id="wish-form-section" class="glow-card p-6 sm:p-8 rounded-3xl border-purple-500/40 relative overflow-hidden">
+            <div class="absolute -right-16 -top-16 w-56 h-56 bg-purple-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+            <div class="max-w-xl mb-6">
+                <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 font-black text-[10px] uppercase tracking-wider mb-2">
+                    <span>💌</span> DEINE IDEE ZÄHLT
+                </div>
+                <h2 id="form-title" class="text-xl sm:text-2xl font-black text-white mb-2">Wunsch oder Feature-Idee einreichen</h2>
+                <p id="form-subtitle" class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                    Du hast einen genialen Einfall für eine neue Animation, eine Funktion oder ein Easter Egg? Schreib es direkt hier auf – dein Vorschlag landet sofort in unserer Feature-Pipeline!
+                </p>
+            </div>
+
+            <form onsubmit="submitWish(event)" class="space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 mb-1">Dein Name / Discord-Tag</label>
+                        <input type="text" id="wish-author" placeholder="z. B. Noel#1234 oder Gast" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-purple-500 transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 mb-1">Kategorie</label>
+                        <select id="wish-category" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-purple-500 transition-colors">
+                            <option value="Audio & Lyrics">🎵 Audio & Lyrics</option>
+                            <option value="Motorsport & Kart">🏎️ Motorsport & Kart</option>
+                            <option value="Performance & Code">⚡ Performance & Code</option>
+                            <option value="Easter Egg">🥚 Easter Egg & Secret</option>
+                            <option value="Design & UI">🎨 Design & UI</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1">Titel deines Wunsches</label>
+                    <input type="text" id="wish-title" placeholder="Kurz & knackig (z. B. Retro-Synth Visualizer)" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-purple-500 transition-colors">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1">Erklärung & Warum das cool wäre</label>
+                    <textarea id="wish-desc" rows="3" placeholder="Beschreibe kurz, wie das Feature funktionieren soll..." required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-purple-500 transition-colors"></textarea>
+                </div>
+
+                <div class="flex items-center justify-between pt-2 flex-wrap gap-3">
+                    <span class="text-[11px] text-slate-400">💡 Wird lokal gespeichert und kann kopiert & auf Discord geteilt werden.</span>
+                    <button type="submit" class="px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 via-pink-600 to-cyan-500 text-white font-black text-xs uppercase tracking-wider shadow-xl hover:scale-102 active:scale-95 transition-all">
+                        🚀 Wunsch jetzt abschicken
+                    </button>
+                </div>
+            </form>
+
+            <!-- Community Wishes List -->
+            <div id="community-wishes-container" class="mt-8 pt-6 border-t border-white/10 hidden">
+                <h3 class="text-sm font-black uppercase text-purple-400 tracking-wider mb-3">Deine eingereichten Wünsche</h3>
+                <div class="space-y-2.5" id="user-wishes-list"></div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="max-w-4xl w-full text-center py-6 text-xs text-slate-500 border-t border-slate-900 mt-6 px-3">
+        <div class="flex items-center justify-center gap-2 sm:gap-4 flex-wrap mb-2">
+            <a href="index.html" class="hover:text-slate-300 transition-colors">Portfolio</a>
+            <span>•</span>
+            <a href="release.html" class="hover:text-slate-300 transition-colors">Release v24.140.0</a>
+            <span>•</span>
+            <a href="status.html" class="hover:text-slate-300 transition-colors">Live-Status</a>
+            <span>•</span>
+            <a href="privacy.html" class="hover:text-slate-300 transition-colors">Datenschutz</a>
+            <span>•</span>
+            <a href="impressum.html" class="hover:text-slate-300 transition-colors">Impressum</a>
+        </div>
+        <p>© 2026 Gamingpig • Alle Rechte vorbehalten • Community Driven Development</p>
+    </footer>
+
+    <!-- Toast Notification Container -->
+    <div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 px-4 py-2.5 rounded-xl bg-slate-900/95 border border-purple-500/40 text-white text-xs font-bold shadow-2xl backdrop-blur-xl transition-all duration-300 opacity-0 pointer-events-none z-50 flex items-center gap-2">
+        <span id="toast-icon">✅</span>
+        <span id="toast-msg">Meldung</span>
+    </div>
+
+    <script>
+        // Language & State Management
+        let currentLang = localStorage.getItem('selectedLanguage') || 'de';
+
+        function showToast(msg, icon = '✅') {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toast-msg');
+            const toastIcon = document.getElementById('toast-icon');
+            if (!toast) return;
+            toastMsg.innerText = msg;
+            toastIcon.innerText = icon;
+            toast.classList.remove('opacity-0', 'translate-y-4');
+            toast.classList.add('opacity-100', 'translate-y-0');
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-4');
+                toast.classList.remove('opacity-100', 'translate-y-0');
+            }, 3000);
+        }
+
+        function filterRoadmap(category) {
+            document.querySelectorAll('#filter-tabs .tab-btn').forEach(btn => {
+                const isActive = btn.dataset.tab === category;
+                btn.className = isActive 
+                    ? 'tab-btn px-3 py-1.5 rounded-lg bg-purple-600 text-white shadow'
+                    : 'tab-btn px-3 py-1.5 rounded-lg text-slate-400 hover:text-white';
+            });
+
+            document.querySelectorAll('#roadmap-grid .glow-card').forEach(card => {
+                if (category === 'all' || card.dataset.category === category) {
+                    card.style.display = 'flex';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        function voteFeature(id, btn) {
+            const key = 'gp_voted_feat_' + id;
+            const countEl = btn.querySelector('.vote-count');
+            let count = parseInt(countEl.innerText, 10);
+
+            if (localStorage.getItem(key)) {
+                localStorage.removeItem(key);
+                btn.classList.remove('voted');
+                countEl.innerText = count - 1;
+                showToast('Vote zurückgenommen.', '↩️');
+            } else {
+                localStorage.setItem(key, 'true');
+                btn.classList.add('voted');
+                countEl.innerText = count + 1;
+                showToast('Danke für deinen Vote!', '🔥');
+            }
+        }
+
+        // Restore Votes
+        function restoreVotes() {
+            [1, 2, 3, 4, 5, 6].forEach(id => {
+                if (localStorage.getItem('gp_voted_feat_' + id)) {
+                    const btn = document.querySelectorAll('.vote-btn')[id - 1];
+                    if (btn) btn.classList.add('voted');
+                }
+            });
+        }
+
+        // Wish Submission
+        function submitWish(e) {
+            e.preventDefault();
+            const author = document.getElementById('wish-author').value.trim();
+            const category = document.getElementById('wish-category').value;
+            const title = document.getElementById('wish-title').value.trim();
+            const desc = document.getElementById('wish-desc').value.trim();
+
+            if (!title || !desc) return;
+
+            const wish = {
+                id: Date.now(),
+                author: author || 'Gast',
+                category,
+                title,
+                desc,
+                date: new Date().toLocaleDateString('de-DE')
+            };
+
+            const saved = JSON.parse(localStorage.getItem('gp_user_wishes') || '[]');
+            saved.unshift(wish);
+            localStorage.setItem('gp_user_wishes', JSON.stringify(saved));
+
+            renderUserWishes();
+            document.getElementById('wish-title').value = '';
+            document.getElementById('wish-desc').value = '';
+            showToast('Dein Wunsch wurde erfolgreich gespeichert! 🎉', '🚀');
+        }
+
+        function renderUserWishes() {
+            const saved = JSON.parse(localStorage.getItem('gp_user_wishes') || '[]');
+            const container = document.getElementById('community-wishes-container');
+            const list = document.getElementById('user-wishes-list');
+
+            if (saved.length === 0) {
+                container.classList.add('hidden');
+                return;
+            }
+
+            container.classList.remove('hidden');
+            list.innerHTML = saved.map(w => `
+                <div class="p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800 flex items-start justify-between gap-3 text-xs">
+                    <div>
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="px-2 py-0.5 rounded-md bg-purple-500/20 text-purple-300 font-mono text-[9px] font-bold">${w.category}</span>
+                            <span class="font-black text-white">${w.title}</span>
+                        </div>
+                        <p class="text-slate-300 leading-relaxed">${w.desc}</p>
+                        <span class="text-[10px] text-slate-500 mt-1 block">Von ${w.author} • ${w.date}</span>
+                    </div>
+                    <button onclick="shareWishToClipboard('${w.title}', '${w.desc}')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-bold shrink-0" title="Für Discord kopieren">
+                        📋 Kopieren
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function shareWishToClipboard(title, desc) {
+            const text = "💡 **Feature-Wunsch für Gamingpig Portfolio:**\\n**Titel:** " + title + "\\n**Beschreibung:** " + desc;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => {
+                    showToast('Wunsch für Discord in Zwischenablage kopiert! 📋', '✨');
+                });
+            }
+        }
+
+        // TTS Read Aloud
+        let isSpeaking = false;
+        function toggleReadAloud() {
+            if (!('speechSynthesis' in window)) {
+                showToast('Vorlesen wird von deinem Browser nicht unterstützt.', '⚠️');
+                return;
+            }
+
+            if (isSpeaking) {
+                window.speechSynthesis.cancel();
+                isSpeaking = false;
+                document.getElementById('tts-label').innerText = 'Vorlesen';
+                document.getElementById('tts-icon').innerText = '🔊';
+                return;
+            }
+
+            const title = document.getElementById('hero-title').innerText;
+            const subtitle = document.getElementById('hero-subtitle').innerText;
+            const text = title + ". " + subtitle + ". Hier kannst du für kommende Features wie Kartbahn-Telemetrie, KI-DJ und Widgets abstimmen oder eigene Wünsche einreichen.";
+
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = currentLang === 'en' ? 'en-US' : 'de-DE';
+            utterance.rate = 1.0;
+
+            utterance.onend = () => {
+                isSpeaking = false;
+                document.getElementById('tts-label').innerText = 'Vorlesen';
+                document.getElementById('tts-icon').innerText = '🔊';
+            };
+
+            window.speechSynthesis.speak(utterance);
+            isSpeaking = true;
+            document.getElementById('tts-label').innerText = 'Stopp';
+            document.getElementById('tts-icon').innerText = '⏹️';
+        }
+
+        function changeLanguage(lang) {
+            currentLang = lang;
+            localStorage.setItem('selectedLanguage', lang);
+            showToast('Sprache gewechselt zu ' + lang.toUpperCase(), '🌐');
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            restoreVotes();
+            renderUserWishes();
+            const selectEl = document.getElementById('lang-select');
+            if (selectEl) selectEl.value = currentLang;
+        });
+    </script>
+</body>
+</html>
