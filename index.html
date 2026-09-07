@@ -3132,6 +3132,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Gamingpig | Portfolio</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <script>
         try {
             const savedAppLang = localStorage.getItem('selectedLanguage');
@@ -6563,7 +6566,7 @@
                 <div id="footer-expandable-menu" class="hidden absolute bottom-full mb-3 left-1/2 -translate-x-1/2 z-50 p-3 rounded-2xl bg-slate-900/95 border border-slate-700/80 shadow-2xl backdrop-blur-xl min-w-[280px] max-w-[92vw] text-xs space-y-2 animate-in fade-in duration-200">
                     <div class="flex items-center justify-between px-1 pb-1 border-b border-white/10">
                         <span class="font-bold text-slate-400 text-[10px] uppercase tracking-wider">Navigation &amp; Rechtliches</span>
-                        <span id="footer-menu-hint" class="text-[9px] text-slate-500 font-mono">v24.144.0</span>
+                        <span id="footer-menu-hint" class="text-[9px] text-slate-500 font-mono">v24.152.0</span>
                     </div>
                     <div class="grid grid-cols-2 gap-2 text-left">
                         <button onclick="openEpicWhatsNewTour(false); toggleFooterMenu(false)" id="footer-whats-new-btn" class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/90 text-slate-200 hover:text-white font-medium flex items-center gap-2 transition-colors active:scale-[0.98]">
@@ -6597,7 +6600,7 @@
                 <div class="inline-flex items-center gap-2 sm:gap-2.5 px-4 py-2 rounded-full bg-slate-900/85 backdrop-blur-xl border border-white/15 shadow-xl text-[11px] sm:text-xs text-slate-300">
                     <span id="footer-established" class="font-bold tracking-tight text-slate-300">© 2026 GAMINGPIG</span>
                     <span class="text-white/20 select-none">•</span>
-                    <span id="footer-version-label" class="font-mono font-bold text-pink-400">v24.144.0</span>
+                    <span id="footer-version-label" class="font-mono font-bold text-pink-400">v24.152.0</span>
                     <span class="text-white/20 select-none">•</span>
                     <button id="footer-menu-toggle-btn" onclick="toggleFooterMenu()" class="text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1 transition-colors px-1 py-0.5 rounded hover:bg-white/5 active:scale-95" aria-expanded="false" aria-label="Mehr Menü öffnen">
                         <span id="footer-more-label">Mehr</span>
@@ -8501,6 +8504,8 @@
             if (settingsVer) settingsVer.textContent = 'Version ' + SITE_VERSION;
             const footerVer = document.getElementById('footer-version-label');
             if (footerVer) footerVer.textContent = SITE_VERSION;
+            const footerMenuHint = document.getElementById('footer-menu-hint');
+            if (footerMenuHint) footerMenuHint.textContent = SITE_VERSION;
 
             // NEW: fallbackMessages / secretMessages Arrays in-place mit neuer Sprache befüllen
             // (sie sind const, aber der Inhalt darf mutiert werden - so bleiben alle
@@ -11370,17 +11375,14 @@
         setInterval(updateTimeOfDayColors, 5 * 60 * 1000);
 
         // ========================================================= //
-        // --- NEW: INSTALLIERBARE PWA (echte Dateien) --------------- //
+        // --- NEW: INSTALLIERBARE PWA & SERVICE WORKER LIFECYCLE --- //
         // ========================================================= //
-        // manifest.json, sw.js, icon-192.png und icon-512.png sind echte Dateien im
-        // selben Ordner (siehe <head> und Upload-Anleitung) - nötig, damit Chrome die
-        // Seite überhaupt als installierbar erkennt und "App installieren" anbietet.
         if ('serviceWorker' in navigator) {
             let isRefreshing = false;
             navigator.serviceWorker.addEventListener('controllerchange', () => {
                 if (isRefreshing) return;
                 isRefreshing = true;
-                console.log('[SW] Neuer Service Worker aktiv – lade Seite neu');
+                console.log('[SW] Neuer Service Worker aktiv – führe automatischen Refresh durch.');
                 try {
                     const pushAllowed = (typeof Notification !== 'undefined' && Notification.permission === 'granted' && localStorage.getItem('pushAlertsEnabled') !== 'false');
                     if (pushAllowed) {
@@ -11394,12 +11396,12 @@
                             tr: '🚀 Yeni Güncelleme Yayında!'
                         };
                         const bodies = {
-                            de: 'Gamingpig Portfolio ist jetzt live mit neuen Features und Optimierungen.',
-                            en: 'Gamingpig Portfolio is live with fresh features and improvements.',
-                            es: 'Gamingpig Portfolio ya está disponible con nuevas mejoras.',
-                            fr: 'Gamingpig Portfolio est disponible avec de nouvelles fonctionnalités.',
-                            pt: 'Gamingpig Portfolio está disponível com novos recursos.',
-                            tr: 'Gamingpig Portfolio yeni özelliklerle yayında.'
+                            de: 'Gamingpig Portfolio ist jetzt live mit neuen Features und Optimierungen (v24.152.0).',
+                            en: 'Gamingpig Portfolio is live with fresh features and improvements (v24.152.0).',
+                            es: 'Gamingpig Portfolio ya está disponible con nuevas mejoras (v24.152.0).',
+                            fr: 'Gamingpig Portfolio est disponible avec de nouvelles fonctionnalités (v24.152.0).',
+                            pt: 'Gamingpig Portfolio está disponível com novos recursos (v24.152.0).',
+                            tr: 'Gamingpig Portfolio yeni özelliklerle yayında (v24.152.0).'
                         };
                         new Notification(titles[lang] || titles.de, {
                             body: bodies[lang] || bodies.de,
@@ -11410,7 +11412,29 @@
                 window.location.reload();
             });
 
-            
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js?v=24.152.0', { updateViaCache: 'none' })
+                    .then((reg) => {
+                        if (reg) {
+                            reg.update().catch(() => {});
+                            reg.addEventListener('updatefound', () => {
+                                const newWorker = reg.installing;
+                                if (newWorker) {
+                                    newWorker.addEventListener('statechange', () => {
+                                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                            newWorker.postMessage({ type: 'SKIP_WAITING' });
+                                        }
+                                    });
+                                }
+                            });
+                        }
+                    })
+                    .catch((err) => {
+                        console.warn('Service Worker Registrierung fehlgeschlagen:', err);
+                    });
+            });
+        }
+
         // UNUMGÄNGLICHE & TRANSPARENTE BENACHRICHTIGUNG BEI DATENSCHUTZ-AKTUALISIERUNG
         const PRIVACY_POLICY_VERSION = '2026-09-04';
         function checkPrivacyPolicyUpdate() {
@@ -11434,27 +11458,13 @@
             if (typeof haptic === 'function') haptic(15);
             if (typeof playUISound === 'function') playUISound('click');
 
-            if (window.OnboardingCoordinator.isOnboarding) {
+            if (window.OnboardingCoordinator && window.OnboardingCoordinator.isOnboarding) {
                 window.OnboardingCoordinator.step5_finished();
             }
         };
         // Nur für wiederkehrende Besucher prüfen, nicht während des Onboardings
         if (localStorage.getItem('onboarding_completed') === '1' && localStorage.getItem('selectedLanguage')) {
             setTimeout(checkPrivacyPolicyUpdate, 600);
-        }
-
-        window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js?v=24.148.0', { updateViaCache: 'none' })
-                    .then((reg) => {
-                        // Prüfe beim Laden direkt auf Updates
-                        if (reg) {
-                            reg.update().catch(() => {});
-                        }
-                    })
-                    .catch((err) => {
-                        console.warn('Service Worker Registrierung fehlgeschlagen (PWA-Installation evtl. nicht möglich):', err);
-                    });
-            });
         }
 
         // --- "Zum Home-Bildschirm hinzufügen" Prompt (Android/Chrome) ---
@@ -18883,8 +18893,10 @@ window.setLyricsStyle = function(style) {
         // NEW: Versionsnummer sichtbar machen (Settings-Menü + Footer)
         const settingsVersionEl = document.getElementById('settings-version-label');
         if (settingsVersionEl) settingsVersionEl.textContent = 'Version ' + SITE_VERSION;
-        const footerVersionEl = document.getElementById('footer-version-link') || document.getElementById('footer-version-label');
+        const footerVersionEl = document.getElementById('footer-version-label');
         if (footerVersionEl) footerVersionEl.textContent = SITE_VERSION;
+        const footerMenuHintEl = document.getElementById('footer-menu-hint');
+        if (footerMenuHintEl) footerMenuHintEl.textContent = SITE_VERSION;
 
         populateLyricsStyleDropdown();
         populateTtsVoiceDropdown();

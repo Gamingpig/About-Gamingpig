@@ -8,8 +8,8 @@
 // ==============================================================================
 
 const SW_VERSION = "24.152.0";
-const CACHE_NAME = `gamingpig-cache-v${SW_VERSION}`;
-const CACHE_PREFIX = "gamingpig-cache-";
+const CURRENT_CACHE_VERSION = `gamingpig-cache-v${SW_VERSION}`;
+const CACHE_NAME = CURRENT_CACHE_VERSION;
 
 // Wichtige Offline-Kerndateien
 const PRECACHE_URLS = [
@@ -30,7 +30,7 @@ const PRECACHE_URLS = [
 self.addEventListener("install", (event) => {
     self.skipWaiting();
     event.waitUntil(
-        caches.open(CACHE_NAME).then((cache) => {
+        caches.open(CURRENT_CACHE_VERSION).then((cache) => {
             return cache.addAll(PRECACHE_URLS);
         }).catch((err) => {
             console.warn("[SW] Precaching Fehler (nicht kritisch):", err);
@@ -38,15 +38,14 @@ self.addEventListener("install", (event) => {
     );
 });
 
-// Aktivierung: Alte Gamingpig-Caches gezielt löschen und Clients sofort binden
+// Aktivierung: Ausnahmslos alle Caches löschen, die nicht mit CURRENT_CACHE_VERSION übereinstimmen
 self.addEventListener("activate", (event) => {
     event.waitUntil(
         caches.keys().then((keys) => {
             return Promise.all(
                 keys.map((key) => {
-                    // Lösche ausnahmslos alle alten Caches bei Versionswechsel
-                    if (key !== CACHE_NAME) {
-                        console.log("[SW] Wische alten Cache für sofortige Aktualisierung:", key);
+                    if (key !== CURRENT_CACHE_VERSION) {
+                        console.log("[SW] Lösche veralteten Cache:", key);
                         return caches.delete(key);
                     }
                     return Promise.resolve();
