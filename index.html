@@ -3137,17 +3137,18 @@
     <meta http-equiv="Expires" content="0">
     <script>
         try {
-            const savedAppLang = localStorage.getItem('selectedLanguage');
+            const savedAppLang = localStorage.getItem('app_language') || localStorage.getItem('selectedLanguage');
             if (savedAppLang) document.documentElement.setAttribute('lang', savedAppLang);
             
-            // 🛡️ INSTANT ONBOARDING SHIELD (v24.151.0)
+            // 🛡️ INSTANT ONBOARDING SHIELD (v24.152.0)
             const _currVer = 'v24.152.0 · 2026-09-07';
             const _installedVer = localStorage.getItem('site_version_installed');
             if (_installedVer !== _currVer) {
                 localStorage.setItem('site_version_installed', _currVer);
             }
             // Onboarding startet NUR wenn noch NIE abgeschlossen oder per URL erzwungen
-            const _onbCompleted = (localStorage.getItem('onboarding_completed') === '1');
+            const _rawOnb = localStorage.getItem('onboarding_completed');
+            const _onbCompleted = (_rawOnb === '1' || _rawOnb === 'true');
             const _urlP = new URLSearchParams(window.location.search);
             const _forceStart = _urlP.has('first_visit') || _urlP.has('onboarding') || _urlP.has('tutorial');
             
@@ -5418,7 +5419,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.149.0 · 2026-09-07';
+        const SITE_VERSION = 'v24.152.0 · 2026-09-07';
 
         // =========================================================
         // NEU v24.118: Automatischer Reset veralteter Cached Flags bei Versionswechsel
@@ -8235,7 +8236,7 @@
             }
         };
 
-        let currentLang = localStorage.getItem('selectedLanguage') || null;
+        let currentLang = (function() { try { return localStorage.getItem('app_language') || localStorage.getItem('selectedLanguage') || null; } catch(e) { return null; } })();
         function t(key, ...args) {
             const langDict = translations[currentLang || 'de'] || translations.de;
             const val = langDict[key] !== undefined ? langDict[key] : translations.de[key];
@@ -8297,8 +8298,10 @@
                 overlay.style.display = 'none';
             }
             
+            const _curOnbVal = (function() { try { return localStorage.getItem('onboarding_completed'); } catch(e) { return null; } })();
+            const _isAlreadyDone = (_curOnbVal === '1' || _curOnbVal === 'true');
             const isFirstFlow = (window.OnboardingCoordinator && window.OnboardingCoordinator.isOnboarding) || 
-                                (localStorage.getItem('onboarding_completed') !== '1' && !window._manualLangChange);
+                                (!_isAlreadyDone && !window._manualLangChange);
             
             if (isFirstFlow) {
                 if (window.OnboardingCoordinator) {
@@ -8334,7 +8337,10 @@
         function applyLanguage(lang) {
             if (!translations[lang]) lang = 'de';
             currentLang = lang;
-            localStorage.setItem('selectedLanguage', lang);
+            try {
+                localStorage.setItem('app_language', lang);
+                localStorage.setItem('selectedLanguage', lang);
+            } catch(e) {}
             syncLangToIndexedDB(lang);
             document.documentElement.setAttribute('lang', lang);
 
@@ -11463,7 +11469,9 @@
             }
         };
         // Nur für wiederkehrende Besucher prüfen, nicht während des Onboardings
-        if (localStorage.getItem('onboarding_completed') === '1' && localStorage.getItem('selectedLanguage')) {
+        const _privacyOnb = localStorage.getItem('onboarding_completed');
+        const _privacyLang = localStorage.getItem('app_language') || localStorage.getItem('selectedLanguage');
+        if ((_privacyOnb === '1' || _privacyOnb === 'true') && _privacyLang) {
             setTimeout(checkPrivacyPolicyUpdate, 600);
         }
 
@@ -13914,7 +13922,8 @@ window.generateShareCard = function() {
         // wiederkehrende Besucher, die schon eine Sprache gewählt haben - für Erstbesucher
         // passiert der Autostart stattdessen in selectLanguage(), NACHDEM die Sprache
         // gewählt wurde (siehe dort).
-        if (localStorage.getItem('onboarding_completed') === '1') {
+        const _autoOnbVal = localStorage.getItem('onboarding_completed');
+        if (_autoOnbVal === '1' || _autoOnbVal === 'true') {
             if (!localStorage.getItem('tutorialCompletedV5') && currentLang) {
                 setTimeout(startTutorial, 500);
             } else if (currentLang && localStorage.getItem('whatsNewSeenVersion') !== SITE_VERSION) {
@@ -16140,7 +16149,8 @@ window.generateShareCard = function() {
         window.OnboardingTracker = {
             isCompleted() {
                 try {
-                    return localStorage.getItem('onboarding_completed') === '1';
+                    const val = localStorage.getItem('onboarding_completed');
+                    return val === '1' || val === 'true';
                 } catch(e) { return false; }
             },
 
@@ -16152,7 +16162,7 @@ window.generateShareCard = function() {
 
             recordCompletion() {
                 try {
-                    localStorage.setItem('onboarding_completed', '1');
+                    localStorage.setItem('onboarding_completed', 'true');
                     localStorage.setItem('tutorialCompletedV5', 'true');
                     localStorage.setItem('whatsNewSeenVersion', SITE_VERSION);
                     localStorage.setItem('accepted_privacy_version', PRIVACY_POLICY_VERSION);
@@ -16162,7 +16172,7 @@ window.generateShareCard = function() {
 
             reset() {
                 try {
-                    localStorage.setItem('onboarding_completed', '0');
+                    localStorage.removeItem('onboarding_completed');
                     localStorage.removeItem('tutorialCompletedV5');
                     localStorage.removeItem('whatsNewSeenVersion');
                     localStorage.removeItem('accepted_privacy_version');
@@ -16193,7 +16203,16 @@ window.generateShareCard = function() {
 
         window.resetOnboarding = function() {
             document.documentElement.classList.add('needs-onboarding');
-            window.OnboardingTracker.reset();
+            if (window.OnboardingTracker) {
+                window.OnboardingTracker.reset();
+            } else {
+                try {
+                    localStorage.removeItem('onboarding_completed');
+                    localStorage.removeItem('tutorialCompletedV5');
+                    localStorage.removeItem('whatsNewSeenVersion');
+                    localStorage.removeItem('accepted_privacy_version');
+                } catch(e) {}
+            }
             if (typeof toggleStandaloneSettings === 'function' && typeof isGlobalSettingsOpen !== 'undefined' && isGlobalSettingsOpen) {
                 toggleStandaloneSettings();
             }
@@ -16211,17 +16230,17 @@ window.generateShareCard = function() {
         window.restartOnboarding = window.resetOnboarding;
 
         window.resetEverythingToFirstVisit = async function() {
-            if (window.OnboardingTracker) {
-                window.OnboardingTracker.resetCounter();
-            }
             const confirmed = confirm('⚠️ KOMPLETTEN ERSTBESUCH SIMULIEREN?\n\nDadurch werden alle Website-Daten, Zähler, Einstellungen, Sprache und das Tutorial unwiderruflich zurückgesetzt.\n\nDie Seite startet danach komplett neu wie beim allerersten Besuch!');
             if (!confirmed) return;
 
-            haptic([50, 50, 100]);
-            showToast('🔄 Alle Daten werden gelöscht... Erstbesuch wird geladen!', 3000);
+            if (typeof haptic === 'function') haptic([50, 50, 100]);
+            if (typeof showToast === 'function') showToast('🔄 Alle Daten werden gelöscht... Erstbesuch wird geladen!', 3000);
 
             try {
                 localStorage.clear();
+            } catch(e) {}
+
+            try {
                 sessionStorage.clear();
             } catch(e) {}
 
@@ -16246,8 +16265,8 @@ window.generateShareCard = function() {
             } catch(e) {}
 
             setTimeout(() => {
-                window.location.replace(window.location.origin + window.location.pathname + '?first_visit=' + Date.now());
-            }, 600);
+                window.location.replace(window.location.origin + window.location.pathname);
+            }, 250);
         };
 
         
@@ -18936,18 +18955,30 @@ window.setLyricsStyle = function(style) {
             window.OnboardingTracker.updateUI();
         }
 
-        // GARANTIERTER AUTOSTART:
-        // Startet NUR dann, wenn onboarding_completed !== "1" ODER per URL erzwungen wird.
-        // Wenn abgeschlossen, wird KEINE Sprachauswahl mehr aufgerufen!
-        const _isCompleted = (localStorage.getItem('onboarding_completed') === '1');
+        // GARANTIERTER AUTOSTART & DAUERHAFTE EINSTELLUNGEN:
+        const _savedLang = (function() {
+            try {
+                return localStorage.getItem('app_language') || localStorage.getItem('selectedLanguage');
+            } catch(e) { return null; }
+        })();
+
+        const _onbCompletedVal = (function() {
+            try {
+                return localStorage.getItem('onboarding_completed');
+            } catch(e) { return null; }
+        })();
+        const _isCompleted = (_onbCompletedVal === '1' || _onbCompletedVal === 'true');
+
+        // Gespeicherte Nutzersprache sofort synchron anwenden
+        applyLanguage(_savedLang || currentLang || 'de');
+
         if (!_isCompleted || _forceOnboarding) {
+            document.documentElement.classList.add('needs-onboarding');
             setTimeout(() => {
                 if (window.OnboardingCoordinator && typeof window.OnboardingCoordinator.step1_language === 'function') {
                     window.OnboardingCoordinator.step1_language();
                 }
             }, 100);
-        } else {
-            applyLanguage(currentLang || localStorage.getItem('selectedLanguage') || 'de');
         }
     </script>
 <script>
