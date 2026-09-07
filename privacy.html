@@ -69,6 +69,14 @@
     color:var(--muted);
     font-size:0.85rem;
   }
+  .back-btn{
+    display:inline-flex; align-items:center; gap:6px;
+    background:var(--card); border:1px solid var(--border);
+    color:var(--text); padding:7px 14px; border-radius:12px;
+    font-size:0.85rem; font-weight:600; text-decoration:none;
+    transition:all 0.15s ease;
+  }
+  .back-btn:hover{ border-color:var(--accent); color:#fff; text-decoration:none; }
   /* NEU: Sprachumschalter */
   .lang-switcher{
     display:flex; flex-wrap:wrap; gap:6px; padding:16px 0 0;
@@ -120,6 +128,9 @@
 </head>
 <body>
 <div class="wrap">
+  <div style="padding-top:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+    <a href="index.html" class="back-btn" id="privacy-back-btn">← Hauptseite</a>
+  </div>
   <div class="lang-switcher">
       <button class="lang-btn" data-lang="de" onclick="setPrivacyLang('de')">Deutsch</button>
       <button class="lang-btn" data-lang="en" onclick="setPrivacyLang('en')">English</button>
@@ -863,6 +874,16 @@
       localStorage.setItem('selectedLanguage', lang);
       syncLangToIndexedDB(lang);
     } catch(e) {}
+        const backBtnText = {
+      de: '← Hauptseite',
+      en: '← Main Page',
+      es: '← Página Principal',
+      fr: '← Page Principale',
+      pt: '← Página Principal',
+      tr: '← Ana Sayfa'
+    };
+    const backBtnEl = document.getElementById('privacy-back-btn');
+    if (backBtnEl) backBtnEl.textContent = backBtnText[lang] || backBtnText.de;
     document.documentElement.setAttribute('lang', lang);
   }
   const savedLang = localStorage.getItem('selectedLanguage') || 'de';

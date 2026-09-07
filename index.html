@@ -1526,7 +1526,7 @@
     aktualisierte Datenschutzerklärung
       - Nutzer bat um Reset des Tutorial-Flags (nach den großen Updates der letzten Releases
         sinnvoll, damit auch wiederkehrende Besucher die neuen Inhalte sehen) - localStorage-
-        Key von 'tutorialCompletedV2' auf 'tutorialCompletedV3' erhöht (alle 3 echten
+        Key von 'tutorialCompletedV2' auf 'tutorialCompletedV4' erhöht (alle 3 echten
         Code-Stellen), zwei historische Changelog-Kommentare (die den ALTEN V1->V2-Wechsel
         beschreiben) beim Massenersatz korrekt wieder auf V2 zurückkorrigiert.
       - Neues "Was ist neu?"-Mini-Tutorial: zwei zusätzliche Schritte am Ende der bestehenden
@@ -3130,7 +3130,7 @@
 <html lang="de" id="html-root">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Gamingpig | Portfolio</title>
     <script>
         try {
@@ -3244,6 +3244,50 @@
             background-color: #020617; 
         }
 
+        /* --- APP ZOOM ENGINE (Mobiler Zoom-Ersatz) --- */
+        :root {
+            --app-zoom: 1;
+        }
+        #main-content {
+            transform-origin: top center;
+            /* Ermöglicht saubere Skalierung ohne Layout-Kollaps */
+        }
+        
+        /* --- VIEWPORT RENDERING / SECTION OPTIMIZATION --- */
+        .section-optimized {
+            content-visibility: auto;
+            contain-intrinsic-size: 1px 500px;
+        }
+
+        /* Action button in toast */
+        .toast-action-btn {
+            background: rgba(59, 130, 246, 0.25);
+            border: 1px solid rgba(59, 130, 246, 0.5);
+            color: #60a5fa;
+            font-size: 0.72rem;
+            font-weight: 800;
+            padding: 0.25rem 0.6rem;
+            border-radius: 0.6rem;
+            margin-left: 0.5rem;
+            cursor: pointer;
+            pointer-events: auto;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+        .toast-action-btn:hover {
+            background: rgba(59, 130, 246, 0.4);
+            color: #ffffff;
+        }
+
+        /* Settings menu outside lyrics mode */
+        #lyrics-settings-menu.standalone-settings {
+            position: fixed !important;
+            top: calc(env(safe-area-inset-top, 0px) + 4.5rem) !important;
+            right: 1rem !important;
+            z-index: 10000 !important;
+            max-height: 80vh !important;
+        }
+        
         /* --- EXTREME PERFORMANCE MODUS --- */
         body.low-end { scroll-behavior: auto !important; }
         body.low-end *, body.low-end .reveal, body.low-end .glass-card {
@@ -5196,11 +5240,11 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.139.0 · 2026-09-04';
+        const SITE_VERSION = 'v24.140.0 · 2026-09-07';
 
         // =========================================================
         // NEU v24.118: Automatischer Reset veralteter Cached Flags bei Versionswechsel
-        // Behaelt Sprache ('selectedLanguage') und Haupt-Tutorial ('tutorialCompletedV3')
+        // Behaelt Sprache ('selectedLanguage') und Haupt-Tutorial ('tutorialCompletedV4')
         // unberuehrt, leert aber alle veralteten Cover-/Layout-/State-Caches.
         // =========================================================
         // FIX v24.132: Behalte alle Nutzer-Präferenzen sicher bei Versionswechsel
@@ -5466,6 +5510,10 @@
 
         <button id="standby-toggle" onclick="toggleStandBy()" aria-label="StandBy Modus" class="group p-2 sm:p-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-lg rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-700 hover:ring-2 hover:ring-orange-500 transition-all active:scale-90" title="StandBy Modus (Ambient Display)">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-500 transition-colors group-hover:text-orange-500 sm:w-6 sm:h-6"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M7 20h10"/><path d="M9 16v4"/><path d="M15 16v4"/></svg>
+        </button>
+
+        <button id="settings-global-toggle" onclick="toggleStandaloneSettings(event)" aria-label="Einstellungen öffnen" class="group p-2 sm:p-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-lg rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-700 hover:ring-2 hover:ring-pink-500 transition-all active:scale-90" title="Einstellungen & Anpassungen">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-500 transition-colors group-hover:text-pink-500 sm:w-6 sm:h-6"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         </button>
 
         <button id="perf-toggle" aria-label="Performance Modus" class="group p-2 sm:p-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-lg rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-700 hover:ring-2 hover:ring-green-500 transition-all active:scale-90" title="Low-End Modus (Deaktiviert Animationen)">
@@ -6339,7 +6387,7 @@
                 <div id="footer-expandable-menu" class="hidden absolute bottom-full mb-3 left-1/2 -translate-x-1/2 z-50 p-3 rounded-2xl bg-slate-900/95 border border-slate-700/80 shadow-2xl backdrop-blur-xl min-w-[280px] max-w-[92vw] text-xs space-y-2 animate-in fade-in duration-200">
                     <div class="flex items-center justify-between px-1 pb-1 border-b border-white/10">
                         <span class="font-bold text-slate-400 text-[10px] uppercase tracking-wider">Navigation &amp; Rechtliches</span>
-                        <span id="footer-menu-hint" class="text-[9px] text-slate-500 font-mono">v24.138.1</span>
+                        <span id="footer-menu-hint" class="text-[9px] text-slate-500 font-mono">v24.140.0</span>
                     </div>
                     <div class="grid grid-cols-2 gap-2 text-left">
                         <button onclick="openChangelogModal(); toggleFooterMenu(false)" id="footer-whats-new-btn" class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/90 text-blue-400 font-bold flex items-center gap-1.5 transition-all active:scale-95">
@@ -6354,6 +6402,9 @@
                         <a href="impressum.html" id="footer-impressum-link" class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/90 text-slate-200 font-bold flex items-center gap-1.5 transition-all active:scale-95">
                             <span>⚖️</span> <span class="truncate">Impressum</span>
                         </a>
+                        <button onclick="toggleStandaloneSettings(event); toggleFooterMenu(false)" id="footer-settings-btn" class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/90 text-amber-400 font-bold flex items-center gap-1.5 transition-all active:scale-95">
+                            <span>⚙️</span> <span class="truncate">Einstellungen</span>
+                        </button>
                         <a href="release.html" id="footer-version-link" class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/90 text-pink-400 font-bold flex items-center gap-1.5 transition-all active:scale-95">
                             <span>🚀</span> <span class="truncate">Release Notes</span>
                         </a>
@@ -6367,7 +6418,7 @@
                 <div class="inline-flex items-center gap-2 sm:gap-2.5 px-4 py-2 rounded-full bg-slate-900/85 backdrop-blur-xl border border-white/15 shadow-xl text-[11px] sm:text-xs text-slate-300">
                     <span id="footer-established" class="font-bold tracking-tight text-slate-300">© 2026 GAMINGPIG</span>
                     <span class="text-white/20 select-none">•</span>
-                    <span id="footer-version-label" class="font-mono font-bold text-pink-400">v24.138.1</span>
+                    <span id="footer-version-label" class="font-mono font-bold text-pink-400">v24.140.0</span>
                     <span class="text-white/20 select-none">•</span>
                     <button id="footer-menu-toggle-btn" onclick="toggleFooterMenu()" class="text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1 transition-colors px-1 py-0.5 rounded hover:bg-white/5 active:scale-95" aria-expanded="false" aria-label="Mehr Menü öffnen">
                         <span id="footer-more-label">Mehr</span>
@@ -7629,7 +7680,7 @@
             window.closeLanguagePicker();
             // NEW: Bugfix - Tutorial-Autostart darf erst NACH der Sprachauswahl kommen,
             // nie gleichzeitig (siehe Kommentar bei der alten if-Abfrage weiter unten).
-            if (!localStorage.getItem('tutorialCompletedV3') && !window._manualLangChange) {
+            if (!localStorage.getItem('tutorialCompletedV4') && !window._manualLangChange) {
                 setTimeout(startTutorial, 500);
             }
             window._manualLangChange = false;
@@ -8088,10 +8139,21 @@
         function populateLyricsStyleDropdown() {
             const select = document.getElementById('lyrics-style-select');
             if (!select) return;
-            select.innerHTML = LYRICS_STYLES.map(group =>
-                `<optgroup label="${group.cat}">${group.items.map(([id, label]) =>
-                    `<option value="${id}">${label}</option>`).join('')}</optgroup>`
-            ).join('');
+            // Perf: Use DocumentFragment to eliminate layout thrashing on Android / Pixel 120Hz displays
+            const frag = document.createDocumentFragment();
+            LYRICS_STYLES.forEach(group => {
+                const optgroup = document.createElement('optgroup');
+                optgroup.label = group.cat;
+                group.items.forEach(([id, label]) => {
+                    const opt = document.createElement('option');
+                    opt.value = id;
+                    opt.textContent = label;
+                    optgroup.appendChild(opt);
+                });
+                frag.appendChild(optgroup);
+            });
+            select.innerHTML = '';
+            select.appendChild(frag);
             select.value = currentLyricsStyle;
         }
 
@@ -8103,8 +8165,34 @@
             const box = document.getElementById('lyrics-style-preview-box');
             const textEl = document.getElementById('lyrics-style-preview-text');
             if (!box || !textEl) return;
-            box.className = `w-full bg-black/40 rounded-xl p-2.5 mb-1 overflow-hidden text-center min-h-[56px] flex items-center justify-center select-none lyrics-style-${style}`;
-            textEl.className = 'lyric-line active text-sm xxs:text-base font-bold leading-snug !m-0 !max-w-full !p-0';
+
+            const isCharStyle = CHAR_LEVEL_STYLES.has(style);
+            const isLowEnd = document.body.classList.contains('low-end');
+
+            // Responsive desktop & mobile sizing
+            box.className = `w-full bg-black/50 rounded-xl p-3 mb-1 overflow-hidden text-center min-h-[60px] flex items-center justify-center select-none lyrics-style-${style} relative border border-white/10`;
+            textEl.className = 'lyric-line active text-xs sm:text-sm md:text-base font-bold leading-snug !m-0 !max-w-full !p-0';
+
+            // Type badge & performance explanation
+            let badgeEl = document.getElementById('lyrics-preview-mode-badge');
+            if (!badgeEl) {
+                badgeEl = document.createElement('div');
+                badgeEl.id = 'lyrics-preview-mode-badge';
+                box.parentNode.insertBefore(badgeEl, box.nextSibling);
+            }
+
+            const badgeType = isCharStyle ? '🔤 Buchstabe für Buchstabe' : '📄 Zeile für Zeile';
+            const badgeColor = isCharStyle ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40' : 'bg-slate-700/60 text-slate-300 border-slate-600/40';
+
+            let lowEndNotice = '';
+            if (isLowEnd) {
+                lowEndNotice = '<div class="text-[9px] text-amber-400/90 font-medium mt-1 leading-tight text-left px-1">⚠️ Low-End Modus: Rendering läuft zeilenweise ohne GPU-Shader zur Schonung des Akkus.</div>';
+            }
+
+            badgeEl.innerHTML = '<div class="flex items-center justify-between gap-2 px-1 mt-1 mb-1 text-[9px] sm:text-[10px]">' +
+                '<span class="font-bold text-slate-400">Art der Animation:</span>' +
+                '<span class="px-2 py-0.5 rounded-full font-bold border text-[9px] font-mono ' + badgeColor + '">' + badgeType + '</span>' +
+            '</div>' + lowEndNotice;
 
             const isCharStyle = CHAR_LEVEL_STYLES.has(style);
             lyricsPreviewStep = 0;
@@ -12063,7 +12151,7 @@ window.generateShareCard = function() {
             if (selectedEl) selectedEl.scrollIntoView({ block: 'nearest' });
         }
 
-        window.openCommandPalette = function() {
+        window.openCommandPalette = function() { if (typeof triggerTutorialEvent === "function") triggerTutorialEvent("search_tested");
             const overlay = document.getElementById('command-palette-overlay');
             const input = document.getElementById('cp-input');
             if (!overlay) return;
@@ -12212,7 +12300,7 @@ window.generateShareCard = function() {
         // den Wert für "Classic" im aktuellen Format, bis StandBy zum ersten Mal öffnet.
         syncStandbyScaleSliderUI();
 
-        window.toggleStandBy = function(force) {
+        window.toggleStandBy = function(force) { if (typeof triggerTutorialEvent === "function") triggerTutorialEvent("standby_or_music");
             const overlay = document.getElementById('standby-overlay');
             if (!overlay) return;
             const wasActive = standByActive;
@@ -12639,7 +12727,7 @@ window.generateShareCard = function() {
                     tutorialBox.classList.remove('tutorial-closing');
                 }
                 clearTutorialHighlights();
-                localStorage.setItem('tutorialCompletedV3', 'true');
+                localStorage.setItem('tutorialCompletedV4', 'true');
                 
                 if (originalPerfModeState !== 'true' && window.innerWidth >= 360) {
                     applyPerformanceMode(false);
@@ -12724,7 +12812,78 @@ window.generateShareCard = function() {
         }
 
         let tutorialTimeout;
-        function startTutorial() {
+        let interactiveTutorialActive = false;
+        let interactiveTutorialTasks = {
+            card_opened: false,
+            settings_opened: false,
+            search_tested: false,
+            standby_or_music: false
+        };
+
+        window.triggerTutorialEvent = function(eventName) {
+            if (!interactiveTutorialActive) return;
+            if (interactiveTutorialTasks.hasOwnProperty(eventName) && !interactiveTutorialTasks[eventName]) {
+                interactiveTutorialTasks[eventName] = true;
+                const completedCount = Object.values(interactiveTutorialTasks).filter(Boolean).length;
+                const totalCount = Object.keys(interactiveTutorialTasks).length;
+                
+                if (typeof launchConfetti === 'function') launchConfetti();
+                haptic(20);
+                
+                if (completedCount === totalCount) {
+                    interactiveTutorialActive = false;
+                    localStorage.setItem('tutorialCompletedV4', 'true');
+                    showToast('🏆 Großartig! Du hast alle interaktiven Meilensteine gemeistert! 🎉', 5000);
+                } else {
+                    showToast('🎯 Meilenstein erreicht (' + completedCount + '/' + totalCount + ')! Erkunde weiter!', 3000);
+                }
+            }
+        };
+
+        function showTutorialModeChoiceModal() {
+            if (!modalOverlay || !modalBody) {
+                runClassicTutorial();
+                return;
+            }
+            
+            modalBody.innerHTML = '<div class="flex flex-col items-center text-center p-2 sm:p-4">' +
+                '<div class="w-16 h-16 rounded-3xl bg-gradient-to-tr from-purple-500 to-pink-500 text-white flex items-center justify-center text-3xl shadow-xl shadow-purple-500/20 mb-4 animate-bounce">🚀</div>' +
+                '<h2 class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mb-2">Wie möchtest du starten?</h2>' +
+                '<p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 max-w-md mb-6 leading-relaxed">Wähle dein bevorzugtes Erlebnis: Entdecke die Funktionen spielerisch durch Ausprobieren mit Event-Meilensteinen oder lehn dich bei einem klassischen geführten Rundgang zurück.</p>' +
+                '<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-md">' +
+                    '<button onclick="startInteractiveLearning()" class="p-4 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white text-left font-bold shadow-lg hover:shadow-blue-500/25 transition-all active:scale-95 group border border-blue-400/30">' +
+                        '<div class="text-2xl mb-1">🎮</div>' +
+                        '<div class="text-sm font-extrabold group-hover:translate-x-0.5 transition-transform">Interaktives Self-Learning</div>' +
+                        '<div class="text-[10px] text-blue-100/80 font-medium mt-1">Learning by Doing: Klicke Karten, teste Suche & sammle Konfetti!</div>' +
+                    '</button>' +
+                    '<button onclick="runClassicTutorial()" class="p-4 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white text-left font-bold shadow-md hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95 group border border-slate-300 dark:border-slate-700">' +
+                        '<div class="text-2xl mb-1">📖</div>' +
+                        '<div class="text-sm font-extrabold group-hover:translate-x-0.5 transition-transform">Klassischer Rundgang</div>' +
+                        '<div class="text-[10px] text-slate-500 dark:text-slate-400 font-medium mt-1">Geführte Schritt-für-Schritt Tour durch alle Kontrollzentren.</div>' +
+                    '</button>' +
+                '</div>' +
+            '</div>';
+
+            if (modalOverlay) {
+                modalOverlay.classList.remove('hidden');
+                modalOverlay.classList.add('flex');
+            }
+        }
+
+        window.startInteractiveLearning = function() {
+            if (modalOverlay) {
+                modalOverlay.classList.remove('flex');
+                modalOverlay.classList.add('hidden');
+            }
+            interactiveTutorialActive = true;
+            showToast('🎮 Interaktiver Modus aktiv: Öffne eine Karte, teste die ⌘K-Suche oder öffne die Einstellungen!', 4500);
+        };
+
+        function runClassicTutorial() {
+            if (modalOverlay) {
+                modalOverlay.classList.remove('flex');
+                modalOverlay.classList.add('hidden');
+            }
             tutorialMode = 'main';
             currentStepIndex = 0;
             originalPerfModeState = localStorage.getItem('perfMode');
@@ -12746,6 +12905,10 @@ window.generateShareCard = function() {
                 }, 1200);
             }
             showTutorialStep(currentStepIndex);
+        }
+
+        function startTutorial() {
+            showTutorialModeChoiceModal();
         }
 
         // FIX v24.62: Eigenständiger, leichtgewichtiger Einstiegspunkt für die "Was ist neu?"-
@@ -12821,7 +12984,7 @@ window.generateShareCard = function() {
         // wiederkehrende Besucher, die schon eine Sprache gewählt haben - für Erstbesucher
         // passiert der Autostart stattdessen in selectLanguage(), NACHDEM die Sprache
         // gewählt wurde (siehe dort).
-        if (!localStorage.getItem('tutorialCompletedV3') && currentLang) {
+        if (!localStorage.getItem('tutorialCompletedV4') && currentLang) {
             setTimeout(startTutorial, 500);
         } else if (currentLang && localStorage.getItem('whatsNewSeenVersion') !== SITE_VERSION) {
             // FIX v24.62: Was-ist-neu-Flag jetzt an SITE_VERSION gekoppelt statt an ein
@@ -12845,6 +13008,62 @@ window.generateShareCard = function() {
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+            { version: 'v24.140.0', date: "7. September 2026", type: 'feature', items: {
+                de: [
+                    "👁️ Intelligentes Viewport-Rendering: 20% Puffer-Zone oben/unten pausiert inaktive Offscreen-Sektionen und spart massiv Akku",
+                    "🏝️ Smarte Dynamic Island Notiz: Informiert transparent beim Öffnen des Musik-Dashboards mit 'Nicht mehr anzeigen'-Schalter",
+                    "🔍 Eigene Mobile Zoom-Engine: Verhindert Layout-Glitches bei mobilem Zoomen durch integrierte Skalierung (Doppeltippen = 115%)",
+                    "⚙️ Globales Einstellungsmenü: Direkter Zugriff auf Themes, Effekte & Performance-Optionen unabhängig von den Songtexten",
+                    "📱 Lag-freie Songtext-Animationsliste: Stark beschleunigte DOM-Operationen auf 120Hz-Displays und Google Pixel Geräten",
+                    "✨ Intelligente Lyrics-Vorschau: Automatische Erkennung von Buchstaben- vs. Zeilen-Rendering mit Low-End-Hinweis",
+                    "🎮 Interaktives Learning-by-Doing Tutorial: Modus-Auswahl (Interaktiv vs. Klassisch) mit Event-Tracking, Meilensteinen & Konfetti"
+                ],
+                en: [
+                    "👁️ Intelligent Viewport Rendering: 20% buffer margin above and below pauses offscreen sections to maximize battery life",
+                    "🏝️ Smart Dynamic Island Notification: Explains island behavior when dashboard opens, with 'Don't show again' toggle",
+                    "🔍 Custom Mobile Zoom Engine: Replaces unstable browser zoom with native app scaling (double tap = 115%)",
+                    "⚙️ Global Settings Menu: Immediate access to themes, effects and performance toggles from anywhere on the page",
+                    "📱 Lag-Free Lyrics Animation Dropdown: Optimized DOM operations and rendering for Google Pixel and 120Hz devices",
+                    "✨ Intelligent Lyrics Preview: Detects letter-by-letter vs line-by-line animations with clear low-end mode explanations",
+                    "🎮 Interactive Learning-by-Doing Tutorial: Choice between interactive tasks with confetti celebrations or classic walkthrough"
+                ],
+                es: [
+                    "👁️ Renderizado Inteligente de Ventana: Margen del 20% que pausa secciones fuera de vista y ahorra batería",
+                    "🏝️ Notificación Dynamic Island: Informa por qué se oculta al abrir el reproductor con opción de no volver a mostrar",
+                    "🔍 Motor de Zoom Personalizado: Evita errores de escala en móviles con zoom integrado (doble toque = 115%)",
+                    "⚙️ Menú de Ajustes Global: Acceso a personalizaciones y rendimiento desde cualquier parte del sitio",
+                    "📱 Lista de Animaciones Optimizada: Desplazamiento ultra fluido sin tirones en Pixel y pantallas a 120Hz",
+                    "✨ Previsualización Inteligente: Detecta animación letra por letra frente a línea por línea con avisos claros",
+                    "🎮 Tutorial Interactivo: Elige entre modo guiado o aprendizaje activo con retos y confeti"
+                ],
+                fr: [
+                    "👁️ Rendu Intelligent de la Vue : Marge de 20% mettant en pause les sections hors écran pour préserver la batterie",
+                    "🏝️ Notification Dynamic Island : Explication transparente lors de l'ouverture du lecteur avec bouton 'Ne plus afficher'",
+                    "🔍 Moteur de Zoom Mobile : Remplace le zoom natif instable par une mise à l'échelle fluide (double-tap = 115%)",
+                    "⚙️ Menu Paramètres Universel : Accès rapide aux styles et réglages sans devoir ouvrir les paroles",
+                    "📱 Sélecteur d'Animations Fluide : Optimisation 120Hz sans latence pour Google Pixel et smartphones Android",
+                    "✨ Aperçu Intelligent des Paroles : Distinction lettre par lettre / ligne par ligne avec mode économie clair",
+                    "🎮 Nouveau Tutoriel Interactif : Choisissez entre défis interactifs avec confettis et visite guidée classique"
+                ],
+                pt: [
+                    "👁️ Renderização de Viewport Inteligente: Margem de 20% pausa seções ocultas e economiza bateria",
+                    "🏝️ Notificação da Dynamic Island: Alerta discreto ao abrir o painel com opção de dispensar para sempre",
+                    "🔍 Motor de Zoom Mobile Exclusivo: Escala personalizada sem quebras de layout (toque duplo = 115%)",
+                    "⚙️ Menu Global de Configurações: Altere temas, efeitos e opções de desempenho de qualquer lugar",
+                    "📱 Lista de Animações Fluida: Operações DOM aceleradas para telas 120Hz e dispositivos Pixel",
+                    "✨ Prévia Inteligente de Letras: Identifica estilos letra por letra ou linha por linha com avisos de desempenho",
+                    "🎮 Tutorial Interativo 'Learning by Doing': Modo prático com metas, confetes e medalha de conclusão"
+                ],
+                tr: [
+                    "👁️ Akıllı Görünüm Alanı İşleme: %20 güvenlik payı ile ekran dışındaki bölümler duraklatılarak pil tasarrufu sağlanır",
+                    "🏝️ Akıllı Dynamic Island Bildirimi: Kontrol paneli açıldığında kullanıcıyı bilgilendirir ('Bir daha gösterme' seçeneğiyle)",
+                    "🔍 Özel Mobil Yakınlaştırma Motoru: Bozulmaları önleyen yerleşik ölçeklendirme motoru (çift dokunma = %115)",
+                    "⚙️ Evrensel Ayarlar Menüsü: Şarkı sözlerini açmaya gerek kalmadan tüm ayarlara anında erişim",
+                    "📱 Akıcı Şarkı Sözü Animasyon Seçimi: Pixel ve 120Hz ekranlarda takılmasız, optimize liste geçişleri",
+                    "✨ Akıllı Şarkı Sözü Önizlemesi: Harf harf ve satır satır efektleri otomatik ayırt eden rozet sistemi",
+                    "🎮 Yeni İnteraktif Öğrenme Turu: Görevler, konfeti kutlamaları ve başarı rozetleriyle zenginleştirilmiş tur"
+                ]
+            }},
             { version: 'v24.139.0', date: "4. September 2026", type: 'feature', items: {
                 de: [
                     "⚡ Dynamischer Songtext-Sync & Auto-Tempo: Sprachausgabe passt ihr Tempo in Echtzeit dem Songrhythmus an und verhindert Verzögerungen",
@@ -14149,7 +14368,7 @@ window.generateShareCard = function() {
             document.body.style.overflow = 'hidden';
         };
 
-        window.openModal = function(key) {
+        window.openModal = function(key) { if (typeof triggerTutorialEvent === "function") triggerTutorialEvent("card_opened");
             const data = getDetails()[key];
             if(!data) return;
             if (modalBody) {
@@ -14228,7 +14447,84 @@ window.generateShareCard = function() {
             revealObserver.observe(el);
         });
 
-        // Versteckt die Dynamic Island automatisch wenn der Musik-Bereich/Player im Blickfeld ist
+        // ========================================================= //
+        // --- 1. INTELLIGENTES VIEWPORT-RENDERING (20% PUFFER) ---- //
+        // ========================================================= //
+        if ('IntersectionObserver' in window) {
+            const viewportSections = [
+                document.getElementById('header-section'),
+                document.getElementById('cards-section'),
+                document.getElementById('music-section'),
+                document.getElementById('support-section'),
+                document.getElementById('socials-section'),
+                document.getElementById('kart-section'),
+                document.getElementById('footer-section')
+            ].filter(Boolean);
+
+            viewportSections.forEach(sec => sec.classList.add('section-optimized'));
+
+            const viewportObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    const el = entry.target;
+                    if (entry.isIntersecting) {
+                        el.style.contentVisibility = 'visible';
+                        el.removeAttribute('data-offscreen');
+                    } else {
+                        el.style.contentVisibility = 'auto';
+                        el.setAttribute('data-offscreen', 'true');
+                    }
+                });
+            }, {
+                root: null,
+                rootMargin: '20% 0px 20% 0px',
+                threshold: [0, 0.05]
+            });
+
+            viewportSections.forEach(sec => viewportObserver.observe(sec));
+        }
+
+        // ========================================================= //
+        // --- 2. CUSTOM APP-ZOOM ENGINE (MOBIL-ERSATZ) ------------ //
+        // ========================================================= //
+        (function initAppZoomEngine() {
+            let currentAppZoom = 1.0;
+            const mainContentEl = document.getElementById('main-content');
+            
+            function setAppZoom(scale) {
+                currentAppZoom = Math.min(1.5, Math.max(0.85, scale));
+                document.documentElement.style.setProperty('--app-zoom', currentAppZoom);
+                if (mainContentEl) {
+                    if (Math.abs(currentAppZoom - 1.0) < 0.01) {
+                        mainContentEl.style.transform = '';
+                    } else {
+                        mainContentEl.style.transform = 'scale(' + currentAppZoom + ')';
+                    }
+                }
+            }
+
+            window.setAppZoom = setAppZoom;
+            window.resetAppZoom = () => setAppZoom(1.0);
+
+            // Double tap on mobile background to toggle 1.15x readable zoom
+            let lastTapTime = 0;
+            document.addEventListener('touchend', (e) => {
+                if (e.target.closest('button, input, select, a, #modal-overlay, #lyrics-overlay, #standby-overlay, #tutorial-wrapper')) return;
+                const now = Date.now();
+                if (now - lastTapTime < 300) {
+                    e.preventDefault();
+                    if (currentAppZoom > 1.05) {
+                        setAppZoom(1.0);
+                        if (typeof showToast === 'function') showToast('🔍 Zoom zurückgesetzt (100%)', 1800);
+                    } else {
+                        setAppZoom(1.15);
+                        if (typeof showToast === 'function') showToast('🔍 Zoom aktiviert (115%)', 1800);
+                    }
+                }
+                lastTapTime = now;
+            }, { passive: false });
+        })();
+
+                // Versteckt die Dynamic Island automatisch wenn der Musik-Bereich/Player im Blickfeld ist
         const musicSectionEl = document.getElementById('music-section');
         if (musicSectionEl && 'IntersectionObserver' in window) {
             const diMusicObserver = new IntersectionObserver((entries) => {
@@ -14269,11 +14565,28 @@ window.generateShareCard = function() {
         // --- NEUES FEATURE: Toast-Benachrichtigungen -------------- //
         // ========================================================= //
         const toastContainer = document.getElementById('toast-container');
-        window.showToast = function(message, duration = 3200) {
+        window.showToast = function(message, duration = 3200, actionBtn = null) {
             if (!toastContainer) return;
             const toast = document.createElement('div');
-            toast.className = 'toast';
-            toast.innerText = message;
+            toast.className = 'toast pointer-events-auto';
+            
+            const textSpan = document.createElement('span');
+            textSpan.innerText = message;
+            toast.appendChild(textSpan);
+
+            if (actionBtn && actionBtn.text && typeof actionBtn.onClick === 'function') {
+                const btn = document.createElement('button');
+                btn.className = 'toast-action-btn';
+                btn.innerText = actionBtn.text;
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    actionBtn.onClick();
+                    toast.classList.add('toast-out');
+                    setTimeout(() => toast.remove(), 400);
+                };
+                toast.appendChild(btn);
+            }
+
             toastContainer.appendChild(toast);
             setTimeout(() => {
                 toast.classList.add('toast-out');
@@ -14608,6 +14921,20 @@ window.generateShareCard = function() {
                 diEl.classList.toggle('di-hidden-by-dashboard', isDashboardOpen);
                 updateIslandRing();
             }
+            if (isDashboardOpen) {
+                // Dynamic Island Notification
+                if (!localStorage.getItem('gp_hide_di_notify_dismissed')) {
+                    const diMsg = (typeof t === 'function' && t('toast_di_hidden_by_dashboard')) || '🏝️ Dynamic Island weicht dem Musik-Dashboard, um Überlappung zu vermeiden.';
+                    const dismissTxt = (typeof t === 'function' && t('toast_dont_show_again')) || 'Nicht mehr anzeigen';
+                    showToast(diMsg, 4800, {
+                        text: dismissTxt,
+                        onClick: () => {
+                            localStorage.setItem('gp_hide_di_notify_dismissed', 'true');
+                            showToast((typeof t === 'function' && t('toast_di_pref_saved')) || '✓ Gespeichert: Hinweis wird nicht mehr angezeigt.', 2500);
+                        }
+                    });
+                }
+            }
             if (isDashboardOpen) { pushOverlayHistory(); } else { popOverlayHistory(); }
             clearTimeout(dashboardTimeout); 
             clearTimeout(dashboardOpenTimeout);
@@ -14842,28 +15169,42 @@ window.generateShareCard = function() {
         // und dessen Ausbreitung gestoppt (stopPropagation) - kann den Listener dadurch
         // kategorisch nie mehr im selben Klick erreichen, unabhängig vom genauen
         // Auslöse-Szenario (Mobilgerät, Touch-Events, o.ä.).
-        window.toggleLyricsSettings = function(event) {
+        window.toggleLyricsSettings = function(event, isStandalone = false) {
             if (event) event.stopPropagation();
             isLyricsSettingsOpen = !isLyricsSettingsOpen;
             if (!lyricsSettingsMenu) return;
             clearTimeout(lyricsSettingsTimeout);
             if (isLyricsSettingsOpen) {
+                if (isStandalone || (!mainMusicCard?.classList.contains('lyrics-open'))) {
+                    lyricsSettingsMenu.classList.add('standalone-settings');
+                } else {
+                    lyricsSettingsMenu.classList.remove('standalone-settings');
+                }
                 lyricsSettingsMenu.classList.remove('hidden', 'settings-closing');
                 lyricsSettingsMenu.classList.add('settings-opening');
-                updateLyricsStylePreview(currentLyricsStyle); // NEW: Vorschau-Schleife frisch starten
+                updateLyricsStylePreview(currentLyricsStyle);
             } else {
-                stopLyricsStylePreviewLoop(); // NEW: Vorschau-Schleife stoppen, spart unnötig laufende Rechenzeit im Hintergrund
+                stopLyricsStylePreviewLoop();
                 lyricsSettingsMenu.classList.remove('settings-opening');
                 lyricsSettingsMenu.classList.add('settings-closing');
                 lyricsSettingsTimeout = setTimeout(() => {
                     lyricsSettingsMenu.classList.add('hidden');
-                    lyricsSettingsMenu.classList.remove('settings-closing');
-                }, 180); // 0.15s Pop-Out abwarten
+                    lyricsSettingsMenu.classList.remove('settings-closing', 'standalone-settings');
+                }, 180);
             }
         };
 
+        window.toggleStandaloneSettings = function(event) { if (typeof triggerTutorialEvent === "function") triggerTutorialEvent("settings_opened");
+            if (event) event.stopPropagation();
+            toggleLyricsSettings(event, true);
+        };
+
         document.addEventListener('click', (e) => {
-            if (isLyricsSettingsOpen && !e.target.closest('#lyrics-settings-menu') && !e.target.closest('#btn-lyrics-settings')) {
+            if (isLyricsSettingsOpen && 
+                !e.target.closest('#lyrics-settings-menu') && 
+                !e.target.closest('#btn-lyrics-settings') && 
+                !e.target.closest('#settings-global-toggle') && 
+                !e.target.closest('#footer-settings-btn')) {
                 toggleLyricsSettings();
             }
         });
