@@ -3395,15 +3395,14 @@
             animation-play-state: paused !important;
         }
 
-        
-        @keyframes quest-pulse-target {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(168, 85, 247, 0.5), 0 0 20px rgba(168, 85, 247, 0.3); transform: scale(1); }
-            50% { box-shadow: 0 0 0 8px rgba(168, 85, 247, 0.15), 0 0 35px rgba(236, 72, 153, 0.5); transform: scale(1.015); }
-        }
-        .quest-highlight-target {
-            animation: quest-pulse-target 1.8s ease-in-out infinite !important;
-            border-color: rgba(168, 85, 247, 0.8) !important;
-            transition: all 0.3s ease !important;
+        /* Clean, subtle spotlight & target focus states (No neon bloom) */
+        .quest-highlight-target,
+        .tutorial-target-active {
+            outline: 2px solid rgba(255, 255, 255, 0.3) !important;
+            outline-offset: 4px !important;
+            box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.7) !important;
+            animation: none !important;
+            transition: outline-color 0.2s ease, box-shadow 0.2s ease !important;
         }
         @keyframes xp-float-anim {
             0% { opacity: 0; transform: translate(-50%, 20px) scale(0.7); }
@@ -4575,7 +4574,15 @@
             100% { transform: scale(20) translate3d(0,0,0); opacity: 0; box-shadow: 0 0 30px 5px rgba(59, 130, 246, 0), inset 0 0 30px transparent; } 
         }
 
-        .tutorial-active-element { z-index: 300 !important; box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7), 0 0 50px 15px rgba(59, 130, 246, 0.5) !important; border-radius: inherit; pointer-events: none; transition: box-shadow 0.8s var(--liquid-fluid) !important; }
+        .tutorial-active-element { 
+            z-index: 300 !important; 
+            outline: 2px solid rgba(255, 255, 255, 0.3) !important;
+            outline-offset: 4px !important;
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.75), 0 0 0 4px rgba(0, 0, 0, 0.6) !important; 
+            border-radius: inherit; 
+            pointer-events: none; 
+            transition: box-shadow 0.3s ease !important; 
+        }
         .tutorial-active-element:not(#ui-controls):not(#cp-trigger):not(#pwa-install-btn):not(#standby-toggle) { position: relative !important; background: white; }
         .dark .tutorial-active-element:not(#ui-controls):not(#cp-trigger):not(#pwa-install-btn):not(#standby-toggle) { background: #0f172a; }
         #ui-controls.tutorial-active-element { position: fixed !important; background: transparent !important; border-radius: 1rem; }
@@ -7002,42 +7009,42 @@
 <!-- 🏆 INTERACTIVE TUTORIAL QUEST HUD (V5)                    -->
 <!-- ========================================================= -->
 <div id="interactive-quest-hud" class="hidden fixed top-20 sm:top-24 right-3 sm:right-6 z-[10001] w-[92vw] sm:w-[360px] max-w-sm transition-all duration-300 select-none animate-fadeIn">
-    <div class="relative rounded-3xl bg-slate-900/95 border-2 border-purple-500/50 shadow-2xl shadow-purple-950/60 backdrop-blur-2xl p-3.5 sm:p-4 text-white overflow-hidden">
-        <!-- Animated top energy bar -->
-        <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 animate-pulse"></div>
+    <div class="relative rounded-2xl bg-slate-900/95 border border-white/10 shadow-2xl backdrop-blur-2xl p-3.5 sm:p-4 text-white overflow-hidden">
+        <!-- Top accent line -->
+        <div class="absolute top-0 left-0 right-0 h-0.5 bg-blue-500/50"></div>
         
         <!-- Header -->
         <div class="flex items-center justify-between gap-2 mb-2.5">
             <div class="flex items-center gap-2 min-w-0">
-                <div class="w-8 h-8 rounded-xl bg-purple-500/20 border border-purple-400/40 flex items-center justify-center text-base shadow-inner shrink-0 animate-bounce">
+                <div class="w-7 h-7 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-sm shadow-inner shrink-0">
                     🎮
                 </div>
                 <div class="min-w-0">
-                    <h3 class="text-xs sm:text-sm font-black uppercase tracking-wider text-white flex items-center gap-1.5">
+                    <h3 class="text-xs sm:text-sm font-bold tracking-tight text-white flex items-center gap-1.5">
                         <span class="truncate">Gamingpig Quest</span>
-                        <span id="quest-badge-count" class="text-[9px] font-mono px-1.5 py-0.5 rounded-full bg-purple-500/30 text-purple-200 border border-purple-400/30 shrink-0">0/4</span>
+                        <span id="quest-badge-count" class="text-[9px] font-mono px-1.5 py-0.5 rounded-md bg-white/10 text-slate-300 border border-white/10 shrink-0">0/4</span>
                     </h3>
-                    <p id="quest-xp-display" class="text-[10px] text-amber-300 font-extrabold flex items-center gap-1">
-                        <span>⚡ 0 XP</span> <span class="text-slate-400 font-medium">• Lvl 1 Entdecker</span>
+                    <p id="quest-xp-display" class="text-[10px] text-amber-300 font-semibold flex items-center gap-1">
+                        <span>⚡ 0 XP</span> <span class="text-slate-400 font-normal">• Lvl 1 Entdecker</span>
                     </p>
                 </div>
             </div>
-            <div class="flex items-center gap-1 shrink-0">
-                <button onclick="toggleQuestHudPosition()" id="btn-quest-position" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-all text-xs font-bold active:scale-95" title="Oben/Unten umschalten">
+            <div class="flex items-center gap-1.5 shrink-0">
+                <button onclick="toggleQuestHudPosition()" id="btn-quest-position" class="p-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition-all text-xs font-bold active:scale-95" title="Oben/Unten umschalten">
                     <span id="quest-pos-icon">↕️</span>
                 </button>
-                <button onclick="toggleQuestHudCollapse()" id="btn-quest-collapse" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-all text-xs font-bold active:scale-95" title="Einklappen">
+                <button onclick="toggleQuestHudCollapse()" id="btn-quest-collapse" class="p-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition-all text-xs font-bold active:scale-95" title="Einklappen">
                     <span id="quest-collapse-icon">▲</span>
                 </button>
-                <button onclick="dismissInteractiveQuest()" class="p-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 transition-all text-xs font-bold active:scale-95" title="Schließen">
-                    ✕
+                <button onclick="dismissInteractiveQuest()" class="px-2.5 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-white/10 transition-all text-[11px] font-semibold active:scale-95" title="Tutorial überspringen">
+                    Überspringen
                 </button>
             </div>
         </div>
 
         <!-- Progress Bar & XP -->
-        <div class="w-full bg-slate-800/90 rounded-full h-2 mb-2.5 overflow-hidden border border-white/10 p-0.5">
-            <div id="quest-progress-bar" class="bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 h-full rounded-full transition-all duration-500 w-0 shadow-lg shadow-purple-500/50"></div>
+        <div class="w-full bg-slate-800/90 rounded-full h-1.5 mb-2.5 overflow-hidden border border-white/5 p-0.5">
+            <div id="quest-progress-bar" class="bg-blue-500 h-full rounded-full transition-all duration-500 w-0"></div>
         </div>
 
         <!-- Quest List (Collapsible Container) -->
