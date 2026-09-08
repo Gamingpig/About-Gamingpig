@@ -3368,18 +3368,25 @@
 
         /* StandBy owns the visible UI. Preserve page layout/state while suspending paint/animation. */
         body.standby-mode #dynamic-island { display: none !important; }
-        body.standby-mode > :not(#standby-overlay),
-        body.standby-mode > :not(#standby-overlay) *,
-        body.standby-mode > :not(#standby-overlay)::before,
-        body.standby-mode > :not(#standby-overlay)::after,
-        body.standby-mode > :not(#standby-overlay) *::before,
-        body.standby-mode > :not(#standby-overlay) *::after {
+        body.standby-mode > :not(#standby-overlay):not(#ai-version-notice),
+        body.standby-mode > :not(#standby-overlay):not(#ai-version-notice) *,
+        body.standby-mode > :not(#standby-overlay):not(#ai-version-notice)::before,
+        body.standby-mode > :not(#standby-overlay):not(#ai-version-notice)::after,
+        body.standby-mode > :not(#standby-overlay):not(#ai-version-notice) *::before,
+        body.standby-mode > :not(#standby-overlay):not(#ai-version-notice) *::after {
             visibility: hidden !important;
             pointer-events: none !important;
             animation-play-state: paused !important;
         }
-        #ai-version-notice { position: fixed; inset: 0 0 auto; z-index: 2147483647; padding: 14px 18px; background: #facc15; color: #111827; border-bottom: 3px solid #111827; font: 700 15px/1.4 system-ui; text-align: center; }
-        #ai-version-notice button { margin-left: 12px; padding: 5px 12px; border: 2px solid currentColor; border-radius: 8px; cursor: pointer; }
+        #ai-version-notice { position: fixed; inset: 0; margin: 0; width: 100%; max-width: none; height: 100dvh; max-height: none; box-sizing: border-box; padding: max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom)); border: 0; background: #111827; color: #fff; overflow-y: auto; font: 16px/1.6 system-ui; }
+        #ai-version-notice::backdrop { background: #111827; }
+        #ai-version-notice .ai-copy { max-width: 1000px; margin: 24px auto; display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); }
+        #ai-version-notice article { padding: 18px; border: 2px solid #facc15; border-radius: 12px; }
+        #ai-version-notice h2 { color: #facc15; font-size: clamp(22px, 4vw, 36px); font-weight: 900; text-align: center; }
+        #ai-version-notice button { display: block; margin: 20px auto; padding: 14px; border: 2px solid #facc15; border-radius: 10px; color: #111827; background: #facc15; font-weight: 800; }
+        #ai-version-notice button:disabled { opacity: .65; cursor: wait; }
+        #ai-notice-time { display: block; text-align: center; font-size: 24px; font-weight: 800; }
+
 
         /* Lyrics Settings Menu (Dropdown anchored directly in lyrics center header) */
         #lyrics-settings-menu {
@@ -5821,11 +5828,55 @@
 </script>
 </head>
 <body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen selection:bg-blue-500/30 overflow-x-hidden">
-    <aside id="ai-version-notice" role="alert" aria-label="KI-Hinweis zur aktuellen Version">
-        <strong>WICHTIG · VERSION 24.158.0: Die Änderungen in dieser Version sind zu 100 % KI-generiert.</strong><br>
-        <span lang="en">All changes in this version are 100% AI-generated.</span>
-        <button type="button" onclick="document.getElementById('ai-version-notice').remove()">Verstanden / Understood</button>
-    </aside>
+    <dialog id="ai-version-notice" aria-labelledby="ai-notice-title" aria-modal="true">
+      <h2 id="ai-notice-title">100 % KI / AI · VERSION 24.158.0</h2>
+      <div class="ai-copy">
+        <article lang="de"><strong>Deutsch</strong><p>Die Änderungen in dieser Version sind zu 100 % KI-generiert. Bitte lies diesen Hinweis. Die Seite wird nach zwei Minuten freigegeben.</p></article>
+        <article lang="en"><strong>English</strong><p>The changes in this version are 100% AI-generated. Please read this notice. The page becomes available after two minutes.</p></article>
+        <article lang="es"><strong>Español</strong><p>Los cambios de esta versión están generados al 100 % por inteligencia artificial. Lee este aviso. La página estará disponible después de dos minutos.</p></article>
+        <article lang="fr"><strong>Français</strong><p>Les modifications de cette version sont générées à 100 % par une intelligence artificielle. Veuillez lire cet avis. La page sera accessible après deux minutes.</p></article>
+        <article lang="pt"><strong>Português</strong><p>As alterações desta versão foram geradas 100 % por inteligência artificial. Leia este aviso. A página estará disponível após dois minutos.</p></article>
+        <article lang="tr"><strong>Türkçe</strong><p>Bu sürümdeki değişiklikler %100 yapay zekâ tarafından oluşturulmuştur. Lütfen bu bildirimi okuyun. Sayfa iki dakika sonra kullanılabilir olacaktır.</p></article>
+      </div>
+      <output id="ai-notice-time" aria-label="Countdown">2:00</output>
+      <button id="ai-notice-continue" type="button" disabled>Weiter / Continue / Continuar / Continuer / Devam</button>
+    </dialog>
+    <script>
+    (() => {
+        const dialog = document.getElementById('ai-version-notice');
+        const button = document.getElementById('ai-notice-continue');
+        const clock = document.getElementById('ai-notice-time');
+        const deadline = performance.now() + 120000;
+        let locked = true;
+        const originalState = history.state;
+        history.pushState(originalState, '', location.href);
+        const blockBack = event => {
+            if (!locked) return;
+            event.stopImmediatePropagation();
+            history.pushState(originalState, '', location.href);
+        };
+        const blockEscape = event => {
+            if (locked && event.key === 'Escape') { event.preventDefault(); event.stopImmediatePropagation(); }
+        };
+        window.addEventListener('popstate', blockBack, true);
+        window.addEventListener('keydown', blockEscape, true);
+        dialog.addEventListener('cancel', event => { if (locked) event.preventDefault(); });
+        dialog.addEventListener('close', () => { if (locked) dialog.showModal(); });
+        dialog.showModal();
+        const timer = setInterval(() => {
+            const seconds = Math.max(0, Math.ceil((deadline - performance.now()) / 1000));
+            clock.textContent = Math.floor(seconds / 60) + ':' + String(seconds % 60).padStart(2, '0');
+            if (!seconds) {
+                clearInterval(timer);
+                locked = false;
+                button.disabled = false;
+                window.removeEventListener('popstate', blockBack, true);
+                window.removeEventListener('keydown', blockEscape, true);
+            }
+        }, 250);
+        button.addEventListener('click', () => { if (!locked) { dialog.close(); dialog.remove(); } });
+    })();
+    </script>
 
     <!-- TRANSPARENTER & UNUMGÄNGLICHER DATENSCHUTZ-AKTUALISIERUNGS-HINWEIS -->
     
@@ -13391,7 +13442,7 @@ let shareCardLoading;
                 currentFetchId++; // Ignore lyrics responses started before entering StandBy.
                 if (isLyricsSettingsOpen) window.toggleLyricsSettings();
                 for (const element of document.body.children) {
-                    if (element === overlay || ['SCRIPT', 'STYLE', 'LINK'].includes(element.tagName)) continue;
+                    if (element === overlay || element.id === 'ai-version-notice' || ['SCRIPT', 'STYLE', 'LINK'].includes(element.tagName)) continue;
                     if (!standbyInertElements.has(element)) standbyInertElements.set(element, { inert: element.inert, opacity: element.style.getPropertyValue('opacity'), priority: element.style.getPropertyPriority('opacity'), transition: element.style.getPropertyValue('transition'), transitionPriority: element.style.getPropertyPriority('transition') });
                     element.inert = true;
                     element.style.setProperty('transition', 'none', 'important');
@@ -19336,7 +19387,8 @@ window.setLyricsStyle = function(style) {
                 // es noch nützt. Stattdessen: dezenter Hinweis, der Nutzer entscheidet selbst,
                 // ob und wann neu geladen wird - console.error bleibt für Diagnosezwecke.
                 console.error(`Notfall-Selbstheilung: sichtbare Zeit-Anzeige war ${Math.round(frozenForMs / 1000)}s unverändert trotz laufender Musik - biete Neuladen an statt es zu erzwingen.`);
-                if (typeof showToast === 'function') showToast(t('toast_stale_reload_hint'), 8000);
+                // Deaktiviert auf Wunsch; Code für spätere Verwendung erhalten:
+                // if (typeof showToast === 'function') showToast(t('toast_stale_reload_hint'), 8000);
                 lastVisibleTimeChangeAt = Date.now(); // Timer zurücksetzen, damit der Hinweis nicht alle 2s erneut aufploppt
             }
         }, 2000);
