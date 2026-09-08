@@ -27,7 +27,74 @@
             };
 
             this.currentLang = 'de';
-            this.translations = {};
+            this.translations = {
+                de: {
+                    onboard_title: 'Wähle deine Sprache',
+                    onboard_subtitle: 'Du kannst das jederzeit später wieder ändern',
+                    tutorial_next: 'Weiter', tutorial_back: 'Zurück', tutorial_finish: 'Fertig', tutorial_skip: 'Überspringen',
+                    onboarding_step_2_5: 'Schritt 2 von 5',
+                    onboarding_intro_done: 'Einführung abgeschlossen',
+                    onboarding_exploration_done: 'Erkundung abgeschlossen',
+                    onboarding_exploration_desc: 'Du hast alle Stationen des Portfolios erfolgreich kennengelernt.',
+                    onboarding_to_whatsnew: 'Weiter zu Neuerungen ➔',
+                    onboarding_maybe_later: 'Vielleicht später',
+                    onboarding_step_5_5: 'Schritt 5 von 5',
+                    onboarding_ready: 'Bereit',
+                    onboarding_all_set: 'Alles eingerichtet',
+                    onboarding_all_set_desc: 'Deine Konfiguration wurde dauerhaft gespeichert. Viel Spaß beim Erkunden!',
+                    onboarding_start_countdown: (s) => `Starten (${s}s) ➔`,
+                    onboarding_start_btn: 'Starten ➔',
+                    quest_title: 'Gamingpig Quest',
+                    quest_skip: 'Überspringen',
+                    quest_completed: 'Erledigt ✓',
+                    quest_open: 'Offen',
+                    quest_dismissed_toast: 'Quest beendet ✓',
+                    quest_card_task: '1. Real-Talk Karte antippen',
+                    quest_settings_task: '2. Einstellungen öffnen',
+                    quest_search_task: '3. Hyper-Suche (⌘K / Suchen)',
+                    quest_music_task: '4. StandBy / Ambient starten',
+                    settings_title: 'Website-Einstellungen',
+                    settings_animations_feedback: 'Animationen & Feedback',
+                    settings_animation_style: 'Animationsstil',
+                    settings_sound: 'UI-Sounds',
+                    settings_haptic: 'Haptik',
+                    on_label: 'AN',
+                    off_label: 'AUS'
+                },
+                en: {
+                    onboard_title: 'Choose your language',
+                    onboard_subtitle: 'You can change this anytime later',
+                    tutorial_next: 'Next', tutorial_back: 'Back', tutorial_finish: 'Finish', tutorial_skip: 'Skip',
+                    onboarding_step_2_5: 'Step 2 of 5',
+                    onboarding_intro_done: 'Tour completed',
+                    onboarding_exploration_done: 'Exploration completed',
+                    onboarding_exploration_desc: 'You have successfully explored all highlights of the portfolio.',
+                    onboarding_to_whatsnew: 'Continue to What\'s New ➔',
+                    onboarding_maybe_later: 'Maybe later',
+                    onboarding_step_5_5: 'Step 5 of 5',
+                    onboarding_ready: 'Ready',
+                    onboarding_all_set: 'All Set',
+                    onboarding_all_set_desc: 'Your settings have been permanently saved. Enjoy exploring!',
+                    onboarding_start_countdown: (s) => `Launch (${s}s) ➔`,
+                    onboarding_start_btn: 'Launch ➔',
+                    quest_title: 'Gamingpig Quest',
+                    quest_skip: 'Skip',
+                    quest_completed: 'Done ✓',
+                    quest_open: 'Open',
+                    quest_dismissed_toast: 'Quest completed ✓',
+                    quest_card_task: '1. Tap a Real-Talk card',
+                    quest_settings_task: '2. Open settings',
+                    quest_search_task: '3. Hyper-Search (⌘K / Search)',
+                    quest_music_task: '4. Launch StandBy / Ambient',
+                    settings_title: 'Website Settings',
+                    settings_animations_feedback: 'Animations & Feedback',
+                    settings_animation_style: 'Animation Style',
+                    settings_sound: 'UI Sounds',
+                    settings_haptic: 'Haptics',
+                    on_label: 'ON',
+                    off_label: 'OFF'
+                }
+            };
             this.subscribers = new Set();
 
             this.resolveInitialLanguage();
@@ -67,7 +134,10 @@
         }
 
         setTranslations(dict) {
-            this.translations = dict || {};
+            if (!dict) return;
+            for (const lang in dict) {
+                this.translations[lang] = Object.assign({}, this.translations[lang] || {}, dict[lang]);
+            }
         }
 
         t(key, ...args) {
