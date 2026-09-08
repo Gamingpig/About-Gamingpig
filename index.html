@@ -3675,7 +3675,9 @@
         body.low-end.liquid-glass-active #interactive-quest-hud > div,
         body.low-end.liquid-glass-active #sharecard-picker-box,
         body.low-end.liquid-glass-active #command-palette,
-        body.low-end.liquid-glass-active #spotify-wrapped-modal > div {
+        body.low-end.liquid-glass-active #spotify-wrapped-modal > div,
+        body.low-end.liquid-glass-active #footer-bubble,
+        body.low-end.liquid-glass-active #footer-expandable-menu {
             animation: none !important;
         }
 
@@ -3707,11 +3709,16 @@
         body.liquid-glass-active #interactive-quest-hud > div,
         body.liquid-glass-active #sharecard-picker-box,
         body.liquid-glass-active #command-palette,
-        body.liquid-glass-active #spotify-wrapped-modal > div {
+        body.liquid-glass-active #spotify-wrapped-modal > div,
+        body.liquid-glass-active #footer-bubble,
+        body.liquid-glass-active #footer-expandable-menu {
             -webkit-backdrop-filter: blur(32px) saturate(180%) brightness(1.1) !important;
             backdrop-filter: blur(32px) saturate(180%) brightness(1.1) !important;
-            box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.12), inset 0 1px 1.5px rgba(255, 255, 255, 0.35) !important;
+            box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.12), inset 0 1px 1.5px rgba(255, 255, 255, 0.35) !important;
             border-radius: 26px !important;
+        }
+        body.liquid-glass-active #footer-bubble {
+            border-radius: 9999px !important;
         }
         .dark body.liquid-glass-active #main-music-card,
         .dark body.liquid-glass-active #mini-player-toggle,
@@ -3725,7 +3732,9 @@
         .dark body.liquid-glass-active #interactive-quest-hud > div,
         .dark body.liquid-glass-active #sharecard-picker-box,
         .dark body.liquid-glass-active #command-palette,
-        .dark body.liquid-glass-active #spotify-wrapped-modal > div {
+        .dark body.liquid-glass-active #spotify-wrapped-modal > div,
+        .dark body.liquid-glass-active #footer-bubble,
+        .dark body.liquid-glass-active #footer-expandable-menu {
             -webkit-backdrop-filter: blur(34px) saturate(200%) brightness(1.15) !important;
             backdrop-filter: blur(34px) saturate(200%) brightness(1.15) !important;
             background: linear-gradient(135deg, rgba(15, 23, 42, 0.76) 0%, rgba(30, 41, 59, 0.45) 40%, rgba(255, 255, 255, 0.08) 60%, rgba(15, 23, 42, 0.72) 100%) !important;
@@ -3743,7 +3752,9 @@
         html:not(.dark) body.liquid-glass-active #interactive-quest-hud > div,
         html:not(.dark) body.liquid-glass-active #sharecard-picker-box,
         html:not(.dark) body.liquid-glass-active #command-palette,
-        html:not(.dark) body.liquid-glass-active #spotify-wrapped-modal > div {
+        html:not(.dark) body.liquid-glass-active #spotify-wrapped-modal > div,
+        html:not(.dark) body.liquid-glass-active #footer-bubble,
+        html:not(.dark) body.liquid-glass-active #footer-expandable-menu {
             background: linear-gradient(135deg, rgba(255, 255, 255, 0.88) 0%, rgba(255, 255, 255, 0.45) 40%, rgba(255, 255, 255, 0.92) 60%, rgba(255, 255, 255, 0.55) 100%) !important;
             border: 1px solid rgba(255, 255, 255, 0.75) !important;
             border-top: 1px solid rgba(255, 255, 255, 0.95) !important;
@@ -4798,6 +4809,71 @@
         /* --- NEUE FEATURES: Back-to-Top, Easter Eggs -------------- */
         /* ========================================================= */
 
+        /* Footer Bubble & Alignment with #back-to-top */
+        #footer-section {
+            padding-bottom: 1.25rem !important;
+        }
+        @media (min-width: 640px) {
+            #footer-section {
+                padding-bottom: 2rem !important;
+            }
+        }
+        #footer-bubble {
+            height: 2.75rem !important;
+            min-height: 2.75rem !important;
+            box-sizing: border-box !important;
+        }
+        @media (min-width: 640px) {
+            #footer-bubble {
+                height: 3.25rem !important;
+                min-height: 3.25rem !important;
+            }
+        }
+        body.liquid-glass-active #footer-expandable-menu:not(.hidden) {
+            animation: ext-footer-menu-in 0.5s var(--liquid-fluid) forwards !important;
+            transform-origin: bottom center !important;
+        }
+        @keyframes ext-footer-menu-in {
+            0% {
+                transform: translate(-50%, 18px) scale(0.72, 1.28);
+                opacity: 0;
+                border-radius: 40px;
+                filter: blur(6px);
+            }
+            50% {
+                transform: translate(-50%, -3px) scale(1.03, 0.97);
+                opacity: 1;
+                border-radius: 22px;
+                filter: blur(0px);
+            }
+            75% {
+                transform: translate(-50%, 1px) scale(0.99, 1.01);
+                border-radius: 27px;
+            }
+            100% {
+                transform: translate(-50%, 0) scale(1, 1);
+                opacity: 1;
+                border-radius: 26px;
+                filter: blur(0px);
+            }
+        }
+        body.liquid-glass-active #footer-expandable-menu button,
+        body.liquid-glass-active #footer-expandable-menu a {
+            background: rgba(255, 255, 255, 0.05) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            border-top: 1px solid rgba(255, 255, 255, 0.22) !important;
+            border-radius: 14px !important;
+            backdrop-filter: blur(14px) !important;
+            transition: all 0.25s var(--apple-spring) !important;
+        }
+        body.liquid-glass-active #footer-expandable-menu button:hover,
+        body.liquid-glass-active #footer-expandable-menu a:hover {
+            transform: translateY(-2px) scale(1.02) !important;
+            background: rgba(59, 130, 246, 0.2) !important;
+            border-color: rgba(96, 165, 250, 0.5) !important;
+            box-shadow: 0 8px 20px -4px rgba(59, 130, 246, 0.35) !important;
+        }
+
         /* Back-to-Top Button */
         #back-to-top {
             position: fixed; bottom: 1.25rem; right: 1.25rem; z-index: 90;
@@ -5653,7 +5729,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.154.0 · 2026-09-08';
+        const SITE_VERSION = 'v24.155.0 · 2026-09-08';
 
         // =========================================================
         // NEU v24.118: Automatischer Reset veralteter Cached Flags bei Versionswechsel
@@ -6810,16 +6886,16 @@
                 </a>
             </div>
             </div>
-        </section><footer id="footer-section" class="mt-12 xxs:mt-20 sm:mt-40 text-center reveal pb-8 px-2 relative z-30">
+        </section><footer id="footer-section" class="mt-12 xxs:mt-20 sm:mt-40 text-center reveal pb-5 sm:pb-8 px-2 relative z-30">
             <div class="relative inline-flex flex-col items-center">
                 <!-- Upward Expandable Popover Menu -->
-                <div id="footer-expandable-menu" class="hidden absolute bottom-full mb-3 left-1/2 -translate-x-1/2 z-50 p-3 rounded-2xl bg-slate-900/95 border border-slate-700/80 shadow-2xl backdrop-blur-xl min-w-[280px] max-w-[92vw] text-xs space-y-2 animate-in fade-in duration-200">
-                    <div class="flex items-center justify-between px-1 pb-1 border-b border-white/10">
-                        <span id="footer-menu-title" data-i18n="footer_menu_title" class="font-bold text-slate-400 text-[10px] uppercase tracking-wider">Navigation &amp; Rechtliches</span>
-                        <span id="footer-menu-hint" class="text-[9px] text-slate-500 font-mono">v24.153.0</span>
+                <div id="footer-expandable-menu" class="hidden absolute bottom-full mb-3 left-1/2 -translate-x-1/2 z-50 p-3.5 rounded-2xl bg-slate-900/95 border border-slate-700/80 shadow-2xl backdrop-blur-xl w-[315px] xxs:w-[340px] sm:w-[370px] max-w-[calc(100vw-1.5rem)] text-xs space-y-2.5" onclick="event.stopPropagation()">
+                    <div class="flex items-center justify-between px-1 pb-1.5 border-b border-white/10 gap-2">
+                        <span id="footer-menu-title" data-i18n="footer_menu_title" class="font-bold text-slate-400 text-[10px] uppercase tracking-wider truncate">Navigation &amp; Rechtliches</span>
+                        <span id="footer-menu-hint" class="text-[9px] text-pink-400 font-mono font-bold shrink-0 whitespace-nowrap">v24.155.0</span>
                     </div>
                     <div class="grid grid-cols-2 gap-2 text-left">
-                        <button onclick="openEpicWhatsNewTour(false); toggleFooterMenu(false)" id="footer-whats-new-btn" class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/90 text-slate-200 hover:text-white font-medium flex items-center gap-2 transition-colors active:scale-[0.98]">
+                        <button onclick="openEpicWhatsNewTour(false); toggleFooterMenu(false)" id="footer-whats-new-btn" class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/90 text-slate-200 hover:text-white font-medium flex items-center gap-2 transition-all active:scale-[0.98]">
                             <span class="text-blue-400">📜</span> <span id="footer-whats-new-label" data-i18n="changelog_whats_new" class="truncate">Was ist neu?</span>
                         </button>
                         <a href="status.html" id="footer-status-link" class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/90 text-emerald-400 font-bold flex items-center gap-1.5 transition-all active:scale-95">
@@ -6845,14 +6921,14 @@
                         </a>
                     </div>
                 </div>
-            </div>
-            <!-- Main Compact Pill (Single-line, fits on all phones) -->
-                <div class="inline-flex items-center gap-2 sm:gap-2.5 px-4 py-2 rounded-full bg-slate-900/85 backdrop-blur-xl border border-white/15 shadow-xl text-[11px] sm:text-xs text-slate-300">
-                    <span id="footer-established" class="font-bold tracking-tight text-slate-300">© 2026 GAMINGPIG</span>
+
+                <!-- Main Compact Pill (Single-line, matches height & thickness of #back-to-top) -->
+                <div id="footer-bubble" class="inline-flex items-center justify-center gap-2 sm:gap-3 px-4 sm:px-6 rounded-full bg-slate-900/85 backdrop-blur-xl border border-white/15 shadow-xl text-xs sm:text-sm text-slate-300 transition-all select-none">
+                    <span id="footer-established" class="font-bold tracking-tight text-slate-300 whitespace-nowrap">© 2026 GAMINGPIG</span>
                     <span class="text-white/20 select-none">•</span>
-                    <span id="footer-version-label" class="font-mono font-bold text-pink-400">v24.153.0</span>
+                    <span id="footer-version-label" class="font-mono font-bold text-pink-400 whitespace-nowrap">v24.155.0</span>
                     <span class="text-white/20 select-none">•</span>
-                    <button id="footer-menu-toggle-btn" onclick="toggleFooterMenu()" class="text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1 transition-colors px-1 py-0.5 rounded hover:bg-white/5 active:scale-95" aria-expanded="false" aria-label="Mehr Menü öffnen">
+                    <button id="footer-menu-toggle-btn" onclick="toggleFooterMenu()" class="text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1.5 transition-all px-2 py-1 rounded-full hover:bg-white/10 active:scale-95 whitespace-nowrap" aria-expanded="false" aria-label="Mehr Menü öffnen">
                         <span id="footer-more-label">Mehr</span>
                         <span id="footer-menu-arrow" class="inline-block transition-transform duration-200 text-[10px]">▲</span>
                     </button>
@@ -7347,6 +7423,7 @@
                 footerExpandableMenu.classList.remove('hidden');
                 if (footerMenuArrow) footerMenuArrow.style.transform = 'rotate(180deg)';
                 if (footerMenuToggleBtn) footerMenuToggleBtn.setAttribute('aria-expanded', 'true');
+                if (typeof haptic === 'function') haptic(10);
             } else {
                 footerExpandableMenu.classList.add('hidden');
                 if (footerMenuArrow) footerMenuArrow.style.transform = 'rotate(0deg)';
@@ -9567,10 +9644,7 @@
             setText('btn-sharecard-live-copy-text', t('sharecard_live_share_btn'));
             const settingsVer = document.getElementById('settings-version-label');
             if (settingsVer) settingsVer.textContent = 'Version ' + SITE_VERSION;
-            const footerVer = document.getElementById('footer-version-label');
-            if (footerVer) footerVer.textContent = SITE_VERSION;
-            const footerMenuHint = document.getElementById('footer-menu-hint');
-            if (footerMenuHint) footerMenuHint.textContent = SITE_VERSION;
+            if (typeof updateFooterVersionDisplay === 'function') updateFooterVersionDisplay();
 
             // NEW: fallbackMessages / secretMessages Arrays in-place mit neuer Sprache befüllen
             // (sie sind const, aber der Inhalt darf mutiert werden - so bleiben alle
@@ -15315,6 +15389,44 @@ window.generateShareCard = function() {
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+    { version: "v24.155.0", date: "8. September 2026", type: "feature", items: {
+        de: [
+            "🫧 Liquid Glass Footer Bubble: Footer-Pill & Popup-Menü auf exakte Stärke (44px mobil / 52px Desktop) des Scroll-to-Top-Buttons angepasst",
+            "📐 Perfekte horizontale Ausrichtung: Footer-Bubble und Scroll-to-Top-Button schweben auf identischer Höhe ohne vertikalen Versatz",
+            "✨ Saubere Single-Line-Responsivität: Automatische Text- und Versions-Skalierung garantiert 100% Einzeiligkeit auf allen Bildschirmgrößen",
+            "🪟 Frosted Glass Popup-Menü: Vollständiges Liquid Glass Design mit Lichtkanten und elastischer Fluid-Spring-Öffnungsanimation"
+        ],
+        en: [
+            "🫧 Liquid Glass Footer Bubble: Footer pill and popup menu updated to match the exact thickness (44px mobile / 52px desktop) of the scroll-to-top button",
+            "📐 Perfect Horizontal Alignment: Footer bubble and back-to-top button sit at the exact same bottom offset with zero vertical misalignment",
+            "✨ Clean Single-Line Responsiveness: Smart text and version formatting guarantees 100% single-line display across all screen widths",
+            "🪟 Frosted Glass Navigation Popup: Complete Liquid Glass styling with specular edges and fluid spring opening animation"
+        ],
+        es: [
+            "🫧 Burbuja de pie de página Liquid Glass: Píldora del pie de página y menú emergente ajustados al grosor exacto del botón de subir",
+            "📐 Alineación horizontal perfecta: La burbuja del pie de página y el botón flotan a la misma altura",
+            "✨ Diseño responsivo de una sola línea: Visualización limpia garantizada en una sola línea para cualquier pantalla",
+            "🪟 Menú emergente de cristal translúcido: Estilo Liquid Glass con bordes especulares y animación elástica"
+        ],
+        fr: [
+            "🫧 Bulle de pied de page Liquid Glass : Pilule de pied de page et menu contextuel alignés sur l'épaisseur exacte du bouton retour en haut",
+            "📐 Alignement horizontal parfait : La bulle de pied de page et le bouton flottent exactement à la même hauteur",
+            "✨ Réactivité sur une seule ligne : Formatage intelligent garantissant un affichage strict sur une seule ligne",
+            "🪟 Menu contextuel en verre dépoli : Design Liquid Glass complet avec reflets spéculaires et animation fluide"
+        ],
+        pt: [
+            "🫧 Bolha de rodapé Liquid Glass: Pílula de rodapé e menu pop-up atualizados para a espessura exata do botão de rolar para o topo",
+            "📐 Alinhamento horizontal perfeito: A bolha e o botão flutuam exatamente na mesma altura",
+            "✨ Responsividade em linha única: Texto inteligente e dimensionamento garantem exibição em uma só linha",
+            "🪟 Menu pop-up em vidro fosco: Design Liquid Glass completo com destaques especulares e animação fluida"
+        ],
+        tr: [
+            "🫧 Liquid Glass Altbilgi Balonu: Altbilgi kapsülü ve açılır menü, yukarı kaydır düğmesinin tam kalınlığına (44px mobil / 52px masaüstü) uyarlandı",
+            "📐 Kusursuz Yatay Hizalama: Altbilgi balonu ve yukarı kaydır düğmesi dikey sapma olmadan aynı yükseklikte konumlandı",
+            "✨ Tek Satırda Kusursuz Uyum: Akıllı metin mantığı tüm ekranlarda %100 tek satır görünüm sağlar",
+            "🪟 Buzlu Cam Açılır Menü: Işıltılı kenarlar ve akıcı yaylanma animasyonuyla eksiksiz Liquid Glass tasarımı"
+        ]
+    }},
     { version: "v24.154.0", date: "8. September 2026", type: "feature", items: {
         de: [
             "💧 Liquid Glass Upgrade für Einstellungen: Organische Fluid-Spring-Animationen (Pop-In & Pop-Out) mit elastischem Bounce und Wassertropfen-Squish für Menüs",
@@ -20577,10 +20689,25 @@ window.setLyricsStyle = function(style) {
         // NEW: Versionsnummer sichtbar machen (Settings-Menü + Footer)
         const settingsVersionEl = document.getElementById('settings-version-label');
         if (settingsVersionEl) settingsVersionEl.textContent = 'Version ' + SITE_VERSION;
-        const footerVersionEl = document.getElementById('footer-version-label');
-        if (footerVersionEl) footerVersionEl.textContent = SITE_VERSION;
-        const footerMenuHintEl = document.getElementById('footer-menu-hint');
-        if (footerMenuHintEl) footerMenuHintEl.textContent = SITE_VERSION;
+        function updateFooterVersionDisplay() {
+            const footerVer = document.getElementById('footer-version-label');
+            const footerMenuHint = document.getElementById('footer-menu-hint');
+            const parts = SITE_VERSION.split(' · ');
+            const ver = parts[0] || SITE_VERSION;
+            const date = parts[1] || '';
+            if (footerMenuHint) {
+                footerMenuHint.textContent = ver;
+            }
+            if (footerVer) {
+                if (window.innerWidth < 480) {
+                    footerVer.innerHTML = '<span class="whitespace-nowrap">' + escapeHTML(ver) + '</span>';
+                } else {
+                    footerVer.innerHTML = '<span class="whitespace-nowrap">' + escapeHTML(ver) + '</span>' + (date ? ' <span class="text-pink-400/80 whitespace-nowrap font-normal">· ' + escapeHTML(date) + '</span>' : '');
+                }
+            }
+        }
+        updateFooterVersionDisplay();
+        window.addEventListener('resize', updateFooterVersionDisplay, { passive: true });
 
         populateLyricsStyleDropdown();
         populateTtsVoiceDropdown();
