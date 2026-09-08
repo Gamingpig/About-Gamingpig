@@ -3154,36 +3154,17 @@
             localStorage.setItem('app_visit_count', String(_visitCount));
 
             // 🛡️ INSTANT ONBOARDING SHIELD
-            const _currVer = 'v24.153.0 · 2026-09-08';
+            const _currVer = 'v24.154.0 · 2026-09-08';
             const _installedVer = localStorage.getItem('site_version_installed');
             if (_installedVer !== _currVer) {
                 localStorage.setItem('site_version_installed', _currVer);
             }
 
-            // Global Onboarding & Tutorial Counter Reset for EVERY user/device
-            const GLOBAL_ONBOARDING_CYCLE = '2026-09-08_v24_153';
-            const _userOnboardingCycle = localStorage.getItem('gp_onboarding_cycle');
-            if (_userOnboardingCycle !== GLOBAL_ONBOARDING_CYCLE) {
-                try {
-                    localStorage.removeItem('tutorial_completed');
-                    localStorage.removeItem('onboarding_completed');
-                    localStorage.removeItem('tutorialCompletedV5');
-                    localStorage.removeItem('tutorialCompletedV6');
-                    localStorage.removeItem('whatsNewSeenVersion');
-                    localStorage.removeItem('accepted_privacy_version');
-                    localStorage.setItem('gp_tutorial_counter', '0');
-                    localStorage.setItem('app_visit_count', '1');
-                    localStorage.setItem('gp_onboarding_cycle', GLOBAL_ONBOARDING_CYCLE);
-                } catch(e) {}
-            }
-
-            // Single source of truth: tutorial_completed & onboarding_completed
-            const _rawTutorialDone = localStorage.getItem('tutorial_completed') || localStorage.getItem('onboarding_completed');
-            const _isTutorialDone = (_rawTutorialDone === 'true' || _rawTutorialDone === '1');
+            // Single source of truth: only show language selection if NO language has been selected yet or explicit force param
             const _urlP = new URLSearchParams(window.location.search);
-            const _forceStart = _urlP.has('first_visit') || _urlP.has('onboarding') || _urlP.has('tutorial');
+            const _forceStart = _urlP.has('first_visit') || _urlP.has('onboarding');
             
-            if (!_isTutorialDone || _forceStart) {
+            if (!savedAppLang || _forceStart) {
                 document.documentElement.classList.add('needs-onboarding');
             }
         } catch(e) {}
@@ -4870,12 +4851,12 @@
             transform: translateY(8px); opacity: 0; transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
         }
         #language-picker-overlay.lp-active #language-picker-box { transform: translateY(0); opacity: 1; }
-        #lang-picker-titles { margin-bottom: 18px; }
+        #lang-picker-titles { margin-bottom: 20px; text-align: center; }
         #lang-picker-titles p {
-            color: #f8fafc; font-weight: 700; font-size: 1.25rem;
-            line-height: 1.3; margin: 0 0 2px 0; letter-spacing: -0.02em;
+            color: #f8fafc; font-weight: 800; font-size: 1.25rem;
+            line-height: 1.35; margin: 0 0 2px 0; letter-spacing: -0.02em;
         }
-        #lang-picker-titles p:not(:first-child) { color: #64748b; font-size: 0.82rem; font-weight: 500; }
+        #lang-picker-titles p:not(:first-child) { color: #94a3b8; font-size: 0.85rem; font-weight: 600; }
         #lang-picker-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; width: 100%; }
         .lang-picker-btn {
             display: flex; align-items: center; gap: 12px;
@@ -5693,10 +5674,13 @@
     <div id="language-picker-overlay" class="hidden" onclick="if(event.target===this && (!window.OnboardingCoordinator || !window.OnboardingCoordinator.isOnboarding))closeLanguagePicker()">
         <div id="language-picker-box" class="relative">
             <button onclick="closeLanguagePicker()" id="lang-picker-close-btn" class="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-all text-xs font-semibold border border-white/10 active:scale-95 z-20" aria-label="Schließen / Close">✕</button>
-            <div class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/5 text-slate-400 text-[10px] font-semibold uppercase tracking-wider mb-3 border border-white/10 mx-auto"><span>Schritt 1 von 5</span> • <span>Sprache</span></div>
             <div id="lang-picker-titles">
-                <p>Sprache wählen</p>
-                <p>Select Language</p>
+                <p>Wähle deine Sprache</p>
+                <p>Choose your language</p>
+                <p>Elige tu idioma</p>
+                <p>Choisis ta langue</p>
+                <p>Escolha seu idioma</p>
+                <p>Dilini seç</p>
             </div>
             <div id="lang-picker-grid">
                 <button class="lang-picker-btn" onclick="selectLanguage('de')">
@@ -11484,8 +11468,12 @@
             hapticEnabled = !hapticEnabled;
             localStorage.setItem('hapticEnabled', hapticEnabled.toString());
             if (hapticEnabled) haptic(10); // sofortige Rückmeldung, dass es jetzt an ist
-            const btn = document.getElementById('btn-toggle-haptic');
-            if (btn) btn.textContent = t('settings_haptic') + ': ' + (hapticEnabled ? t('on_label') : t('off_label'));
+            if (typeof updateSettingsStatusButtons === 'function') {
+                updateSettingsStatusButtons();
+            } else {
+                const btn = document.getElementById('btn-toggle-haptic');
+                if (btn) btn.textContent = (typeof t === 'function' ? t('settings_haptic') : 'Haptik') + ': ' + (hapticEnabled ? (typeof t === 'function' ? t('on_label') : 'AN') : (typeof t === 'function' ? t('off_label') : 'AUS'));
+            }
         };
 
         // --- NEW: DYNAMIC TIME-OF-DAY WALLPAPER ---
@@ -14151,14 +14139,8 @@ window.generateShareCard = function() {
         // wiederkehrende Besucher, die schon eine Sprache gewählt haben - für Erstbesucher
         // passiert der Autostart stattdessen in selectLanguage(), NACHDEM die Sprache
         // gewählt wurde (siehe dort).
-        const _autoOnbVal = localStorage.getItem('onboarding_completed');
-        if (_autoOnbVal === '1' || _autoOnbVal === 'true') {
-            if (!localStorage.getItem('tutorialCompletedV5') && currentLang) {
-                setTimeout(startTutorial, 500);
-            } else if (currentLang && localStorage.getItem('whatsNewSeenVersion') !== SITE_VERSION) {
-                setTimeout(startWhatsNewTour, 500);
-            }
-        }
+        // Unsolicited auto-popups disabled on reload to prevent UI interruptions.
+        // What's New is accessible via the navigation bar, and Tutorial via the menu or onboarding flow.
 
         let modalTimeout;
         // ========================================================= //
@@ -18891,8 +18873,12 @@ window.setLyricsStyle = function(style) {
             uiSoundEnabled = !uiSoundEnabled;
             localStorage.setItem('uiSoundEnabled', uiSoundEnabled.toString());
             if (uiSoundEnabled) playUISound('pop');
-            const btn = document.getElementById('btn-toggle-sound');
-            if (btn) btn.textContent = (t('settings_sound') || 'UI-Sounds') + ': ' + (uiSoundEnabled ? t('on_label') : t('off_label'));
+            if (typeof updateSettingsStatusButtons === 'function') {
+                updateSettingsStatusButtons();
+            } else {
+                const btn = document.getElementById('btn-toggle-sound');
+                if (btn) btn.textContent = (typeof t === 'function' ? (t('settings_sound') || 'UI-Sounds') : 'UI-Sounds') + ': ' + (uiSoundEnabled ? (typeof t === 'function' ? t('on_label') : 'AN') : (typeof t === 'function' ? t('off_label') : 'AUS'));
+            }
         };
 
         // Attach universal UI sound and haptic to interactive buttons
@@ -19210,11 +19196,14 @@ window.setLyricsStyle = function(style) {
         const _isCompleted = (_onbCompletedVal === '1' || _onbCompletedVal === 'true');
 
         // Gespeicherte Nutzersprache sofort synchron anwenden
-        applyLanguage(_savedLang || currentLang || 'de');
+        const effectiveLang = _savedLang || currentLang || 'de';
+        applyLanguage(effectiveLang);
 
-        if (!_isCompleted || _forceOnboarding) {
+        // Nur beim allerersten Besuch (keine Sprache hinterlegt) oder explizitem Aufruf öffnen
+        const _needsLanguageSelection = (!_savedLang || _forceOnboarding);
+
+        if (_needsLanguageSelection) {
             document.documentElement.classList.add('needs-onboarding');
-            // Automatischer Sofortstart des Onboardings für Erstbesucher & nach Reset
             if (window.OnboardingCoordinator && typeof window.OnboardingCoordinator.step1_language === 'function') {
                 window.OnboardingCoordinator.step1_language();
             } else {
@@ -19223,6 +19212,14 @@ window.setLyricsStyle = function(style) {
                         window.OnboardingCoordinator.step1_language();
                     }
                 }, 50);
+            }
+        } else {
+            document.documentElement.classList.remove('needs-onboarding');
+            const _lpOverlay = document.getElementById('language-picker-overlay');
+            if (_lpOverlay) {
+                _lpOverlay.classList.add('hidden');
+                _lpOverlay.classList.remove('lp-active');
+                _lpOverlay.style.display = 'none';
             }
         }
     </script>
