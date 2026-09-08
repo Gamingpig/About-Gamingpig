@@ -3373,8 +3373,8 @@
             right: 0 !important;
             margin-top: 0.5rem !important;
             z-index: 99999 !important;
-            max-height: min(72vh, 480px) !important;
-            width: min(340px, calc(100vw - 2rem)) !important;
+            max-height: min(72vh, 480px, var(--lyrics-settings-height, 480px)) !important;
+            width: min(340px, calc(100vw - 2rem), var(--lyrics-settings-width, 340px)) !important;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.18) !important;
             backdrop-filter: blur(28px) !important;
             -webkit-backdrop-filter: blur(28px) !important;
@@ -17464,6 +17464,23 @@ let shareCardLoading;
         let globalSettingsTimeout = null;
         let isGlobalSettingsOpen = false;
 
+        // The dropdown is clipped by the dashboard, not by the viewport.
+        // Observe only while open; no polling or changes to the dashboard layout.
+        let lyricsSettingsResizeObserver;
+        function fitLyricsSettingsToDashboard() {
+            const menu = document.getElementById('lyrics-settings-menu');
+            const overlay = document.getElementById('lyrics-overlay');
+            if (!menu || !overlay || !menu.offsetParent) return;
+            const bounds = overlay.getBoundingClientRect();
+            const anchor = menu.offsetParent.getBoundingClientRect();
+            const padding = getComputedStyle(overlay);
+            const gap = parseFloat(getComputedStyle(menu).marginTop) || 0;
+            const width = anchor.right - bounds.left - (parseFloat(padding.paddingLeft) || 0);
+            const height = bounds.bottom - anchor.bottom - gap - (parseFloat(padding.paddingBottom) || 0);
+            menu.style.setProperty('--lyrics-settings-width', Math.max(0, width) + 'px');
+            menu.style.setProperty('--lyrics-settings-height', Math.max(0, height) + 'px');
+        }
+
         window.toggleLyricsSettings = function(event) {
             if (typeof triggerTutorialEvent === "function") triggerTutorialEvent("settings_opened");
             if (event) event.stopPropagation();
@@ -17477,12 +17494,18 @@ let shareCardLoading;
                 if (isGlobalSettingsOpen) window.toggleStandaloneSettings();
                 lyricsMenu.classList.remove('hidden', 'settings-closing');
                 lyricsMenu.classList.add('settings-opening');
+                fitLyricsSettingsToDashboard();
+                if (typeof ResizeObserver !== 'undefined') {
+                    lyricsSettingsResizeObserver ||= new ResizeObserver(fitLyricsSettingsToDashboard);
+                    lyricsSettingsResizeObserver.observe(document.getElementById('lyrics-overlay'));
+                }
                 setTimeout(() => {
                     populateLyricsStyleDropdown();
                     updateLyricsStylePreview(currentLyricsStyle);
                     if (typeof updateSettingsStatusButtons === 'function') updateSettingsStatusButtons();
                 }, 20);
             } else {
+                lyricsSettingsResizeObserver?.disconnect();
                 stopLyricsStylePreviewLoop();
                 lyricsMenu.classList.remove('settings-opening');
                 lyricsMenu.classList.add('settings-closing');
