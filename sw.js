@@ -1,5 +1,5 @@
 // ==============================================================================
-// Gamingpig Portfolio PWA Service Worker (v24.153.0)
+// Gamingpig Portfolio PWA Service Worker (v24.157.0)
 // Robust Update- & Cache-Strategie:
 // - HTML / Navigation: ECHTES Network-First mit Offline-Fallback
 // - Statische Assets (Bilder, Icons, Manifest): Stale-While-Revalidate mit Cache-Fallback
@@ -7,7 +7,7 @@
 // - Sofortige Übernahme: self.skipWaiting() & clients.claim()
 // ==============================================================================
 
-const SW_VERSION = "24.153.0";
+const SW_VERSION = "24.157.0";
 const CURRENT_CACHE_VERSION = `gamingpig-cache-v${SW_VERSION}`;
 const CACHE_NAME = CURRENT_CACHE_VERSION;
 
@@ -16,13 +16,18 @@ const PRECACHE_URLS = [
     "./",
     "./index.html",
     "./status.html",
-    "./push-admin.html",
     "./release.html",
     "./release-v24-115.html",
     "./privacy.html",
     "./impressum.html",
-    "./js/read-aloud-service.js",
-    "./js/i18n-manager.js",
+    "./roadmap.html",
+    "./js/core/storage.e856be99df567fd2.js",
+    "./js/core/push-config.c9a9d21e3077b97f.js",
+    "./js/services/push-registration.dac93cbcb3758c9f.js",
+    "./js/roadmap-protocol.0d283f073353011c.js",
+    "./js/github-roadmap.6d5d949a55d29080.js",
+    "./js/read-aloud-service.1fc24873f319082e.js",
+    "./js/i18n-manager.56dbdc7cc518ed8b.js",
     "./manifest.json",
     "./icon-192.png",
     "./icon-512.png",
@@ -31,23 +36,21 @@ const PRECACHE_URLS = [
 
 // Sofortige Installation ohne Warten
 self.addEventListener("install", (event) => {
-    self.skipWaiting();
     event.waitUntil(
         caches.open(CURRENT_CACHE_VERSION).then((cache) => {
             return cache.addAll(PRECACHE_URLS);
-        }).catch((err) => {
-            console.warn("[SW] Precaching Fehler (nicht kritisch):", err);
-        })
+        }).then(() => self.skipWaiting())
     );
 });
 
-// Aktivierung: Ausnahmslos alle Caches löschen, die nicht mit CURRENT_CACHE_VERSION übereinstimmen
+// Aktivierung: Nur eigene alte Releases entfernen; Vorversion und fremde Caches behalten.
 self.addEventListener("activate", (event) => {
     event.waitUntil(
         caches.keys().then((keys) => {
+            const previous = keys.filter(key => key.startsWith('gamingpig-cache-v') && key !== CURRENT_CACHE_VERSION).pop();
             return Promise.all(
                 keys.map((key) => {
-                    if (key !== CURRENT_CACHE_VERSION) {
+                    if (key.startsWith("gamingpig-cache-v") && key !== CURRENT_CACHE_VERSION && key !== previous) {
                         console.log("[SW] Lösche veralteten Cache:", key);
                         return caches.delete(key);
                     }
@@ -62,7 +65,7 @@ self.addEventListener("activate", (event) => {
 
 // Nachrichten-Listener (z. B. für manuelles skipWaiting)
 self.addEventListener("message", (event) => {
-    if (event.data && event.data.type === "SKIP_WAITING") {
+    if (event.source && new URL(event.source.url).origin === self.location.origin && event.data && event.data.type === "SKIP_WAITING") {
         self.skipWaiting();
     }
 });
@@ -74,15 +77,15 @@ self.addEventListener("notificationclick", (event) => {
     const rawUrl = (event.notification.data && event.notification.data.url) ? event.notification.data.url : "./status.html";
     let targetUrl;
     try {
-        targetUrl = new URL(rawUrl, self.location.origin).href;
+        targetUrl = safeLocalUrl(rawUrl, "./status.html");
     } catch(e) {
-        targetUrl = new URL("./status.html", self.location.origin).href;
+        targetUrl = safeLocalUrl("./status.html", "./status.html");
     }
 
     event.waitUntil(
         clients.matchAll({ type: "window", includeUncontrolled: true }).then((windowClients) => {
             for (const client of windowClients) {
-                if (client.url === targetUrl || (targetUrl.includes("status.html") && client.url.includes("status.html"))) {
+                if (client.url === targetUrl) {
                     if ("focus" in client) return client.focus();
                 }
             }
@@ -95,51 +98,14 @@ self.addEventListener("notificationclick", (event) => {
     );
 });
 
-// Helper: Liest die in der App gespeicherte Nutzersprache aus IndexedDB (mit Timeout)
-function getStoredAppLanguage() {
-    return new Promise((resolve) => {
-        const timer = setTimeout(() => resolve(null), 300);
-        try {
-            const req = indexedDB.open('gamingpig_pwa_db', 1);
-            req.onupgradeneeded = (e) => {
-                const db = e.target.result;
-                if (!db.objectStoreNames.contains('settings')) {
-                    db.createObjectStore('settings');
-                }
-            };
-            req.onsuccess = (e) => {
-                try {
-                    const db = e.target.result;
-                    if (!db.objectStoreNames.contains('settings')) {
-                        clearTimeout(timer);
-                        resolve(null);
-                        return;
-                    }
-                    const tx = db.transaction('settings', 'readonly');
-                    const store = tx.objectStore('settings');
-                    const getReq = store.get('app_lang');
-                    getReq.onsuccess = () => {
-                        clearTimeout(timer);
-                        resolve(getReq.result || null);
-                    };
-                    getReq.onerror = () => {
-                        clearTimeout(timer);
-                        resolve(null);
-                    };
-                } catch(err) {
-                    clearTimeout(timer);
-                    resolve(null);
-                }
-            };
-            req.onerror = () => {
-                clearTimeout(timer);
-                resolve(null);
-            };
-        } catch (e) {
-            clearTimeout(timer);
-            resolve(null);
-        }
-    });
+// Resolve project-relative notification targets and reject external/special schemes.
+function safeLocalUrl(raw, fallback) {
+    const base = self.registration.scope;
+    try {
+        const url = new URL(String(raw), base);
+        if (url.origin === self.location.origin && url.pathname.startsWith(new URL(base).pathname) && /^https?:$/.test(url.protocol)) return url.href;
+    } catch (_) {}
+    return new URL(fallback, base).href;
 }
 
 // Web Push Event Handler für Android / iOS / Desktop
@@ -184,14 +150,15 @@ self.addEventListener("push", (event) => {
         }
     }
 
-    const iconUrl = payload.icon || "icon-192.png";
-    const badgeUrl = payload.badge || "icon-192.png";
+    const iconUrl = safeLocalUrl(payload.icon || "icon-192.png", "icon-192.png");
+    const badgeUrl = safeLocalUrl(payload.badge || "icon-192.png", "icon-192.png");
 
     event.waitUntil(
-        self.registration.showNotification(title, {
-            body: body,
+        self.registration.showNotification(String(title).slice(0, 160), {
+            body: String(body).slice(0, 1000),
             icon: iconUrl,
             badge: badgeUrl,
+            tag: typeof payload.broadcastId === "string" ? payload.broadcastId.slice(0, 160) : undefined,
             data: { url: payload.url || "./status.html" }
         }).catch((err) => {
             console.error("[SW] showNotification error:", err);
@@ -214,49 +181,47 @@ self.addEventListener("fetch", (event) => {
         return; // Direkt dem Browser-Netzwerk überlassen
     }
 
-    // 2. HTML-Dokumente & Navigationen: ECHTES NETWORK-FIRST
-    // Holt bei bestehender Verbindung IMMER die aktuelle HTML-Version vom Server
-    if (isNavigation) {
-        event.respondWith(
-            fetch(event.request, { cache: "no-cache" })
-                .then((networkResponse) => {
-                    if (networkResponse && networkResponse.ok) {
-                        const responseToCache = networkResponse.clone();
-                        caches.open(CACHE_NAME).then((cache) => {
-                            cache.put(event.request, responseToCache);
-                        }).catch(() => {});
-                    }
-                    return networkResponse;
-                })
-                .catch(() => {
-                    // Offline-Fallback: Gecachte Version der angeforderten Seite oder Startseite
-                    return caches.match(event.request).then((cachedResponse) => {
-                        return cachedResponse || caches.match("./index.html") || caches.match("./");
-                    });
-                })
-        );
-        return;
-    }
-
-    // 3. Statische Assets (Bilder, Icons, Manifest): STALE-WHILE-REVALIDATE
-    // Schnelles Laden aus Cache + Revalidierung im Hintergrund
-    event.respondWith(
-        caches.match(event.request).then((cachedResponse) => {
-            const fetchPromise = fetch(event.request)
-                .then((networkResponse) => {
-                    if (networkResponse && networkResponse.ok && networkResponse.type === "basic") {
-                        const responseToCache = networkResponse.clone();
-                        caches.open(CACHE_NAME).then((cache) => {
-                            cache.put(event.request, responseToCache);
-                        }).catch(() => {});
-                    }
-                    return networkResponse;
-                })
-                .catch(() => {
-                    return null;
-                });
-
-            return cachedResponse || fetchPromise;
-        })
-    );
+    // Network-first for documents/scripts: never serve stale JS before checking the release.
+    // Other local assets use the same bounded cache; live data is not cached.
+    if (url.pathname.includes('/data/') || url.searchParams.has('api')) return;
+    const cacheable = isNavigation || ['script', 'style', 'image', 'font', 'manifest'].includes(event.request.destination);
+    if (!cacheable) return;
+    event.respondWith((async () => {
+        let cache;
+        try { cache = await caches.open(CACHE_NAME); }
+        catch (_) { return fetch(event.request).catch(() => new Response('Offline', { status: 503 })); }
+        const immutable = /\.[a-f0-9]{16}\.js$/.test(url.pathname);
+        const cached = await cache.match(event.request) || (immutable ? await caches.match(event.request) : null);
+        if (immutable && cached) return cached;
+        const network = (async () => {
+        try {
+            const response = await fetch(event.request, { cache: 'no-cache' });
+            if (response.ok) {
+                const copy = response.clone();
+                event.waitUntil((async () => {
+                    await cache.put(event.request, copy);
+                    const keys = await cache.keys();
+                    const core = new Set(PRECACHE_URLS.map(value => new URL(value, self.registration.scope).href));
+                    const runtime = keys.filter(request => !core.has(request.url));
+                    for (const request of runtime.slice(0, Math.max(0, runtime.length - 80))) await cache.delete(request);
+                })().catch(() => {}));
+                return response;
+            }
+            if (cached && response.status >= 500) return cached;
+            return response;
+        } catch (_) {
+            if (cached) return cached;
+            if (isNavigation) {
+                const home = await cache.match('./index.html') || await cache.match('./');
+                if (home) return home;
+            }
+            return new Response('Offline', { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+        }
+        })();
+        if (cached && !isNavigation && event.request.destination !== 'script') {
+            event.waitUntil(network.then(() => {}));
+            return cached;
+        }
+        return network;
+    })());
 });

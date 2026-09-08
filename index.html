@@ -305,7 +305,7 @@
         Laden pro Element trotz höherer Dekodier-Kosten die robustere Wahl sein.
       - Haptic-Feedback (Android) weiterhin ungelöst mangels Diagnose-Daten - kompletten Code
         nochmal gegengeprüft (hapticEnabled/haptic() unverändert seit v24.93, kein neuer Bug
-        gefunden). Ohne die [haptic]-Konsolenausgabe (localStorage.setItem('hapticDebug',
+        gefunden). Ohne die [haptic]-Konsolenausgabe (AppStorage.setItem('hapticDebug',
         'true') + Reload) bleibt das ein Rätsel, kein weiterer Blindversuch in dieser Version.
 
     [FEATURE] Release v24.98: "Was ist neu?"-Tour zeigt bei sehr vielen verpassten Versionen
@@ -446,7 +446,7 @@
         Overhead pro Aufruf, auch bei geschlossenen DevTools - bei JEDEM Tap auf der ganzen
         Seite, für immer, unnötig für Nutzer, die gar nicht debuggen wollen. Jetzt
         standardmäßig AUS, nur bei Bedarf über die Konsole einschaltbar:
-        localStorage.setItem('hapticDebug','true') + Seite neu laden.
+        AppStorage.setItem('hapticDebug','true') + Seite neu laden.
       - Haptic-Grundproblem (Android) weiterhin ungelöst mangels Diagnose-Daten - kein
         weiterer Blindversuch, da der komplette Code bereits durchsucht wurde und nichts
         Falsches gefunden werden konnte. Nutzer müsste die Debug-Ausgabe (siehe oben)
@@ -3086,7 +3086,7 @@
         1/8 - Willkommen in meiner Welt!") gleichzeitig übereinander auf, weil das Tutorial
         einen höheren z-index (99999) hat als die Sprachauswahl (1000) und somit darüber
         gerendert wurde - siehe Bugreport-Screenshot.
-      - Ursache: Der Tutorial-Autostart (`if (!localStorage.getItem('tutorialCompletedV2'))
+      - Ursache: Der Tutorial-Autostart (`if (!AppStorage.getItem('tutorialCompletedV2'))
         setTimeout(startTutorial, 500)`) lief komplett unabhängig von der Sprachauswahl-
         Logik und feuerte immer 500ms nach Seitenload, egal ob gerade noch keine Sprache
         gewählt wurde.
@@ -3129,42 +3129,45 @@
 -->
 <html lang="de" id="html-root">
 <head>
+    <script src="./js/core/push-config.c9a9d21e3077b97f.js"></script>
+    <script src="./js/services/push-registration.dac93cbcb3758c9f.js"></script>
+    <script src="./js/core/storage.e856be99df567fd2.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Gamingpig | Portfolio</title>
-    <script src="js/read-aloud-service.js"></script>
-    <script src="js/i18n-manager.js"></script>
+    <script src="js/read-aloud-service.1fc24873f319082e.js"></script>
+    <script src="js/i18n-manager.56dbdc7cc518ed8b.js"></script>
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <script>
         try {
-            const savedAppLang = localStorage.getItem('app_language') || localStorage.getItem('selectedLanguage');
+            const savedAppLang = AppStorage.getItem('app_language') || AppStorage.getItem('selectedLanguage');
             if (savedAppLang) document.documentElement.setAttribute('lang', savedAppLang);
             
             // Animation Style Initialisierung
-            const savedAnimStyle = localStorage.getItem('app_animation_style') || 'smooth';
+            const savedAnimStyle = AppStorage.getItem('app_animation_style') || 'smooth';
             document.documentElement.setAttribute('data-animation-style', savedAnimStyle);
 
             // Safe Visit-Counter Tracking
-            const rawVisits = localStorage.getItem('app_visit_count');
+            const rawVisits = AppStorage.getItem('app_visit_count');
             let _visitCount = parseInt(rawVisits || '0', 10);
             if (isNaN(_visitCount) || _visitCount < 0) _visitCount = 0;
             _visitCount++;
-            localStorage.setItem('app_visit_count', String(_visitCount));
+            AppStorage.setItem('app_visit_count', String(_visitCount));
 
             // 🛡️ INSTANT ONBOARDING SHIELD
-            const _currVer = window.ONBOARDING_VERSION = 'v24.156.0 · 2026-09-08';
-            const _installedVer = localStorage.getItem('site_version_installed');
+            const _currVer = window.ONBOARDING_VERSION = 'v24.157.0 · 2026-09-08';
+            const _installedVer = AppStorage.getItem('site_version_installed');
             if (_installedVer !== _currVer) {
-                localStorage.setItem('site_version_installed', _currVer);
+                AppStorage.setItem('site_version_installed', _currVer);
             }
 
             // Single source of truth: only show language selection if NO language has been selected yet or explicit force param
             const _urlP = new URLSearchParams(window.location.search);
             const _forceStart = _urlP.has('first_visit') || _urlP.has('onboarding') || _urlP.has('tutorial');
             
-            if (!savedAppLang || localStorage.getItem('onboarding_completed_version') !== _currVer || _forceStart) {
+            if (!savedAppLang || AppStorage.getItem('onboarding_completed_version') !== _currVer || _forceStart) {
                 document.documentElement.classList.add('needs-onboarding');
             }
         } catch(e) {}
@@ -3238,7 +3241,7 @@
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        tailwind.config = {
+        if (window.tailwind) tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
@@ -5756,9 +5759,9 @@
         // FIX v24.150: Behalte alle Nutzer-Präferenzen und Onboarding-Status sicher bei Versionswechsel
         (function enforceVersionFreshness() {
             try {
-                const storedVer = localStorage.getItem('site_version_installed');
+                const storedVer = AppStorage.getItem('site_version_installed');
                 if (storedVer !== SITE_VERSION) {
-                    localStorage.setItem('site_version_installed', SITE_VERSION);
+                    AppStorage.setItem('site_version_installed', SITE_VERSION);
                     // Onboarding-Status NICHT löschen bei Versionswechsel!
                 }
             } catch (e) {}
@@ -5875,9 +5878,9 @@
                 Wir haben unsere <strong class="text-white">Datenschutzerklärung</strong> transparent erweitert:
             </p>
             <ul class="text-[11px] text-slate-400 space-y-1.5 mb-4 list-disc list-inside">
-                <li id="privacy-modal-item1-el">Öffentliche GitHub-Speicherung: Wünsche und Stimmen sind mit deinem GitHub-Konto öffentlich verknüpft.</li>
-                <li id="privacy-modal-item2-el">Übertragung an GitHub: Bereits das Öffnen des vorausgefüllten Formulars sendet deine Texte; die Roadmap lädt öffentliche Daten über die GitHub-API.</li>
-                <li id="privacy-modal-item3-el">Lokaler Lesecache und Löschung: Browserdaten und GitHub-Beiträge werden getrennt gespeichert. Details und Kontakt stehen in der Erklärung.</li>
+                <li id="privacy-modal-item1-el">Öffentliches Voting und Wünsche: ohne GitHub-Anmeldung, mit einer pseudonymen Browser-Kennung.</li>
+                <li id="privacy-modal-item2-el">Übertragung über ntfy: Einträge gehen zunächst in eine öffentliche Warteschlange und werden später auf GitHub gespeichert.</li>
+                <li id="privacy-modal-item3-el">Gerätecode, Lesecache und Löschung: Privater Schlüssel bleibt lokal; öffentliche Daten und Git-Historie werden getrennt gespeichert.</li>
             </ul>
             <div class="flex items-center gap-2 pt-2 border-t border-white/10">
                 <a id="privacy-modal-read-btn" href="privacy.html" target="_blank" class="flex-1 text-center py-2.5 px-3 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold transition-all border border-white/10">
@@ -7415,9 +7418,10 @@
 </div>
 
     <script>
+        let uiSoundEnabled = AppStorage.getItem('uiSoundEnabled') !== 'false';
         function escapeHTML(str) {
             if (!str) return "";
-            return str.replace(/[&<>'"]/g, 
+            return String(str).replace(/[&<>'"]/g, 
                 tag => ({
                     '&': '&amp;',
                     '<': '&lt;',
@@ -8899,9 +8903,9 @@
                 privacy_modal_title: "Datenschutz aktualisiert",
                 privacy_modal_date: "Stand: 8. September 2026",
                 privacy_modal_intro: "Wir haben unsere <strong class=\"text-white\">Datenschutzerklärung</strong> transparent erweitert:",
-                privacy_modal_item1: "Öffentliche GitHub-Speicherung: Wünsche und Stimmen sind mit deinem GitHub-Konto öffentlich verknüpft.",
-                privacy_modal_item2: "Übertragung an GitHub: Bereits das Öffnen des vorausgefüllten Formulars sendet deine Texte; die Roadmap lädt öffentliche Daten über die GitHub-API.",
-                privacy_modal_item3: "Lokaler Lesecache und Löschung: Browserdaten und GitHub-Beiträge werden getrennt gespeichert. Details und Kontakt stehen in der Erklärung.",
+                privacy_modal_item1: "Öffentliches Voting und Wünsche: ohne GitHub-Anmeldung, mit einer pseudonymen Browser-Kennung.",
+                privacy_modal_item2: "Übertragung über ntfy: Einträge gehen zunächst in eine öffentliche Warteschlange und werden später auf GitHub gespeichert.",
+                privacy_modal_item3: "Gerätecode, Lesecache und Löschung: Privater Schlüssel bleibt lokal; öffentliche Daten und Git-Historie werden getrennt gespeichert. Push-Gerätedaten werden jetzt vor der Übertragung und auf GitHub verschlüsselt gespeichert.",
                 privacy_modal_read: "Erklärung lesen ↗",
                 privacy_modal_accept: "Verstanden ✓",
                 btn_close: "Schließen",
@@ -8969,9 +8973,9 @@
                 privacy_modal_title: "Privacy Policy Updated",
                 privacy_modal_date: "Last updated: September 8, 2026",
                 privacy_modal_intro: "We have updated our <strong class=\"text-white\">privacy policy</strong> transparently:",
-                privacy_modal_item1: "Public GitHub storage: wishes and votes are publicly linked to your GitHub account.",
-                privacy_modal_item2: "Transfer to GitHub: opening the prefilled form already sends your text; the roadmap reads public data through the GitHub API.",
-                privacy_modal_item3: "Local read cache and deletion: browser data and GitHub contributions are stored separately. See the policy for details and contact.",
+                privacy_modal_item1: "Public votes and wishes: no GitHub login, using a pseudonymous browser identifier.",
+                privacy_modal_item2: "Transfer through ntfy: entries first enter a public queue and are later stored on GitHub.",
+                privacy_modal_item3: "Device code, cache and deletion: private key stays local; public data and Git history are stored separately. Push device records are now encrypted before transmission and on GitHub.",
                 privacy_modal_read: "Read Policy ↗",
                 privacy_modal_accept: "Understood ✓",
                 btn_close: "Close",
@@ -9039,9 +9043,9 @@
                 privacy_modal_title: "Privacidad actualizada",
                 privacy_modal_date: "Actualizado: 8 de septiembre de 2026",
                 privacy_modal_intro: "Hemos ampliado nuestra <strong class=\"text-white\">política de privacidad</strong> con total transparencia:",
-                privacy_modal_item1: "Almacenamiento público en GitHub: ideas y votos están vinculados públicamente a tu cuenta.",
-                privacy_modal_item2: "Transferencia a GitHub: abrir el formulario ya envía el texto; la hoja de ruta consulta la API pública.",
-                privacy_modal_item3: "Caché local y eliminación: los datos del navegador y las aportaciones de GitHub se guardan por separado. Consulta la política.",
+                privacy_modal_item1: "Votos e ideas públicos sin cuenta GitHub, con identificador seudónimo.",
+                privacy_modal_item2: "Envío mediante ntfy: cola pública y almacenamiento posterior en GitHub.",
+                privacy_modal_item3: "Código privado local; caché, datos públicos e historial Git se guardan por separado. Los datos push ahora se cifran antes del envío y en GitHub.",
                 privacy_modal_read: "Leer política ↗",
                 privacy_modal_accept: "Entendido ✓",
                 btn_close: "Cerrar",
@@ -9110,9 +9114,9 @@
                 privacy_modal_title: "Confidentialité mise à jour",
                 privacy_modal_date: "Mise à jour : 8 septembre 2026",
                 privacy_modal_intro: "Nous avons élargi notre <strong class=\"text-white\">politique de confidentialité</strong> en toute transparence :",
-                privacy_modal_item1: "Stockage public sur GitHub : idées et votes sont publiquement liés à ton compte.",
-                privacy_modal_item2: "Transmission à GitHub : ouvrir le formulaire transmet déjà les textes ; la feuille de route consulte l’API publique.",
-                privacy_modal_item3: "Cache local et suppression : données du navigateur et contributions GitHub sont conservées séparément. Voir la déclaration.",
+                privacy_modal_item1: "Votes et idées publics sans compte GitHub, avec identifiant pseudonyme.",
+                privacy_modal_item2: "Transmission via ntfy : file publique puis stockage sur GitHub.",
+                privacy_modal_item3: "Code privé local ; cache, données publiques et historique Git sont conservés séparément. Les données push sont désormais chiffrées avant envoi et sur GitHub.",
                 privacy_modal_read: "Lire la déclaration ↗",
                 privacy_modal_accept: "Compris ✓",
                 btn_close: "Fermer",
@@ -9217,9 +9221,9 @@
                 privacy_modal_title: "Privacidade atualizada",
                 privacy_modal_date: "Atualizado em: 8 de setembro de 2026",
                 privacy_modal_intro: "Atualizamos nossa <strong class=\"text-white\">política de privacidade</strong> de forma transparente:",
-                privacy_modal_item1: "Armazenamento público no GitHub: ideias e votos ficam associados publicamente à sua conta.",
-                privacy_modal_item2: "Transferência ao GitHub: abrir o formulário já envia os textos; a página consulta a API pública.",
-                privacy_modal_item3: "Cache local e exclusão: dados do navegador e contribuições GitHub são guardados separadamente. Consulte a política.",
+                privacy_modal_item1: "Votos e ideias públicos sem conta GitHub, com identificador pseudônimo.",
+                privacy_modal_item2: "Transferência pelo ntfy: fila pública e armazenamento posterior no GitHub.",
+                privacy_modal_item3: "Código privado local; cache, dados públicos e histórico Git são separados. Dados push agora são criptografados antes do envio e no GitHub.",
                 privacy_modal_read: "Ler política ↗",
                 privacy_modal_accept: "Entendido ✓",
                 btn_close: "Fechar",
@@ -9324,9 +9328,9 @@
                 privacy_modal_title: "Gizlilik Politikası Güncellendi",
                 privacy_modal_date: "Güncelleme: 8 Eylül 2026",
                 privacy_modal_intro: "Gizlilik politikamızı şeffaf bir şekilde güncelledik:",
-                privacy_modal_item1: "GitHub’da herkese açık saklama: fikirler ve oylar hesabınla ilişkilidir.",
-                privacy_modal_item2: "GitHub’a aktarım: formu açmak metinleri zaten gönderir; yol haritası herkese açık API verilerini alır.",
-                privacy_modal_item3: "Yerel önbellek ve silme: tarayıcı verileri ve GitHub katkıları ayrı saklanır. Ayrıntılar bildirime eklenmiştir.",
+                privacy_modal_item1: "GitHub hesabı olmadan, takma kimlikle herkese açık oy ve fikirler.",
+                privacy_modal_item2: "ntfy aktarımı: önce herkese açık kuyruk, sonra GitHub kaydı.",
+                privacy_modal_item3: "Özel kod yerelde; önbellek, açık veriler ve Git geçmişi ayrıdır. Push cihaz verileri artık iletimden önce ve GitHub üzerinde şifrelenir.",
                 privacy_modal_read: "Politikayı oku ↗",
                 privacy_modal_accept: "Anlaşıldı ✓",
                 btn_close: "Kapat",
@@ -9380,7 +9384,7 @@
         }
 
         if (window.I18nManager) { window.I18nManager.setTranslations(translations); }
-        let currentLang = (function() { try { return localStorage.getItem('app_language') || localStorage.getItem('selectedLanguage') || null; } catch(e) { return null; } })();
+        let currentLang = (function() { try { return AppStorage.getItem('app_language') || AppStorage.getItem('selectedLanguage') || null; } catch(e) { return null; } })();
         function t(key, ...args) {
             if (window.I18nManager) return window.I18nManager.t(key, ...args);
             const langDict = translations[currentLang || 'de'] || translations.de || {};
@@ -9492,8 +9496,8 @@
                 window.I18nManager.setLanguage(lang);
             } else {
                 try {
-                    localStorage.setItem('app_language', lang);
-                    localStorage.setItem('selectedLanguage', lang);
+                    AppStorage.setItem('app_language', lang);
+                    AppStorage.setItem('selectedLanguage', lang);
                 } catch(e) {}
                 syncLangToIndexedDB(lang);
                 document.documentElement.setAttribute('lang', lang);
@@ -9853,7 +9857,7 @@
         }
         function getWhatsNewSteps() {
             // DYNAMISCHE WHATS-NEW-TOUR: Lädt stets die allerneuesten Updates direkt aus PUBLIC_CHANGELOG
-            const seenVersion = localStorage.getItem('whatsNewSeenVersion');
+            const seenVersion = AppStorage.getItem('whatsNewSeenVersion');
             const seenNum = seenVersion ? parseVersionNum(seenVersion) : 0;
             const currentNum = parseVersionNum(SITE_VERSION);
 
@@ -9913,7 +9917,7 @@
         function getCurrentSteps() {
             return tutorialMode === 'whatsnew' ? getWhatsNewSteps() : getTutorialSteps();
         }
-        let originalPerfModeState = localStorage.getItem('perfMode');
+        let originalPerfModeState = AppStorage.getItem('perfMode');
         let activeTutorialTarget = null;
         let currentNoLyricsMessage = fallbackMessages[0];
         let isDashboardOpen = false;
@@ -9934,7 +9938,7 @@
         let overlayHistoryDepth = 0;
         let suppressPopHandling = false;
         let isLyricsSettingsOpen = false;
-        let currentLyricsStyle = localStorage.getItem('lyricsStyle') || 'fill';
+        let currentLyricsStyle = AppStorage.getItem('lyricsStyle') || 'fill';
         // PERF-FIX v24.17 (radikal): Nur diese 8 von 61 Songtext-Stilen nutzen überhaupt
         // .lyric-char-Selektoren in ihrem CSS - für alle anderen 53 Stile (87%!) wurden bisher
         // trotzdem für JEDES einzelne Zeichen des kompletten Songtexts eigene <span>-Elemente
@@ -10265,11 +10269,11 @@
         // Opt-Out (=== 'true' statt !== 'false') - wer es explizit will, kann es im
         // Einstellungsmenü weiterhin anschalten, aber die meisten Besucher bekommen jetzt die
         // deutlich günstigere Variante ohne Dauer-Videodekodierung.
-        let canvasEnabled = localStorage.getItem('canvasEnabled') === 'true';
+        let canvasEnabled = AppStorage.getItem('canvasEnabled') === 'true';
         let currentCanvasUrl = null;
         // NEW: Falls der Nutzer schon mal manuell per Ohr nachjustiert hat, diesen
         // gespeicherten Wert verwenden statt immer wieder beim Standardwert zu starten.
-        const savedUserSyncOffset = localStorage.getItem('userSyncOffset');
+        const savedUserSyncOffset = AppStorage.getItem('userSyncOffset');
         let liveSyncOffset = savedUserSyncOffset !== null ? parseInt(savedUserSyncOffset, 10) : (typeof DEFAULT_SYNC_OFFSET !== 'undefined' ? DEFAULT_SYNC_OFFSET : -400);
         
         let currentMs = 0;
@@ -10505,7 +10509,7 @@
         // Persistent Cover Cache in LocalStorage für sofortigen Kaltstart ohne Ladezeit
         (function initLocalCoverCache() {
             try {
-                const stored = localStorage.getItem('gp_cover_cache_v1');
+                const stored = AppStorage.getItem('gp_cover_cache_v1');
                 if (stored) {
                     const parsed = JSON.parse(stored);
                     if (parsed && typeof parsed === 'object') {
@@ -10534,7 +10538,7 @@
                 for (const [k, v] of trackCoverMemoryCache.entries()) {
                     obj[k] = v;
                 }
-                localStorage.setItem('gp_cover_cache_v1', JSON.stringify(obj));
+                AppStorage.setItem('gp_cover_cache_v1', JSON.stringify(obj));
             } catch (e) {}
         }
 
@@ -10844,7 +10848,7 @@
                             ${style.icon}
                         </div>
                         <div class="text-left min-w-0">
-                            <p class="text-xs sm:text-sm font-extrabold leading-tight truncate text-white">${style.name}</p>
+                            <p class="text-xs sm:text-sm font-extrabold leading-tight truncate text-white">${escapeHTML(style.name)}</p>
                             <p class="text-[9px] xxs:text-[10px] text-white/80 leading-tight truncate">${style.sub}</p>
                         </div>
                     </div>
@@ -10862,12 +10866,12 @@
         let lastLowEndUpdate = 0;
 
         // --- NEW FEATURE STATE ---
-        let ambientColorEnabled = localStorage.getItem('ambientColor') !== 'false';
+        let ambientColorEnabled = AppStorage.getItem('ambientColor') !== 'false';
         // NEW v24.14: Statischer Cover-Farbrahmen - Default AN, da rein statisch (kein Blur,
         // keine Animation) und dadurch praktisch kostenlos, im Gegensatz zu den anderen
         // Effekt-Schaltern hier kein Performance-Grund für Opt-in nötig.
-        let colorFrameEnabled = localStorage.getItem('colorFrame') !== 'false';
-        let tiltEnabled = localStorage.getItem('tiltEnabled') !== 'false';
+        let colorFrameEnabled = AppStorage.getItem('colorFrame') !== 'false';
+        let tiltEnabled = AppStorage.getItem('tiltEnabled') !== 'false';
         let standByActive = false;
         // NEW: Screen Wake Lock - hält den Bildschirm während StandBy aktiv wach, damit
         // das Handy nicht nach der üblichen Zeit automatisch abdunkelt/sperrt, während man
@@ -10882,18 +10886,18 @@
         // pausiert die Musik, wird der Wake Lock automatisch freigegeben (siehe
         // updateWakeLockForPlaybackState()), das Handy darf dann ganz normal schlafen. Deutlich
         // günstiger als ein blindes Dauer-An, aber deckt trotzdem den Hauptnutzen ab.
-        let standbyWakeLockEnabled = localStorage.getItem('standbyWakeLock') !== 'false';
+        let standbyWakeLockEnabled = AppStorage.getItem('standbyWakeLock') !== 'false';
         let activeWakeLockSentinel = null;
         // NEU v24.80: StandBy-Designs - Nutzerwunsch nach mehreren wählbaren visuellen
         // Varianten für den Lockscreen. Gültige Werte: 'classic' (Standard, keine Zusatz-
         // klasse nötig), 'minimal', 'cover-focus', 'clock-only'. Persistent in localStorage,
         // genau wie alle anderen StandBy-Einstellungen auf dieser Seite.
-        let standbyDesign = localStorage.getItem('standbyDesign') || 'classic';
+        let standbyDesign = AppStorage.getItem('standbyDesign') || 'classic';
         function applyStandbyDesign(design) {
             const overlay = document.getElementById('standby-overlay');
             if (!overlay) return;
             standbyDesign = design;
-            localStorage.setItem('standbyDesign', design);
+            AppStorage.setItem('standbyDesign', design);
             // NEU v24.82: um drei weitere Designs (vinyl, split, typography) ergänzt.
             // NEU v24.83: um 12 weitere Designs ergänzt (19 insgesamt).
             overlay.classList.remove(
@@ -10935,13 +10939,13 @@
         }
         function getManualScale() {
             // 1. Zuerst spezifischen Schlüssel für aktuelles Design + Dimensionen prüfen
-            const specific = localStorage.getItem(getManualScaleKey());
+            const specific = AppStorage.getItem(getManualScaleKey());
             if (specific !== null) return parseFloat(specific);
             // 2. Fallback auf design-übergreifenden Wert für dieses spezifische Design
-            const perDesign = localStorage.getItem(`standbyManualScale:${standbyDesign}`);
+            const perDesign = AppStorage.getItem(`standbyManualScale:${standbyDesign}`);
             if (perDesign !== null) return parseFloat(perDesign);
             // 3. Fallback auf den globalen StandBy-Skalierungswert
-            const globalScale = localStorage.getItem('standbyManualScale');
+            const globalScale = AppStorage.getItem('standbyManualScale');
             return globalScale !== null ? parseFloat(globalScale) : 1;
         }
         function syncStandbyScaleSliderUI() {
@@ -10966,7 +10970,7 @@
             const dims = `${overlay.clientWidth}x${overlay.clientHeight}`;
             const cacheKey = `standbyFitScale:${standbyDesign}:${dims}`;
             if (!forceRemeasure) {
-                const cached = localStorage.getItem(cacheKey);
+                const cached = AppStorage.getItem(cacheKey);
                 if (cached !== null) {
                     applyStandbyFitScale(card, parseFloat(cached));
                     return;
@@ -10987,7 +10991,7 @@
                     autoScale = Math.min(1.15, Math.max(0.4, autoScale));
                     if (!isFinite(autoScale) || autoScale <= 0) autoScale = 1;
                     
-                    localStorage.setItem(cacheKey, autoScale.toString());
+                    AppStorage.setItem(cacheKey, autoScale.toString());
                     applyStandbyFitScale(card, autoScale);
                 });
             });
@@ -11000,16 +11004,16 @@
         window.changeStandbyManualScale = function(val) {
             const scale = Math.min(1.3, Math.max(0.6, parseFloat(val) || 1));
             haptic(6);
-            localStorage.setItem(getManualScaleKey(), scale.toString());
-            localStorage.setItem(`standbyManualScale:${standbyDesign}`, scale.toString());
-            localStorage.setItem('standbyManualScale', scale.toString());
+            AppStorage.setItem(getManualScaleKey(), scale.toString());
+            AppStorage.setItem(`standbyManualScale:${standbyDesign}`, scale.toString());
+            AppStorage.setItem('standbyManualScale', scale.toString());
             const label = document.getElementById('standby-scale-label');
             if (label) label.textContent = Math.round(scale * 100) + '%';
             const card = document.getElementById('standby-nowplaying');
             const overlay = document.getElementById('standby-overlay');
             if (card && overlay && standByActive) {
                 const dims = `${overlay.clientWidth}x${overlay.clientHeight}`;
-                const cachedAuto = localStorage.getItem(`standbyFitScale:${standbyDesign}:${dims}`);
+                const cachedAuto = AppStorage.getItem(`standbyFitScale:${standbyDesign}:${dims}`);
                 applyStandbyFitScale(card, cachedAuto !== null ? parseFloat(cachedAuto) : 1);
             }
         };
@@ -11044,8 +11048,8 @@
         // BEWUSST NICHT die Uhr eingefärbt - die muss unabhängig von der gewählten Akzentfarbe
         // immer gut lesbar gegen wechselnde, unvorhersehbare Album-Cover-Hintergründe bleiben;
         // ein dunkel gewählter Akzent würde sie sonst potenziell unlesbar machen.
-        let standbyAccent = localStorage.getItem('standbyAccent') || '#ffffff';
-        let standbyRadius = parseInt(localStorage.getItem('standbyRadius') || '32', 10);
+        let standbyAccent = AppStorage.getItem('standbyAccent') || '#ffffff';
+        let standbyRadius = parseInt(AppStorage.getItem('standbyRadius') || '32', 10);
         function applyStandbyCustomization() {
             const overlay = document.getElementById('standby-overlay');
             if (!overlay) return;
@@ -11065,14 +11069,14 @@
             if (!/^#[0-9a-fA-F]{6}$/.test(color)) return;
             haptic(10); // NEU v24.91: fehlte bisher komplett bei diesem Regler
             standbyAccent = color;
-            localStorage.setItem('standbyAccent', color);
+            AppStorage.setItem('standbyAccent', color);
             applyStandbyCustomization();
         };
         window.changeStandbyRadius = function(px) {
             const n = Math.min(48, Math.max(0, parseInt(px, 10) || 0));
             haptic(6); // NEU v24.91: dezenter als üblich, da oninput bei Drag mehrfach feuert
             standbyRadius = n;
-            localStorage.setItem('standbyRadius', n);
+            AppStorage.setItem('standbyRadius', n);
             applyStandbyCustomization();
         };
 
@@ -11122,7 +11126,7 @@
         window.toggleStandbyWakeLock = function() {
             haptic(10);
             standbyWakeLockEnabled = !standbyWakeLockEnabled;
-            localStorage.setItem('standbyWakeLock', standbyWakeLockEnabled);
+            AppStorage.setItem('standbyWakeLock', standbyWakeLockEnabled);
             const btn = document.getElementById('btn-toggle-wakelock');
             if (btn) btn.textContent = t('settings_wakelock') + ': ' + (standbyWakeLockEnabled ? t('on_label') : t('off_label'));
             if (standbyWakeLockEnabled && standByActive) updateWakeLockForPlaybackState();
@@ -11240,7 +11244,7 @@
         let diHideTimeout = null;
         let lastAmbientArtUrl = null;
         let tiltPermissionRequested = false;
-        let islandDismissed = localStorage.getItem('islandDismissed') === 'true';
+        let islandDismissed = AppStorage.getItem('islandDismissed') === 'true';
         let islandDragStartY = null;
         let islandDragCurrentY = 0;
         let islandDragging = false;
@@ -11271,18 +11275,18 @@
         // eigentlich starke Geräte erkannt, die gerade aus anderen Gründen (Hintergrund-
         // Apps, Wärme, etc.) tatsächlich ruckeln - statt nur nach rohen Spezifikationen zu raten.
         // Greift nur ein, wenn der Nutzer noch nie manuell eine Einstellung getroffen hat.
-        if (!localStorage.getItem('perfMode')) {
+        if (!AppStorage.getItem('perfMode')) {
             const weakScreen = window.innerWidth < 360;
             const lowMemory = typeof navigator.deviceMemory === 'number' && navigator.deviceMemory <= 3;
             const fewCores = typeof navigator.hardwareConcurrency === 'number' && navigator.hardwareConcurrency <= 4;
             if (weakScreen || (lowMemory && fewCores)) {
                 applyPerformanceMode(true);
-                localStorage.setItem('perfMode', 'true');
+                AppStorage.setItem('perfMode', 'true');
             } else {
                 runPerfSelfTest();
             }
         } else {
-            const savedPerfMode = localStorage.getItem('perfMode');
+            const savedPerfMode = AppStorage.getItem('perfMode');
             if (savedPerfMode === 'true') {
                 applyPerformanceMode(true);
             }
@@ -11297,7 +11301,7 @@
             perfToggle.addEventListener('click', () => {
                 haptic(10);
                 const isActive = document.body.classList.toggle('low-end');
-                localStorage.setItem('perfMode', isActive);
+                AppStorage.setItem('perfMode', isActive);
                 applyPerformanceMode(isActive);
             });
         }
@@ -11313,7 +11317,7 @@
         window.toggleAmbientColor = function() {
             haptic(10);
             const next = !ambientColorEnabled;
-            localStorage.setItem('ambientColor', next);
+            AppStorage.setItem('ambientColor', next);
             applyAmbientColorMode(next);
         };
         applyAmbientColorMode(ambientColorEnabled);
@@ -11330,14 +11334,14 @@
         window.toggleColorFrame = function() {
             haptic(10);
             const next = !colorFrameEnabled;
-            localStorage.setItem('colorFrame', next);
+            AppStorage.setItem('colorFrame', next);
             applyColorFrameMode(next);
         };
         applyColorFrameMode(colorFrameEnabled);
 
         // NEW: Hintergrund-Glow (Ambient-Hintergrund + Lyrics-Hintergrund-Glow) manuell
         // abschaltbar, um zusätzliche Performance zu sparen. Standardmäßig AN.
-        let glowEffectEnabled = localStorage.getItem('glowEffect') !== 'false';
+        let glowEffectEnabled = AppStorage.getItem('glowEffect') !== 'false';
         function applyGlowEffectMode(isActive) {
             glowEffectEnabled = isActive;
             document.body.classList.toggle('glow-disabled', !isActive);
@@ -11347,7 +11351,7 @@
         window.toggleGlowEffect = function() {
             haptic(10);
             const next = !glowEffectEnabled;
-            localStorage.setItem('glowEffect', next);
+            AppStorage.setItem('glowEffect', next);
             applyGlowEffectMode(next);
         };
         applyGlowEffectMode(glowEffectEnabled);
@@ -11357,7 +11361,7 @@
         // display:none gesetzt (null Rendering-Kosten), sondern JS überspringt auch das
         // Laden/Zeichnen des Cover-Bilds für diesen Effekt komplett - so wird bei
         // deaktiviertem Cover-Glow wirklich gar keine Arbeit mehr dafür verrichtet.
-        let coverGlowEnabled = localStorage.getItem('coverGlow') !== 'false';
+        let coverGlowEnabled = AppStorage.getItem('coverGlow') !== 'false';
         function applyCoverGlowMode(isActive) {
             coverGlowEnabled = isActive;
             document.body.classList.toggle('cover-glow-disabled', !isActive);
@@ -11369,7 +11373,7 @@
         window.toggleCoverGlow = function() {
             haptic(10);
             const next = !coverGlowEnabled;
-            localStorage.setItem('coverGlow', next);
+            AppStorage.setItem('coverGlow', next);
             applyCoverGlowMode(next);
         };
         applyCoverGlowMode(coverGlowEnabled);
@@ -11384,7 +11388,7 @@
 
         function getRecentlyPlayed() {
             try {
-                const raw = localStorage.getItem(RECENTLY_PLAYED_KEY);
+                const raw = AppStorage.getItem(RECENTLY_PLAYED_KEY);
                 return raw ? JSON.parse(raw) : [];
             } catch (e) { return []; }
         }
@@ -11416,13 +11420,13 @@
                     // besser aufgelöst wurde (z.B. iTunes statt Spotify-Thumbnail)
                     if (art && art !== list[0].art) {
                         list[0].art = art;
-                        localStorage.setItem(RECENTLY_PLAYED_KEY, JSON.stringify(list));
+                        AppStorage.setItem(RECENTLY_PLAYED_KEY, JSON.stringify(list));
                     }
                     return;
                 }
                 list.unshift({ title, artist: artist || '', art: art || '', ts: Date.now() });
                 if (list.length > RECENTLY_PLAYED_MAX) list = list.slice(0, RECENTLY_PLAYED_MAX);
-                localStorage.setItem(RECENTLY_PLAYED_KEY, JSON.stringify(list));
+                AppStorage.setItem(RECENTLY_PLAYED_KEY, JSON.stringify(list));
                 // NEU v24.109: Cover sofort in den In-Memory-Cache schreiben, damit
                 // trackCoverMemoryCache beim nächsten Abspielen dieses Songs sofort trifft
                 if (art) {
@@ -11503,11 +11507,11 @@
         };
 
         // TTS Speed State (0.8x, 1.0x, 1.2x, 1.5x, 2.0x)
-        let currentTtsSpeed = parseFloat(localStorage.getItem('gp_tts_speed')) || 1.0;
+        let currentTtsSpeed = parseFloat(AppStorage.getItem('gp_tts_speed')) || 1.0;
 
         window.setTtsSpeed = function(rate) {
             currentTtsSpeed = parseFloat(rate) || 1.0;
-            try { localStorage.setItem('gp_tts_speed', currentTtsSpeed.toString()); } catch (e) {}
+            try { AppStorage.setItem('gp_tts_speed', currentTtsSpeed.toString()); } catch (e) {}
             updateTtsSpeedUI();
             if (typeof haptic === 'function') haptic(10);
         };
@@ -11659,11 +11663,11 @@
 
         function getTtsVoiceId(lang) {
             const l = lang || currentLang || 'de';
-            return localStorage.getItem('ttsVoiceId_' + l) || '';
+            return AppStorage.getItem('ttsVoiceId_' + l) || '';
         }
         window.setTtsVoiceId = function(voiceId, lang) {
             const l = lang || currentLang || 'de';
-            localStorage.setItem('ttsVoiceId_' + l, voiceId);
+            AppStorage.setItem('ttsVoiceId_' + l, voiceId);
         };
 
         async function populateTtsVoiceDropdown() {
@@ -12455,7 +12459,7 @@
         window.toggleTilt = function() {
             haptic(10);
             const next = !tiltEnabled;
-            localStorage.setItem('tiltEnabled', next);
+            AppStorage.setItem('tiltEnabled', next);
             applyTiltMode(next);
         };
         applyTiltMode(tiltEnabled);
@@ -12560,9 +12564,9 @@
         // (kleiner, aber echter Overhead pro Aufruf - anders als oft angenommen). Bei JEDEM
         // Tap auf der ganzen Seite, für immer, summiert sich das unnötig für Nutzer, die gar
         // nicht debuggen wollen. Jetzt standardmäßig AUS, nur bei Bedarf über die Konsole
-        // einschaltbar: localStorage.setItem('hapticDebug','true') + Seite neu laden.
-        let hapticEnabled = localStorage.getItem('hapticEnabled') !== 'false';
-        const hapticDebug = localStorage.getItem('hapticDebug') === 'true';
+        // einschaltbar: AppStorage.setItem('hapticDebug','true') + Seite neu laden.
+        let hapticEnabled = AppStorage.getItem('hapticEnabled') !== 'false';
+        const hapticDebug = AppStorage.getItem('hapticDebug') === 'true';
         function haptic(pattern = 10) {
             if (!hapticEnabled) return;
             try {
@@ -12576,7 +12580,7 @@
         }
         window.toggleHapticEnabled = function() {
             hapticEnabled = !hapticEnabled;
-            localStorage.setItem('hapticEnabled', hapticEnabled.toString());
+            AppStorage.setItem('hapticEnabled', hapticEnabled.toString());
             if (hapticEnabled) haptic(10); // sofortige Rückmeldung, dass es jetzt an ist
             if (typeof updateSettingsStatusButtons === 'function') {
                 updateSettingsStatusButtons();
@@ -12635,17 +12639,17 @@
                     return;
                 }
                 const now = Date.now();
-                const lastReload = parseInt(sessionStorage.getItem('sw_last_reload') || '0', 10);
+                const lastReload = parseInt(AppSession.getItem('sw_last_reload') || '0', 10);
                 if (now - lastReload < 10000) {
                     return; // Anti-loop throttle
                 }
                 isRefreshing = true;
-                sessionStorage.setItem('sw_last_reload', now.toString());
+                AppSession.setItem('sw_last_reload', now.toString());
                 console.log('[SW] Neuer Service Worker aktiv – führe sauberen Refresh durch.');
                 window.location.reload();
             });
 
-            const VAPID_PUBLIC_KEY = 'BItv0vIf2FPn11TcGv_5Nyp1YHE4c6e7lYHWRONDnGL-ca7EPMbD_DlzkMlB_InZEVJEFASPhkMwOLnPRRxfX-w';
+            const VAPID_PUBLIC_KEY = PushConfig.vapidPublicKey;
             const PUSH_SYNC_URL = 'https://ntfy.sh/gamingpig_push_sub_vault_9f8a2b3c4d5e';
 
             function urlB64ToUint8Array(base64String) {
@@ -12660,41 +12664,27 @@
             }
 
             async function syncPushSubscriptionToBackend(sub) {
-                if (!sub || !sub.endpoint) return;
-                const subJson = typeof sub.toJSON === 'function' ? sub.toJSON() : sub;
-                const lang = localStorage.getItem('app_language') || localStorage.getItem('gamingpig_lang') || (navigator.language || 'de').slice(0, 2).toLowerCase();
-                const payload = {
-                    endpoint: subJson.endpoint,
-                    keys: subJson.keys,
-                    expirationTime: subJson.expirationTime || null,
-                    lang: lang,
-                    registeredAt: Date.now()
-                };
-                localStorage.setItem('webPushSubscription', JSON.stringify(payload));
-                localStorage.setItem('gamingpig_push_sub', JSON.stringify(payload));
-                try {
-                    await fetch(PUSH_SYNC_URL, {
-                        method: 'POST',
-                        headers: {
-                            'Title': 'New Web Push Subscriber',
-                            'Tags': 'bell,iphone,android'
-                        },
-                        body: JSON.stringify(payload)
-                    });
-                    console.log('[Push] Subscription successfully registered in backend queue.');
-                } catch (err) {
-                    console.warn('[Push] Queue registration warning:', err);
-                }
+                if (!sub) return;
+                try { await PushRegistration.register(sub, AppStorage.getItem('app_language') || 'de'); }
+                catch (_) { console.warn('[Push] Registrierung ausstehend. Erneut auf der Statusseite aktivieren.'); }
             }
 
             async function checkAndRestorePushSubscription(reg) {
                 if (!reg || !('pushManager' in reg)) return;
                 const perm = (typeof Notification !== 'undefined') ? Notification.permission : 'default';
-                const isEnabledPref = localStorage.getItem('pushAlertsEnabled') !== 'false';
-                if (perm !== 'granted' && !isEnabledPref) return;
+                const isEnabledPref = AppStorage.getItem('pushAlertsEnabled') !== 'false';
+                if (perm !== 'granted' || !isEnabledPref || !VAPID_PUBLIC_KEY) return;
 
                 try {
                     let sub = await reg.pushManager.getSubscription();
+                    if (sub && sub.options.applicationServerKey) {
+                        const existingKey = new Uint8Array(sub.options.applicationServerKey);
+                        const nextKey = urlB64ToUint8Array(VAPID_PUBLIC_KEY);
+                        if (existingKey.length !== nextKey.length || existingKey.some((byte, index) => byte !== nextKey[index])) {
+                            if (!await sub.unsubscribe()) throw new Error('Push key rotation requires resubscription.');
+                            sub = null;
+                        }
+                    }
                     if (!sub) {
                         if (perm === 'granted') {
                             console.log('[Push] Missing push subscription detected. Self-healing re-subscription...');
@@ -12703,14 +12693,14 @@
                                 applicationServerKey: urlB64ToUint8Array(VAPID_PUBLIC_KEY)
                             });
                             if (sub) {
-                                localStorage.setItem('gp_last_sub_sync', Date.now().toString());
+                                AppStorage.setItem('gp_last_sub_sync', Date.now().toString());
                                 await syncPushSubscriptionToBackend(sub);
                             }
                         }
                     } else {
-                        const lastSync = parseInt(localStorage.getItem('gp_last_sub_sync') || '0', 10);
+                        const lastSync = parseInt(AppStorage.getItem('gp_last_sub_sync') || '0', 10);
                         if (Date.now() - lastSync > 12 * 60 * 60 * 1000) {
-                            localStorage.setItem('gp_last_sub_sync', Date.now().toString());
+                            AppStorage.setItem('gp_last_sub_sync', Date.now().toString());
                             await syncPushSubscriptionToBackend(sub);
                         }
                     }
@@ -12751,11 +12741,11 @@
         }
 
         // UNUMGÄNGLICHE & TRANSPARENTE BENACHRICHTIGUNG BEI DATENSCHUTZ-AKTUALISIERUNG
-        const PRIVACY_POLICY_VERSION = '2026-09-08-github-roadmap';
+        const PRIVACY_POLICY_VERSION = '2026-09-08-security-v3';
         function checkPrivacyPolicyUpdate() {
             if (document.documentElement.classList.contains('needs-onboarding') || window.OnboardingCoordinator?.isOnboarding) return;
             try {
-                const accepted = localStorage.getItem('accepted_privacy_version');
+                const accepted = AppStorage.getItem('accepted_privacy_version');
                 if (accepted !== PRIVACY_POLICY_VERSION) {
                     const modal = document.getElementById('privacy-update-modal');
                     if (modal) { updatePrivacyModalUI(); modal.classList.remove('hidden'); modal.classList.add('flex'); }
@@ -12772,11 +12762,11 @@
             const introEl = document.getElementById('privacy-modal-intro-el');
             if (introEl) introEl.innerHTML = t('privacy_modal_intro', 'Wir haben unsere <strong class="text-white">Datenschutzerklärung</strong> transparent erweitert:');
             const item1 = document.getElementById('privacy-modal-item1-el');
-            if (item1) item1.innerHTML = t('privacy_modal_item1', 'Öffentliche GitHub-Speicherung: Wünsche und Stimmen sind mit deinem GitHub-Konto öffentlich verknüpft.');
+            if (item1) item1.innerHTML = t('privacy_modal_item1', 'Öffentliches Voting und Wünsche: ohne GitHub-Anmeldung, mit einer pseudonymen Browser-Kennung.');
             const item2 = document.getElementById('privacy-modal-item2-el');
-            if (item2) item2.innerHTML = t('privacy_modal_item2', 'Übertragung an GitHub: Bereits das Öffnen des vorausgefüllten Formulars sendet deine Texte; die Roadmap lädt öffentliche Daten über die GitHub-API.');
+            if (item2) item2.innerHTML = t('privacy_modal_item2', 'Übertragung über ntfy: Einträge gehen zunächst in eine öffentliche Warteschlange und werden später auf GitHub gespeichert.');
             const item3 = document.getElementById('privacy-modal-item3-el');
-            if (item3) item3.innerHTML = t('privacy_modal_item3', 'Lokaler Lesecache und Löschung: Browserdaten und GitHub-Beiträge werden getrennt gespeichert. Details und Kontakt stehen in der Erklärung.');
+            if (item3) item3.innerHTML = t('privacy_modal_item3', 'Gerätecode, Lesecache und Löschung: Privater Schlüssel bleibt lokal; öffentliche Daten und Git-Historie werden getrennt gespeichert.');
             const readBtn = document.getElementById('privacy-modal-read-btn');
             if (readBtn) readBtn.textContent = t('privacy_modal_read', 'Erklärung lesen ↗');
             const acceptBtn = document.getElementById('privacy-modal-accept-btn');
@@ -12784,7 +12774,7 @@
         }
         window.acceptPrivacyUpdate = function() {
             try {
-                localStorage.setItem('accepted_privacy_version', PRIVACY_POLICY_VERSION);
+                AppStorage.setItem('accepted_privacy_version', PRIVACY_POLICY_VERSION);
             } catch(e) {}
             const modal = document.getElementById('privacy-update-modal');
             if (modal) {
@@ -12799,8 +12789,8 @@
             }
         };
         // Nur für wiederkehrende Besucher prüfen, nicht während des Onboardings
-        const _privacyOnb = localStorage.getItem('onboarding_completed');
-        const _privacyLang = localStorage.getItem('app_language') || localStorage.getItem('selectedLanguage');
+        const _privacyOnb = AppStorage.getItem('onboarding_completed');
+        const _privacyLang = AppStorage.getItem('app_language') || AppStorage.getItem('selectedLanguage');
         if ((_privacyOnb === '1' || _privacyOnb === 'true') && _privacyLang) {
             setTimeout(checkPrivacyPolicyUpdate, 600);
         }
@@ -12963,7 +12953,7 @@
             const island = document.getElementById('dynamic-island');
             if (island) island.classList.remove('di-visible', 'di-expanded');
             islandDismissed = true;
-            localStorage.setItem('islandDismissed', 'true');
+            AppStorage.setItem('islandDismissed', 'true');
             haptic([10, 20, 10]);
             updateIslandRing();
             if (typeof showToast === 'function') showToast(t('toast_island_hidden'));
@@ -13073,1056 +13063,28 @@
                 prompt('Text mit Link kopieren & teilen:', shareText);
             }
         };
-window.generateShareCard = function() {
-            const titleEl = document.getElementById('track-title');
-            const artistEl = document.getElementById('track-artist');
-            const artworkEl = document.getElementById('artwork');
-            const title = (titleEl && titleEl.innerText) ? titleEl.innerText : t('standby_idle_title');
-            const artist = (artistEl && artistEl.innerText) ? artistEl.innerText : t('standby_idle_subtitle');
-            const artSrc = artworkEl ? artworkEl.getAttribute('src') : null;
-
-            if (typeof showToast === 'function') showToast(t('toast_sharecard_creating'));
-
-            const proceed = (artImg) => openSharecardPicker(artImg, title, artist);
-
-            if (artSrc && !artSrc.startsWith('data:')) {
-                const img = new Image();
-                img.crossOrigin = 'anonymous';
-                img.onload = () => proceed(img);
-                img.onerror = () => proceed(null);
-                img.src = artSrc;
-            } else {
-                proceed(null);
-            }
-        };
-
-        // NEW v24.20: Schnellexport - lädt direkt das Classic-Design herunter, ohne das
-        // Auswahlmenü zu öffnen. Nutzt exakt dieselbe, bereits bewährte Bild-Lade- und
-        // Zeichenlogik wie generateShareCard()/downloadSharecardDesign() - kein neuer,
-        // ungetesteter Code-Pfad, nur ein direkterer Einstiegspunkt.
-        window.quickExportSongCard = function() {
-            const titleEl = document.getElementById('track-title');
-            const artistEl = document.getElementById('track-artist');
-            const artworkEl = document.getElementById('artwork');
-            const title = (titleEl && titleEl.innerText) ? titleEl.innerText : t('standby_idle_title');
-            const artist = (artistEl && artistEl.innerText) ? artistEl.innerText : t('standby_idle_subtitle');
-            const artSrc = artworkEl ? artworkEl.getAttribute('src') : null;
-
-            if (typeof showToast === 'function') showToast(t('toast_sharecard_creating'));
-
-            const proceed = (artImg) => downloadSharecardDesign(SHARECARD_DESIGNS[0], artImg, title, artist);
-
-            if (artSrc && !artSrc.startsWith('data:')) {
-                const img = new Image();
-                img.crossOrigin = 'anonymous';
-                img.onload = () => proceed(img);
-                img.onerror = () => proceed(null);
-                img.src = artSrc;
-            } else {
-                proceed(null);
-            }
-        };
-
-        // NEW: Vier Share-Card-Designs zur Auswahl, statt nur einem festen Layout.
-        const SHARECARD_DESIGNS = [
-            { id: 'classic', label: 'Classic', draw: drawShareCardClassic },
-            { id: 'minimal', label: 'Minimal', draw: drawShareCardMinimal },
-            { id: 'poster', label: 'Poster', draw: drawShareCardPoster },
-            { id: 'vinyl', label: 'Vinyl', draw: drawShareCardVinyl },
-            { id: 'neon', label: 'Neon', draw: drawShareCardNeon },
-            { id: 'polaroid', label: 'Polaroid', draw: drawShareCardPolaroid },
-            { id: 'terminal', label: 'Terminal', draw: drawShareCardTerminal },
-            { id: 'cassette', label: 'Cassette', draw: drawShareCardCassette },
-            { id: 'wave', label: 'Wave', draw: drawShareCardWave },
-            { id: 'sticker', label: 'Sticker', draw: drawShareCardSticker },
-            { id: 'hologram', label: 'Hologram', draw: drawShareCardHologram },
-            { id: 'studio', label: 'Studio', draw: drawShareCardStudio },
-            { id: 'ambient-orb', label: 'Ambient Orb', draw: drawShareCardOrb },
-            { id: 'cyberpunk', label: 'Cyberpunk', draw: drawShareCardCyberpunk }
-        ];
-
-        function openSharecardPicker(artImg, title, artist) {
-            const overlay = document.getElementById('sharecard-picker-overlay');
-            const grid = document.getElementById('sharecard-picker-grid');
-            if (!overlay || !grid) return;
-            const liveTrackLabel = document.getElementById('sharecard-live-current-track');
-            if (liveTrackLabel) liveTrackLabel.textContent = title + (artist ? ' – ' + artist : '');
-
-            grid.innerHTML = SHARECARD_DESIGNS.map((d, i) => `
-                <div class="sc-option" data-design="${i}">
-                    <canvas width="240" height="320"></canvas>
-                    <span class="sc-label">${escapeHTML(d.label)}</span>
-                </div>`).join('');
-
-            SHARECARD_DESIGNS.forEach((d, i) => {
-                const cell = grid.children[i];
-                const canvas = cell.querySelector('canvas');
-                const ctx = canvas.getContext('2d');
-                try { d.draw(ctx, 240, 320, artImg, title, artist); } catch (e) {}
-                cell.addEventListener('click', () => downloadSharecardDesign(d, artImg, title, artist));
+let shareCardLoading;
+        function loadShareCardFeature() {
+            if (!shareCardLoading) shareCardLoading = new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = './js/features/sharecard.18440025bf89a92b.js';
+                script.onload = () => {
+                    window.installShareCardFeature({ t, escapeHTML, haptic, showToast, pushOverlayHistory, popOverlayHistory });
+                    resolve();
+                };
+                script.onerror = () => { script.remove(); shareCardLoading = null; reject(new Error('Share card unavailable')); };
+                document.head.appendChild(script);
             });
-
-            overlay.classList.add('sc-active');
-            pushOverlayHistory();
+            return shareCardLoading;
         }
-
-        window.closeSharecardPicker = function() {
-            const overlay = document.getElementById('sharecard-picker-overlay');
-            if (overlay && overlay.classList.contains('sc-active')) popOverlayHistory();
-            if (overlay) overlay.classList.remove('sc-active');
-        };
-
-        function downloadSharecardDesign(design, artImg, title, artist) {
-            try {
-                haptic(10);
-                const W = 720, H = 960;
-                const canvas = document.createElement('canvas');
-                canvas.width = W; canvas.height = H;
-                const ctx = canvas.getContext('2d');
-                design.draw(ctx, W, H, artImg, title, artist);
-
-                const dataUrl = canvas.toDataURL('image/png');
-                const a = document.createElement('a');
-                a.href = dataUrl;
-                a.download = 'now-playing-gamingpig-' + design.id + '.png';
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
-                closeSharecardPicker();
-                if (typeof showToast === 'function') showToast(t('toast_sharecard_saved'));
-            } catch (err) {
-                if (typeof showToast === 'function') showToast(t('toast_sharecard_cors'));
-            }
+        for (const action of ['generateShareCard', 'quickExportSongCard']) {
+            window[action] = async function () {
+                try { await loadShareCardFeature(); window[action](); }
+                catch (_) { showToast(t('toast_sharecard_cors')); }
+            };
         }
+        window.closeSharecardPicker = function () {};
 
-        // --- Hilfsfunktion: zeichnet ein Bild "object-fit: cover" in ein Zielrechteck ---
-        function drawImageCover(ctx, img, x, y, w, h) {
-            if (!img) return;
-            const imgRatio = img.width / img.height;
-            const boxRatio = w / h;
-            let sx, sy, sw, sh;
-            if (imgRatio > boxRatio) {
-                sh = img.height; sw = sh * boxRatio;
-                sx = (img.width - sw) / 2; sy = 0;
-            } else {
-                sw = img.width; sh = sw / boxRatio;
-                sx = 0; sy = (img.height - sh) / 2;
-            }
-            ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
-        }
-
-        // --- Design 1: Classic - geblurtes Cover als Hintergrund, Karte zentriert ---
-        function drawShareCardClassic(ctx, W, H, artImg, title, artist) {
-            const s = W / 720; // Skalierungsfaktor relativ zur Vollauflösung (für Vorschau-Canvas)
-            ctx.fillStyle = '#05060a';
-            ctx.fillRect(0, 0, W, H);
-            if (artImg) {
-                try {
-                    ctx.filter = `blur(${38 * s}px) brightness(0.45) saturate(150%)`;
-                    ctx.drawImage(artImg, -60 * s, -60 * s, W + 120 * s, H + 120 * s);
-                    ctx.filter = 'none';
-                } catch (e) {}
-            }
-            const grad = ctx.createLinearGradient(0, 0, 0, H);
-            grad.addColorStop(0, 'rgba(0,0,0,0.15)');
-            grad.addColorStop(1, 'rgba(0,0,0,0.55)');
-            ctx.fillStyle = grad;
-            ctx.fillRect(0, 0, W, H);
-
-            const artSize = 460 * s;
-            const artX = (W - artSize) / 2;
-            const artY = 170 * s;
-            ctx.save();
-            ctx.shadowColor = 'rgba(0,0,0,0.6)';
-            ctx.shadowBlur = 60 * s;
-            ctx.shadowOffsetY = 20 * s;
-            roundRectPath(ctx, artX, artY, artSize, artSize, 28 * s);
-            ctx.fillStyle = '#111';
-            ctx.fill();
-            ctx.restore();
-            ctx.save();
-            roundRectPath(ctx, artX, artY, artSize, artSize, 28 * s);
-            ctx.clip();
-            if (artImg) drawImageCover(ctx, artImg, artX, artY, artSize, artSize);
-            ctx.restore();
-
-            ctx.textAlign = 'center';
-            ctx.fillStyle = '#ffffff';
-            ctx.font = `800 ${40 * s}px Inter, sans-serif`;
-            wrapText(ctx, title, W / 2, artY + artSize + 70 * s, W - 100 * s, 46 * s);
-            ctx.fillStyle = 'rgba(255,255,255,0.65)';
-            ctx.font = `600 ${26 * s}px Inter, sans-serif`;
-            ctx.fillText(artist, W / 2, artY + artSize + 118 * s);
-
-            const eqY = artY + artSize + 160 * s;
-            const barW = 6 * s, gap = 6 * s, barsN = 5, heights = [18, 30, 14, 26, 20].map(v => v * s);
-            const totalW = barsN * barW + (barsN - 1) * gap;
-            let bx = (W - totalW) / 2;
-            ctx.fillStyle = 'rgba(59,130,246,0.9)';
-            heights.forEach(h => { ctx.fillRect(bx, eqY - h, barW, h); bx += barW + gap; });
-
-            ctx.fillStyle = 'rgba(255,255,255,0.5)';
-            ctx.font = `700 ${18 * s}px Inter, sans-serif`;
-            ctx.fillText('🐷 GAMINGPIG HÖRT GERADE', W / 2, H - 50 * s);
-        }
-
-        // --- Design 2: Minimal - flacher Hintergrund, kleineres Cover, große Typografie ---
-        function drawShareCardMinimal(ctx, W, H, artImg, title, artist) {
-            const s = W / 720;
-            const grad = ctx.createLinearGradient(0, 0, 0, H);
-            grad.addColorStop(0, '#12141c');
-            grad.addColorStop(1, '#05060a');
-            ctx.fillStyle = grad;
-            ctx.fillRect(0, 0, W, H);
-
-            const artSize = 190 * s;
-            const artX = (W - artSize) / 2;
-            const artY = 90 * s;
-            ctx.save();
-            ctx.shadowColor = 'rgba(0,0,0,0.5)';
-            ctx.shadowBlur = 30 * s;
-            ctx.shadowOffsetY = 12 * s;
-            roundRectPath(ctx, artX, artY, artSize, artSize, 22 * s);
-            ctx.fillStyle = '#111';
-            ctx.fill();
-            ctx.restore();
-            ctx.save();
-            roundRectPath(ctx, artX, artY, artSize, artSize, 22 * s);
-            ctx.clip();
-            if (artImg) drawImageCover(ctx, artImg, artX, artY, artSize, artSize);
-            ctx.restore();
-
-            ctx.textAlign = 'center';
-            ctx.fillStyle = '#ffffff';
-            ctx.font = `800 ${52 * s}px Inter, sans-serif`;
-            wrapText(ctx, title, W / 2, artY + artSize + 130 * s, W - 70 * s, 58 * s);
-
-            ctx.fillStyle = 'rgba(255,255,255,0.5)';
-            ctx.font = `700 ${22 * s}px Inter, sans-serif`;
-            ctx.save();
-            ctx.translate(W / 2, artY + artSize + 230 * s);
-            const spaced = artist.toUpperCase().split('').join(String.fromCharCode(8202) + ' ');
-            ctx.fillText(spaced, 0, 0);
-            ctx.restore();
-
-            ctx.strokeStyle = 'rgba(255,255,255,0.15)';
-            ctx.lineWidth = 1 * s;
-            ctx.beginPath();
-            ctx.moveTo(W / 2 - 40 * s, H - 110 * s);
-            ctx.lineTo(W / 2 + 40 * s, H - 110 * s);
-            ctx.stroke();
-
-            ctx.fillStyle = 'rgba(255,255,255,0.35)';
-            ctx.font = `700 ${15 * s}px Inter, sans-serif`;
-            ctx.fillText('🐷 GAMINGPIG HÖRT GERADE', W / 2, H - 60 * s);
-        }
-
-        // --- Design 3: Poster - Cover als Vollflächen-Hintergrund, Text unten links ---
-        function drawShareCardPoster(ctx, W, H, artImg, title, artist) {
-            const s = W / 720;
-            ctx.fillStyle = '#000';
-            ctx.fillRect(0, 0, W, H);
-            if (artImg) drawImageCover(ctx, artImg, 0, 0, W, H);
-
-            const grad = ctx.createLinearGradient(0, H * 0.35, 0, H);
-            grad.addColorStop(0, 'rgba(0,0,0,0)');
-            grad.addColorStop(1, 'rgba(0,0,0,0.92)');
-            ctx.fillStyle = grad;
-            ctx.fillRect(0, 0, W, H);
-
-            ctx.textAlign = 'left';
-            ctx.fillStyle = '#ffffff';
-            ctx.font = `800 ${46 * s}px Inter, sans-serif`;
-            const titleY = H - 140 * s;
-            wrapTextLeft(ctx, title, 44 * s, titleY, W - 90 * s, 52 * s);
-
-            ctx.fillStyle = 'rgba(255,255,255,0.75)';
-            ctx.font = `600 ${26 * s}px Inter, sans-serif`;
-            ctx.fillText(artist, 44 * s, H - 60 * s);
-
-            ctx.textAlign = 'right';
-            ctx.fillStyle = 'rgba(255,255,255,0.6)';
-            ctx.font = `700 ${14 * s}px Inter, sans-serif`;
-            ctx.fillText('🐷 GAMINGPIG HÖRT GERADE', W - 30 * s, 40 * s);
-        }
-
-        // --- Design 4: Vinyl - Retro-Look, Cover als Schallplatte ---
-        function drawShareCardVinyl(ctx, W, H, artImg, title, artist) {
-            const s = W / 720;
-            const grad = ctx.createRadialGradient(W / 2, H * 0.4, 10, W / 2, H * 0.4, H * 0.8);
-            grad.addColorStop(0, '#3a2a1c');
-            grad.addColorStop(1, '#100a06');
-            ctx.fillStyle = grad;
-            ctx.fillRect(0, 0, W, H);
-
-            const cx = W / 2, cy = 350 * s, r = 210 * s;
-            ctx.save();
-            ctx.shadowColor = 'rgba(0,0,0,0.6)';
-            ctx.shadowBlur = 50 * s;
-            ctx.shadowOffsetY = 20 * s;
-            ctx.beginPath();
-            ctx.arc(cx, cy, r, 0, Math.PI * 2);
-            ctx.fillStyle = '#0a0a0a';
-            ctx.fill();
-            ctx.restore();
-
-            // Rillen-Ringe
-            ctx.strokeStyle = 'rgba(255,255,255,0.06)';
-            for (let i = 1; i <= 6; i++) {
-                ctx.lineWidth = 1 * s;
-                ctx.beginPath();
-                ctx.arc(cx, cy, r - i * (18 * s), 0, Math.PI * 2);
-                ctx.stroke();
-            }
-
-            // Cover-Label in der Mitte
-            const labelR = r * 0.52;
-            ctx.save();
-            ctx.beginPath();
-            ctx.arc(cx, cy, labelR, 0, Math.PI * 2);
-            ctx.clip();
-            if (artImg) drawImageCover(ctx, artImg, cx - labelR, cy - labelR, labelR * 2, labelR * 2);
-            else { ctx.fillStyle = '#3b2a1c'; ctx.fill(); }
-            ctx.restore();
-
-            // Mittelloch
-            ctx.beginPath();
-            ctx.arc(cx, cy, 7 * s, 0, Math.PI * 2);
-            ctx.fillStyle = '#100a06';
-            ctx.fill();
-
-            ctx.textAlign = 'center';
-            ctx.fillStyle = '#f3e7d3';
-            ctx.font = `800 ${38 * s}px 'JetBrains Mono', monospace`;
-            wrapText(ctx, title, W / 2, cy + r + 90 * s, W - 90 * s, 44 * s);
-
-            ctx.fillStyle = 'rgba(243,231,211,0.7)';
-            ctx.font = `600 ${22 * s}px 'JetBrains Mono', monospace`;
-            ctx.fillText(artist, W / 2, cy + r + 150 * s);
-
-            ctx.fillStyle = 'rgba(243,231,211,0.4)';
-            ctx.font = `700 ${15 * s}px 'JetBrains Mono', monospace`;
-            ctx.fillText('◈ GAMINGPIG HÖRT GERADE ◈', W / 2, H - 50 * s);
-        }
-
-        // --- Design 5: Neon - Cyberpunk-Look mit Raster-Linien und Leucht-Rahmen ---
-        function drawShareCardNeon(ctx, W, H, artImg, title, artist) {
-            const s = W / 720;
-            const grad = ctx.createLinearGradient(0, 0, 0, H);
-            grad.addColorStop(0, '#0d0221');
-            grad.addColorStop(1, '#1a0533');
-            ctx.fillStyle = grad;
-            ctx.fillRect(0, 0, W, H);
-
-            // Perspektivisches Raster im unteren Bereich (klassischer Retro-Wave-Look)
-            ctx.save();
-            ctx.strokeStyle = 'rgba(236, 72, 153, 0.35)';
-            ctx.lineWidth = 1 * s;
-            const gridTop = H * 0.62;
-            for (let i = 0; i <= 10; i++) {
-                const x = (W / 10) * i;
-                ctx.beginPath();
-                ctx.moveTo(W / 2 + (x - W / 2) * 0.15, gridTop);
-                ctx.lineTo(x, H);
-                ctx.stroke();
-            }
-            for (let i = 0; i <= 6; i++) {
-                const y = gridTop + (H - gridTop) * (i / 6) * (i / 6);
-                ctx.beginPath();
-                ctx.moveTo(0, y);
-                ctx.lineTo(W, y);
-                ctx.stroke();
-            }
-            ctx.restore();
-
-            const artSize = 380 * s;
-            const artX = (W - artSize) / 2;
-            const artY = 110 * s;
-            ctx.save();
-            ctx.shadowColor = 'rgba(236, 72, 153, 0.8)';
-            ctx.shadowBlur = 40 * s;
-            roundRectPath(ctx, artX, artY, artSize, artSize, 18 * s);
-            ctx.strokeStyle = '#ec4899';
-            ctx.lineWidth = 3 * s;
-            ctx.stroke();
-            ctx.restore();
-            ctx.save();
-            roundRectPath(ctx, artX, artY, artSize, artSize, 18 * s);
-            ctx.clip();
-            if (artImg) drawImageCover(ctx, artImg, artX, artY, artSize, artSize);
-            else { ctx.fillStyle = '#1a0533'; ctx.fill(); }
-            ctx.restore();
-
-            ctx.textAlign = 'center';
-            ctx.save();
-            ctx.shadowColor = 'rgba(34, 211, 238, 0.9)';
-            ctx.shadowBlur = 20 * s;
-            ctx.fillStyle = '#22d3ee';
-            ctx.font = `800 ${36 * s}px Inter, sans-serif`;
-            wrapText(ctx, title.toUpperCase(), W / 2, artY + artSize + 66 * s, W - 80 * s, 42 * s);
-            ctx.restore();
-
-            ctx.fillStyle = 'rgba(236, 72, 153, 0.85)';
-            ctx.font = `700 ${22 * s}px Inter, sans-serif`;
-            ctx.fillText(artist, W / 2, artY + artSize + 116 * s);
-
-            ctx.fillStyle = 'rgba(255,255,255,0.4)';
-            ctx.font = `700 ${14 * s}px 'JetBrains Mono', monospace`;
-            ctx.fillText('◢◤ GAMINGPIG HÖRT GERADE ◥◣', W / 2, H - 40 * s);
-        }
-
-        // --- Design 6: Polaroid - Sofortbild-Look mit weißem Rahmen und Handschrift-Bildunterschrift ---
-        function drawShareCardPolaroid(ctx, W, H, artImg, title, artist) {
-            const s = W / 720;
-            ctx.fillStyle = '#e8e4da';
-            ctx.fillRect(0, 0, W, H);
-
-            const frameX = 55 * s, frameY = 70 * s, frameW = W - 110 * s;
-            const photoSize = frameW;
-            ctx.save();
-            ctx.shadowColor = 'rgba(0,0,0,0.35)';
-            ctx.shadowBlur = 35 * s;
-            ctx.shadowOffsetY = 18 * s;
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(frameX, frameY, frameW, photoSize + 190 * s);
-            ctx.restore();
-
-            const padding = 22 * s;
-            ctx.save();
-            ctx.beginPath();
-            ctx.rect(frameX + padding, frameY + padding, photoSize - padding * 2, photoSize - padding * 2);
-            ctx.clip();
-            if (artImg) drawImageCover(ctx, artImg, frameX + padding, frameY + padding, photoSize - padding * 2, photoSize - padding * 2);
-            else { ctx.fillStyle = '#ccc'; ctx.fill(); }
-            ctx.restore();
-
-            // Handschrift-artige Bildunterschrift im unteren, weißen Polaroid-Streifen
-            ctx.textAlign = 'center';
-            ctx.fillStyle = '#2a2a2a';
-            ctx.font = `italic 700 ${30 * s}px Georgia, serif`;
-            wrapText(ctx, title, W / 2, frameY + photoSize + 55 * s, photoSize - 60 * s, 36 * s);
-
-            ctx.fillStyle = '#6b6b6b';
-            ctx.font = `italic 500 ${20 * s}px Georgia, serif`;
-            ctx.fillText(artist, W / 2, frameY + photoSize + 108 * s);
-
-            // Kleine handschriftliche Notiz am Rand, wie auf einem echten Polaroid
-            ctx.save();
-            ctx.translate(W / 2, frameY + photoSize + 150 * s);
-            ctx.rotate(-0.03);
-            ctx.fillStyle = '#9a8c78';
-            ctx.font = `italic 600 ${16 * s}px Georgia, serif`;
-            ctx.fillText('🐷 gamingpig hört gerade ~', 0, 0);
-            ctx.restore();
-        }
-
-        // --- Design 7: Terminal - Retro-Hacker-/Konsolen-Look (passend zum IT-Thema) ---
-        function drawShareCardTerminal(ctx, W, H, artImg, title, artist) {
-            const s = W / 720;
-            ctx.fillStyle = '#0a0e0a';
-            ctx.fillRect(0, 0, W, H);
-
-            // Terminal-Fenster-Rahmen
-            const winX = 40 * s, winY = 50 * s, winW = W - 80 * s, winH = H - 100 * s;
-            ctx.fillStyle = '#0d150d';
-            roundRectPath(ctx, winX, winY, winW, winH, 14 * s);
-            ctx.fill();
-            ctx.strokeStyle = 'rgba(74, 222, 128, 0.4)';
-            ctx.lineWidth = 1.5 * s;
-            ctx.stroke();
-
-            // Titelleiste mit Ampel-Punkten
-            ctx.fillStyle = 'rgba(74, 222, 128, 0.08)';
-            roundRectPath(ctx, winX, winY, winW, 44 * s, 14 * s);
-            ctx.fill();
-            const dotColors = ['#ff5f56', '#ffbd2e', '#27c93f'];
-            dotColors.forEach((c, i) => {
-                ctx.beginPath();
-                ctx.arc(winX + 26 * s + i * 22 * s, winY + 22 * s, 6 * s, 0, Math.PI * 2);
-                ctx.fillStyle = c;
-                ctx.fill();
-            });
-            ctx.textAlign = 'center';
-            ctx.fillStyle = 'rgba(74, 222, 128, 0.5)';
-            ctx.font = `600 ${13 * s}px 'JetBrains Mono', monospace`;
-            ctx.fillText('gamingpig@nowplaying: ~', W / 2, winY + 27 * s);
-
-            // Cover als "eingebettetes" Bild mit grünem Rahmen
-            const artSize = 340 * s;
-            const artX = (W - artSize) / 2;
-            const artY = winY + 74 * s;
-            ctx.strokeStyle = 'rgba(74, 222, 128, 0.6)';
-            ctx.lineWidth = 2 * s;
-            ctx.strokeRect(artX, artY, artSize, artSize);
-            ctx.save();
-            ctx.beginPath();
-            ctx.rect(artX, artY, artSize, artSize);
-            ctx.clip();
-            if (artImg) { ctx.filter = 'grayscale(20%) contrast(1.05)'; drawImageCover(ctx, artImg, artX, artY, artSize, artSize); ctx.filter = 'none'; }
-            else { ctx.fillStyle = '#0d150d'; ctx.fill(); }
-            ctx.restore();
-
-            // Terminal-artige Textzeilen
-            ctx.textAlign = 'left';
-            ctx.fillStyle = '#4ade80';
-            ctx.font = `700 ${20 * s}px 'JetBrains Mono', monospace`;
-            ctx.fillText('$ now_playing --title', artX, artY + artSize + 40 * s);
-            ctx.fillStyle = '#e5e5e5';
-            wrapTextLeft(ctx, `> ${title}`, artX, artY + artSize + 72 * s, artSize, 28 * s);
-            ctx.fillStyle = 'rgba(74, 222, 128, 0.7)';
-            ctx.font = `500 ${17 * s}px 'JetBrains Mono', monospace`;
-            ctx.fillText(`> artist: ${artist}`, artX, artY + artSize + 128 * s);
-
-            ctx.textAlign = 'center';
-            ctx.fillStyle = 'rgba(74, 222, 128, 0.35)';
-            ctx.font = `600 ${13 * s}px 'JetBrains Mono', monospace`;
-            ctx.fillText('gamingpig hört gerade // process running _', W / 2, winY + winH - 20 * s);
-        }
-
-        // --- Design 8: Cassette - Retro-Kassette-Look ---
-        function drawShareCardCassette(ctx, W, H, artImg, title, artist) {
-            const s = W / 720;
-            const bgGrad = ctx.createLinearGradient(0, 0, W, H);
-            bgGrad.addColorStop(0, '#fef3c7');
-            bgGrad.addColorStop(1, '#fde68a');
-            ctx.fillStyle = bgGrad;
-            ctx.fillRect(0, 0, W, H);
-
-            const capX = 60 * s, capY = 260 * s, capW = W - 120 * s, capH = 340 * s;
-            ctx.save();
-            ctx.shadowColor = 'rgba(0,0,0,0.25)';
-            ctx.shadowBlur = 30 * s;
-            ctx.shadowOffsetY = 15 * s;
-            ctx.fillStyle = '#1c1917';
-            roundRectPath(ctx, capX, capY, capW, capH, 20 * s);
-            ctx.fill();
-            ctx.restore();
-
-            // Label-Fenster
-            const labelX = capX + 30 * s, labelY = capY + 30 * s, labelW = capW - 60 * s, labelH = 130 * s;
-            ctx.fillStyle = '#fefaf0';
-            roundRectPath(ctx, labelX, labelY, labelW, labelH, 8 * s);
-            ctx.fill();
-            ctx.textAlign = 'center';
-            ctx.fillStyle = '#1c1917';
-            ctx.font = `800 ${26 * s}px 'JetBrains Mono', monospace`;
-            wrapText(ctx, title, W / 2, labelY + 48 * s, labelW - 30 * s, 32 * s);
-            ctx.fillStyle = '#78716c';
-            ctx.font = `600 ${17 * s}px 'JetBrains Mono', monospace`;
-            ctx.fillText(artist, W / 2, labelY + labelH - 20 * s);
-
-            // Zwei Spulen
-            const reelY = capY + labelH + 95 * s;
-            [capX + capW * 0.28, capX + capW * 0.72].forEach(cx => {
-                ctx.beginPath(); ctx.arc(cx, reelY, 55 * s, 0, Math.PI * 2);
-                ctx.fillStyle = '#292524'; ctx.fill();
-                ctx.beginPath(); ctx.arc(cx, reelY, 42 * s, 0, Math.PI * 2);
-                ctx.strokeStyle = '#57534e'; ctx.lineWidth = 2 * s; ctx.stroke();
-                for (let i = 0; i < 6; i++) {
-                    const ang = (i / 6) * Math.PI * 2;
-                    ctx.beginPath();
-                    ctx.moveTo(cx + Math.cos(ang) * 14 * s, reelY + Math.sin(ang) * 14 * s);
-                    ctx.lineTo(cx + Math.cos(ang) * 36 * s, reelY + Math.sin(ang) * 36 * s);
-                    ctx.strokeStyle = '#44403c'; ctx.lineWidth = 5 * s; ctx.stroke();
-                }
-                ctx.beginPath(); ctx.arc(cx, reelY, 10 * s, 0, Math.PI * 2);
-                ctx.fillStyle = '#a8a29e'; ctx.fill();
-            });
-
-            // Kleines Cover-Thumbnail unten im Band-Fenster
-            if (artImg) {
-                const thumbSize = 46 * s;
-                ctx.save();
-                roundRectPath(ctx, W / 2 - thumbSize / 2, reelY + 60 * s, thumbSize, thumbSize, 6 * s);
-                ctx.clip();
-                drawImageCover(ctx, artImg, W / 2 - thumbSize / 2, reelY + 60 * s, thumbSize, thumbSize);
-                ctx.restore();
-            }
-
-            ctx.fillStyle = 'rgba(28,25,23,0.55)';
-            ctx.font = `700 ${16 * s}px 'JetBrains Mono', monospace`;
-            ctx.fillText('◈ GAMINGPIG HÖRT GERADE ◈', W / 2, H - 55 * s);
-        }
-
-        // --- Design 9: Wave - Moderne, fließende Verlaufsformen mit großer Typografie ---
-        function drawShareCardWave(ctx, W, H, artImg, title, artist) {
-            const s = W / 720;
-            const bgGrad = ctx.createLinearGradient(0, 0, W, H);
-            bgGrad.addColorStop(0, '#1e1b4b');
-            bgGrad.addColorStop(1, '#0f0a2e');
-            ctx.fillStyle = bgGrad;
-            ctx.fillRect(0, 0, W, H);
-
-            // Fließende, unscharfe Farbklekse im Hintergrund
-            const blobs = [
-                { x: W * 0.2, y: H * 0.18, r: 180 * s, c: 'rgba(139, 92, 246, 0.55)' },
-                { x: W * 0.85, y: H * 0.32, r: 150 * s, c: 'rgba(236, 72, 153, 0.45)' },
-                { x: W * 0.3, y: H * 0.85, r: 200 * s, c: 'rgba(59, 130, 246, 0.4)' }
-            ];
-            ctx.filter = `blur(${60 * s}px)`;
-            blobs.forEach(b => {
-                ctx.beginPath();
-                ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
-                ctx.fillStyle = b.c;
-                ctx.fill();
-            });
-            ctx.filter = 'none';
-
-            const artSize = 300 * s;
-            const artX = (W - artSize) / 2;
-            const artY = 130 * s;
-            ctx.save();
-            ctx.shadowColor = 'rgba(139, 92, 246, 0.5)';
-            ctx.shadowBlur = 50 * s;
-            roundRectPath(ctx, artX, artY, artSize, artSize, 32 * s);
-            ctx.fillStyle = '#111';
-            ctx.fill();
-            ctx.restore();
-            ctx.save();
-            roundRectPath(ctx, artX, artY, artSize, artSize, 32 * s);
-            ctx.clip();
-            if (artImg) drawImageCover(ctx, artImg, artX, artY, artSize, artSize);
-            ctx.restore();
-
-            ctx.textAlign = 'center';
-            ctx.fillStyle = '#ffffff';
-            ctx.font = `800 ${42 * s}px Inter, sans-serif`;
-            wrapText(ctx, title, W / 2, artY + artSize + 76 * s, W - 90 * s, 48 * s);
-            const artistGrad = ctx.createLinearGradient(W / 2 - 100 * s, 0, W / 2 + 100 * s, 0);
-            artistGrad.addColorStop(0, '#a78bfa');
-            artistGrad.addColorStop(1, '#f472b6');
-            ctx.fillStyle = artistGrad;
-            ctx.font = `700 ${24 * s}px Inter, sans-serif`;
-            ctx.fillText(artist, W / 2, artY + artSize + 122 * s);
-
-            ctx.fillStyle = 'rgba(255,255,255,0.4)';
-            ctx.font = `700 ${15 * s}px Inter, sans-serif`;
-            ctx.fillText('🐷 GAMINGPIG HÖRT GERADE', W / 2, H - 45 * s);
-        }
-
-        // --- Design 10: Sticker - Verspielter Aufkleber-/Washi-Tape-Look ---
-        function drawShareCardSticker(ctx, W, H, artImg, title, artist) {
-            const s = W / 720;
-            ctx.fillStyle = '#fef9c3';
-            ctx.fillRect(0, 0, W, H);
-
-            const cardX = 55 * s, cardY = 90 * s, cardW = W - 110 * s, cardH = H - 220 * s;
-            ctx.save();
-            ctx.translate(cardX + cardW / 2, cardY + cardH / 2);
-            ctx.rotate(-0.02);
-            ctx.translate(-(cardX + cardW / 2), -(cardY + cardH / 2));
-            ctx.shadowColor = 'rgba(0,0,0,0.15)';
-            ctx.shadowBlur = 25 * s;
-            ctx.shadowOffsetY = 10 * s;
-            ctx.fillStyle = '#ffffff';
-            roundRectPath(ctx, cardX, cardY, cardW, cardH, 24 * s);
-            ctx.fill();
-            ctx.restore();
-
-            // "Washi Tape" Streifen oben
-            ctx.save();
-            ctx.translate(W / 2, cardY);
-            ctx.rotate(-0.05);
-            ctx.fillStyle = 'rgba(251, 113, 133, 0.75)';
-            ctx.fillRect(-90 * s, -18 * s, 180 * s, 36 * s);
-            ctx.restore();
-
-            const artSize = 260 * s;
-            const artX = (W - artSize) / 2;
-            const artY = cardY + 55 * s;
-            ctx.save();
-            ctx.translate(artX + artSize / 2, artY + artSize / 2);
-            ctx.rotate(0.015);
-            ctx.translate(-(artX + artSize / 2), -(artY + artSize / 2));
-            roundRectPath(ctx, artX, artY, artSize, artSize, 18 * s);
-            ctx.strokeStyle = '#fff'; ctx.lineWidth = 8 * s;
-            ctx.save(); ctx.clip();
-            if (artImg) drawImageCover(ctx, artImg, artX, artY, artSize, artSize);
-            else { ctx.fillStyle = '#ddd'; ctx.fill(); }
-            ctx.restore();
-            ctx.stroke();
-            ctx.restore();
-
-            // Kleine Sticker-Deko (Stern + Herz als einfache Formen)
-            ctx.fillStyle = '#fbbf24';
-            ctx.beginPath();
-            ctx.arc(artX - 20 * s, artY - 10 * s, 22 * s, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = '#f472b6';
-            ctx.beginPath();
-            ctx.arc(artX + artSize + 15 * s, artY + artSize + 5 * s, 18 * s, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.textAlign = 'center';
-            ctx.fillStyle = '#1c1917';
-            ctx.font = `800 ${32 * s}px Inter, sans-serif`;
-            wrapText(ctx, title, W / 2, artY + artSize + 70 * s, cardW - 60 * s, 38 * s);
-            ctx.fillStyle = '#78716c';
-            ctx.font = `600 ${20 * s}px Inter, sans-serif`;
-            ctx.fillText(artist, W / 2, artY + artSize + 116 * s);
-
-            ctx.fillStyle = 'rgba(28,25,23,0.5)';
-            ctx.font = `700 ${16 * s}px Inter, sans-serif`;
-            ctx.fillText('🐷 gamingpig hört gerade', W / 2, H - 50 * s);
-        }
-
-        
-        // --- Design 11: Hologram - Futuristisches Sci-Fi HUD mit Gitter und leuchtendem Hologramm ---
-        function drawShareCardHologram(ctx, W, H, artImg, title, artist) {
-            const s = W / 720;
-            const bgGrad = ctx.createLinearGradient(0, 0, 0, H);
-            bgGrad.addColorStop(0, '#030b14');
-            bgGrad.addColorStop(0.5, '#051829');
-            bgGrad.addColorStop(1, '#020810');
-            ctx.fillStyle = bgGrad;
-            ctx.fillRect(0, 0, W, H);
-
-            // Tech HUD Gitter-Hintergrund
-            ctx.save();
-            ctx.strokeStyle = 'rgba(6, 182, 212, 0.12)';
-            ctx.lineWidth = 1 * s;
-            for (let x = 0; x <= W; x += 40 * s) {
-                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
-            }
-            for (let y = 0; y <= H; y += 40 * s) {
-                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
-            }
-            ctx.restore();
-
-            // Holografischer Kreis-Projektor
-            const cx = W / 2, cy = 350 * s;
-            ctx.save();
-            ctx.strokeStyle = 'rgba(6, 182, 212, 0.4)';
-            ctx.lineWidth = 2 * s;
-            ctx.setLineDash([8 * s, 6 * s]);
-            ctx.beginPath(); ctx.arc(cx, cy, 230 * s, 0, Math.PI * 2); ctx.stroke();
-            ctx.beginPath(); ctx.arc(cx, cy, 245 * s, 0, Math.PI * 2); ctx.stroke();
-            ctx.restore();
-
-            // Zentrale Hologramm-Karte
-            const artSize = 340 * s;
-            const artX = (W - artSize) / 2;
-            const artY = cy - artSize / 2;
-
-            ctx.save();
-            ctx.shadowColor = 'rgba(6, 182, 212, 0.85)';
-            ctx.shadowBlur = 40 * s;
-            roundRectPath(ctx, artX, artY, artSize, artSize, 20 * s);
-            ctx.strokeStyle = '#06b6d4';
-            ctx.lineWidth = 3 * s;
-            ctx.stroke();
-            ctx.restore();
-
-            ctx.save();
-            roundRectPath(ctx, artX, artY, artSize, artSize, 20 * s);
-            ctx.clip();
-            if (artImg) {
-                ctx.filter = 'saturate(180%) contrast(1.1) brightness(1.05)';
-                drawImageCover(ctx, artImg, artX, artY, artSize, artSize);
-                ctx.filter = 'none';
-            } else {
-                ctx.fillStyle = '#082f49';
-                ctx.fill();
-            }
-            // Hologram Scanline-Overlay
-            ctx.fillStyle = 'rgba(6, 182, 212, 0.15)';
-            for (let sy = artY; sy < artY + artSize; sy += 4 * s) {
-                ctx.fillRect(artX, sy, artSize, 2 * s);
-            }
-            ctx.restore();
-
-            // Typografie mit Glow
-            ctx.textAlign = 'center';
-            ctx.save();
-            ctx.shadowColor = 'rgba(6, 182, 212, 0.9)';
-            ctx.shadowBlur = 18 * s;
-            ctx.fillStyle = '#67e8f9';
-            ctx.font = "800 " + Math.round(36 * s) + "px 'JetBrains Mono', monospace";
-            wrapText(ctx, title, W / 2, artY + artSize + 80 * s, W - 90 * s, 44 * s);
-            ctx.restore();
-
-            ctx.fillStyle = 'rgba(165, 243, 252, 0.75)';
-            ctx.font = "600 " + Math.round(22 * s) + "px 'JetBrains Mono', monospace";
-            ctx.fillText(artist, W / 2, artY + artSize + 135 * s);
-
-            ctx.fillStyle = 'rgba(6, 182, 212, 0.5)';
-            ctx.font = "700 " + Math.round(14 * s) + "px 'JetBrains Mono', monospace";
-            ctx.fillText('◈ HOLOGRAM AUDIO STREAM // GAMINGPIG ◈', W / 2, H - 45 * s);
-        }
-
-        // --- Design 12: Studio - High-End Tonstudio Look mit VU-Meter & Matt-Schwarz ---
-        function drawShareCardStudio(ctx, W, H, artImg, title, artist) {
-            const s = W / 720;
-            ctx.fillStyle = '#09090b';
-            ctx.fillRect(0, 0, W, H);
-
-            // Studio Metall-Panel Textur
-            const panelX = 40 * s, panelY = 50 * s, panelW = W - 80 * s, panelH = H - 100 * s;
-            ctx.save();
-            ctx.shadowColor = 'rgba(0,0,0,0.8)';
-            ctx.shadowBlur = 40 * s;
-            roundRectPath(ctx, panelX, panelY, panelW, panelH, 24 * s);
-            ctx.fillStyle = '#141418';
-            ctx.fill();
-            ctx.strokeStyle = '#27272a';
-            ctx.lineWidth = 2 * s;
-            ctx.stroke();
-            ctx.restore();
-
-            // Studio Header mit Rack-Schrauben
-            const screwCols = [panelX + 20 * s, panelX + panelW - 20 * s];
-            const screwRows = [panelY + 20 * s, panelY + panelH - 20 * s];
-            screwCols.forEach(sx => {
-                screwRows.forEach(sy => {
-                    ctx.beginPath(); ctx.arc(sx, sy, 7 * s, 0, Math.PI * 2);
-                    ctx.fillStyle = '#27272a'; ctx.fill();
-                    ctx.beginPath(); ctx.arc(sx, sy, 3 * s, 0, Math.PI * 2);
-                    ctx.fillStyle = '#09090b'; ctx.fill();
-                });
-            });
-
-            // Master LED Display
-            ctx.fillStyle = 'rgba(239, 68, 68, 0.85)';
-            ctx.beginPath(); ctx.arc(panelX + 45 * s, panelY + 45 * s, 5 * s, 0, Math.PI * 2); ctx.fill();
-            ctx.fillStyle = '#a1a1aa';
-            ctx.font = "700 " + Math.round(13 * s) + "px 'JetBrains Mono', monospace";
-            ctx.textAlign = 'left';
-            ctx.fillText('REC • MASTER OUT (24-BIT 96kHz)', panelX + 60 * s, panelY + 49 * s);
-
-            // Cover
-            const artSize = 360 * s;
-            const artX = (W - artSize) / 2;
-            const artY = panelY + 80 * s;
-            ctx.save();
-            roundRectPath(ctx, artX, artY, artSize, artSize, 16 * s);
-            ctx.fillStyle = '#09090b'; ctx.fill();
-            ctx.clip();
-            if (artImg) drawImageCover(ctx, artImg, artX, artY, artSize, artSize);
-            ctx.restore();
-            ctx.strokeStyle = 'rgba(255,255,255,0.1)';
-            ctx.lineWidth = 2 * s;
-            roundRectPath(ctx, artX, artY, artSize, artSize, 16 * s);
-            ctx.stroke();
-
-            // VU Meter Stereo Balken
-            const vuY = artY + artSize + 35 * s;
-            const vuW = artSize, vuH = 10 * s;
-            ['L', 'R'].forEach((ch, idx) => {
-                const yPos = vuY + idx * 16 * s;
-                ctx.fillStyle = '#71717a';
-                ctx.font = "700 " + Math.round(11 * s) + "px 'JetBrains Mono', monospace";
-                ctx.fillText(ch, artX - 20 * s, yPos + 8 * s);
-                const segments = 24;
-                const segW = (vuW - (segments - 1) * 3 * s) / segments;
-                for (let i = 0; i < segments; i++) {
-                    const segX = artX + i * (segW + 3 * s);
-                    if (i < 16) ctx.fillStyle = '#22c55e';
-                    else if (i < 20) ctx.fillStyle = '#eab308';
-                    else ctx.fillStyle = '#ef4444';
-                    ctx.fillRect(segX, yPos, segW, vuH);
-                }
-            });
-
-            // Song Info
-            ctx.textAlign = 'center';
-            ctx.fillStyle = '#ffffff';
-            ctx.font = "800 " + Math.round(34 * s) + "px Inter, sans-serif";
-            wrapText(ctx, title, W / 2, vuY + 70 * s, panelW - 60 * s, 42 * s);
-
-            ctx.fillStyle = '#a1a1aa';
-            ctx.font = "600 " + Math.round(22 * s) + "px Inter, sans-serif";
-            ctx.fillText(artist, W / 2, vuY + 122 * s);
-
-            ctx.fillStyle = '#52525b';
-            ctx.font = "700 " + Math.round(13 * s) + "px 'JetBrains Mono', monospace";
-            ctx.fillText('STUDIO MONITORING // GAMINGPIG', W / 2, panelY + panelH - 30 * s);
-        }
-
-        // --- Design 13: Glow Orb - Kosmischer Farbverlauf mit leuchtender Sphäre ---
-        function drawShareCardOrb(ctx, W, H, artImg, title, artist) {
-            const s = W / 720;
-            const bgGrad = ctx.createLinearGradient(0, 0, W, H);
-            bgGrad.addColorStop(0, '#0c071e');
-            bgGrad.addColorStop(0.5, '#190a38');
-            bgGrad.addColorStop(1, '#05020c');
-            ctx.fillStyle = bgGrad;
-            ctx.fillRect(0, 0, W, H);
-
-            // Große leuchtende Sphäre / Orb im Zentrum
-            const cx = W / 2, cy = 340 * s;
-            const orbGrad = ctx.createRadialGradient(cx, cy, 20 * s, cx, cy, 240 * s);
-            orbGrad.addColorStop(0, 'rgba(236, 72, 153, 0.7)');
-            orbGrad.addColorStop(0.5, 'rgba(139, 92, 246, 0.45)');
-            orbGrad.addColorStop(1, 'transparent');
-            ctx.fillStyle = orbGrad;
-            ctx.beginPath(); ctx.arc(cx, cy, 240 * s, 0, Math.PI * 2); ctx.fill();
-
-            // Rundes schwebendes Cover
-            const artR = 170 * s;
-            ctx.save();
-            ctx.shadowColor = 'rgba(236, 72, 153, 0.7)';
-            ctx.shadowBlur = 50 * s;
-            ctx.beginPath(); ctx.arc(cx, cy, artR, 0, Math.PI * 2);
-            ctx.fillStyle = '#180e29'; ctx.fill();
-            ctx.restore();
-
-            ctx.save();
-            ctx.beginPath(); ctx.arc(cx, cy, artR, 0, Math.PI * 2); ctx.clip();
-            if (artImg) drawImageCover(ctx, artImg, cx - artR, cy - artR, artR * 2, artR * 2);
-            ctx.restore();
-
-            ctx.beginPath(); ctx.arc(cx, cy, artR, 0, Math.PI * 2);
-            ctx.strokeStyle = 'rgba(255,255,255,0.4)';
-            ctx.lineWidth = 3 * s;
-            ctx.stroke();
-
-            // Text
-            ctx.textAlign = 'center';
-            ctx.fillStyle = '#ffffff';
-            ctx.font = "800 " + Math.round(40 * s) + "px Inter, sans-serif";
-            wrapText(ctx, title, W / 2, cy + artR + 90 * s, W - 90 * s, 48 * s);
-
-            const artGrad = ctx.createLinearGradient(W / 2 - 120 * s, 0, W / 2 + 120 * s, 0);
-            artGrad.addColorStop(0, '#f472b6');
-            artGrad.addColorStop(1, '#a78bfa');
-            ctx.fillStyle = artGrad;
-            ctx.font = "700 " + Math.round(24 * s) + "px Inter, sans-serif";
-            ctx.fillText(artist, W / 2, cy + artR + 144 * s);
-
-            ctx.fillStyle = 'rgba(255,255,255,0.45)';
-            ctx.font = "700 " + Math.round(15 * s) + "px Inter, sans-serif";
-            ctx.fillText('✨ AMBIENT ORB // GAMINGPIG', W / 2, H - 45 * s);
-        }
-
-        // --- Design 14: Cyberpunk - Glitchiger High-Tech Look mit gelben/cyan Warnstreifen ---
-        function drawShareCardCyberpunk(ctx, W, H, artImg, title, artist) {
-            const s = W / 720;
-            ctx.fillStyle = '#0a0a0f';
-            ctx.fillRect(0, 0, W, H);
-
-            // Cyberpunk Gelb/Cyan Schrägstreifen
-            ctx.save();
-            ctx.fillStyle = '#fcee0a';
-            ctx.fillRect(0, 0, W, 20 * s);
-            ctx.fillStyle = '#00f0ff';
-            ctx.fillRect(0, 20 * s, W, 6 * s);
-
-            // Diagonale Warnstreifen oben
-            ctx.fillStyle = '#0a0a0f';
-            for (let i = 0; i < W; i += 30 * s) {
-                ctx.beginPath();
-                ctx.moveTo(i, 0);
-                ctx.lineTo(i + 15 * s, 0);
-                ctx.lineTo(i, 20 * s);
-                ctx.lineTo(i - 15 * s, 20 * s);
-                ctx.fill();
-            }
-            ctx.restore();
-
-            const cardX = 45 * s, cardY = 70 * s, cardW = W - 90 * s, cardH = H - 140 * s;
-            ctx.save();
-            ctx.fillStyle = '#12131a';
-            ctx.strokeStyle = '#00f0ff';
-            ctx.lineWidth = 2 * s;
-            // Angeschrägte Ecken
-            const cut = 24 * s;
-            ctx.beginPath();
-            ctx.moveTo(cardX + cut, cardY);
-            ctx.lineTo(cardX + cardW, cardY);
-            ctx.lineTo(cardX + cardW, cardY + cardH - cut);
-            ctx.lineTo(cardX + cardW - cut, cardY + cardH);
-            ctx.lineTo(cardX, cardY + cardH);
-            ctx.lineTo(cardX, cardY + cut);
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
-            ctx.restore();
-
-            // Cover
-            const artSize = 350 * s;
-            const artX = (W - artSize) / 2;
-            const artY = cardY + 50 * s;
-            ctx.save();
-            ctx.shadowColor = '#00f0ff';
-            ctx.shadowBlur = 30 * s;
-            ctx.strokeStyle = '#fcee0a';
-            ctx.lineWidth = 3 * s;
-            ctx.strokeRect(artX, artY, artSize, artSize);
-            ctx.restore();
-
-            ctx.save();
-            ctx.beginPath(); ctx.rect(artX, artY, artSize, artSize); ctx.clip();
-            if (artImg) {
-                ctx.filter = 'contrast(1.15) saturate(140%)';
-                drawImageCover(ctx, artImg, artX, artY, artSize, artSize);
-                ctx.filter = 'none';
-            }
-            ctx.restore();
-
-            // Typo
-            ctx.textAlign = 'center';
-            ctx.fillStyle = '#fcee0a';
-            ctx.font = "900 " + Math.round(36 * s) + "px 'JetBrains Mono', monospace";
-            wrapText(ctx, title.toUpperCase(), W / 2, artY + artSize + 70 * s, cardW - 40 * s, 42 * s);
-
-            ctx.fillStyle = '#00f0ff';
-            ctx.font = "700 " + Math.round(22 * s) + "px 'JetBrains Mono', monospace";
-            ctx.fillText('// ' + artist.toUpperCase(), W / 2, artY + artSize + 120 * s);
-
-            ctx.fillStyle = '#fcee0a';
-            ctx.font = "800 " + Math.round(14 * s) + "px 'JetBrains Mono', monospace";
-            ctx.fillText('⚡ CYBERPUNK 2077 NOW PLAYING ⚡', W / 2, cardY + cardH - 25 * s);
-        }
-
-        function roundRectPath(ctx, x, y, w, h, r) {
-            ctx.beginPath();
-            ctx.moveTo(x + r, y);
-            ctx.arcTo(x + w, y, x + w, y + h, r);
-            ctx.arcTo(x + w, y + h, x, y + h, r);
-            ctx.arcTo(x, y + h, x, y, r);
-            ctx.arcTo(x, y, x + w, y, r);
-            ctx.closePath();
-        }
-
-        function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
-            const words = text.split(' ');
-            let line = '';
-            const lines = [];
-            for (let n = 0; n < words.length; n++) {
-                const testLine = line + words[n] + ' ';
-                if (ctx.measureText(testLine).width > maxWidth && n > 0) {
-                    lines.push(line.trim());
-                    line = words[n] + ' ';
-                } else {
-                    line = testLine;
-                }
-            }
-            lines.push(line.trim());
-            const startY = y - ((lines.length - 1) * lineHeight) / 2;
-            lines.slice(0, 2).forEach((l, i) => ctx.fillText(l, x, startY + i * lineHeight));
-        }
-
-        // NEW: wie wrapText, aber linksbündig (für das Poster-Design)
-        function wrapTextLeft(ctx, text, x, y, maxWidth, lineHeight) {
-            const words = text.split(' ');
-            let line = '';
-            const lines = [];
-            for (let n = 0; n < words.length; n++) {
-                const testLine = line + words[n] + ' ';
-                if (ctx.measureText(testLine).width > maxWidth && n > 0) {
-                    lines.push(line.trim());
-                    line = words[n] + ' ';
-                } else {
-                    line = testLine;
-                }
-            }
-            lines.push(line.trim());
-            const trimmed = lines.slice(0, 2);
-            const startY = y - (trimmed.length - 1) * lineHeight;
-            trimmed.forEach((l, i) => ctx.fillText(l, x, startY + i * lineHeight));
-        }
-
-        // ========================================================= //
         // --- NEW: COMMAND PALETTE (⌘K Spotlight) ------------------ //
         // ========================================================= //
         let cpSelectedIndex = 0;
@@ -14171,7 +13133,7 @@ window.generateShareCard = function() {
                 { icon: '🐷', label: t('cp_tiktok'), keywords: 'tiktok social gamingpig', action: () => window.open('https://www.tiktok.com/@gamingpig900', '_blank') },
                 { icon: '🏝️', label: t('cp_island_back'), keywords: 'dynamic island zeigen einblenden reset ausgeblendet wisch', action: () => {
                     islandDismissed = false;
-                    localStorage.setItem('islandDismissed', 'false');
+                    AppStorage.setItem('islandDismissed', 'false');
                     const titleEl = document.getElementById('track-title');
                     const artistEl = document.getElementById('track-artist');
                     const art = document.getElementById('artwork');
@@ -14365,10 +13327,10 @@ window.generateShareCard = function() {
             document.documentElement.style.setProperty('--standby-bg-blur', blurPx + 'px');
             const label = document.getElementById('standby-opacity-value');
             if (label) label.textContent = pct + '%';
-            localStorage.setItem('standbyOpacity', pct);
+            AppStorage.setItem('standbyOpacity', pct);
         };
         (function initStandbyOpacity() {
-            const saved = localStorage.getItem('standbyOpacity');
+            const saved = AppStorage.getItem('standbyOpacity');
             const pct = saved !== null ? parseInt(saved, 10) : 0;
             const slider = document.getElementById('standby-opacity-slider');
             if (slider) slider.value = pct;
@@ -14716,7 +13678,7 @@ window.generateShareCard = function() {
 
         // Auto-StandBy: mobiles Gerät im Querformat + Ladezustand (best effort, opt-in)
         window.addEventListener('orientationchange', () => {
-            const isAutoAllowed = localStorage.getItem('autoStandBy') === 'true';
+            const isAutoAllowed = AppStorage.getItem('autoStandBy') === 'true';
             if (!isAutoAllowed || window.innerWidth < window.innerHeight) return;
             if (window.innerWidth < 900) {
                 setTimeout(() => { if (window.innerWidth > window.innerHeight) toggleStandBy(true); }, 400);
@@ -14736,7 +13698,7 @@ window.generateShareCard = function() {
             }
         }
 
-        const savedLiquidGlass = localStorage.getItem('liquidGlassMode');
+        const savedLiquidGlass = AppStorage.getItem('liquidGlassMode');
         if (savedLiquidGlass === 'true') {
             applyLiquidGlassMode(true);
         }
@@ -14745,12 +13707,12 @@ window.generateShareCard = function() {
             liquidGlassToggle.addEventListener('click', () => {
                 haptic(10);
                 const isActive = document.body.classList.toggle('liquid-glass-active');
-                localStorage.setItem('liquidGlassMode', isActive);
+                AppStorage.setItem('liquidGlassMode', isActive);
                 applyLiquidGlassMode(isActive);
             });
         }
 
-        const savedTheme = localStorage.getItem('theme');
+        const savedTheme = AppStorage.getItem('theme');
         if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             html.classList.add('dark');
         }
@@ -14759,24 +13721,24 @@ window.generateShareCard = function() {
             themeToggle.addEventListener('click', () => {
                 haptic(10);
                 html.classList.toggle('dark');
-                localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
+                AppStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
             });
         }
 
         // Dedicated Tutorial state management
         try {
-            if (localStorage.getItem('app_tutorial_completed') === null) {
+            if (AppStorage.getItem('app_tutorial_completed') === null) {
                 const completed = ['tutorialCompletedV5', 'tutorial_completed', 'onboarding_completed']
-                    .some(key => ['true', '1'].includes(localStorage.getItem(key)));
-                localStorage.setItem('app_tutorial_completed', completed ? '1' : '0');
+                    .some(key => ['true', '1'].includes(AppStorage.getItem(key)));
+                AppStorage.setItem('app_tutorial_completed', completed ? '1' : '0');
             }
         } catch(e) {}
 
         window.getTutorialStatus = function() {
             try {
-                const val = localStorage.getItem('app_tutorial_completed');
+                const val = AppStorage.getItem('app_tutorial_completed');
                 if (val === null) {
-                    localStorage.setItem('app_tutorial_completed', '0');
+                    AppStorage.setItem('app_tutorial_completed', '0');
                     return '0';
                 }
                 return val === '1' ? '1' : '0';
@@ -14792,7 +13754,7 @@ window.generateShareCard = function() {
         window.setTutorialCompleted = function(val) {
             try {
                 const strVal = (val === true || val === '1' || val === 1) ? '1' : '0';
-                localStorage.setItem('app_tutorial_completed', strVal);
+                AppStorage.setItem('app_tutorial_completed', strVal);
                 if (typeof updateSettingsTutorialUI === 'function') updateSettingsTutorialUI();
                 return strVal;
             } catch(e) {
@@ -14876,7 +13838,7 @@ window.generateShareCard = function() {
                     }
                     if (tutorialBox) tutorialBox.classList.remove('tutorial-closing');
                     clearTutorialHighlights();
-                    localStorage.setItem('whatsNewSeenVersion', SITE_VERSION);
+                    AppStorage.setItem('whatsNewSeenVersion', SITE_VERSION);
                 }, 850);
                 return;
             }
@@ -14894,10 +13856,10 @@ window.generateShareCard = function() {
                 
                 if (originalPerfModeState !== 'true' && window.innerWidth >= 360) {
                     applyPerformanceMode(false);
-                    localStorage.setItem('perfMode', 'false');
+                    AppStorage.setItem('perfMode', 'false');
                 } else if (originalPerfModeState === 'true') {
                     applyPerformanceMode(true);
-                    localStorage.setItem('perfMode', 'true');
+                    AppStorage.setItem('perfMode', 'true');
                 }
                 window.scrollTo({ top: 0, behavior: 'auto' });
                 
@@ -15104,7 +14066,7 @@ window.generateShareCard = function() {
                 el.classList.remove('quest-highlight-target', 'tutorial-target-active', 'tutorial-active-element', 'is-highlighted', 'is-spotlighted');
             });
             window.setTutorialCompleted(true);
-            localStorage.setItem('onboarding_completed', 'true');
+            AppStorage.setItem('onboarding_completed', 'true');
             showToast(t('quest_dismissed_toast', 'Quest beendet ✓'), 2000);
             setTimeout(() => {
                 window.location.reload();
@@ -15194,7 +14156,7 @@ window.generateShareCard = function() {
                     '<button onclick="window.closeModal(); if(window.OnboardingCoordinator) window.OnboardingCoordinator.step3_whatsNew();" class="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs text-center transition-all active:scale-[0.98] border border-blue-400/30">' +
                         t('onboarding_to_whatsnew', 'Weiter zu Neuerungen ➔') +
                     '</button>' +
-                    '<button onclick="window.setTutorialCompleted(true); localStorage.setItem(\'onboarding_completed\', \'true\'); window.closeModal(); window.location.reload();" class="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs text-center transition-all active:scale-[0.98] border border-white/10">' +
+                    '<button onclick="window.setTutorialCompleted(true); AppStorage.setItem(\'onboarding_completed\', \'true\'); window.closeModal(); window.location.reload();" class="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs text-center transition-all active:scale-[0.98] border border-white/10">' +
                         t('onboarding_maybe_later', 'Vielleicht später') +
                     '</button>' +
                 '</div>' +
@@ -15294,7 +14256,7 @@ window.generateShareCard = function() {
             }
             tutorialMode = 'main';
             currentStepIndex = 0;
-            originalPerfModeState = localStorage.getItem('perfMode');
+            originalPerfModeState = AppStorage.getItem('perfMode');
             document.body.classList.add('tutorial-mode');
             
             applyPerformanceMode(true);
@@ -16855,7 +15817,12 @@ window.generateShareCard = function() {
                     if (guild.name && nameEl) nameEl.textContent = guild.name;
                     if (guild.icon && iconEl) {
                         const iconUrl = `https://cdn.discordapp.com/icons/${guild.id || '1532122826713206955'}/${guild.icon}.png?size=64`;
-                        iconEl.innerHTML = `<img src="${iconUrl}" alt="Server Icon" class="w-full h-full object-cover" loading="lazy">`;
+                        const image = document.createElement('img');
+                        image.src = iconUrl;
+                        image.alt = 'Server Icon';
+                        image.className = 'w-full h-full object-cover';
+                        image.loading = 'lazy';
+                        iconEl.replaceChildren(image);
                     }
                     const online = typeof data.approximate_presence_count === 'number' ? data.approximate_presence_count : 5;
                     const members = typeof data.approximate_member_count === 'number' ? data.approximate_member_count : 9;
@@ -17061,7 +16028,7 @@ window.generateShareCard = function() {
             function setAppZoom(scale) {
                 currentAppZoom = Math.min(1.40, Math.max(0.85, Math.round(scale * 100) / 100));
                 try {
-                    localStorage.setItem('app-zoom', currentAppZoom.toString());
+                    AppStorage.setItem('app-zoom', currentAppZoom.toString());
                 } catch(e) {}
                 document.documentElement.style.setProperty('--app-zoom', currentAppZoom);
                 if (mainContentEl) {
@@ -17080,7 +16047,7 @@ window.generateShareCard = function() {
 
             // Restore saved zoom level
             try {
-                const saved = localStorage.getItem('app-zoom');
+                const saved = AppStorage.getItem('app-zoom');
                 if (saved) {
                     const parsed = parseFloat(saved);
                     if (!isNaN(parsed) && parsed >= 0.85 && parsed <= 1.40) {
@@ -17356,10 +16323,10 @@ window.generateShareCard = function() {
         window.dismissSearchHint = function() {
             const bubble = document.getElementById('search-hint-bubble');
             if (bubble) bubble.classList.remove('hint-visible');
-            localStorage.setItem('seenSearchHint', 'true');
+            AppStorage.setItem('seenSearchHint', 'true');
         };
         (function initSearchHint() {
-            if (localStorage.getItem('seenSearchHint') === 'true') return;
+            if (AppStorage.getItem('seenSearchHint') === 'true') return;
             setTimeout(() => {
                 const bubble = document.getElementById('search-hint-bubble');
                 if (!bubble || document.body.classList.contains('low-end')) return;
@@ -17582,7 +16549,7 @@ window.generateShareCard = function() {
                 // Neuladen zu verlieren - das ist der praktische Weg, "automatisch richtig
                 // eingestellt" zu bekommen: einmal per Ohr fein justieren, danach merkt
                 // sich die Seite den Wert und wendet ihn beim nächsten Besuch direkt an.
-                localStorage.setItem('userSyncOffset', liveSyncOffset);
+                AppStorage.setItem('userSyncOffset', liveSyncOffset);
                 syncLyricsUI(true, true); 
             });
         }
@@ -17630,7 +16597,7 @@ window.generateShareCard = function() {
                 if (typeof showToast === 'function') showToast('Re-Sync fehlgeschlagen, versuch es nochmal.');
             } finally {
                 liveSyncOffset = typeof DEFAULT_SYNC_OFFSET !== 'undefined' ? DEFAULT_SYNC_OFFSET : -400;
-                localStorage.removeItem('userSyncOffset'); // NEW: Re-Sync setzt auch den gespeicherten manuellen Wert zurück auf den Standard
+                AppStorage.removeItem('userSyncOffset'); // NEW: Re-Sync setzt auch den gespeicherten manuellen Wert zurück auf den Standard
                 if (syncSlider) syncSlider.value = liveSyncOffset;
                 if (syncValueEl) syncValueEl.innerText = liveSyncOffset;
 
@@ -17692,7 +16659,7 @@ window.generateShareCard = function() {
                 const newOffset = Math.round(targetLine.timeMs - currentMs);
                 const clampedOffset = Math.max(-5000, Math.min(5000, newOffset));
                 liveSyncOffset = clampedOffset;
-                localStorage.setItem('userSyncOffset', liveSyncOffset);
+                AppStorage.setItem('userSyncOffset', liveSyncOffset);
                 const syncSliderEl = document.getElementById('sync-slider');
                 const syncValueElUpdate = document.getElementById('sync-value');
                 if (syncSliderEl) syncSliderEl.value = liveSyncOffset;
@@ -17727,8 +16694,8 @@ window.generateShareCard = function() {
         window.OnboardingTracker = {
             isCompleted() {
                 try {
-                    const val = localStorage.getItem('onboarding_completed');
-                    return (val === '1' || val === 'true') && localStorage.getItem('onboarding_completed_version') === SITE_VERSION;
+                    const val = AppStorage.getItem('onboarding_completed');
+                    return (val === '1' || val === 'true') && AppStorage.getItem('onboarding_completed_version') === SITE_VERSION;
                 } catch(e) { return false; }
             },
 
@@ -17741,26 +16708,26 @@ window.generateShareCard = function() {
             recordCompletion() {
                 try {
                     window.setTutorialCompleted(true);
-                    localStorage.setItem('onboarding_completed_version', SITE_VERSION);
+                    AppStorage.setItem('onboarding_completed_version', SITE_VERSION);
                     // Force links should run once, not restart on the final reload.
                     const url = new URL(window.location.href);
                     ['first_visit', 'onboarding', 'tutorial'].forEach(key => url.searchParams.delete(key));
                     window.history.replaceState(window.history.state, '', url.href);
-                    localStorage.setItem('onboarding_completed', 'true');
-                    localStorage.setItem('tutorialCompletedV5', 'true');
-                    localStorage.setItem('whatsNewSeenVersion', SITE_VERSION);
-                    localStorage.setItem('accepted_privacy_version', PRIVACY_POLICY_VERSION);
+                    AppStorage.setItem('onboarding_completed', 'true');
+                    AppStorage.setItem('tutorialCompletedV5', 'true');
+                    AppStorage.setItem('whatsNewSeenVersion', SITE_VERSION);
+                    AppStorage.setItem('accepted_privacy_version', PRIVACY_POLICY_VERSION);
                     this.updateUI();
                 } catch(e) {}
             },
 
             reset() {
                 try {
-                    localStorage.removeItem('onboarding_completed_version');
-                    localStorage.removeItem('onboarding_completed');
-                    localStorage.removeItem('tutorialCompletedV5');
-                    localStorage.removeItem('whatsNewSeenVersion');
-                    localStorage.removeItem('accepted_privacy_version');
+                    AppStorage.removeItem('onboarding_completed_version');
+                    AppStorage.removeItem('onboarding_completed');
+                    AppStorage.removeItem('tutorialCompletedV5');
+                    AppStorage.removeItem('whatsNewSeenVersion');
+                    AppStorage.removeItem('accepted_privacy_version');
                     this.updateUI();
                 } catch(e) {}
             },
@@ -17793,11 +16760,11 @@ window.generateShareCard = function() {
                 window.OnboardingTracker.reset();
             } else {
                 try {
-                    localStorage.removeItem('onboarding_completed_version');
-                    localStorage.removeItem('onboarding_completed');
-                    localStorage.removeItem('tutorialCompletedV5');
-                    localStorage.removeItem('whatsNewSeenVersion');
-                    localStorage.removeItem('accepted_privacy_version');
+                    AppStorage.removeItem('onboarding_completed_version');
+                    AppStorage.removeItem('onboarding_completed');
+                    AppStorage.removeItem('tutorialCompletedV5');
+                    AppStorage.removeItem('whatsNewSeenVersion');
+                    AppStorage.removeItem('accepted_privacy_version');
                 } catch(e) {}
             }
             if (typeof toggleStandaloneSettings === 'function' && typeof isGlobalSettingsOpen !== 'undefined' && isGlobalSettingsOpen) {
@@ -17824,12 +16791,12 @@ window.generateShareCard = function() {
             if (typeof showToast === 'function') showToast('🔄 Alle Daten werden gelöscht... Erstbesuch wird geladen!', 3000);
 
             try {
-                localStorage.clear();
-                localStorage.setItem('app_tutorial_completed', '0');
+                AppStorage.clear();
+                AppStorage.setItem('app_tutorial_completed', '0');
             } catch(e) {}
 
             try {
-                sessionStorage.clear();
+                AppSession.clear();
             } catch(e) {}
 
             try {
@@ -17905,11 +16872,11 @@ window.generateShareCard = function() {
                     if (window.OnboardingTracker) {
                         window.OnboardingTracker.recordCompletion();
                     } else {
-                        localStorage.setItem('onboarding_completed', '1');
+                        AppStorage.setItem('onboarding_completed', '1');
                     }
-                    localStorage.setItem('tutorialCompletedV5', 'true');
-                    localStorage.setItem('accepted_privacy_version', PRIVACY_POLICY_VERSION);
-                    localStorage.setItem('whatsNewSeenVersion', SITE_VERSION);
+                    AppStorage.setItem('tutorialCompletedV5', 'true');
+                    AppStorage.setItem('accepted_privacy_version', PRIVACY_POLICY_VERSION);
+                    AppStorage.setItem('whatsNewSeenVersion', SITE_VERSION);
                 } catch(e) {}
 
                 document.documentElement.classList.remove('needs-onboarding');
@@ -17958,9 +16925,9 @@ window.generateShareCard = function() {
                                 finishBtn.className = 'w-full max-w-xs py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs text-center transition-all active:scale-[0.98] border border-blue-400/30 mx-auto cursor-pointer shadow-lg shadow-blue-500/20';
                                 finishBtn.innerText = t('onboarding_start_btn') || 'Starten ➔';
                                 finishBtn.onclick = () => {
-                                    localStorage.setItem('tutorial_completed', 'true');
-                                    localStorage.setItem('tutorialCompletedV5', 'true');
-                                    localStorage.setItem('onboarding_completed', 'true');
+                                    AppStorage.setItem('tutorial_completed', 'true');
+                                    AppStorage.setItem('tutorialCompletedV5', 'true');
+                                    AppStorage.setItem('onboarding_completed', 'true');
                                     window.closeModal();
                                     window.location.reload();
                                 };
@@ -18355,7 +17322,7 @@ window.generateShareCard = function() {
                 modal.classList.remove('flex');
                 modal.classList.add('hidden');
             }, 300);
-            localStorage.setItem('whatsNewSeenVersion', SITE_VERSION);
+            AppStorage.setItem('whatsNewSeenVersion', SITE_VERSION);
         };
 
         window.advanceFromWhatsNewToPrivacy = function() {
@@ -18437,7 +17404,7 @@ window.generateShareCard = function() {
                 btnHaptic.className = `text-center text-[9px] xxs:text-[10px] sm:text-xs px-2 py-2 rounded-xl border font-bold transition-all active:scale-95 ${hapticEnabled ? 'text-teal-400 bg-teal-500/15 border-teal-500/30' : 'text-slate-400 bg-slate-800/80 border-white/5'}`;
             }
 
-            const currentAnim = localStorage.getItem('app_animation_style') || 'smooth';
+            const currentAnim = AppStorage.getItem('app_animation_style') || 'smooth';
             if (typeof updateSettingsTutorialUI === 'function') updateSettingsTutorialUI();
             const animSelect = document.getElementById('app-animation-style-select');
             if (animSelect) animSelect.value = currentAnim;
@@ -18459,7 +17426,7 @@ window.generateShareCard = function() {
         window.setAnimationStyle = function(style) {
             const validStyles = ['smooth', 'dynamic', 'minimal', 'reduced'];
             const targetStyle = validStyles.includes(style) ? style : 'smooth';
-            localStorage.setItem('app_animation_style', targetStyle);
+            AppStorage.setItem('app_animation_style', targetStyle);
             document.documentElement.setAttribute('data-animation-style', targetStyle);
             if (typeof playUISound === 'function') playUISound('click');
             if (typeof haptic === 'function') haptic(10);
@@ -18639,14 +17606,14 @@ window.generateShareCard = function() {
             btn.className = 'lyrics-dim-btn flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/80 transition-all active:scale-95 text-[10px] font-semibold';
         }
     });
-    try { localStorage.setItem('gp_lyrics_dim_mode', mode); } catch(e) {}
+    try { AppStorage.setItem('gp_lyrics_dim_mode', mode); } catch(e) {}
     if (window.showAppToast) window.showAppToast('Fokus: ' + (mode === 'deep' ? 'Kino (Stark)' : 'Sanft'));
 };
 
 // Initialize lyrics settings from localStorage
 (function initLyricsSettingsAddons() {
     try {
-        const savedDim = localStorage.getItem('gp_lyrics_dim_mode') || 'soft';
+        const savedDim = AppStorage.getItem('gp_lyrics_dim_mode') || 'soft';
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => {
                 window.setLyricsDimMode(savedDim);
@@ -18659,7 +17626,7 @@ window.generateShareCard = function() {
 
 window.setLyricsStyle = function(style) {
             currentLyricsStyle = style;
-            localStorage.setItem('lyricsStyle', style);
+            AppStorage.setItem('lyricsStyle', style);
             
             if (lyricsContainer) {
                 lyricsContainer.className = `absolute inset-0 overflow-y-auto overflow-x-hidden text-left w-full h-full lyrics-style-${style}`;
@@ -18698,7 +17665,7 @@ window.setLyricsStyle = function(style) {
             haptic(10);
             if (!currentCanvasUrl) return; 
             canvasEnabled = !canvasEnabled;
-            localStorage.setItem('canvasEnabled', canvasEnabled);
+            AppStorage.setItem('canvasEnabled', canvasEnabled);
             
             if (!btnToggleCanvas || !canvasVideo) return;
 
@@ -20434,7 +19401,7 @@ window.setLyricsStyle = function(style) {
         // ==============================================================================
         // NEU v24.127: SPOTIFY WRAPPED STORIES & ADVANCED UI SOUND/HAPTIC SYSTEM
         // ==============================================================================
-        let uiSoundEnabled = localStorage.getItem('uiSoundEnabled') !== 'false';
+
         let audioCtxInstance = null;
 
         function getAudioContext() {
@@ -20488,7 +19455,7 @@ window.setLyricsStyle = function(style) {
 
         window.toggleUiSoundEnabled = function() {
             uiSoundEnabled = !uiSoundEnabled;
-            localStorage.setItem('uiSoundEnabled', uiSoundEnabled.toString());
+            AppStorage.setItem('uiSoundEnabled', uiSoundEnabled.toString());
             if (uiSoundEnabled) playUISound('pop');
             if (typeof updateSettingsStatusButtons === 'function') {
                 updateSettingsStatusButtons();
@@ -20622,7 +19589,7 @@ window.setLyricsStyle = function(style) {
                             const art = item.artist;
                             const name = art.name || 'Unbekannt';
                             const img = art.image || 'https://gamingpig.github.io/About-Gamingpig/og-v2.jpg';
-                            const streams = item.streams ? `${item.streams.toLocaleString()} Plays` : '';
+                            const streams = item.streams ? `${Number(item.streams).toLocaleString()} Plays` : '';
 
                             return `
                             <div class="flex items-center gap-3 p-2.5 rounded-2xl bg-white/5 border border-white/5 hover:border-yellow-400/40 transition-all">
@@ -20670,7 +19637,7 @@ window.setLyricsStyle = function(style) {
                             const title = tr.name || 'Unbekannt';
                             const artistName = (tr.artists && tr.artists.map(a => a.name).join(', ')) || 'Gamingpig';
                             const cover = (tr.albums && tr.albums[0]?.image) || (tr.artists && tr.artists[0]?.image) || 'https://gamingpig.github.io/About-Gamingpig/og-v2.jpg';
-                            const streams = item.streams ? `${item.streams.toLocaleString()} Streams` : '';
+                            const streams = item.streams ? `${Number(item.streams).toLocaleString()} Streams` : '';
 
                             return `
                             <div class="flex items-center gap-3 p-2.5 rounded-2xl bg-white/5 border border-white/5 hover:border-green-500/40 transition-all">
@@ -20743,8 +19710,8 @@ window.setLyricsStyle = function(style) {
             // danach normal weiter. Kurze Verzögerung, damit erst die initialen Musikdaten da
             // sind, bevor StandBy mit eventuell noch leeren Angaben aufpoppt.
             try {
-                if (sessionStorage.getItem('standbyResumeAfterReload') === '1') {
-                    sessionStorage.removeItem('standbyResumeAfterReload');
+                if (AppSession.getItem('standbyResumeAfterReload') === '1') {
+                    AppSession.removeItem('standbyResumeAfterReload');
                     setTimeout(() => { if (typeof toggleStandBy === 'function') toggleStandBy(true); }, 1200);
                 }
             } catch (e) {}
@@ -20816,13 +19783,13 @@ window.setLyricsStyle = function(style) {
         // GARANTIERTER AUTOSTART & DAUERHAFTE EINSTELLUNGEN:
         const _savedLang = (function() {
             try {
-                return localStorage.getItem('app_language') || localStorage.getItem('selectedLanguage');
+                return AppStorage.getItem('app_language') || AppStorage.getItem('selectedLanguage');
             } catch(e) { return null; }
         })();
 
         const _onbCompletedVal = (function() {
             try {
-                return localStorage.getItem('onboarding_completed');
+                return AppStorage.getItem('onboarding_completed');
             } catch(e) { return null; }
         })();
         const _isCompleted = window.OnboardingTracker.isCompleted();

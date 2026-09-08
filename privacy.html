@@ -1,14 +1,15 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
+    <script src="./js/core/storage.e856be99df567fd2.js"></script>
 <meta charset="UTF-8">
-<script src="js/read-aloud-service.js"></script>
-<script src="js/i18n-manager.js"></script>
+<script src="js/read-aloud-service.1fc24873f319082e.js"></script>
+<script src="js/i18n-manager.56dbdc7cc518ed8b.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Privacy Policy / Datenschutzerklärung – Gamingpig Portfolio</title>
 <script>
   try {
-    const savedAppLang = localStorage.getItem('selectedLanguage');
+    const savedAppLang = AppStorage.getItem('selectedLanguage');
     if (savedAppLang) document.documentElement.setAttribute('lang', savedAppLang);
   } catch(e) {}
 </script>
@@ -185,7 +186,7 @@
   </p>
 
   <h2>2. Welche Daten werden erhoben?</h2>
-  <p>Die Website hat keine eigene Benutzerverwaltung, kein Analytics-Tracking und keine Werbung. Für das freiwillige Voting und das Einreichen von Wünschen wird jedoch ein GitHub-Konto genutzt. Die dabei verarbeiteten personenbezogenen und öffentlichen Daten werden in Abschnitt 14 erklärt. Daneben erhalten die unten genannten externen Dienste technische Verbindungsdaten.</p>
+  <p>Die Website hat keine eigene Benutzerverwaltung, kein Analytics-Tracking und keine Werbung. Voting und Wünsche funktionieren ohne Anmeldung. Dafür werden pseudonyme Browser-Kennungen und freiwillig eingegebene Texte über ntfy an GitHub übertragen und öffentlich gespeichert (Abschnitt 14). Externe Dienste erhalten technische Verbindungsdaten.</p>
   <ul>
     <li>Es werden keine Standortdaten erhoben.</li>
     <li>Es werden keine Kontakte, Fotos oder Dateien ausgelesen.</li>
@@ -252,10 +253,12 @@
   <a href="https://discord.com/privacy" target="_blank" rel="noopener">Datenschutzerklärung von Discord</a>.</p>
 
   <h2>9. Lokale Speicherung im Browser (localStorage)</h2>
-  <p>Sprache, Design, Vorlesestimme und -tempo, der lokale Songverlauf sowie Einführungs- und Datenschutz-Versionsstände werden im Browser gespeichert. Der Roadmap-Lesecache (<code>gp_github_roadmap_v1:Gamingpig/About-Gamingpig</code>) enthält zuletzt geladene öffentliche Stimmzahlen und bis zu 30 Wünsche einschließlich GitHub-Nutzername, Text, Datum und Status. Er wird bei erfolgreicher Synchronisierung ersetzt, hat aber keine automatische Ablaufzeit. Alte, noch nicht abgesendete lokale Wünsche können zur Wiederherstellung vorhanden sein. Diese Speicher werden nicht als Nutzerprofil hochgeladen. Über die Browsereinstellungen kannst du sie löschen; dadurch werden keine GitHub-Issues oder Reaktionen gelöscht.</p>
+  <p>Sprache, Design, Vorleseeinstellungen, Songverlauf und Versionsstände bleiben im Browser gespeichert. Für die Roadmap werden zusätzlich ein zufällig erzeugtes Schlüsselpaar (<code>gp_roadmap_identity_v2</code>), noch nicht bestätigte Einträge (<code>gp_roadmap_pending_v2</code>) und ein Lesecache (<code>gp_roadmap_cache_v2</code>) in localStorage gespeichert. Der private Schlüssel wird nicht an den Dienst gesendet; der freiwillige Gerätecode enthält ihn zur Übertragung auf eigene Geräte. Öffentliche Kennung, Signatur und Eintragsinhalt werden beim Absenden übertragen. Der Cache wird beim Abgleich ersetzt, ausstehende Einträge nach GitHub-Bestätigung entfernt. Es gibt keine automatische lokale Ablaufzeit. Alte lokale Wünsche können zur Wiederherstellung vorhanden sein. Browserdaten lassen sich in den Einstellungen löschen; dies löscht keine öffentlichen GitHub-Daten und kann ohne gesicherten Gerätecode den Zugriff auf die eigene Stimme verlieren lassen.</p>
 
   <h2>10. Web-Push-Benachrichtigungen &amp; Störungs-Überwachung</h2>
   <p>Die Website und PWA bietet eine freiwillige Störungs-Benachrichtigung (Web Push) an. Die Aktivierung erfolgt rein opt-in-basiert über deine ausdrückliche Zustimmung (Art. 6 Abs. 1 lit. a DSGVO). Zur technischen Zustellung von Meldungen bei API-Ausfällen generiert dein Browser einen pseudonymisierten Push-Endpunkt (z. B. über Google Firebase Cloud Messaging oder Apple Web Push). Es werden keine Namen, E-Mail-Adressen oder Geräteprofile verknüpft. Du kannst die Benachrichtigungen jederzeit mit einem Klick auf der Status-Seite oder in den Browsereinstellungen wieder deaktivieren.</p>
+
+  <p>Push-Endpunkt, Abonnementschlüssel und Sprache werden vor der Übertragung an ntfy mit einem zufälligen AES-GCM-Schlüssel verschlüsselt; dieser wird mit dem öffentlichen RSA-Schlüssel des Betreibers geschützt. GitHub Actions entschlüsselt die Registrierung und speichert die Gerätedaten erneut AES-GCM-verschlüsselt in data/subscribers.enc.json. Die privaten Schlüssel liegen in GitHub Actions Secrets. ntfy und GitHub verarbeiten weiterhin Verbindungsmetadaten wie IP-Adresse und Zeitpunkt. Push pausieren meldet das Browser-Abonnement ab; gespeicherte Daten und frühere Git-Historie werden dadurch nicht sofort entfernt. Frühere Versionen speicherten Geräte öffentlich; für eine Löschanfrage bitte die Kontaktadresse oben nutzen.</p>
 
   <h2>11. Änderungen dieser Erklärung</h2>
   <p>Diese Datenschutzerklärung kann bei Bedarf aktualisiert werden, z. B. wenn neue Funktionen
@@ -268,13 +271,13 @@
   <h2>13. Urheberrecht &amp; Rechtlicher Schutz</h2>
   <p>Alle auf dieser Website und in der Web-Applikation bereitgestellten Inhalte, Designs, Logos, Icons, Quelltexte, Audiodaten und Softwarekomponenten unterliegen dem Urheberrecht: <strong>© 2026 Gamingpig · Alle Rechte vorbehalten</strong>. Jegliche unbefugte Vervielfältigung, Verbreitung, Bearbeitung oder Veröffentlichung ohne vorherige schriftliche Zustimmung ist untersagt und rechtlich geschützt.</p>
 
-  <h2 id="github-roadmap-de">14. GitHub-Voting und öffentliche Community-Wünsche</h2>
-  <p>Zweck ist die gemeinsame Planung von Funktionen und die geräteübergreifende Anzeige von Stimmen und Vorschlägen. Der Speicher ist das öffentliche GitHub-Repository <code>Gamingpig/About-Gamingpig</code>. Zum Lesen ist keine Anmeldung nötig; zum Abstimmen und Absenden brauchst du ein GitHub-Konto. Die Website erhält weder dein GitHub-Passwort noch einen privaten Zugangsschlüssel.</p>
-  <p>Wünsche werden als Issues gespeichert: GitHub-Nutzername, eingegebener Name/Discord-Tag, Kategorie, Titel, Beschreibung und Veröffentlichungsdatum sind öffentlich. Ein Pseudonym genügt; bitte keine vertraulichen Daten oder Daten anderer Personen eintragen. Bereits beim Klick auf „Auf GitHub einreichen“ werden die Formulartexte über die vorausgefüllte URL an GitHub übertragen und können im Browserverlauf stehen. Erst die Bestätigung auf GitHub veröffentlicht das Issue. Stimmen sind öffentliche 👍-Reaktionen am ersten Feature-Beitrag; dein GitHub-Konto ist dort der Reaktion zugeordnet. Die Website zeigt gemeinsame Summen und die neuesten 30 Wünsche.</p>
-  <p>Beim Öffnen der Roadmap ruft dein Browser <code>api.github.com</code> auf. GitHub erhält dabei technische Zugriffsdaten wie IP-Adresse, Zeitpunkt und Browserinformationen. Die Website liest bei sichtbarer Seite etwa alle fünf Minuten sowie bei Rückkehr, höchstens einmal pro Minute, erneut. Ein GitHub-Login auf dieser Website wird dabei nicht eingerichtet.</p>
+  <h2 id="github-roadmap-de">14. Direktes Voting und öffentliche Wünsche über ntfy und GitHub</h2>
+  <p>Zweck ist die gemeinsame Feature-Planung und die geräteübergreifende Anzeige von Vorschlägen und Stimmen. Es ist kein Nutzerkonto erforderlich. Eine zufällig erzeugte Browser-Identität ordnet eigene Stimmen zu; über einen freiwillig übertragbaren privaten Gerätecode können eigene Geräte dieselbe Identität nutzen. Daraus folgt keine verifizierte Zuordnung zu einer natürlichen Person.</p>
+  <p>Beim Abstimmen oder Absenden werden Eintrags-ID, öffentliche Schlüsselkennung, Signatur und Stimmstand beziehungsweise Name/Pseudonym, Kategorie, Titel und Beschreibung an <code>ntfy.sh</code> gesendet. Die separate Roadmap-Warteschlange ist öffentlich lesbar. Ein GitHub-Workflow übernimmt gültige Einträge in <code>data/roadmap.json</code> im öffentlichen Repository <code>Gamingpig/About-Gamingpig</code>. Dort stehen pseudonyme Kennungen, Stimmen und Wünsche mit Datum auch geräteübergreifend zur Verfügung. Bitte keine vertraulichen Daten oder Angaben über andere Personen einreichen.</p>
+  <p>ntfy ist nur ein Zwischenspeicher mit begrenzter Aufbewahrung; dauerhaft gespeichert ist ein Eintrag erst nach dem GitHub-Commit. Der vorhandene Workflow ist alle 15 Minuten geplant, kann aber später laufen. Ausstehende Einträge werden deshalb gesondert angezeigt und können erneut gesendet werden. Die sichtbare Roadmap liest den gemeinsamen Stand von <code>raw.githubusercontent.com</code> etwa alle fünf Minuten und bei Rückkehr, höchstens einmal pro Minute. ntfy und GitHub erhalten dabei technisch notwendige Verbindungsdaten wie IP-Adresse, Zeitpunkt und Browserinformationen.</p>
   <p>Für den Betrieb der öffentlichen Roadmap und die Anzeige freiwillig veröffentlichter Beiträge stützen wir uns auf Art. 6 Abs. 1 lit. f DSGVO: das berechtigte Interesse an gemeinsamer Feature-Planung und zuverlässiger Anzeige. Die Teilnahme ist freiwillig; das Portfolio kannst du ohne Beitrag oder Stimme nutzen. „Verstanden“ im Datenschutzhinweis bestätigt nur die Kenntnisnahme und ist keine Einwilligung in zusätzliche Verarbeitung.</p>
-  <p>Es gibt keine automatische Löschfrist für Issues. Sie bleiben bis zur Löschung gespeichert; Schließen eines Issues ist keine Löschung. Eigene 👍-Reaktionen kannst du auf GitHub entfernen und eigene Beiträge dort bearbeiten. Für die Entfernung eines Wunsches aus unserem Repository kontaktiere uns mit dem Issue-Link unter <a href="mailto:gamingpig.support@gmail.com">gamingpig.support@gmail.com</a>. Bereits geladene Lesecaches können bis zum nächsten erfolgreichen Abgleich oder zum Löschen der Browserdaten ältere Inhalte enthalten. Öffentliche Inhalte können von Dritten kopiert worden sein.</p>
-  <p>GitHub verarbeitet Daten auch in den USA. Für GitHubs eigene Verarbeitung, Aufbewahrung und internationale Übermittlungen gilt die <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">GitHub-Datenschutzerklärung</a>.</p>
+  <p>Es gibt keine automatische Löschfrist für die öffentlichen Datensätze. Sie und frühere Fassungen können in der Git-Historie verbleiben. Die eigene Stimme lässt sich mit derselben Browser-Identität zurückziehen; ältere Git-Versionen werden dadurch nicht gelöscht. Zur Löschung eines Wunsches oder einer Kennung kontaktiere <a href="mailto:gamingpig.support@gmail.com">gamingpig.support@gmail.com</a> mit der Eintrags-ID. Sende niemals deinen privaten Gerätecode mit. Kopien Dritter, Git-Historie und bereits geladene Browser-Caches können gesonderte Behandlung erfordern; der nächste erfolgreiche Abgleich ersetzt den lokalen Lesecache.</p>
+  <p>GitHub verarbeitet Daten auch in den USA. Details zu eigener Verarbeitung, Aufbewahrung und internationalen Übermittlungen stehen in der <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">GitHub-Datenschutzerklärung</a> und der <a href="https://docs.ntfy.sh/privacy/" target="_blank" rel="noopener">ntfy-Datenschutzerklärung</a>.</p>
   <p>Nach Maßgabe der DSGVO bestehen Rechte auf Auskunft, Berichtigung, Löschung, Einschränkung, Widerspruch und Beschwerde bei einer Datenschutzaufsichtsbehörde. Anfragen zu unserer Verarbeitung richten sich an die oben genannte Kontaktadresse.</p>
 
   <footer>
@@ -302,7 +305,7 @@
   </p>
 
   <h2>2. What data is collected?</h2>
-  <p>The website has no account system of its own, analytics tracking or advertising. Optional voting and wish submissions use a GitHub account and process personal and public data as described in section 14. External services listed below also receive technical connection data.</p>
+  <p>The website has no account system, analytics tracking or advertising. Votes and wishes work without login. Pseudonymous browser identifiers and voluntarily entered text are sent through ntfy to GitHub and stored publicly (section 14). External services receive technical connection data.</p>
   <ul>
     <li>No location data is collected.</li>
     <li>No contacts, photos, or files are read.</li>
@@ -366,10 +369,12 @@
   <a href="https://discord.com/privacy" target="_blank" rel="noopener">Discord Privacy Policy</a>.</p>
 
   <h2>9. Local storage in the browser (localStorage)</h2>
-  <p>Language, design, speech voice and speed, recent songs, onboarding and privacy version flags are stored in the browser. The roadmap read cache (<code>gp_github_roadmap_v1:Gamingpig/About-Gamingpig</code>) holds the last public vote counts and up to 30 wishes including GitHub username, text, date and status. Successful synchronization replaces it; it has no automatic expiry. Old unsubmitted local wishes may remain available for recovery. These stores are not uploaded as a user profile. Clearing website data in your browser removes them, but does not delete GitHub issues or reactions.</p>
+  <p>Language, design, speech preferences, recent songs and version flags are stored in the browser. Roadmap storage also includes a random key pair (<code>gp_roadmap_identity_v2</code>), unconfirmed entries (<code>gp_roadmap_pending_v2</code>) and a read cache (<code>gp_roadmap_cache_v2</code>). The private key is not sent to the service; the optional device code includes it for transfer to your own devices. The public identifier, signature and content are sent on submission. Sync replaces the cache and GitHub confirmation removes pending entries. Local storage has no automatic expiry. Older local wishes may remain recoverable. Clearing browser data does not delete public GitHub data and may remove access to your vote without a saved device code.</p>
 
   <h2>10. Web Push Notifications &amp; Outage Alerts</h2>
   <p>The website and PWA offer optional outage and incident alerts (Web Push). Activation is strictly opt-in based on your explicit consent (Art. 6(1)(a) GDPR). For message delivery when services go down, your browser generates a pseudonymized push endpoint (via Google FCM or Apple Push Services). No personal names, emails, or device tracking profiles are linked. You can revoke and disable notifications at any time directly on the status page or via your browser settings.</p>
+
+  <p>Push endpoints, subscription keys and language are encrypted before transmission to ntfy using AES-GCM and the operator’s RSA public key. GitHub Actions decrypts registrations and saves device records encrypted with AES-GCM in data/subscribers.enc.json; private keys are held in Actions Secrets. ntfy and GitHub still process connection metadata such as IP addresses and timestamps. Pausing push unsubscribes the browser; stored records and historical Git revisions are not immediately erased. Earlier versions stored records publicly. Contact the address above for deletion requests.</p>
 
   <h2>11. Changes to this policy</h2>
   <p>This privacy policy may be updated as needed, e.g. when new features
@@ -382,13 +387,13 @@
   <h2>13. Copyright &amp; Legal Protection</h2>
   <p>All content, designs, logos, icons, source code, audio data, and software components provided on this website and PWA are subject to copyright: <strong>&copy; 2026 Gamingpig &middot; All Rights Reserved</strong>. Any unauthorized reproduction, distribution, modification, or public dissemination without prior written consent is strictly prohibited and legally protected.</p>
 
-  <h2 id="github-roadmap-en">14. GitHub voting and public community wishes</h2>
-  <p>The purpose is shared feature planning and displaying votes and ideas across devices. Data is stored in the public <code>Gamingpig/About-Gamingpig</code> GitHub repository. Reading requires no login; voting and submitting require a GitHub account. The website receives neither your GitHub password nor a private access token.</p>
-  <p>Wishes are issues: your GitHub username, entered name/Discord tag, category, title, description and publication date are public. A pseudonym is sufficient; do not enter confidential information or other people’s data. Clicking “Submit on GitHub” already transfers the form text to GitHub through a prefilled URL, which may remain in browser history. Confirming on GitHub publishes the issue. Votes are public 👍 reactions on the first feature post, linked to your GitHub account there. The website displays totals and the latest 30 wishes.</p>
-  <p>Opening the roadmap contacts <code>api.github.com</code>, which receives technical access data such as IP address, time and browser information. While visible, the roadmap refreshes about every five minutes and on return, at most once per minute. This does not establish a GitHub login on this website.</p>
+  <h2 id="github-roadmap-en">14. Direct voting and public wishes through ntfy and GitHub</h2>
+  <p>The purpose is shared feature planning and displaying votes and ideas across devices. No account is required. A random browser identity assigns your votes; an optional private device code lets your devices share it. This is not a verified identity of a natural person.</p>
+  <p>Voting or submitting sends an entry ID, public key identifier, signature and vote selection or name/pseudonym, category, title and description to <code>ntfy.sh</code>. The separate roadmap queue is publicly readable. A GitHub workflow imports valid entries into <code>data/roadmap.json</code> in the public <code>Gamingpig/About-Gamingpig</code> repository. Pseudonymous identifiers, votes and dated wishes are available across devices. Do not submit confidential or other people’s data.</p>
+  <p>ntfy is temporary storage with limited retention. An entry is durable only after the GitHub commit. The existing workflow is scheduled every 15 minutes but may be delayed. Pending entries are shown separately and can be resent. The visible roadmap reads shared data from <code>raw.githubusercontent.com</code> about every five minutes and on return, at most once per minute. ntfy and GitHub receive technical connection data including IP address, time and browser information.</p>
   <p>Operating the public roadmap and displaying voluntarily published contributions relies on Article 6(1)(f) GDPR: the legitimate interest in shared feature planning and reliable display. Participation is optional; the portfolio remains available without contributing. “Understood” acknowledges the privacy notice and is not consent to additional processing.</p>
-  <p>Issues have no automatic deletion deadline and remain until deleted; closing an issue does not delete it. You can remove your own 👍 reactions and edit your posts on GitHub. To request removal of a wish from our repository, send its issue link to <a href="mailto:gamingpig.support@gmail.com">gamingpig.support@gmail.com</a>. Previously loaded caches may retain older content until the next successful sync or browser data deletion. Third parties may have copied public content.</p>
-  <p>GitHub also processes data in the USA. Its own processing, retention and international transfers are described in the <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">GitHub Privacy Statement</a>.</p>
+  <p>Public records have no automatic deletion deadline; previous versions may remain in Git history. You can withdraw your vote using the same browser identity, without deleting older Git versions. To request removal of a wish or identifier, email its entry ID to <a href="mailto:gamingpig.support@gmail.com">gamingpig.support@gmail.com</a>. Never send your private device code. Third-party copies, Git history and existing browser caches may require separate handling; successful synchronization replaces the local cache.</p>
+  <p>GitHub also processes data in the USA. Its own processing, retention and international transfers are described in the <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">GitHub Privacy Statement</a>; see also the <a href="https://docs.ntfy.sh/privacy/" target="_blank" rel="noopener">ntfy Privacy Policy</a>.</p>
   <p>Subject to the GDPR, you have rights of access, rectification, erasure, restriction, objection and complaint to a supervisory authority. Contact the address above regarding our processing.</p>
 
   <footer>
@@ -416,7 +421,7 @@
   </p>
 
   <h2>2. ¿Qué datos se recopilan?</h2>
-  <p>El sitio no tiene cuentas propias, seguimiento analítico ni publicidad. La votación y las propuestas opcionales utilizan una cuenta de GitHub y tratan datos personales y públicos según la sección 14. Los servicios externos indicados también reciben datos técnicos de conexión.</p>
+  <p>El sitio no tiene cuentas, seguimiento analítico ni publicidad. Votos e ideas no requieren registro. Identificadores seudónimos y textos voluntarios se envían por ntfy a GitHub y se guardan públicamente (sección 14). Los servicios externos reciben datos técnicos.</p>
   <ul>
     <li>No se recopilan datos de ubicación.</li>
     <li>No se leen contactos, fotos ni archivos.</li>
@@ -479,10 +484,12 @@
   <a href="https://discord.com/privacy" target="_blank" rel="noopener">Política de Privacidad de Discord</a>.</p>
 
   <h2>9. Almacenamiento local en el navegador (localStorage)</h2>
-  <p>El navegador guarda idioma, diseño, voz y velocidad, canciones recientes y versiones de introducción y privacidad. La caché de la hoja de ruta (<code>gp_github_roadmap_v1:Gamingpig/About-Gamingpig</code>) conserva los últimos votos públicos y hasta 30 ideas con usuario de GitHub, texto, fecha y estado. Se sustituye al sincronizar correctamente, sin caducidad automática. Pueden quedar ideas locales antiguas sin enviar para recuperarlas. Estos datos no se suben como perfil de usuario. Puedes borrarlos en el navegador; esto no elimina issues ni reacciones de GitHub.</p>
+  <p>El navegador conserva idioma, diseño, lectura, canciones y versiones. También guarda claves aleatorias (<code>gp_roadmap_identity_v2</code>), envíos pendientes (<code>gp_roadmap_pending_v2</code>) y caché (<code>gp_roadmap_cache_v2</code>). La clave privada no se envía al servicio; el código opcional permite transferirla a tus dispositivos. Identificador público, firma y contenido se transmiten al enviar. La sincronización reemplaza la caché y elimina pendientes confirmados por GitHub. No caducan automáticamente. Pueden quedar ideas locales antiguas. Borrar datos del navegador no elimina datos públicos y puede perder el acceso a tu voto sin copia del código.</p>
 
   <h2>10. Notificaciones Web Push y Alertas de Incidentes</h2>
   <p>El sitio web y la PWA ofrecen un sistema opcional de notificaciones por fallos (Web Push). La activación es totalmente voluntaria con tu consentimiento explícito (Art. 6.1.a RGPD). Para el envío técnico, el navegador genera un endpoint seudonimizado (vía Google FCM o Apple Push). No se vinculan nombres ni perfiles personales. Puedes desactivar las notificaciones en cualquier momento desde la página de estado o los ajustes de tu navegador.</p>
+
+  <p>Los endpoints push, claves y lengua se cifran antes de enviarse a ntfy mediante AES-GCM y RSA. GitHub Actions los descifra y almacena cifrados en data/subscribers.enc.json; las claves privadas están en Actions Secrets. Los proveedores procesan metadatos de conexión, como IP y fecha. Pausar push cancela la suscripción del navegador, pero no borra inmediatamente registros ni historial Git. Versiones anteriores guardaban datos públicamente. Para solicitar su eliminación, usa el contacto anterior.</p>
 
   <h2>11. Cambios en esta política</h2>
   <p>Esta política de privacidad puede actualizarse según sea necesario, p. ej. cuando se añaden nuevas
@@ -495,13 +502,13 @@
   <h2>13. Derechos de Autor y Protección Legal</h2>
   <p>Todos los contenidos, diseños, logotipos, iconos, código fuente y componentes de software de este sitio web y PWA están protegidos por derechos de autor: <strong>&copy; 2026 Gamingpig &middot; Todos los derechos reservados</strong>. Queda prohibida cualquier reproducción, distribución o modificación no autorizada.</p>
 
-  <h2 id="github-roadmap-es">14. Votación en GitHub e ideas públicas</h2>
-  <p>La finalidad es planificar funciones y mostrar votos e ideas entre dispositivos. Se guardan en el repositorio público <code>Gamingpig/About-Gamingpig</code>. Leer no requiere cuenta; votar y enviar sí requieren una cuenta de GitHub. El sitio no recibe tu contraseña ni un token privado.</p>
-  <p>Las ideas se guardan como issues: son públicos el usuario de GitHub, nombre/Discord indicado, categoría, título, descripción y fecha. Basta un seudónimo; no introduzcas información confidencial ni datos ajenos. Al pulsar «Enviar en GitHub», los textos ya se transmiten mediante la URL del formulario y pueden permanecer en el historial. La confirmación en GitHub publica el issue. Los votos son reacciones 👍 públicas en el primer mensaje, asociadas allí a tu cuenta. El sitio muestra totales y las últimas 30 ideas.</p>
-  <p>Al abrir la hoja de ruta, <code>api.github.com</code> recibe datos técnicos como IP, hora e información del navegador. La página visible se actualiza aproximadamente cada cinco minutos y al regresar, como máximo una vez por minuto. Esto no inicia una sesión de GitHub en este sitio.</p>
+  <h2 id="github-roadmap-es">14. Votos e ideas públicas mediante ntfy y GitHub</h2>
+  <p>La finalidad es planificar funciones y mostrar votos e ideas entre dispositivos sin cuenta. Una identidad aleatoria del navegador identifica tus votos; el código privado opcional permite compartirla entre tus dispositivos. No verifica la identidad de una persona.</p>
+  <p>Al votar o enviar, <code>ntfy.sh</code> recibe ID, identificador de clave pública, firma y selección de votos o nombre/seudónimo, categoría, título y descripción. La cola separada es pública. Un workflow importa entradas válidas en <code>data/roadmap.json</code> del repositorio público <code>Gamingpig/About-Gamingpig</code>, con identificadores, votos y fechas. No envíes datos confidenciales o ajenos.</p>
+  <p>ntfy es temporal y conserva mensajes por tiempo limitado; solo el commit en GitHub confirma almacenamiento duradero. El workflow está programado cada 15 minutos, pero puede retrasarse. Los pendientes se muestran y pueden reenviarse. La página visible consulta <code>raw.githubusercontent.com</code> cada cinco minutos y al regresar, máximo una vez por minuto. ntfy y GitHub reciben IP, hora e información del navegador.</p>
   <p>La base para mantener la hoja de ruta y mostrar aportaciones publicadas voluntariamente es el art. 6.1.f RGPD: interés legítimo en planificar funciones conjuntamente y mostrar datos fiables. Participar es opcional. «Entendido» solo confirma la lectura del aviso, no autoriza tratamientos adicionales.</p>
-  <p>Los issues no se borran automáticamente; permanecen hasta su eliminación. Cerrarlos no los elimina. Puedes retirar tus 👍 y editar tus mensajes en GitHub. Para solicitar eliminar una idea del repositorio, envía su enlace a <a href="mailto:gamingpig.support@gmail.com">gamingpig.support@gmail.com</a>. La caché puede conservar contenido antiguo hasta sincronizar correctamente o borrar los datos del navegador. Terceros pueden haber copiado contenidos públicos.</p>
-  <p>GitHub también trata datos en Estados Unidos. Su tratamiento, conservación y transferencias internacionales se explican en la <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">política de privacidad de GitHub</a>.</p>
+  <p>No hay borrado automático; versiones anteriores pueden permanecer en el historial Git. Retirar tu voto con la misma identidad no borra versiones antiguas. Para eliminar una idea o identificador, envía el ID a <a href="mailto:gamingpig.support@gmail.com">gamingpig.support@gmail.com</a>, nunca el código privado. Copias, historial y cachés pueden requerir tratamiento separado; sincronizar correctamente reemplaza la caché.</p>
+  <p>GitHub también trata datos en EE. UU. Consulta su <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">política de privacidad</a> y la de <a href="https://docs.ntfy.sh/privacy/" target="_blank" rel="noopener">ntfy</a> sobre tratamiento, conservación y transferencias.</p>
   <p>Según el RGPD, puedes solicitar acceso, rectificación, supresión, limitación y oposición, y reclamar ante una autoridad de control. Contacta con la dirección anterior sobre nuestro tratamiento.</p>
 
   <footer>
@@ -529,7 +536,7 @@
   </p>
 
   <h2>2. Quelles données sont collectées ?</h2>
-  <p>Le site ne gère pas de comptes propres, de suivi analytique ou de publicité. Les votes et idées facultatifs utilisent un compte GitHub et des données personnelles et publiques, décrites à la section 14. Les services externes ci-dessous reçoivent aussi des données techniques de connexion.</p>
+  <p>Le site ne gère ni comptes, ni suivi analytique, ni publicité. Votes et idées fonctionnent sans connexion. Identifiants pseudonymes et textes volontaires passent par ntfy vers GitHub et sont publics (section 14). Les services externes reçoivent des données techniques.</p>
   <ul>
     <li>Aucune donnée de localisation n'est collectée.</li>
     <li>Aucun contact, photo ou fichier n'est lu.</li>
@@ -592,10 +599,12 @@
   <a href="https://discord.com/privacy" target="_blank" rel="noopener">politique de confidentialité de Discord</a>.</p>
 
   <h2>9. Stockage local dans le navigateur (localStorage)</h2>
-  <p>Le navigateur conserve langue, design, voix et vitesse, chansons récentes et versions de l’introduction et de la confidentialité. Le cache de lecture (<code>gp_github_roadmap_v1:Gamingpig/About-Gamingpig</code>) contient les derniers votes publics et jusqu’à 30 idées avec utilisateur GitHub, texte, date et statut. Il est remplacé après synchronisation réussie, sans expiration automatique. D’anciennes idées locales non envoyées peuvent être récupérables. Ces données ne sont pas envoyées comme profil utilisateur. Effacer les données du site les supprime localement, sans supprimer les issues ni les réactions GitHub.</p>
+  <p>Le navigateur conserve langue, design, lecture, chansons et versions. Il conserve aussi les clés aléatoires (<code>gp_roadmap_identity_v2</code>), envois en attente (<code>gp_roadmap_pending_v2</code>) et cache (<code>gp_roadmap_cache_v2</code>). La clé privée n’est pas envoyée au service ; le code facultatif la transfère entre tes appareils. Identifiant public, signature et contenu sont transmis lors de l’envoi. La synchronisation remplace le cache et retire les envois confirmés par GitHub, sans expiration automatique locale. D’anciennes idées peuvent rester récupérables. Effacer le navigateur ne supprime pas GitHub et peut perdre l’accès au vote sans copie du code.</p>
 
   <h2>10. Notifications Web Push et Alertes d'Incidents</h2>
   <p>Le site et la PWA proposent des alertes d'incidents facultatives (Web Push). L'activation repose sur votre consentement explicite (Art. 6, par. 1, point a du RGPD). Pour la distribution technique, votre navigateur génère un point de terminaison pseudonymisé (via Google FCM ou Apple Push). Aucun nom ni profil de suivi n'est associé. Vous pouvez désactiver les notifications à tout moment sur la page de statut ou dans les paramètres du navigateur.</p>
+
+  <p>Les endpoints push, clés et langue sont chiffrés avant l’envoi à ntfy avec AES-GCM et RSA. GitHub Actions les déchiffre et les conserve chiffrés dans data/subscribers.enc.json ; les clés privées restent dans Actions Secrets. Les fournisseurs traitent les métadonnées de connexion, dont IP et date. La pause désabonne le navigateur sans effacer immédiatement les données ni l’historique Git. Les anciennes versions stockaient les données publiquement. Pour leur suppression, utilisez le contact ci-dessus.</p>
 
   <h2>11. Modifications de cette politique</h2>
   <p>Cette politique de confidentialité peut être mise à jour si nécessaire, par ex. lors de l'ajout de nouvelles
@@ -608,13 +617,13 @@
   <h2>13. Droits d'Auteur et Protection Légale</h2>
   <p>Tous les contenus, designs, logos, icônes, code source et composants logiciels de ce site et de cette application sont protégés par le droit d'auteur : <strong>&copy; 2026 Gamingpig &middot; Tous droits réservés</strong>. Toute reproduction, distribution ou modification non autorisée est strictement interdite.</p>
 
-  <h2 id="github-roadmap-fr">14. Votes GitHub et idées publiques</h2>
-  <p>Le but est de planifier les fonctions ensemble et d’afficher votes et idées sur tous les appareils. Le dépôt public <code>Gamingpig/About-Gamingpig</code> les conserve. Lire ne nécessite pas de compte ; voter et envoyer nécessitent un compte GitHub. Le site ne reçoit ni ton mot de passe ni un jeton privé.</p>
-  <p>Les idées sont des issues : utilisateur GitHub, nom/Discord saisi, catégorie, titre, description et date sont publics. Un pseudonyme suffit ; évite les données confidentielles ou d’autrui. Cliquer sur « Envoyer sur GitHub » transmet déjà les textes via une URL préremplie pouvant rester dans l’historique. Confirmer sur GitHub publie l’issue. Les votes sont des réactions 👍 publiques au premier message, liées à ton compte. Le site affiche les totaux et les 30 dernières idées.</p>
-  <p>À l’ouverture, <code>api.github.com</code> reçoit des données techniques telles que l’IP, l’heure et les informations du navigateur. La page visible se synchronise environ toutes les cinq minutes et au retour, au maximum une fois par minute. Aucune session GitHub n’est créée sur ce site.</p>
+  <h2 id="github-roadmap-fr">14. Votes directs et idées publiques via ntfy et GitHub</h2>
+  <p>Le but est de planifier ensemble et d’afficher votes et idées entre appareils, sans compte. Une identité aléatoire du navigateur associe tes votes ; le code privé facultatif permet de la partager entre tes appareils. Aucune personne n’est ainsi vérifiée.</p>
+  <p>Voter ou envoyer transmet à <code>ntfy.sh</code> un ID, identifiant de clé publique, signature et votes ou nom/pseudonyme, catégorie, titre et description. La file séparée est publique. Un workflow importe les entrées valides dans <code>data/roadmap.json</code> du dépôt public <code>Gamingpig/About-Gamingpig</code>, avec identifiants, votes et dates. N’envoie pas de données confidentielles ou d’autrui.</p>
+  <p>ntfy conserve temporairement les messages. Seul le commit GitHub confirme le stockage durable. Le workflow prévu toutes les 15 minutes peut être retardé. Les envois en attente restent visibles et peuvent être renvoyés. La page visible consulte <code>raw.githubusercontent.com</code> environ toutes les cinq minutes et au retour, au maximum une fois par minute. ntfy et GitHub reçoivent IP, heure et informations du navigateur.</p>
   <p>La base du fonctionnement de la feuille de route et de l’affichage des contributions volontairement publiées est l’art. 6(1)(f) RGPD : l’intérêt légitime à planifier des fonctions ensemble et à fournir un affichage fiable. Participer est facultatif. « Compris » accuse réception de l’avis et ne consent pas à des traitements supplémentaires.</p>
-  <p>Les issues restent jusqu’à leur suppression, sans échéance automatique ; fermer une issue ne la supprime pas. Tu peux retirer tes 👍 et modifier tes messages sur GitHub. Pour demander la suppression d’une idée du dépôt, envoie son lien à <a href="mailto:gamingpig.support@gmail.com">gamingpig.support@gmail.com</a>. Les caches peuvent conserver un ancien contenu jusqu’à la synchronisation réussie ou l’effacement des données du navigateur. Des tiers peuvent avoir copié des contenus publics.</p>
-  <p>GitHub traite aussi des données aux États-Unis. Ses traitements, durées de conservation et transferts internationaux figurent dans sa <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">déclaration de confidentialité</a>.</p>
+  <p>Il n’y a pas de suppression automatique ; des versions peuvent rester dans l’historique Git. Retirer ton vote avec la même identité ne supprime pas cet historique. Pour supprimer une idée ou un identifiant, envoie l’ID à <a href="mailto:gamingpig.support@gmail.com">gamingpig.support@gmail.com</a>, jamais ton code privé. Copies, historique et caches peuvent nécessiter un traitement séparé ; la synchronisation réussie remplace le cache.</p>
+  <p>GitHub traite aussi des données aux États-Unis. Consulte sa <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">déclaration de confidentialité</a> et celle de <a href="https://docs.ntfy.sh/privacy/" target="_blank" rel="noopener">ntfy</a> pour les traitements, conservation et transferts.</p>
   <p>Selon le RGPD, tu disposes des droits d’accès, rectification, effacement, limitation, opposition et réclamation auprès d’une autorité de contrôle. Contacte l’adresse ci-dessus concernant nos traitements.</p>
 
   <footer>
@@ -642,7 +651,7 @@
   </p>
 
   <h2>2. Quais dados são coletados?</h2>
-  <p>O site não tem contas próprias, análise de comportamento ou publicidade. Votos e ideias opcionais usam uma conta do GitHub e dados pessoais e públicos, descritos na seção 14. Os serviços externos abaixo também recebem dados técnicos de conexão.</p>
+  <p>O site não tem contas, análise comportamental ou publicidade. Votos e ideias não exigem login. Identificadores pseudônimos e textos voluntários passam pelo ntfy ao GitHub e são públicos (seção 14). Serviços externos recebem dados técnicos.</p>
   <ul>
     <li>Nenhum dado de localização é coletado.</li>
     <li>Nenhum contato, foto ou arquivo é lido.</li>
@@ -705,10 +714,12 @@
   <a href="https://discord.com/privacy" target="_blank" rel="noopener">Política de Privacidade do Discord</a>.</p>
 
   <h2>9. Armazenamento local no navegador (localStorage)</h2>
-  <p>O navegador guarda idioma, design, voz e velocidade, músicas recentes e versões da introdução e privacidade. O cache de leitura (<code>gp_github_roadmap_v1:Gamingpig/About-Gamingpig</code>) contém os últimos votos públicos e até 30 ideias com usuário GitHub, texto, data e estado. É substituído após sincronização bem-sucedida, sem prazo automático de expiração. Ideias locais antigas não enviadas podem estar disponíveis para recuperação. Esses dados não são enviados como perfil de usuário. Apagar os dados do site remove-os localmente, mas não exclui issues nem reações no GitHub.</p>
+  <p>O navegador guarda idioma, design, leitura, músicas e versões. Também guarda chaves aleatórias (<code>gp_roadmap_identity_v2</code>), envios pendentes (<code>gp_roadmap_pending_v2</code>) e cache (<code>gp_roadmap_cache_v2</code>). A chave privada não é enviada ao serviço; o código opcional a transfere entre seus aparelhos. Identificador público, assinatura e conteúdo são enviados ao submeter. Sincronizar substitui cache e remove pendentes confirmados, sem expiração automática local. Ideias antigas podem ser recuperáveis. Apagar o navegador não apaga GitHub e pode perder acesso ao voto sem cópia do código.</p>
 
   <h2>10. Notificações Web Push e Alertas de Falhas</h2>
   <p>O site e PWA oferecem alertas opcionais de falha de serviços (Web Push). A ativação é voluntária mediante seu consentimento explícito (Art. 6º, 1, a do RGPD). Para a entrega técnica, seu navegador gera um endpoint pseudonimizado (via Google FCM ou Apple Push). Não há coleta de nomes ou perfis de rastreamento. Você pode desativar as notificações a qualquer momento na página de status ou nas opções do navegador.</p>
+
+  <p>Endpoints push, chaves e idioma são criptografados antes do envio ao ntfy com AES-GCM e RSA. GitHub Actions descriptografa e salva os registros criptografados em data/subscribers.enc.json; chaves privadas ficam em Actions Secrets. Os provedores processam metadados de conexão, incluindo IP e horário. Pausar push cancela a assinatura do navegador, mas não apaga imediatamente registros nem histórico Git. Versões anteriores salvavam dados publicamente. Solicite exclusão ao contato acima.</p>
 
   <h2>11. Alterações nesta política</h2>
   <p>Esta política de privacidade pode ser atualizada conforme necessário, ex.: quando novas
@@ -721,13 +732,13 @@
   <h2>13. Direitos Autorais e Proteção Legal</h2>
   <p>Todos os conteúdos, designs, logotipos, ícones, código-fonte e componentes de software deste site e aplicativo estão protegidos por direitos autorais: <strong>&copy; 2026 Gamingpig &middot; Todos os direitos reservados</strong>. Qualquer reprodução, distribuição ou modificação não autorizada é estritamente proibida.</p>
 
-  <h2 id="github-roadmap-pt">14. Votação no GitHub e ideias públicas</h2>
-  <p>O objetivo é planejar recursos em conjunto e mostrar votos e ideias em vários dispositivos. O repositório público <code>Gamingpig/About-Gamingpig</code> guarda esses dados. Ler não exige conta; votar e enviar exigem conta no GitHub. O site não recebe sua senha nem token privado.</p>
-  <p>Ideias são issues: usuário GitHub, nome/Discord informado, categoria, título, descrição e data são públicos. Um pseudônimo basta; não inclua informações confidenciais ou dados de outras pessoas. Clicar em “Enviar no GitHub” já transmite os textos pela URL preenchida, que pode ficar no histórico. Confirmar no GitHub publica a issue. Votos são reações 👍 públicas na primeira mensagem, associadas à sua conta. O site mostra os totais e as 30 ideias mais recentes.</p>
-  <p>Ao abrir a página, <code>api.github.com</code> recebe dados técnicos como IP, horário e informações do navegador. A página visível atualiza aproximadamente a cada cinco minutos e ao retornar, no máximo uma vez por minuto. Isso não cria login do GitHub neste site.</p>
+  <h2 id="github-roadmap-pt">14. Votos diretos e ideias públicas pelo ntfy e GitHub</h2>
+  <p>O objetivo é planejar recursos e mostrar votos e ideias entre dispositivos, sem conta. Uma identidade aleatória do navegador associa seus votos; o código privado opcional compartilha a identidade entre seus aparelhos. Isso não verifica uma pessoa.</p>
+  <p>Votar ou enviar transmite ID, identificador de chave pública, assinatura e votos ou nome/pseudônimo, categoria, título e descrição ao <code>ntfy.sh</code>. A fila separada é pública. Um workflow importa entradas válidas em <code>data/roadmap.json</code> do repositório público <code>Gamingpig/About-Gamingpig</code>, incluindo identificadores, votos e datas. Não envie dados confidenciais ou de outras pessoas.</p>
+  <p>ntfy é temporário, com retenção limitada. Só o commit GitHub confirma armazenamento durável. O workflow programado a cada 15 minutos pode atrasar. Pendentes são mostrados e podem ser reenviados. A página visível consulta <code>raw.githubusercontent.com</code> a cada cinco minutos e ao retornar, no máximo uma vez por minuto. ntfy e GitHub recebem IP, horário e dados do navegador.</p>
   <p>A base para a página pública e a exibição das contribuições publicadas voluntariamente é o art. 6(1)(f) RGPD: interesse legítimo em planejamento conjunto e exibição confiável. Participar é opcional. “Entendido” apenas reconhece o aviso, sem consentir em tratamento adicional.</p>
-  <p>Issues ficam até serem excluídas, sem prazo automático; fechar não exclui. Você pode remover suas 👍 e editar suas mensagens no GitHub. Para solicitar exclusão de uma ideia do repositório, envie o link para <a href="mailto:gamingpig.support@gmail.com">gamingpig.support@gmail.com</a>. Caches podem manter conteúdo antigo até sincronização bem-sucedida ou exclusão dos dados do navegador. Terceiros podem ter copiado conteúdo público.</p>
-  <p>O GitHub também trata dados nos EUA. Seu tratamento, retenção e transferências internacionais estão descritos na <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">política de privacidade do GitHub</a>.</p>
+  <p>Não há exclusão automática; versões podem permanecer no histórico Git. Retirar seu voto com a mesma identidade não exclui versões antigas. Para excluir ideia ou identificador, envie o ID a <a href="mailto:gamingpig.support@gmail.com">gamingpig.support@gmail.com</a>, nunca o código privado. Cópias, histórico e caches podem exigir tratamento separado; sincronizar substitui o cache local.</p>
+  <p>O GitHub também trata dados nos EUA. Veja sua <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">política de privacidade</a> e a do <a href="https://docs.ntfy.sh/privacy/" target="_blank" rel="noopener">ntfy</a> sobre tratamento, retenção e transferências.</p>
   <p>Conforme o RGPD, existem direitos de acesso, retificação, exclusão, limitação, oposição e reclamação à autoridade de controle. Contate o endereço acima sobre nosso tratamento.</p>
 
   <footer>
@@ -755,7 +766,7 @@
   </p>
 
   <h2>2. Hangi veriler toplanıyor?</h2>
-  <p>Sitenin kendi hesap sistemi, davranış analizi veya reklamı yoktur. İsteğe bağlı oy ve fikir gönderimi GitHub hesabı kullanır; kişisel ve herkese açık veriler bölüm 14’te açıklanır. Aşağıdaki dış hizmetler teknik bağlantı verileri de alır.</p>
+  <p>Sitede hesap, davranış analizi veya reklam yoktur. Oy ve fikirler giriş gerektirmez. Takma tarayıcı kimlikleri ve gönüllü metinler ntfy üzerinden GitHub’a gönderilir ve herkese açıktır (bölüm 14). Dış hizmetler teknik veri alır.</p>
   <ul>
     <li>Hiçbir konum verisi toplanmaz.</li>
     <li>Hiçbir kişi, fotoğraf veya dosya okunmaz.</li>
@@ -814,10 +825,12 @@
   <a href="https://discord.com/privacy" target="_blank" rel="noopener">Discord Gizlilik Politikası</a>na bakabilirsiniz.</p>
 
   <h2>9. Tarayıcıda yerel depolama (localStorage)</h2>
-  <p>Dil, tasarım, okuma sesi ve hızı, son şarkılar, tanıtım ve gizlilik sürümleri tarayıcıda saklanır. Yol haritası okuma önbelleği (<code>gp_github_roadmap_v1:Gamingpig/About-Gamingpig</code>) son herkese açık oy sayılarını ve GitHub kullanıcı adı, metin, tarih ve durumla en fazla 30 fikri tutar. Başarılı eşitlemede yenilenir; otomatik son kullanma süresi yoktur. Gönderilmemiş eski yerel fikirler kurtarılabilir durumda kalabilir. Bu veriler kullanıcı profili olarak yüklenmez. Tarayıcı site verilerini silmek bunları kaldırır; GitHub issue ve tepkilerini silmez.</p>
+  <p>Tarayıcı dil, tasarım, okuma, şarkı ve sürümleri saklar. Rastgele anahtarlar (<code>gp_roadmap_identity_v2</code>), bekleyen girişler (<code>gp_roadmap_pending_v2</code>) ve önbellek (<code>gp_roadmap_cache_v2</code>) de saklanır. Özel anahtar hizmete gönderilmez; isteğe bağlı cihaz kodu kendi cihazlarına aktarır. Açık kimlik, imza ve içerik gönderimle aktarılır. Eşitleme önbelleği yeniler, GitHub onaylı girişleri kaldırır; otomatik yerel süre sonu yoktur. Eski fikirler kurtarılabilir. Tarayıcıyı silmek GitHub verilerini silmez; kod yedeği olmadan kendi oyuna erişimi kaybettirebilir.</p>
 
   <h2>10. Web Push Bildirimleri ve Kesinti Uyarıları</h2>
   <p>Web sitesi ve PWA, isteğe bağlı kesinti ve arıza uyarıları (Web Push) sunar. Etkinleştirme tamamen açık rızanıza bağlıdır (GDPR Madde 6(1)(a)). Bildirimlerin iletilmesi için tarayıcınız anonim bir push uç noktası (Google FCM veya Apple Push üzerinden) oluşturur. Kişisel isimler veya izleme profilleri ilişkilendirilmez. Bildirimleri istediğiniz zaman durum sayfasından veya tarayıcı ayarlarınızdan kapatabilirsiniz.</p>
+
+  <p>Push uç noktası, anahtarlar ve dil ntfy’ye gönderilmeden önce AES-GCM ve RSA ile şifrelenir. GitHub Actions kaydı açar ve data/subscribers.enc.json içinde yeniden şifreleyerek saklar; özel anahtarlar Actions Secrets içindedir. Sağlayıcılar IP ve zaman gibi bağlantı verilerini işler. Push duraklatma tarayıcı aboneliğini iptal eder; kayıtları ve Git geçmişini hemen silmez. Önceki sürümler verileri açık saklıyordu. Silme talepleri için yukarıdaki iletişim adresini kullanın.</p>
 
   <h2>11. Bu politikadaki değişiklikler</h2>
   <p>Bu gizlilik politikası, ör. yeni özellikler eklendiğinde, gerektiğinde güncellenebilir.
@@ -830,13 +843,13 @@
   <h2>13. Telif Hakkı ve Yasal Koruma</h2>
   <p>Bu web sitesinde ve uygulamada sunulan tüm içerikler, tasarımlar, logolar, simgeler, kaynak kodları ve yazılım bileşenleri telif hakkı ile korunmaktadır: <strong>&copy; 2026 Gamingpig &middot; Tüm Hakları Saklıdır</strong>. Yazılı izin olmaksızın izinsiz çoğaltılması, dağıtılması veya değiştirilmesi yasaktır.</p>
 
-  <h2 id="github-roadmap-tr">14. GitHub oylaması ve herkese açık fikirler</h2>
-  <p>Amaç ortak özellik planlaması ve oylarla fikirlerin cihazlar arasında gösterilmesidir. Veriler herkese açık <code>Gamingpig/About-Gamingpig</code> deposunda saklanır. Okumak hesap gerektirmez; oy vermek ve göndermek GitHub hesabı gerektirir. Site GitHub parolanı veya özel erişim anahtarını almaz.</p>
-  <p>Fikirler issue olarak saklanır: GitHub kullanıcı adı, girilen ad/Discord etiketi, kategori, başlık, açıklama ve tarih herkese açıktır. Takma ad yeterlidir; gizli veya başkalarına ait veri yazma. “GitHub’da gönder” tıklanınca metinler doldurulmuş URL üzerinden GitHub’a aktarılır ve tarayıcı geçmişinde kalabilir. GitHub’da onaylamak issue’yu yayımlar. Oylar ilk gönderide hesabına bağlı herkese açık 👍 tepkileridir. Site toplamları ve son 30 fikri gösterir.</p>
-  <p>Sayfa açıldığında <code>api.github.com</code> IP, saat ve tarayıcı bilgisi gibi teknik verileri alır. Görünür sayfa yaklaşık beş dakikada bir ve geri dönüldüğünde, dakikada en fazla bir kez eşitlenir. Bu sitede GitHub oturumu açılmaz.</p>
+  <h2 id="github-roadmap-tr">14. ntfy ve GitHub ile doğrudan oy ve herkese açık fikirler</h2>
+  <p>Amaç hesapsız ortak planlama ve cihazlar arasında oy ve fikir gösterimidir. Rastgele tarayıcı kimliği oylarını ilişkilendirir; özel cihaz kodu kendi cihazlarında paylaşmanı sağlar. Bu bir kişinin doğrulanmış kimliği değildir.</p>
+  <p>Oy veya gönderim sırasında ID, açık anahtar kimliği, imza ve oylar ya da ad/takma ad, kategori, başlık ve açıklama <code>ntfy.sh</code> adresine gider. Ayrı kuyruk herkese açıktır. Workflow geçerli girişleri herkese açık <code>Gamingpig/About-Gamingpig</code> deposundaki <code>data/roadmap.json</code> dosyasına kimlik, oy ve tarihle aktarır. Gizli veya başkalarının verisini gönderme.</p>
+  <p>ntfy sınırlı süreli geçici depodur. Kalıcı kayıt ancak GitHub commit’iyle onaylanır. 15 dakikada bir planlanan workflow gecikebilir. Bekleyenler gösterilir ve yeniden gönderilebilir. Görünür sayfa <code>raw.githubusercontent.com</code> üzerinden yaklaşık beş dakikada bir ve dönüşte, dakikada en fazla bir kez okur. ntfy ve GitHub IP, saat ve tarayıcı bilgisi alır.</p>
   <p>Herkese açık yol haritasının işletilmesi ve gönüllü yayımlanan katkıların gösterilmesinin dayanağı GDPR madde 6(1)(f): ortak planlama ve güvenilir gösterimde meşru menfaattir. Katılım isteğe bağlıdır. “Anlaşıldı” bildirimin görüldüğünü belirtir; ek veri işlemeye onay değildir.</p>
-  <p>Issue’lar otomatik silinmez; silinene kadar kalır. Kapatmak silmek değildir. GitHub’da kendi 👍 tepkini kaldırabilir ve iletilerini düzenleyebilirsin. Fikrinin depodan silinmesi için issue bağlantısını <a href="mailto:gamingpig.support@gmail.com">gamingpig.support@gmail.com</a> adresine gönder. Önbellek, başarılı eşitleme veya tarayıcı verilerinin silinmesine kadar eski içerik tutabilir. Üçüncü kişiler herkese açık içeriği kopyalamış olabilir.</p>
-  <p>GitHub ABD’de de veri işler. Kendi işleme, saklama ve uluslararası aktarımları <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">GitHub Gizlilik Bildirimi</a>nde açıklanır.</p>
+  <p>Otomatik silme yoktur; sürümler Git geçmişinde kalabilir. Aynı kimlikle oyunu geri çekmek geçmişi silmez. Fikir veya kimlik silmek için giriş ID’sini <a href="mailto:gamingpig.support@gmail.com">gamingpig.support@gmail.com</a> adresine gönder; özel kodunu asla gönderme. Kopyalar, geçmiş ve önbellekler ayrı işlem gerektirebilir; başarılı eşitleme yerel önbelleği yeniler.</p>
+  <p>GitHub ABD’de de veri işler. İşleme, saklama ve aktarımlar için <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">GitHub gizlilik bildirimi</a> ve <a href="https://docs.ntfy.sh/privacy/" target="_blank" rel="noopener">ntfy bildirimi</a>ne bak.</p>
   <p>GDPR kapsamında erişim, düzeltme, silme, kısıtlama, itiraz ve denetim makamına şikâyet hakları vardır. İşlememizle ilgili yukarıdaki adrese başvurabilirsin.</p>
 
   <footer>
@@ -849,7 +862,7 @@
 <script>
   let privacyTtsSpeed = 1.0;
   try {
-    const savedSpeed = localStorage.getItem('gp_tts_speed');
+    const savedSpeed = AppStorage.getItem('gp_tts_speed');
     if (savedSpeed) privacyTtsSpeed = parseFloat(savedSpeed) || 1.0;
   } catch(e) {}
 
@@ -863,7 +876,7 @@
 
   function setPrivacyTtsSpeed(rate) {
     privacyTtsSpeed = parseFloat(rate) || 1.0;
-    try { localStorage.setItem('gp_tts_speed', privacyTtsSpeed.toString()); } catch(e) {}
+    try { AppStorage.setItem('gp_tts_speed', privacyTtsSpeed.toString()); } catch(e) {}
     if (window.ReadAloudService && typeof window.ReadAloudService.setSpeed === 'function') {
       window.ReadAloudService.setSpeed(privacyTtsSpeed);
     }
@@ -913,8 +926,8 @@
       }
     } else {
       try {
-        localStorage.setItem('app_language', safeLang);
-        localStorage.setItem('selectedLanguage', safeLang);
+        AppStorage.setItem('app_language', safeLang);
+        AppStorage.setItem('selectedLanguage', safeLang);
       } catch(e) {}
     }
 
@@ -930,7 +943,7 @@
       initial = window.I18nManager.getLanguage();
     } else {
       try {
-        const saved = localStorage.getItem('app_language') || localStorage.getItem('selectedLanguage');
+        const saved = AppStorage.getItem('app_language') || AppStorage.getItem('selectedLanguage');
         if (saved && ['de','en','es','fr','pt','tr'].includes(saved)) initial = saved;
       } catch(e) {}
     }
@@ -1044,10 +1057,10 @@
         return;
       }
       const now = Date.now();
-      const lastReload = parseInt(sessionStorage.getItem('sw_last_reload') || '0', 10);
+      const lastReload = parseInt(AppSession.getItem('sw_last_reload') || '0', 10);
       if (now - lastReload < 10000) return;
       isRefreshing = true;
-      sessionStorage.setItem('sw_last_reload', now.toString());
+      AppSession.setItem('sw_last_reload', now.toString());
       window.location.reload();
     });
 

@@ -1,13 +1,14 @@
 <!DOCTYPE html>
 <html lang="de" class="dark">
 <head>
+    <script src="./js/core/storage.e856be99df567fd2.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🔥 RELEASE v24.132 – Gamingpig Mega-Update</title>
     <link rel="icon" href="icon-192.png" type="image/png">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        tailwind.config = {
+        if (window.tailwind) tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
@@ -520,7 +521,7 @@
             }
         };
 
-        let currentLang = localStorage.getItem('selectedLanguage') || 'de';
+        let currentLang = AppStorage.getItem('selectedLanguage') || 'de';
 
         function applyTranslations(lang) {
             const t = TRANSLATIONS[lang] || TRANSLATIONS.de;
@@ -576,7 +577,7 @@
 
         function changeLanguage(lang) {
             currentLang = lang;
-            localStorage.setItem('selectedLanguage', lang);
+            AppStorage.setItem('selectedLanguage', lang);
             applyTranslations(lang);
             if (window.isSpeaking) {
                 stopSpeech();

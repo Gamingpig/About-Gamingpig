@@ -1,19 +1,22 @@
 <!DOCTYPE html>
 <html lang="de" class="dark">
 <head>
+    <script src="./js/core/push-config.c9a9d21e3077b97f.js"></script>
+    <script src="./js/services/push-registration.dac93cbcb3758c9f.js"></script>
+    <script src="./js/core/storage.e856be99df567fd2.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>🟢 Live System-Status & Störungsmelder – Gamingpig</title>
     <link rel="icon" href="icon-192.png" type="image/png">
     <script>
         try {
-            const savedAppLang = localStorage.getItem('selectedLanguage');
+            const savedAppLang = AppStorage.getItem('selectedLanguage');
             if (savedAppLang) document.documentElement.setAttribute('lang', savedAppLang);
         } catch(e) {}
     </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        tailwind.config = {
+        if (window.tailwind) tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
@@ -82,7 +85,7 @@
 <body class="text-slate-100 min-h-screen flex flex-col items-center justify-between p-3.5 sm:p-6 md:p-10 selection:bg-emerald-500/40">
 
     <!-- Top Navigation Bar -->
-    <header class="max-w-4xl w-full flex items-center justify-between py-3.5 px-4 sm:px-6 rounded-2xl bg-slate-900/85 border border-slate-800 backdrop-blur-xl mb-6 sm:mb-8 shadow-2xl">
+    <header class="max-w-4xl w-full flex flex-wrap gap-3 items-center justify-between py-3.5 px-4 sm:px-6 rounded-2xl bg-slate-900/85 border border-slate-800 backdrop-blur-xl mb-6 sm:mb-8 shadow-2xl">
         <a href="index.html" class="flex items-center gap-2 text-white hover:text-emerald-400 font-extrabold text-xs sm:text-sm transition-colors group">
             <span class="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 group-hover:-translate-x-1 transition-transform">←</span>
             <span id="nav-back">Hauptseite</span>
@@ -999,7 +1002,7 @@
             }
         };
 
-        let currentLang = localStorage.getItem('selectedLanguage') || 'de';
+        let currentLang = AppStorage.getItem('selectedLanguage') || 'de';
         let activeSpeakingMode = null; // 'status' | 'help' | null
         let lastDiagnosticResults = {};
 
@@ -1031,7 +1034,7 @@
             currentLang = lang;
             document.documentElement.lang = lang;
             try {
-                localStorage.setItem('selectedLanguage', lang);
+                AppStorage.setItem('selectedLanguage', lang);
                 syncLangToIndexedDB(lang);
             } catch(e) {}
 
@@ -1081,7 +1084,7 @@
         }
 
         function changeLanguage(lang) {
-            localStorage.setItem('selectedLanguage', lang);
+            AppStorage.setItem('selectedLanguage', lang);
             applyTranslations(lang);
         }
 
@@ -1392,7 +1395,7 @@
         // Multi-Platform Web Push Notification Handler             //
         // Android, iOS (PWA), Desktop (Chrome, Edge, Firefox, Safari)//
         // ========================================================= //
-        const VAPID_PUBLIC_KEY = 'BItv0vIf2FPn11TcGv_5Nyp1YHE4c6e7lYHWRONDnGL-ca7EPMbD_DlzkMlB_InZEVJEFASPhkMwOLnPRRxfX-w';
+        const VAPID_PUBLIC_KEY = PushConfig.vapidPublicKey;
         const PUSH_SYNC_TOPIC = 'gamingpig_push_sub_vault_9f8a2b3c4d5e';
         const PUSH_SYNC_URL = 'https://ntfy.sh/' + PUSH_SYNC_TOPIC;
 
@@ -1412,7 +1415,7 @@
         function isPushEnabled() {
             if (typeof Notification === 'undefined') return false;
             if (Notification.permission !== 'granted') return false;
-            return localStorage.getItem('pushAlertsEnabled') !== 'false';
+            return AppStorage.getItem('pushAlertsEnabled') !== 'false';
         }
 
         function updatePushUI() {
@@ -1447,17 +1450,25 @@
                     navigator.serviceWorker.ready.then(async (reg) => {
                         try {
                             let sub = await reg.pushManager.getSubscription();
+                    if (sub && sub.options.applicationServerKey) {
+                        const existingKey = new Uint8Array(sub.options.applicationServerKey);
+                        const nextKey = urlB64ToUint8Array(VAPID_PUBLIC_KEY);
+                        if (existingKey.length !== nextKey.length || existingKey.some((byte, index) => byte !== nextKey[index])) {
+                            if (!await sub.unsubscribe()) throw new Error('Push key rotation requires resubscription.');
+                            sub = null;
+                        }
+                    }
                             if (!sub && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
                                 console.log('[Push] Self-healing push subscription in status page...');
                                 const subJson = await subscribeToWebPush();
                                 if (subJson) {
-                                    localStorage.setItem('gp_last_sub_sync', Date.now().toString());
+                                    AppStorage.setItem('gp_last_sub_sync', Date.now().toString());
                                     await autoRegisterSubscription(subJson);
                                 }
                             } else if (sub) {
-                                const lastSync = parseInt(localStorage.getItem('gp_last_sub_sync') || '0', 10);
+                                const lastSync = parseInt(AppStorage.getItem('gp_last_sub_sync') || '0', 10);
                                 if (Date.now() - lastSync > 12 * 60 * 60 * 1000) {
-                                    localStorage.setItem('gp_last_sub_sync', Date.now().toString());
+                                    AppStorage.setItem('gp_last_sub_sync', Date.now().toString());
                                     await autoRegisterSubscription(JSON.stringify(sub.toJSON()));
                                 }
                             }
@@ -1486,6 +1497,14 @@
             try {
                 const reg = await navigator.serviceWorker.ready;
                 let sub = await reg.pushManager.getSubscription();
+                    if (sub && sub.options.applicationServerKey) {
+                        const existingKey = new Uint8Array(sub.options.applicationServerKey);
+                        const nextKey = urlB64ToUint8Array(VAPID_PUBLIC_KEY);
+                        if (existingKey.length !== nextKey.length || existingKey.some((byte, index) => byte !== nextKey[index])) {
+                            if (!await sub.unsubscribe()) throw new Error('Push key rotation requires resubscription.');
+                            sub = null;
+                        }
+                    }
                 if (!sub) {
                     sub = await reg.pushManager.subscribe({
                         userVisibleOnly: true,
@@ -1493,7 +1512,7 @@
                     });
                 }
                 const subJson = JSON.stringify(sub.toJSON());
-                localStorage.setItem('webPushSubscription', subJson);
+                AppStorage.setItem('webPushSubscription', subJson);
                 return subJson;
             } catch (e) {
                 console.warn('Web Push subscription failed:', e);
@@ -1517,118 +1536,12 @@
             });
         }
 
-        async function tryDirectGitHubRegistration(sub) {
-            try {
-                let token = localStorage.getItem('gamingpig_gh_pat');
-                if (!token) {
-                    const enc = localStorage.getItem('gh_admin_pat_v2');
-                    if (enc && (enc.startsWith('ghp_') || enc.startsWith('github_pat_'))) {
-                        token = enc;
-                    }
-                }
-                if (!token) return false;
-
-                const getRes = await fetch('https://api.github.com/repos/Gamingpig/About-Gamingpig/contents/data/subscribers.json', {
-                    headers: {
-                        'Accept': 'application/vnd.github+json',
-                        'Authorization': `Bearer ${token}`,
-                        'X-GitHub-Api-Version': '2022-11-28'
-                    }
-                });
-                if (!getRes.ok) return false;
-                const fileData = await getRes.json();
-                const contentStr = decodeURIComponent(escape(atob(fileData.content.replace(/\s/g, ''))));
-                let subscribers = JSON.parse(contentStr || '[]');
-
-                const existingIdx = subscribers.findIndex(s => s.endpoint === sub.endpoint);
-                const cleanSub = {
-                    endpoint: sub.endpoint,
-                    expirationTime: sub.expirationTime || null,
-                    lang: (sub.lang || currentLang || 'de').slice(0, 2).toLowerCase(),
-                    keys: {
-                        p256dh: sub.keys.p256dh,
-                        auth: sub.keys.auth
-                    }
-                };
-
-                if (existingIdx >= 0) {
-                    subscribers[existingIdx] = cleanSub;
-                } else {
-                    subscribers.push(cleanSub);
-                }
-
-                const updatedJson = JSON.stringify(subscribers, null, 2);
-                const encodedContent = btoa(unescape(encodeURIComponent(updatedJson)));
-
-                const putRes = await fetch('https://api.github.com/repos/Gamingpig/About-Gamingpig/contents/data/subscribers.json', {
-                    method: 'PUT',
-                    headers: {
-                        'Accept': 'application/vnd.github+json',
-                        'Authorization': `Bearer ${token}`,
-                        'X-GitHub-Api-Version': '2022-11-28'
-                    },
-                    body: JSON.stringify({
-                        message: 'feat(push): auto-register subscriber device [skip ci]',
-                        content: encodedContent,
-                        sha: fileData.sha
-                    })
-                });
-                return putRes.ok;
-            } catch (e) {
-                console.warn('Direct GitHub registration skipped:', e);
-                return false;
-            }
-        }
-
         async function autoRegisterSubscription(subJson) {
-            if (!subJson) return;
-            try {
-                const sub = typeof subJson === 'string' ? JSON.parse(subJson) : subJson;
-                sub.lang = currentLang || localStorage.getItem('gamingpig_lang') || (navigator.language || 'de').slice(0, 2).toLowerCase();
-                sub.registeredAt = Date.now();
-
-                // 1. Immer lokal im Browser absichern
-                localStorage.setItem('gamingpig_push_sub', JSON.stringify(sub));
-                localStorage.setItem('webPushSubscription', JSON.stringify(sub));
-
-                // 2. Direkter GitHub-Commit falls Admin-Token im Browser verfügbar ist
-                let directSuccess = false;
-                try {
-                    directSuccess = await tryDirectGitHubRegistration(sub);
-                    if (directSuccess) {
-                        console.log('✅ Gerät direkt via GitHub API in data/subscribers.json eingetragen!');
-                    }
-                } catch (e) {}
-
-                // 3. Vollautomatische Registrierung in der Server-Queue (Funktioniert auf JEDEM iPhone, Android & PC ohne Login)
-                try {
-                    const queuePayload = {
-                        endpoint: sub.endpoint,
-                        keys: sub.keys,
-                        expirationTime: sub.expirationTime || null,
-                        lang: sub.lang,
-                        registeredAt: Date.now()
-                    };
-
-                    const qRes = await fetch(PUSH_SYNC_URL, {
-                        method: 'POST',
-                        headers: {
-                            'Title': 'New Web Push Subscriber',
-                            'Tags': 'bell,iphone,android'
-                        },
-                        body: JSON.stringify(queuePayload)
-                    });
-                    if (qRes.ok) {
-                        console.log('✅ Push-Abonnement vollautomatisch in Server-Sync-Queue eingetragen.');
-                    }
-                } catch (qErr) {
-                    console.warn('Queue submission warning:', qErr);
-                }
-
-                showToast(t('toast_push_registered') || 'Gerät erfolgreich für automatischen Störungs-Push registriert!', '✅');
-            } catch(e) {
-                console.warn('autoRegisterSubscription failed:', e);
-            }
+            const sub = typeof subJson === 'string' ? JSON.parse(subJson) : subJson;
+            await PushRegistration.register(sub, currentLang || 'de');
+            AppStorage.setItem('gamingpig_push_sub', JSON.stringify(sub));
+            AppStorage.setItem('webPushSubscription', JSON.stringify(sub));
+            showToast('Verschlüsselt eingereicht. Aktivierung nach dem nächsten GitHub-Sync.', '⏳');
         }
 
         async function copyMyDeviceToken() {
@@ -1651,6 +1564,14 @@
                 }
                 const reg = await navigator.serviceWorker.ready;
                 let sub = await reg.pushManager.getSubscription();
+                    if (sub && sub.options.applicationServerKey) {
+                        const existingKey = new Uint8Array(sub.options.applicationServerKey);
+                        const nextKey = urlB64ToUint8Array(VAPID_PUBLIC_KEY);
+                        if (existingKey.length !== nextKey.length || existingKey.some((byte, index) => byte !== nextKey[index])) {
+                            if (!await sub.unsubscribe()) throw new Error('Push key rotation requires resubscription.');
+                            sub = null;
+                        }
+                    }
                 if (!sub) {
                     sub = await reg.pushManager.subscribe({
                         userVisibleOnly: true,
@@ -1674,70 +1595,36 @@
         }
 
         async function togglePushNotifications() {
-            // Push only works on HTTPS or localhost
-            const isSecure = location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-            if (!isSecure) {
-                showToast(t('toast_push_https') || 'Push-Benachrichtigungen erfordern HTTPS.', '🔒');
-                return;
-            }
-            if (typeof Notification === 'undefined') {
-                const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
-                if (isIOS) {
-                    showToast(t('toast_token_ios_hint') || 'Auf iOS: Tippe auf Teilen 📤 → "Zum Home-Bildschirm", um Push zu aktivieren.', '📲');
-                } else {
-                    showToast(t('toast_token_unsupported') || 'Dein Browser unterstützt keine Web-Benachrichtigungen.', '⚠️');
-                }
-                return;
-            }
-
-            if (Notification.permission === 'denied') {
-                showToast(t('toast_push_blocked') || 'In Browser-Einstellungen blockiert → Tippe auf 🔒 in der Adresszeile.', '🔒');
-                return;
-            }
-
-            if (Notification.permission === 'granted') {
-                const currentlyEnabled = localStorage.getItem('pushAlertsEnabled') !== 'false';
-                if (currentlyEnabled) {
-                    localStorage.setItem('pushAlertsEnabled', 'false');
+            try {
+                if (!('serviceWorker' in navigator) || typeof Notification === 'undefined') throw new Error(t('toast_token_unsupported'));
+                const reg = await navigator.serviceWorker.ready;
+                const existing = await reg.pushManager.getSubscription();
+                if (existing && AppStorage.getItem('pushAlertsEnabled') !== 'false') {
+                    if (!await existing.unsubscribe()) throw new Error('Push konnte nicht pausiert werden.');
+                    AppStorage.setItem('pushAlertsEnabled', 'false');
                     updatePushUI();
-                    showToast(t('toast_push_paused') || '⏸️ Push-Benachrichtigungen pausiert.', 'ℹ️');
-                } else {
-                    localStorage.setItem('pushAlertsEnabled', 'true');
-                    const subJson = await subscribeToWebPush();
-                    if (subJson) await autoRegisterSubscription(subJson);
-                    updatePushUI();
-                    showToast(t('toast_push_active'), '🔔');
-                    sendSystemNotification(
-                        t('push_active_title') || '🔔 Gamingpig Störungs-Alarm aktiv',
-                        t('push_active_body') || 'Du wirst ab sofort bei Ausfällen oder Störungen benachrichtigt!'
-                    );
+                    showToast(t('toast_push_paused'), 'ℹ️');
+                    return;
                 }
-                return;
-            }
-
-            const permission = await requestNotificationPermissionSafe();
-            if (permission === 'granted') {
-                localStorage.setItem('pushAlertsEnabled', 'true');
-                const subJson = await subscribeToWebPush();
-                if (subJson) await autoRegisterSubscription(subJson);
+                if (!PushConfig.vapidPublicKey || !PushConfig.registrationPublicKey) throw new Error('Push wird gewartet: neue Schlüssel müssen eingerichtet werden.');
+                const permission = await requestNotificationPermissionSafe();
+                if (permission !== 'granted') throw new Error(t('toast_push_blocked'));
+                const sub = await subscribeToWebPush();
+                if (!sub) throw new Error('Push-Abonnement nicht verfügbar.');
+                await autoRegisterSubscription(sub);
+                AppStorage.setItem('pushAlertsEnabled', 'true');
                 updatePushUI();
-                showToast(t('toast_push_active'), '🔔');
-                sendSystemNotification(
-                    t('push_active_title') || '🔔 Gamingpig Störungs-Alarm aktiv',
-                    t('push_active_body') || 'Du wirst ab sofort bei Ausfällen oder Störungen benachrichtigt!'
-                );
-            } else if (permission === 'denied') {
+            } catch (error) {
+                AppStorage.setItem('pushAlertsEnabled', 'false');
                 updatePushUI();
-                showToast(t('toast_push_blocked') || '🔒 Benachrichtigungen im Browser blockiert.', '❌');
-            } else {
-                updatePushUI();
+                showToast(error.message, '⚠️');
             }
         }
 
         async function sendSystemNotification(title, body) {
             if (!('Notification' in window)) return;
             if (Notification.permission !== 'granted') return;
-            if (localStorage.getItem('pushAlertsEnabled') === 'false') return;
+            if (AppStorage.getItem('pushAlertsEnabled') === 'false') return;
 
             if ('serviceWorker' in navigator) {
                 try {
@@ -1997,7 +1884,7 @@
         // 🎙️ ULTRA-INTELLIGENTE SPRACHAUSGABE & BRIEFINGS           //
         // ========================================================= //
         window._ttsUtterances = [];
-        let currentTtsSpeed = parseFloat(localStorage.getItem('gp_tts_speed') || '1.0');
+        let currentTtsSpeed = parseFloat(AppStorage.getItem('gp_tts_speed') || '1.0');
         let currentSpeakingText = null;
 
         function sanitizeTextForSpeech(text, lang = 'de') {
@@ -2056,7 +1943,7 @@
 
         function setTtsSpeed(rate) {
             currentTtsSpeed = Number(rate) || 1.0;
-            localStorage.setItem('gp_tts_speed', currentTtsSpeed.toString());
+            AppStorage.setItem('gp_tts_speed', currentTtsSpeed.toString());
             updateTtsSpeedUI();
 
             // Falls gerade gesprochen wird: flüssig mit neuer Geschwindigkeit fortsetzen
@@ -2243,12 +2130,12 @@
                     return;
                 }
                 const now = Date.now();
-                const lastReload = parseInt(sessionStorage.getItem('sw_last_reload') || '0', 10);
+                const lastReload = parseInt(AppSession.getItem('sw_last_reload') || '0', 10);
                 if (now - lastReload < 10000) {
                     return;
                 }
                 isRefreshing = true;
-                sessionStorage.setItem('sw_last_reload', now.toString());
+                AppSession.setItem('sw_last_reload', now.toString());
                 window.location.reload();
             });
 

@@ -1,15 +1,16 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
+    <script src="./js/core/storage.e856be99df567fd2.js"></script>
 <meta charset="UTF-8">
-<script src="js/read-aloud-service.js"></script>
-<script src="js/i18n-manager.js"></script>
+<script src="js/read-aloud-service.1fc24873f319082e.js"></script>
+<script src="js/i18n-manager.56dbdc7cc518ed8b.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Impressum / Legal Notice – Gamingpig Portfolio</title>
 <link rel="icon" type="image/png" href="icon-192.png">
 <script>
   try {
-    const savedAppLang = localStorage.getItem('selectedLanguage');
+    const savedAppLang = AppStorage.getItem('selectedLanguage');
     if (savedAppLang) document.documentElement.setAttribute('lang', savedAppLang);
   } catch(e) {}
 </script>
@@ -323,7 +324,7 @@
 <script>
 let impTtsSpeed = 1.0;
 try {
-  const savedSpeed = localStorage.getItem('gp_tts_speed');
+  const savedSpeed = AppStorage.getItem('gp_tts_speed');
   if (savedSpeed) impTtsSpeed = parseFloat(savedSpeed) || 1.0;
 } catch(e) {}
 
@@ -337,7 +338,7 @@ function updateImpressumTtsSpeedUI() {
 
 function setImpressumTtsSpeed(rate) {
   impTtsSpeed = parseFloat(rate) || 1.0;
-  try { localStorage.setItem('gp_tts_speed', impTtsSpeed.toString()); } catch(e) {}
+  try { AppStorage.setItem('gp_tts_speed', impTtsSpeed.toString()); } catch(e) {}
   if (window.ReadAloudService && typeof window.ReadAloudService.setSpeed === 'function') {
     window.ReadAloudService.setSpeed(impTtsSpeed);
   }
@@ -370,8 +371,8 @@ function setImpressumLang(lang) {
     }
   } else {
     try {
-      localStorage.setItem('app_language', safeLang);
-      localStorage.setItem('selectedLanguage', safeLang);
+      AppStorage.setItem('app_language', safeLang);
+      AppStorage.setItem('selectedLanguage', safeLang);
     } catch(e) {}
   }
   
@@ -387,7 +388,7 @@ function setImpressumLang(lang) {
     lang = window.I18nManager.getLanguage();
   } else {
     try {
-      const saved = localStorage.getItem('app_language') || localStorage.getItem('selectedLanguage');
+      const saved = AppStorage.getItem('app_language') || AppStorage.getItem('selectedLanguage');
       if (saved && ['de','en','es','fr','pt','tr'].includes(saved)) {
         lang = saved;
       } else if (navigator.language) {
@@ -507,10 +508,10 @@ window.addEventListener('tts:speedChange', (e) => {
         return;
       }
       const now = Date.now();
-      const lastReload = parseInt(sessionStorage.getItem('sw_last_reload') || '0', 10);
+      const lastReload = parseInt(AppSession.getItem('sw_last_reload') || '0', 10);
       if (now - lastReload < 10000) return;
       isRefreshing = true;
-      sessionStorage.setItem('sw_last_reload', now.toString());
+      AppSession.setItem('sw_last_reload', now.toString());
       window.location.reload();
     });
 

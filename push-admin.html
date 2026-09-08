@@ -1,13 +1,15 @@
 <!DOCTYPE html>
 <html lang="de" class="dark">
 <head>
+    <script src="./js/core/push-config.c9a9d21e3077b97f.js"></script>
+    <script src="./js/services/admin-vault.84e8972d1fccc147.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🔐 Push-Alarm Control Center – Gamingpig</title>
     <link rel="icon" href="icon-192.png" type="image/png">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        tailwind.config = {
+        if (window.tailwind) tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
@@ -93,7 +95,7 @@
                 🔐
             </div>
             <h1 class="text-xl font-black text-white mb-1">Push Control Center</h1>
-            <p class="text-xs text-slate-400 mb-4">Bitte Admin-Passwort eingeben, um Push-Benachrichtigungen zu verfassen und zu testen.</p>
+            <p class="text-xs text-slate-400 mb-4">Lokalen Tresor entsperren. Beim ersten Besuch eine neue Passphrase mit mindestens 14 Zeichen festlegen; danach GitHub-Token erneut eintragen.</p>
 
             <div id="attempts-badge" class="mb-4 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 border border-slate-700 text-[11px] font-mono text-slate-300">
                 <span>🛡️ Versuche übrig:</span> <strong id="attempts-left-count" class="text-emerald-400">10 / 10</strong>
@@ -101,7 +103,7 @@
 
             <form onsubmit="handleLogin(event)" class="space-y-4">
                 <div class="relative">
-                    <input type="password" id="input-password" placeholder="Passwort eingeben..." required
+                    <input type="password" aria-description="Beim ersten Besuch eine lokale Passphrase mit mindestens 14 Zeichen festlegen. Danach dieselbe Passphrase verwenden." id="input-password" placeholder="Lokale Passphrase (min. 14 Zeichen)" required
                         class="w-full px-4 py-3 rounded-xl bg-slate-900/90 border border-slate-700 text-white text-sm font-mono placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all">
                 </div>
                 <div id="login-error" class="text-xs font-bold text-rose-400 hidden">
@@ -347,8 +349,6 @@
 
     <script>
         // Cryptographic salted authentication hash
-        const AUTH_SALT = 'gamingpig_status_push_salt_2026';
-        const AUTH_HASH = 'a14370f4bac2464358ee34ec6fe9313c9e3b5bf0728e7b4359eb409d8e7f8116';
 
         // Templates Dictionary
         const TEMPLATES = {
@@ -621,11 +621,20 @@
             const input = inputEl.value;
             const err = document.getElementById('login-error');
 
-            const computed = await sha256(input + AUTH_SALT);
-            if (computed === AUTH_HASH) {
+            let unlocked = false;
+            try { await AdminVault.unlock(input); unlocked = true; }
+            catch (error) {
+                if (error.name !== 'OperationError') {
+                    if (err) { err.textContent = error.message || 'Tresor nicht verfügbar.'; err.classList.remove('hidden'); }
+                    inputEl.value = '';
+                    return;
+                }
+            }
+            inputEl.value = '';
+            if (unlocked) {
                 // Correct password resets failure counter
                 await saveConsolidatedSecurityState(fp, 0, false);
-                sessionStorage.setItem('pushAdminAuth', 'true');
+
                 if (err) err.classList.add('hidden');
                 unlockDashboard();
                 showToast('Erfolgreich eingeloggt!', '🔓');
@@ -653,6 +662,7 @@
         }
 
         function handleLogout() {
+            AdminVault.lock();
             sessionStorage.removeItem('pushAdminAuth');
             document.getElementById('admin-dashboard').classList.add('hidden');
             document.getElementById('login-panel').classList.remove('hidden');
@@ -662,106 +672,10 @@
             showToast('Abgemeldet.', '🔒');
         }
 
-        const GH_TOKEN_KEY = 'gamingpig_gh_pat_enc';
-        const GH_TOKEN_LEGACY_KEY = 'gamingpig_gh_pat';
-
-        // --- Web Crypto AES-GCM 256-Bit Storage Vault ---
-        async function deriveEncryptionKey(saltStr) {
-            const enc = new TextEncoder();
-            const fp = globalHardwareFp || await computeHardwareFingerprint();
-            const baseMaterial = fp + AUTH_HASH + AUTH_SALT;
-            const keyMaterial = await crypto.subtle.importKey(
-                'raw',
-                enc.encode(baseMaterial),
-                { name: 'PBKDF2' },
-                false,
-                ['deriveKey']
-            );
-            return await crypto.subtle.deriveKey(
-                {
-                    name: 'PBKDF2',
-                    salt: enc.encode(saltStr || 'gamingpig_vault_salt_2026'),
-                    iterations: 100000,
-                    hash: 'SHA-256'
-                },
-                keyMaterial,
-                { name: 'AES-GCM', length: 256 },
-                false,
-                ['encrypt', 'decrypt']
-            );
-        }
-
-        async function encryptSecureToken(plaintext) {
-            if (!plaintext) return '';
-            const enc = new TextEncoder();
-            const iv = crypto.getRandomValues(new Uint8Array(12));
-            const key = await deriveEncryptionKey('gamingpig_token_vault_salt');
-            const encrypted = await crypto.subtle.encrypt(
-                { name: 'AES-GCM', iv: iv },
-                key,
-                enc.encode(plaintext)
-            );
-            const blob = {
-                iv: Array.from(iv),
-                data: Array.from(new Uint8Array(encrypted))
-            };
-            return btoa(JSON.stringify(blob));
-        }
-
-        async function decryptSecureToken(encryptedB64) {
-            if (!encryptedB64) return '';
-            try {
-                const parsed = JSON.parse(atob(encryptedB64));
-                if (!parsed.iv || !parsed.data) return '';
-                const iv = new Uint8Array(parsed.iv);
-                const data = new Uint8Array(parsed.data);
-                const key = await deriveEncryptionKey('gamingpig_token_vault_salt');
-                const decrypted = await crypto.subtle.decrypt(
-                    { name: 'AES-GCM', iv: iv },
-                    key,
-                    data
-                );
-                return new TextDecoder().decode(decrypted);
-            } catch (e) {
-                // If legacy plain text was stored, return it and upgrade
-                if (encryptedB64.startsWith('ghp_') || encryptedB64.startsWith('github_pat_')) {
-                    return encryptedB64;
-                }
-                return '';
-            }
-        }
-
-        async function getStoredGitHubToken() {
-            const encrypted = localStorage.getItem(GH_TOKEN_KEY);
-            if (encrypted) {
-                return await decryptSecureToken(encrypted);
-            }
-            const legacy = localStorage.getItem(GH_TOKEN_LEGACY_KEY);
-            if (legacy) {
-                // Upgrade to encrypted format automatically
-                await saveGitHubToken(legacy);
-                localStorage.removeItem(GH_TOKEN_LEGACY_KEY);
-                return legacy;
-            }
-            return '';
-        }
-
-        async function hasStoredGitHubToken() {
-            const encrypted = localStorage.getItem(GH_TOKEN_KEY) || localStorage.getItem(GH_TOKEN_LEGACY_KEY);
-            if (!encrypted) return false;
-            const token = await getStoredGitHubToken();
-            return !!(token && token.length > 5);
-        }
-
+        async function getStoredGitHubToken() { return AdminVault.getToken(); }
+        async function hasStoredGitHubToken() { return !!(await AdminVault.getToken()); }
         async function saveGitHubToken(token) {
-            if (token && token.trim().length > 0) {
-                const enc = await encryptSecureToken(token.trim());
-                localStorage.setItem(GH_TOKEN_KEY, enc);
-                localStorage.removeItem(GH_TOKEN_LEGACY_KEY);
-            } else {
-                localStorage.removeItem(GH_TOKEN_KEY);
-                localStorage.removeItem(GH_TOKEN_LEGACY_KEY);
-            }
+            await AdminVault.setToken((token || '').trim());
             await updateGitHubBridgeUI();
         }
 
@@ -804,8 +718,10 @@
                 showToast('Bitte Token eingeben.', '⚠️');
                 return;
             }
-            await saveGitHubToken(token);
-            showToast('Token mit AES-256 verschlüsselt gespeichert!', '🔒');
+            try {
+                await saveGitHubToken(token);
+                showToast('Token mit AES-256 verschlüsselt gespeichert!', '🔒');
+            } catch (_) { showToast('Token konnte nicht dauerhaft gespeichert werden.', '⚠️'); }
         }
 
         async function handleSaveModalToken() {
@@ -835,134 +751,26 @@
 
         async function loadSubscribersCount() {
             const el = document.getElementById('subscribers-count');
+            if (!el) return;
             try {
-                const res = await fetch('./data/subscribers.json?_t=' + Date.now());
-                let activeCount = 3;
-                let existingEndpoints = new Set();
-                if (res.ok) {
-                    const data = await res.json();
-                    activeCount = data.length;
-                    data.forEach(s => existingEndpoints.add(s.endpoint));
-                }
-
-                // Check pending items in queue
-                let pendingCount = 0;
-                try {
-                    const qRes = await fetch(`${PUSH_SYNC_URL}/json?poll=1&since=24h`);
-                    if (qRes.ok) {
-                        const qText = await qRes.text();
-                        const lines = qText.split('\n').filter(Boolean);
-                        for (const line of lines) {
-                            try {
-                                const item = JSON.parse(line);
-                                if (item.event === 'message' && item.message) {
-                                    const m = typeof item.message === 'string' ? JSON.parse(item.message) : item.message;
-                                    if (m && m.endpoint && !existingEndpoints.has(m.endpoint)) {
-                                        pendingCount++;
-                                    }
-                                }
-                            } catch (e) {}
-                        }
-                    }
-                } catch (e) {}
-
-                if (pendingCount > 0) {
-                    el.innerText = `${activeCount} aktiv (+${pendingCount} neu in Queue)`;
-                } else {
-                    el.innerText = activeCount + (activeCount === 1 ? ' Gerät aktiv' : ' Geräte aktiv');
-                }
-            } catch (e) {
-                el.innerText = 'Aktiv';
-            }
+                const response = await fetch('https://raw.githubusercontent.com/Gamingpig/About-Gamingpig/main/data/push-summary.json', { cache: 'no-store' });
+                if (!response.ok) throw new Error('Unavailable');
+                const data = await response.json();
+                el.textContent = Number.isSafeInteger(data.count) ? `${data.count} Geräte gespeichert` : 'Unbekannt';
+            } catch (_) { el.textContent = 'Noch kein bestätigter Stand'; }
         }
-
         async function syncQueueNow() {
-            showToast('Synchronisiere Geräte aus Warteschlange...', '🔄');
             try {
                 const token = await getStoredGitHubToken();
-                if (!token) {
-                    showToast('Bitte speichere zuerst deinen GitHub PAT in den Einstellungen!', '⚠️');
-                    return;
-                }
-
-                const getRes = await fetch('https://api.github.com/repos/Gamingpig/About-Gamingpig/contents/data/subscribers.json', {
-                    headers: {
-                        'Accept': 'application/vnd.github+json',
-                        'Authorization': `Bearer ${token}`,
-                        'X-GitHub-Api-Version': '2022-11-28'
-                    }
+                if (!token) throw new Error('GitHub-Token fehlt.');
+                const response = await fetch('https://api.github.com/repos/Gamingpig/About-Gamingpig/dispatches', {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' },
+                    body: JSON.stringify({ event_type: 'monitor' })
                 });
-                if (!getRes.ok) {
-                    showToast('Fehler beim Laden von data/subscribers.json von GitHub', '❌');
-                    return;
-                }
-                const fileData = await getRes.json();
-                const contentStr = decodeURIComponent(escape(atob(fileData.content.replace(/\s/g, ''))));
-                let subscribers = JSON.parse(contentStr || '[]');
-
-                const qRes = await fetch(`${PUSH_SYNC_URL}/json?poll=1&since=24h`);
-                if (!qRes.ok) {
-                    showToast('Warteschlange antwortet nicht', '⚠️');
-                    return;
-                }
-                const qText = await qRes.text();
-                const lines = qText.split('\n').filter(Boolean);
-                let added = 0;
-                for (const line of lines) {
-                    try {
-                        const item = JSON.parse(line);
-                        if (item.event === 'message' && item.message) {
-                            const data = typeof item.message === 'string' ? JSON.parse(item.message) : item.message;
-                            if (data && data.endpoint && data.endpoint.startsWith('https://') && data.keys && data.keys.p256dh && data.keys.auth) {
-                                const cleanSub = {
-                                    endpoint: data.endpoint,
-                                    expirationTime: data.expirationTime || null,
-                                    lang: (data.lang || 'de').slice(0, 2).toLowerCase(),
-                                    keys: {
-                                        p256dh: data.keys.p256dh,
-                                        auth: data.keys.auth
-                                    }
-                                };
-                                const idx = subscribers.findIndex(s => s.endpoint === cleanSub.endpoint);
-                                if (idx >= 0) {
-                                    subscribers[idx] = cleanSub;
-                                } else {
-                                    subscribers.push(cleanSub);
-                                    added++;
-                                }
-                            }
-                        }
-                    } catch (e) {}
-                }
-
-                if (added > 0) {
-                    const updatedJson = JSON.stringify(subscribers, null, 2);
-                    const encodedContent = btoa(unescape(encodeURIComponent(updatedJson)));
-                    const putRes = await fetch('https://api.github.com/repos/Gamingpig/About-Gamingpig/contents/data/subscribers.json', {
-                        method: 'PUT',
-                        headers: {
-                            'Accept': 'application/vnd.github+json',
-                            'Authorization': `Bearer ${token}`,
-                            'X-GitHub-Api-Version': '2022-11-28'
-                        },
-                        body: JSON.stringify({
-                            message: `chore(push): sync ${added} new subscriber(s) from queue [skip ci]`,
-                            content: encodedContent,
-                            sha: fileData.sha
-                        })
-                    });
-                    if (putRes.ok) {
-                        showToast(`✅ ${added} neue(s) Gerät(e) erfolgreich synchronisiert!`, '🎉');
-                    } else {
-                        showToast('GitHub Commit fehlgeschlagen', '❌');
-                    }
-                } else {
-                    showToast('Alle Geräte sind bereits synchronisiert.', 'ℹ️');
-                }
-                await loadSubscribersCount();
-            } catch (err) {
-                showToast('Sync-Fehler: ' + err.message, '❌');
-            }
+                if (!response.ok) throw new Error('GitHub: ' + response.status);
+                showToast('GitHub-Synchronisation angefordert.', '⏳');
+            } catch (error) { showToast(error.message, '⚠️'); }
         }
 
         function applyTemplate(key) {
@@ -1044,7 +852,9 @@
             const title = document.getElementById('msg-title').value.trim() || '⚠️ Gamingpig Status-Alarm';
             const body = document.getElementById('msg-body').value.trim() || 'Status-Aktualisierung.';
             const rawUrl = document.getElementById('msg-url').value.trim() || 'status.html';
-            const url = rawUrl.startsWith('http') ? rawUrl : (window.location.origin + '/' + rawUrl.replace(/^\.?\//, ''));
+            const target = new URL(rawUrl, window.location.href);
+            if (target.origin !== location.origin || !/^https?:$/.test(target.protocol)) { showToast('Bitte eine URL dieser Website verwenden.', '⚠️'); return; }
+            const url = target.href;
             const token = await getStoredGitHubToken();
 
             if (!token || token.length < 5) {
@@ -1147,7 +957,8 @@
                     errorDetails.push(e.message);
                 }
 
-                // 2. Repository Dispatch Trigger zur sofortigen Ausführung
+                // Dispatch only after the intended payload was saved.
+                if (!success) throw new Error(errorDetails.join(' | ') || 'Auftrag nicht gespeichert.');
                 try {
                     const resDisp = await fetch('https://api.github.com/repos/Gamingpig/About-Gamingpig/dispatches', {
                         method: 'POST',
@@ -1160,9 +971,7 @@
                             event_type: 'health-check'
                         })
                     });
-                    if (resDisp.status === 204 || resDisp.ok) {
-                        success = true;
-                    } else {
+                    if (!(resDisp.status === 204 || resDisp.ok)) {
                         const dispJson = await resDisp.json().catch(() => ({}));
                         errorDetails.push(`Dispatch API (HTTP ${resDisp.status}: ${dispJson.message || 'Error'})`);
                     }
@@ -1172,7 +981,7 @@
                 }
 
                 if (success) {
-                    showToast('🚀 Push-Auftrag erfolgreich übermittelt! Alle Geräte erhalten den Push.', '✅');
+                    showToast('🚀 Push-Auftrag erfolgreich übermittelt! Versand erfolgt durch GitHub Actions.', '✅');
                 } else {
                     const errSummary = errorDetails.join(' | ') || 'Verbindungsfehler';
                     showToast(`❌ GitHub Fehler: ${errSummary}`, '⚠️');
@@ -1188,7 +997,7 @@
             }
         }
 
-        const VAPID_PUBLIC_KEY = 'BItv0vIf2FPn11TcGv_5Nyp1YHE4c6e7lYHWRONDnGL-ca7EPMbD_DlzkMlB_InZEVJEFASPhkMwOLnPRRxfX-w';
+        const VAPID_PUBLIC_KEY = PushConfig.vapidPublicKey;
 
         function urlB64ToUint8Array(base64String) {
             const padding = '='.repeat((4 - base64String.length % 4) % 4);
@@ -1257,9 +1066,7 @@
                     return;
                 }
 
-                if (sessionStorage.getItem('pushAdminAuth') === 'true') {
-                    unlockDashboard();
-                }
+                // The vault must be unlocked with its passphrase after every reload.
             } catch(e) {
                 console.warn('Security init fallback:', e);
             }
