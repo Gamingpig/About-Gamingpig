@@ -10497,16 +10497,17 @@
             }
         }
         async function syncAllCoverConsumers(explicitUrl) {
+            if (document.body.classList.contains('standby-mode')) return;
             const artSrc = explicitUrl || (mArtwork ? mArtwork.src : null);
             if (!artSrc || artSrc === fallbackImg) return;
 
             const drawToAll = (imgElement) => {
+                if (document.body.classList.contains('standby-mode')) return;
                 const diCanvas = document.getElementById('di-art');
                 if (diCanvas) drawCoverToCanvas(diCanvas, imgElement);
                 const lyricsCanvas = document.getElementById('lyrics-mini-art');
                 if (lyricsCanvas) drawCoverToCanvas(lyricsCanvas, imgElement);
-                const sbCanvas = document.getElementById('standby-track-art');
-                if (sbCanvas) drawCoverToCanvas(sbCanvas, imgElement);
+                // StandBy owns its artwork; it may show a newer track than the frozen dashboard.
             };
 
             const img = new Image();
@@ -13463,7 +13464,7 @@ let shareCardLoading;
             overlay.classList.toggle('standby-active', standByActive);
             document.body.classList.toggle('standby-mode', standByActive);
             if (standByActive) {
-                if (!wasActive) standbyProgressSample = { id: currentTrackId, progress: lastSeenProgressMs, playing: trackIsPlaying };
+                if (!wasActive) standbyProgressSample = { id: currentTrackId + (lastKnownMusicData?.track?.id ? '|' + String(lastKnownMusicData.track.id) : ''), progress: lastSeenProgressMs, playing: trackIsPlaying };
                 stopLyricsStylePreviewLoop();
                 if (window.speechSynthesis?.speaking && !window.speechSynthesis.paused) {
                     standbyPausedSpeech = true;
@@ -13538,6 +13539,7 @@ let shareCardLoading;
                     else element.style.removeProperty('transition');
                 }
                 standbyInertElements.clear();
+                cancelStandbyArtwork();
                 stopProgressTracking();
                 for (const media of standbyPausedMedia) media.play().catch(() => {});
                 standbyPausedMedia.clear();
@@ -13657,6 +13659,7 @@ let shareCardLoading;
                 // Kurz warten, bis der Browser das neue Layout berechnet hat (Font bereits
                 // geladen, Text bereits gesetzt), sonst wäre scrollWidth noch veraltet.
                 requestAnimationFrame(() => {
+                    if (!standByActive) return;
                     const overflow = innerEl.scrollWidth - outerEl.clientWidth;
                     if (overflow > 4) {
                         const distance = -(overflow + 12); // + kleiner Puffer als Lese-Pause am Ende
@@ -13674,146 +13677,84 @@ let shareCardLoading;
         // hält die zuletzt bekannten Track-Infos fest, auch wenn StandBy gerade geschlossen
         // ist und die eigentlichen Bilder deshalb noch nicht geladen wurden.
         let lastStandbyTrackInfo = { title: null, artist: null, artUrl: null, isPlaying: undefined };
-        function syncStandByTrackInfo(title, artist, artUrl, isNewTrack, isPlaying) {
-            // FIX v24.21: Zielt jetzt auf die inneren <span>-Elemente statt auf die äußeren
-            // <p>-Container, da diese seit dem Marquee-Feature ein verschachteltes <span>
-            // enthalten - .textContent auf dem äußeren Element hätte dieses <span> sonst bei
-            // jedem Update einfach gelöscht und den Scroll-Effekt dauerhaft kaputt gemacht.
+        let standbyArtRevision = 0;
+        let standbyArtJob = null;
+        function cancelStandbyArtwork() {
+            standbyArtRevision++;
+            if (standbyArtJob?.image) {
+                standbyArtJob.image.onload = standbyArtJob.image.onerror = null;
+                if (!standbyArtJob.loaded) standbyArtJob.image.src = '';
+            }
+            standbyArtJob = null;
+        }
+        function syncStandByTrackInfo(title, artist, artUrl, isNewTrack, isPlaying, fromStandby = false) {
+            title = typeof title === 'string' ? title : '';
+            artist = typeof artist === 'string' ? artist : '';
+            // Late dashboard artwork callbacks are not authoritative during StandBy.
+            if (standByActive && standbyPendingMusic) {
+                if (!fromStandby) return;
+                const latest = standbyPendingMusic.data;
+                const expected = latest?.track;
+                if (title !== (expected?.title || expected?.name || '') || artist !== (expected?.artist || '')) return;
+                if (latest?.status !== 'playing') isPlaying = false;
+            }
+            const idle = !title || isPlaying === false;
+            const previous = lastStandbyTrackInfo;
+            const textChanged = previous.title !== title || previous.artist !== artist || previous.isPlaying !== !idle;
+            lastStandbyTrackInfo = { title, artist, artUrl, isPlaying: !idle };
             const titleEl = document.getElementById('standby-track-title-inner');
             const artistEl = document.getElementById('standby-track-artist-inner');
-            const img = document.getElementById('standby-track-art');
+            const canvas = document.getElementById('standby-track-art');
             const bg = document.getElementById('standby-bg');
-            const cardBg = document.getElementById('standby-card-blur-bg'); // NEU v24.90
-            const npCard = document.getElementById('standby-nowplaying');
-            // FIX v24.104 (KRITISCH): Nutzer meldete - pausiert man die Musik, während man im
-            // StandBy ist, zeigt die Karte weiterhin Titel/Cover des zuletzt gespielten Songs
-            // an, statt zum Ruhezustand ("Aktuell ist es ruhig...") zu wechseln. Das war laut
-            // Nutzer nie so gewollt und ist ihm "random irgendwann" untergekommen. Root Cause:
-            // isIdle wurde bisher NUR anhand von "!title" bestimmt - die meisten Musik-APIs
-            // (auch diese hier) liefern aber weiterhin den zuletzt aktiven Titel zurück,
-            // SOLANGE noch ein Track "aktuell" ist, unabhängig davon, ob er gerade wiedergegeben
-            // wird oder pausiert ist. isPlaying wurde dabei komplett ignoriert. Fix: isIdle
-            // berücksichtigt jetzt zusätzlich isPlaying - wird explizit false übergeben
-            // (Musik pausiert), gilt das StandBy als "ruhig", auch wenn ein Titel bekannt ist.
-            const isIdle = !title || isPlaying === false;
-
-            if (npCard) npCard.classList.toggle('standby-idle', isIdle);
-            if (titleEl) titleEl.textContent = title || t('standby_idle_title');
-            if (artistEl) artistEl.textContent = artist || t('standby_idle_subtitle');
-            // NEU v24.21: Falls StandBy gerade aktiv ist, bei jedem Songwechsel neu prüfen,
-            // ob der neue Titel/Künstler-Name gescrollt werden muss.
-            if (standByActive) setupStandbyMarquee();
-            // NEU v24.88: bei echtem Songwechsel neu prüfen, ob die Karte noch passt - neuer
-            // Titel/Künstler kann die natürliche Höhe beeinflussen (z.B. zweizeilig statt
-            // einzeilig), das reine Design+Bildschirmgröße-Cache deckt das nicht ab, deshalb
-            // hier gezielt mit forceRemeasure=true.
-            if (standByActive && isNewTrack) fitStandbyToScreen(true);
-
-            lastStandbyTrackInfo = { title, artist, artUrl, isPlaying };
-            // FIX v24.79 (KRITISCH): Nutzer meldete - Cover brauchen bei Songwechsel spürbar
-            // länger zum Laden als früher. Root Cause (siehe ausführliche Erklärung bei
-            // extractDominantColor()): bis zu sechs unabhängige Bild-Lade-/Dekodier-Vorgänge
-            // liefen bisher GLEICHZEITIG bei jedem Songwechsel für praktisch dasselbe Cover -
-            // darunter zwei allein für StandBy (Cover-Bild + Hintergrund-Vorlader für den
-            // Crossfade aus v24.74), UNABHÄNGIG davon, ob StandBy überhaupt sichtbar/geöffnet
-            // war. Das war reine Verschwendung: niemand sieht ein Bild, das gerade lädt, wenn
-            // der Bildschirm dafür gar nicht offen ist. Text bleibt bewusst weiter IMMER
-            // aktuell (kostet praktisch nichts), aber die eigentlichen Bilder werden jetzt nur
-            // noch geladen, wenn StandBy auch tatsächlich aktiv ist - beim Öffnen holt
-            // applyPendingStandbyImages() das dann sofort nach, siehe dort.
+            const cardBg = document.getElementById('standby-card-blur-bg');
+            document.getElementById('standby-nowplaying')?.classList.toggle('standby-idle', idle);
+            const shownTitle = idle ? t('standby_idle_title') : title;
+            const shownArtist = idle ? t('standby_idle_subtitle') : artist;
+            if (titleEl && titleEl.textContent !== shownTitle) titleEl.textContent = shownTitle;
+            if (artistEl && artistEl.textContent !== shownArtist) artistEl.textContent = shownArtist;
+            if (standByActive && (textChanged || isNewTrack)) { setupStandbyMarquee(); fitStandbyToScreen(true); }
             if (!standByActive) return;
-
-            if (isIdle) {
-                // FIX v24.87: img ist <canvas> - clearRect() zum Leeren.
-                if (img) {
-                    const ctx = img.getContext && img.getContext('2d');
-                    if (ctx) ctx.clearRect(0, 0, img.width, img.height);
-                    img.style.opacity = '';
-                }
-                // FIX v24.103: bg/cardBg sind wieder <div background-image> - siehe
-                // ausführliche Begründung bei #standby-bg im CSS.
-                if (bg) { bg.style.backgroundImage = 'none'; bg.style.opacity = ''; }
-                if (cardBg) { cardBg.style.backgroundImage = 'none'; cardBg.style.opacity = ''; }
-            } else {
-                // FIX v24.74: Nutzer wünschte sich eine "effiziente Fade-Animation" beim
-                // Cover/Hintergrund-Wechsel im StandBy - bisher hart/abrupt, da
-                // "transition: background-image" (siehe CSS-Kommentar bei #standby-bg) gar
-                // nicht funktioniert. Echter opacity-Crossfade: nur wenn sich die Bild-URL
-                // TATSÄCHLICH ändert (nicht bei jedem 5s-Poll mit demselben Song, sonst würde
-                // ständig unnötig neu geblendet) - kurz ausblenden, neues Bild vorladen,
-                // wieder einblenden. Bewusst nur EINMALIG pro echtem Wechsel (kein Dauerloop),
-                // kostet also nichts im Ruhezustand.
-                // FIX v24.80 (KRITISCH): Nutzer meldete - Cover blinkt im StandBy random
-                // immer wieder aus und ein, obwohl der Song sich gar nicht ändert. Root Cause:
-                // "isNewArt" wurde bisher per rohem URL-String-Vergleich ermittelt
-                // (img.src !== artUrl) - aber Cover-URLs von Musik-APIs (Spotify/npc-api)
-                // können bei DEMSELBEN Song zwischen zwei Polls leicht variieren (andere
-                // Cache-Busting-Parameter, CDN-Signaturen, Größenvarianten), obwohl es
-                // optisch dasselbe Bild ist. Jeder 5s-Poll hat dadurch fälschlich einen
-                // "neuen" Songwechsel erkannt und einen kompletten Aus-/Einblend-Zyklus
-                // ausgelöst - das war das gemeldete zufällige Geflacker, kein Bug in der
-                // Blend-Logik selbst. Fix: nutzt jetzt dieselbe Songwechsel-Erkennung wie der
-                // Rest der Seite (isNewTrack, basiert auf der stabilen Track-ID statt der
-                // volatilen Cover-URL) - blendet dadurch nur noch bei ECHTEM Songwechsel.
-                const isNewArt = !!artUrl && !!isNewTrack;
-
-                // FIX v24.87: #standby-track-art ist <canvas> - zeichnet aus dem bereits
-                // geladenen #artwork, erbt automatisch dessen Robustheit (Retry aus v24.99).
-                async function drawFromMainArtwork(canvas) {
-                    if (!canvas || !mArtwork || !mArtwork.src) return;
-                    try { if (typeof mArtwork.decode === 'function') await mArtwork.decode(); }
-                    catch (e) { /* decode schlägt bei unsichtbaren Elementen fehl - kein Problem, drawCoverToCanvas prüft die Bereitschaft selbst */ }
-                    drawCoverToCanvas(canvas, mArtwork);
-                }
-                if (img && artUrl) {
-                    if (isNewArt) {
-                        img.style.opacity = '0';
-                        requestAnimationFrame(() => {
-                            drawFromMainArtwork(img).then(() => {
-                                requestAnimationFrame(() => { img.style.opacity = '1'; });
-                            });
-                        });
-                    } else {
-                        drawFromMainArtwork(img);
-                    }
-                }
-
-                if (bg && artUrl) {
-                    const targetUrl = `url('${artUrl}')`;
-                    if (bg.style.backgroundImage === targetUrl) {
-                        bg.style.opacity = '1';
-                        if (cardBg) cardBg.style.opacity = '1';
-                    } else {
-                        const applyLoaded = () => {
-                            bg.style.backgroundImage = targetUrl;
-                            if (cardBg) cardBg.style.backgroundImage = targetUrl;
-                            bg.style.opacity = '1';
-                            if (cardBg) cardBg.style.opacity = '1';
-                        };
-                        if (isNewArt) {
-                            bg.style.opacity = '0';
-                            if (cardBg) cardBg.style.opacity = '0';
-                            requestAnimationFrame(() => {});
-                        }
-                        const preload = new Image();
-                        const cleanupPreload = () => { preload.onload = null; preload.onerror = null; preload.src = ''; };
-                        preload.onload = () => { applyLoaded(); cleanupPreload(); };
-                        preload.onerror = async () => {
-                            const retrySucceeded = await retryImageLoad(artUrl);
-                            if (retrySucceeded) { applyLoaded(); cleanupPreload(); return; }
-                            const itunesUrl = await tryItunesArtworkFallback(title, artist);
-                            if (itunesUrl) {
-                                bg.style.backgroundImage = `url('${itunesUrl}')`;
-                                if (cardBg) cardBg.style.backgroundImage = `url('${itunesUrl}')`;
-                            }
-                            bg.style.opacity = '1';
-                            if (cardBg) cardBg.style.opacity = '1';
-                            cleanupPreload();
-                        };
-                        preload.src = artUrl;
-                    }
-                }
+            const clearArt = () => {
+                const ctx = canvas?.getContext('2d');
+                if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+                if (canvas) canvas.style.opacity = '0';
+                for (const layer of [bg, cardBg]) if (layer) { layer.style.backgroundImage = 'none'; layer.style.opacity = '0'; }
+            };
+            if (idle) {
+                if (standbyArtJob || textChanged || isNewTrack) { cancelStandbyArtwork(); clearArt(); }
+                return;
             }
+            const source = typeof artUrl === 'string' && artUrl ? artUrl : fallbackImg;
+            const key = JSON.stringify([title, artist, source]);
+            if (standbyArtJob?.key === key) return;
+            cancelStandbyArtwork();
+            clearArt();
+            const revision = standbyArtRevision;
+            const job = standbyArtJob = { key, image: null, loaded: false };
+            const current = () => standByActive && revision === standbyArtRevision && standbyArtJob === job;
+            const load = (url, fallback = false) => {
+                if (!current()) return;
+                const image = job.image = new Image();
+                image.onload = () => {
+                    if (!current()) return;
+                    job.loaded = true;
+                    drawCoverToCanvas(canvas, image);
+                    if (canvas) canvas.style.opacity = '1';
+                    for (const layer of [bg, cardBg]) if (layer) { layer.style.backgroundImage = 'url(' + JSON.stringify(url) + ')'; layer.style.opacity = '1'; }
+                    image.onload = image.onerror = null;
+                };
+                image.onerror = async () => {
+                    if (!current()) return;
+                    image.onload = image.onerror = null;
+                    if (!fallback) {
+                        let resolved;
+                        try { resolved = await tryItunesArtworkFallback(title, artist); } catch (_) {}
+                        if (current()) load(resolved || fallbackImg, true);
+                    }
+                };
+                image.src = url;
+            };
+            load(source);
         }
         // NEU v24.79: Wird beim ÖFFNEN von StandBy aufgerufen - holt Bild-Updates nach, die
         // während der Schließzeit bewusst übersprungen wurden (siehe Erklärung oben in
@@ -13821,7 +13762,7 @@ let shareCardLoading;
         // vorherigen Song zu sehen sein, bis der nächste 5s-Poll durchläuft.
         function applyPendingStandbyImages() {
             if (lastStandbyTrackInfo.title || lastStandbyTrackInfo.artUrl) {
-                syncStandByTrackInfo(lastStandbyTrackInfo.title, lastStandbyTrackInfo.artist, lastStandbyTrackInfo.artUrl, true, lastStandbyTrackInfo.isPlaying);
+                syncStandByTrackInfo(lastStandbyTrackInfo.title, lastStandbyTrackInfo.artist, lastStandbyTrackInfo.artUrl, true, lastStandbyTrackInfo.isPlaying, true);
             }
         }
 
@@ -18013,6 +17954,10 @@ window.setLyricsStyle = function(style) {
 
         function updateProgressUI() {
             if (standByActive) {
+                if (trackIsPlaying && totalMs > 0 && currentMs >= totalMs && lastStandbyTrackInfo.isPlaying) {
+                    syncStandByTrackInfo(lastStandbyTrackInfo.title, lastStandbyTrackInfo.artist, null, false, false, true);
+                    releaseStandbyWakeLock();
+                }
                 const pct = totalMs > 0 ? Math.min(currentMs / totalMs, 1) : 0;
                 if (sbProgressBarEl) sbProgressBarEl.style.transform = `scaleX(${pct})`;
                 if (sbTimeCurrentEl) sbTimeCurrentEl.innerText = formatTime(currentMs);
@@ -18841,10 +18786,10 @@ window.setLyricsStyle = function(style) {
             if (standByActive) {
                 standbyPendingMusic = { data, latency: dynamicLatency };
                 const track = data?.track;
-                const playing = data?.status === 'playing' && !!track;
-                const title = track?.title || track?.name || '';
-                const artist = track?.artist || '';
-                const id = title + '-' + artist.replace(/\s*•\s*From Smart Shuffle/gi, '').trim();
+                const title = typeof (track?.title || track?.name) === 'string' ? (track.title || track.name) : '';
+                const artist = typeof track?.artist === 'string' ? track.artist : '';
+                const playing = data?.status === 'playing' && !!title;
+                const id = title + '-' + artist.replace(/\s*•\s*From Smart Shuffle/gi, '').trim() + (track?.id ? '|' + String(track.id) : '');
                 const raw = data?.progress_ms ?? track?.progress_ms;
                 const progress = raw !== null && raw !== undefined && Number.isFinite(Number(raw)) ? Math.max(0, Number(raw)) : null;
                 const previous = standbyProgressSample;
@@ -18877,10 +18822,11 @@ window.setLyricsStyle = function(style) {
                 currentMs = serverBaseProgress + (playing ? now - localStartTime : 0);
                 if (totalMs > 0) currentMs = Math.min(currentMs, totalMs);
                 standbyProgressSample = { id, progress: progress ?? (newTrack ? null : previous.progress), playing };
-                const changed = title !== lastStandbyTrackInfo?.title || artist !== lastStandbyTrackInfo?.artist;
+                const ended = playing && totalMs > 0 && currentMs >= totalMs;
+                const changed = newTrack || title !== lastStandbyTrackInfo?.title || artist !== lastStandbyTrackInfo?.artist;
                 const art = track?.artwork_url || (changed ? fallbackImg : lastStandbyTrackInfo?.artUrl) || fallbackImg;
-                syncStandByTrackInfo(title, artist, art, changed, trackIsPlaying);
-                updateWakeLockForPlaybackState();
+                syncStandByTrackInfo(title, artist, art, changed, playing && !ended, true);
+                if (ended || !playing) releaseStandbyWakeLock(); else updateWakeLockForPlaybackState();
                 updateProgressUI();
                 return;
             }
@@ -19084,6 +19030,7 @@ window.setLyricsStyle = function(style) {
             }
 
             const applyDataChanges = (addedDelay = 0) => {
+                if (standByActive) return;
                 if (mArtwork) {
                     mArtwork.onerror = async function() {
                         this.onerror = () => { this.src = fallbackImg; };
