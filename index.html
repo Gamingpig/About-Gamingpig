@@ -3146,10 +3146,12 @@
             const savedAnimStyle = localStorage.getItem('app_animation_style') || 'smooth';
             document.documentElement.setAttribute('data-animation-style', savedAnimStyle);
 
-            // Visit-Counter Tracking
-            let _visitCount = parseInt(localStorage.getItem('app_visit_count') || '0', 10);
+            // Safe Visit-Counter Tracking
+            const rawVisits = localStorage.getItem('app_visit_count');
+            let _visitCount = parseInt(rawVisits || '0', 10);
+            if (isNaN(_visitCount) || _visitCount < 0) _visitCount = 0;
             _visitCount++;
-            localStorage.setItem('app_visit_count', _visitCount.toString());
+            localStorage.setItem('app_visit_count', String(_visitCount));
 
             // 🛡️ INSTANT ONBOARDING SHIELD
             const _currVer = 'v24.152.0 · 2026-09-07';
@@ -3415,6 +3417,32 @@
             animation: xp-float-anim 1.5s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
         }
 
+        /* Settings Animation Keyframes */
+        @keyframes settings-menu-in {
+            0% {
+                opacity: 0;
+                transform: scale(0.96) translateY(-8px);
+                filter: blur(4px);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+                filter: blur(0px);
+            }
+        }
+        @keyframes settings-menu-out {
+            0% {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+                filter: blur(0px);
+            }
+            100% {
+                opacity: 0;
+                transform: scale(0.96) translateY(-8px);
+                filter: blur(4px);
+            }
+        }
+
         /* Global Standalone Settings Modal (Fixed top right) */
         #global-settings-menu {
             position: fixed !important;
@@ -3429,6 +3457,7 @@
             -webkit-overflow-scrolling: touch !important;
             overscroll-behavior-y: contain !important;
             transform-origin: top right !important;
+            will-change: transform, opacity;
         }
         #global-settings-menu:not(.settings-opening):not(.settings-closing) {
             display: none !important;
@@ -3438,16 +3467,16 @@
             visibility: visible !important;
             opacity: 1 !important;
             pointer-events: auto !important;
-            animation: lyrics-menu-in 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
-            transform-origin: top right;
+            animation: settings-menu-in 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
         }
         #global-settings-menu.settings-closing {
             display: flex !important;
             visibility: visible !important;
             pointer-events: none !important;
-            animation: lyrics-menu-out 0.18s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
-            transform-origin: top right;
+            animation: settings-menu-out 0.18s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
         }
+        #privacy-update-modal.hidden { display: none !important; }
+        #privacy-update-modal:not(.hidden) { display: flex !important; }
         @media (max-width: 640px) {
             #lyrics-settings-menu, #global-settings-menu {
                 right: 0.5rem !important;
@@ -4749,14 +4778,11 @@
             -webkit-tap-highlight-color: transparent;
             transition: width 0.7s var(--liquid-fluid), height 0.7s var(--liquid-fluid), border-radius 0.6s var(--liquid-fluid), opacity 0.4s ease, padding 0.7s var(--liquid-fluid), box-shadow 0.4s ease, top 0.4s ease, left 0.4s ease;
         }
-        #dynamic-island.di-visible { opacity: 1; pointer-events: auto; }
-        /* NEW: Insel ausblenden wenn StandBy, Lyrics, Dashboard oder Musikbereich aktiv/im Bild ist (verhindert Überlappungen und doppelte Player) */
-        #dynamic-island.di-hidden-by-standby,
-        #dynamic-island.di-hidden-by-lyrics,
-        #dynamic-island.di-hidden-by-dashboard {
-            opacity: 0 !important;
-            pointer-events: none !important;
-            transform: translateX(-50%) scale(0.85) translateZ(0) !important;
+        #dynamic-island.di-visible {
+            display: flex !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+            pointer-events: auto !important;
         }
         #dynamic-island-ring.di-ring-hidden {
             opacity: 0 !important;
