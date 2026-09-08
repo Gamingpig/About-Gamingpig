@@ -3154,7 +3154,7 @@
             localStorage.setItem('app_visit_count', String(_visitCount));
 
             // 🛡️ INSTANT ONBOARDING SHIELD
-            const _currVer = 'v24.154.0 · 2026-09-08';
+            const _currVer = window.ONBOARDING_VERSION = 'v24.156.0 · 2026-09-08';
             const _installedVer = localStorage.getItem('site_version_installed');
             if (_installedVer !== _currVer) {
                 localStorage.setItem('site_version_installed', _currVer);
@@ -3162,9 +3162,9 @@
 
             // Single source of truth: only show language selection if NO language has been selected yet or explicit force param
             const _urlP = new URLSearchParams(window.location.search);
-            const _forceStart = _urlP.has('first_visit') || _urlP.has('onboarding');
+            const _forceStart = _urlP.has('first_visit') || _urlP.has('onboarding') || _urlP.has('tutorial');
             
-            if (!savedAppLang || _forceStart) {
+            if (!savedAppLang || localStorage.getItem('onboarding_completed_version') !== _currVer || _forceStart) {
                 document.documentElement.classList.add('needs-onboarding');
             }
         } catch(e) {}
@@ -5746,7 +5746,7 @@
         // NEW: Sichtbare Versionsnummer (Settings-Menü + Footer), damit sich bei Cache-/
         // Deployment-Problemen sofort nachvollziehen lässt, welche Version man gerade
         // sieht. Bei jedem größeren Update bitte hochzählen und Datum anpassen.
-        const SITE_VERSION = 'v24.156.0 · 2026-09-08';
+        const SITE_VERSION = window.ONBOARDING_VERSION;
 
         // =========================================================
         // NEU v24.118: Automatischer Reset veralteter Cached Flags bei Versionswechsel
@@ -5868,16 +5868,16 @@
                 </div>
                 <div>
                     <h3 id="privacy-modal-title-el" class="text-base sm:text-lg font-black text-white leading-tight">Datenschutz aktualisiert</h3>
-                    <p id="privacy-modal-date-el" class="text-[10px] font-mono text-blue-400 font-bold">Stand: 4. September 2026</p>
+                    <p id="privacy-modal-date-el" class="text-[10px] font-mono text-blue-400 font-bold">Stand: 8. September 2026</p>
                 </div>
             </div>
             <p id="privacy-modal-intro-el" class="text-xs text-slate-300 leading-relaxed mb-3">
                 Wir haben unsere <strong class="text-white">Datenschutzerklärung</strong> transparent erweitert:
             </p>
             <ul class="text-[11px] text-slate-400 space-y-1.5 mb-4 list-disc list-inside">
-                <li id="privacy-modal-item1-el"><strong class="text-slate-200">Mehrsprachiges Songtext-Vorlesen:</strong> Lokale Spracherkennung (u.&nbsp;a. Schwedisch für Marcus &amp; Martinus, Norwegisch, Deutsch, Englisch).</li>
-                <li id="privacy-modal-item2-el"><strong class="text-slate-200">Einstellbares Vorlesetempo:</strong> Anpassbare Geschwindigkeiten (0.8x bis 2.0x) für alle Audio-Elemente.</li>
-                <li id="privacy-modal-item3-el"><strong class="text-slate-200">Keine Datenübertragung:</strong> Sämtliche Einstellungen verbleiben rein lokal in deinem Browser.</li>
+                <li id="privacy-modal-item1-el">Öffentliche GitHub-Speicherung: Wünsche und Stimmen sind mit deinem GitHub-Konto öffentlich verknüpft.</li>
+                <li id="privacy-modal-item2-el">Übertragung an GitHub: Bereits das Öffnen des vorausgefüllten Formulars sendet deine Texte; die Roadmap lädt öffentliche Daten über die GitHub-API.</li>
+                <li id="privacy-modal-item3-el">Lokaler Lesecache und Löschung: Browserdaten und GitHub-Beiträge werden getrennt gespeichert. Details und Kontakt stehen in der Erklärung.</li>
             </ul>
             <div class="flex items-center gap-2 pt-2 border-t border-white/10">
                 <a id="privacy-modal-read-btn" href="privacy.html" target="_blank" class="flex-1 text-center py-2.5 px-3 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold transition-all border border-white/10">
@@ -8897,11 +8897,11 @@
                 whatsnew_full_log: "Vollständiges Logbuch anzeigen",
                 whatsnew_compact_milestones: "Kompakte Meilensteine anzeigen",
                 privacy_modal_title: "Datenschutz aktualisiert",
-                privacy_modal_date: "Stand: 4. September 2026",
+                privacy_modal_date: "Stand: 8. September 2026",
                 privacy_modal_intro: "Wir haben unsere <strong class=\"text-white\">Datenschutzerklärung</strong> transparent erweitert:",
-                privacy_modal_item1: "<strong class=\"text-slate-200\">Mehrsprachiges Songtext-Vorlesen:</strong> Lokale Spracherkennung (u. a. Schwedisch für Marcus & Martinus, Norwegisch, Deutsch, Englisch).",
-                privacy_modal_item2: "<strong class=\"text-slate-200\">Einstellbares Vorlesetempo:</strong> Anpassbare Geschwindigkeiten (0.8x bis 2.0x) für alle Audio-Elemente.",
-                privacy_modal_item3: "<strong class=\"text-slate-200\">Keine Datenübertragung:</strong> Sämtliche Einstellungen verbleiben rein lokal in deinem Browser.",
+                privacy_modal_item1: "Öffentliche GitHub-Speicherung: Wünsche und Stimmen sind mit deinem GitHub-Konto öffentlich verknüpft.",
+                privacy_modal_item2: "Übertragung an GitHub: Bereits das Öffnen des vorausgefüllten Formulars sendet deine Texte; die Roadmap lädt öffentliche Daten über die GitHub-API.",
+                privacy_modal_item3: "Lokaler Lesecache und Löschung: Browserdaten und GitHub-Beiträge werden getrennt gespeichert. Details und Kontakt stehen in der Erklärung.",
                 privacy_modal_read: "Erklärung lesen ↗",
                 privacy_modal_accept: "Verstanden ✓",
                 btn_close: "Schließen",
@@ -8967,11 +8967,11 @@
                 whatsnew_full_log: "Show full changelog",
                 whatsnew_compact_milestones: "Show compact milestones",
                 privacy_modal_title: "Privacy Policy Updated",
-                privacy_modal_date: "As of: September 4, 2026",
+                privacy_modal_date: "Last updated: September 8, 2026",
                 privacy_modal_intro: "We have updated our <strong class=\"text-white\">privacy policy</strong> transparently:",
-                privacy_modal_item1: "<strong class=\"text-slate-200\">Multilingual Lyrics Read-Aloud:</strong> Local language recognition (e.g. Swedish for Marcus & Martinus, Norwegian, German, English).",
-                privacy_modal_item2: "<strong class=\"text-slate-200\">Adjustable Speech Rate:</strong> Configurable speeds (0.8x to 2.0x) for all audio elements.",
-                privacy_modal_item3: "<strong class=\"text-slate-200\">No Data Transmission:</strong> All settings remain strictly local within your browser.",
+                privacy_modal_item1: "Public GitHub storage: wishes and votes are publicly linked to your GitHub account.",
+                privacy_modal_item2: "Transfer to GitHub: opening the prefilled form already sends your text; the roadmap reads public data through the GitHub API.",
+                privacy_modal_item3: "Local read cache and deletion: browser data and GitHub contributions are stored separately. See the policy for details and contact.",
                 privacy_modal_read: "Read Policy ↗",
                 privacy_modal_accept: "Understood ✓",
                 btn_close: "Close",
@@ -9037,11 +9037,11 @@
                 whatsnew_full_log: "Ver registro de cambios completo",
                 whatsnew_compact_milestones: "Ver hitos compactos",
                 privacy_modal_title: "Privacidad actualizada",
-                privacy_modal_date: "A partir de: 4 de septiembre de 2026",
+                privacy_modal_date: "Actualizado: 8 de septiembre de 2026",
                 privacy_modal_intro: "Hemos ampliado nuestra <strong class=\"text-white\">política de privacidad</strong> con total transparencia:",
-                privacy_modal_item1: "<strong class=\"text-slate-200\">Lectura de letras multilingüe:</strong> Reconocimiento de idioma local (p. ej. sueco para Marcus & Martinus, noruego, alemán, inglés).",
-                privacy_modal_item2: "<strong class=\"text-slate-200\">Velocidad de voz ajustable:</strong> Velocidades configurables (0.8x a 2.0x) para elementos de audio.",
-                privacy_modal_item3: "<strong class=\"text-slate-200\">Sin transferencia de datos:</strong> Todas las preferencias permanecen localmente en tu navegador.",
+                privacy_modal_item1: "Almacenamiento público en GitHub: ideas y votos están vinculados públicamente a tu cuenta.",
+                privacy_modal_item2: "Transferencia a GitHub: abrir el formulario ya envía el texto; la hoja de ruta consulta la API pública.",
+                privacy_modal_item3: "Caché local y eliminación: los datos del navegador y las aportaciones de GitHub se guardan por separado. Consulta la política.",
                 privacy_modal_read: "Leer política ↗",
                 privacy_modal_accept: "Entendido ✓",
                 btn_close: "Cerrar",
@@ -9108,11 +9108,11 @@
                 whatsnew_full_log: "Afficher tout le journal des modifications",
                 whatsnew_compact_milestones: "Afficher les jalons compacts",
                 privacy_modal_title: "Confidentialité mise à jour",
-                privacy_modal_date: "Date : 4 septembre 2026",
+                privacy_modal_date: "Mise à jour : 8 septembre 2026",
                 privacy_modal_intro: "Nous avons élargi notre <strong class=\"text-white\">politique de confidentialité</strong> en toute transparence :",
-                privacy_modal_item1: "<strong class=\"text-slate-200\">Lecture vocale multilingue des paroles :</strong> Reconnaissance linguistique locale (ex. suédois pour Marcus & Martinus, norvégien, allemand, anglais).",
-                privacy_modal_item2: "<strong class=\"text-slate-200\">Vitesse de lecture ajustable :</strong> Vitesses configurables (0.8x à 2.0x) pour tous les éléments audio.",
-                privacy_modal_item3: "<strong class=\"text-slate-200\">Aucune transmission de données :</strong> Tous les paramètres restent strictement en local dans ton navigateur.",
+                privacy_modal_item1: "Stockage public sur GitHub : idées et votes sont publiquement liés à ton compte.",
+                privacy_modal_item2: "Transmission à GitHub : ouvrir le formulaire transmet déjà les textes ; la feuille de route consulte l’API publique.",
+                privacy_modal_item3: "Cache local et suppression : données du navigateur et contributions GitHub sont conservées séparément. Voir la déclaration.",
                 privacy_modal_read: "Lire la déclaration ↗",
                 privacy_modal_accept: "Compris ✓",
                 btn_close: "Fermer",
@@ -9215,11 +9215,11 @@
                 whatsnew_full_log: "Ver log de alterações completo",
                 whatsnew_compact_milestones: "Ver marcos compactos",
                 privacy_modal_title: "Privacidade atualizada",
-                privacy_modal_date: "Em: 4 de setembro de 2026",
+                privacy_modal_date: "Atualizado em: 8 de setembro de 2026",
                 privacy_modal_intro: "Atualizamos nossa <strong class=\"text-white\">política de privacidade</strong> de forma transparente:",
-                privacy_modal_item1: "<strong class=\"text-slate-200\">Leitura de letras multilíngue:</strong> Reconhecimento local de idioma (ex.: sueco para Marcus & Martinus, norueguês, alemão, inglês).",
-                privacy_modal_item2: "<strong class=\"text-slate-200\">Velocidade de leitura ajustável:</strong> Velocidades configuráveis (0.8x a 2.0x) para áudios.",
-                privacy_modal_item3: "<strong class=\"text-slate-200\">Sem transferência de dados:</strong> Todas as configurações ficam estritamente locais no navegador.",
+                privacy_modal_item1: "Armazenamento público no GitHub: ideias e votos ficam associados publicamente à sua conta.",
+                privacy_modal_item2: "Transferência ao GitHub: abrir o formulário já envia os textos; a página consulta a API pública.",
+                privacy_modal_item3: "Cache local e exclusão: dados do navegador e contribuições GitHub são guardados separadamente. Consulte a política.",
                 privacy_modal_read: "Ler política ↗",
                 privacy_modal_accept: "Entendido ✓",
                 btn_close: "Fechar",
@@ -9322,11 +9322,11 @@
                 whatsnew_full_log: "Tam değişiklik günlüğünü göster",
                 whatsnew_compact_milestones: "Kompakt kilometre taşlarını göster",
                 privacy_modal_title: "Gizlilik Politikası Güncellendi",
-                privacy_modal_date: "Tarih: 4 Eylül 2026",
+                privacy_modal_date: "Güncelleme: 8 Eylül 2026",
                 privacy_modal_intro: "Gizlilik politikamızı şeffaf bir şekilde güncelledik:",
-                privacy_modal_item1: "<strong class=\"text-slate-200\">Çok Dilli Şarkı Sözü Okuma:</strong> Yerel dil tanıma (ör. Marcus & Martinus için İsveççe, Norveççe, Almanca, İngilizce).",
-                privacy_modal_item2: "<strong class=\"text-slate-200\">Ayarlanabilir Okuma Hızı:</strong> Tüm ses ögeleri için özelleştirilebilir hızlar (0.8x - 2.0x).",
-                privacy_modal_item3: "<strong class=\"text-slate-200\">Veri Aktarımı Yok:</strong> Tüm ayarlar tamamen yerel olarak tarayıcında saklanır.",
+                privacy_modal_item1: "GitHub’da herkese açık saklama: fikirler ve oylar hesabınla ilişkilidir.",
+                privacy_modal_item2: "GitHub’a aktarım: formu açmak metinleri zaten gönderir; yol haritası herkese açık API verilerini alır.",
+                privacy_modal_item3: "Yerel önbellek ve silme: tarayıcı verileri ve GitHub katkıları ayrı saklanır. Ayrıntılar bildirime eklenmiştir.",
                 privacy_modal_read: "Politikayı oku ↗",
                 privacy_modal_accept: "Anlaşıldı ✓",
                 btn_close: "Kapat",
@@ -12751,13 +12751,14 @@
         }
 
         // UNUMGÄNGLICHE & TRANSPARENTE BENACHRICHTIGUNG BEI DATENSCHUTZ-AKTUALISIERUNG
-        const PRIVACY_POLICY_VERSION = '2026-09-04';
+        const PRIVACY_POLICY_VERSION = '2026-09-08-github-roadmap';
         function checkPrivacyPolicyUpdate() {
+            if (document.documentElement.classList.contains('needs-onboarding') || window.OnboardingCoordinator?.isOnboarding) return;
             try {
                 const accepted = localStorage.getItem('accepted_privacy_version');
                 if (accepted !== PRIVACY_POLICY_VERSION) {
                     const modal = document.getElementById('privacy-update-modal');
-                    if (modal) modal.classList.remove('hidden');
+                    if (modal) { updatePrivacyModalUI(); modal.classList.remove('hidden'); modal.classList.add('flex'); }
                 }
             } catch(e) {}
         }
@@ -12767,15 +12768,15 @@
             const title = document.getElementById('privacy-modal-title-el');
             if (title) title.textContent = t('privacy_modal_title', 'Datenschutz aktualisiert');
             const dateEl = document.getElementById('privacy-modal-date-el');
-            if (dateEl) dateEl.textContent = t('privacy_modal_date', 'Stand: 4. September 2026');
+            if (dateEl) dateEl.textContent = t('privacy_modal_date', 'Stand: 8. September 2026');
             const introEl = document.getElementById('privacy-modal-intro-el');
             if (introEl) introEl.innerHTML = t('privacy_modal_intro', 'Wir haben unsere <strong class="text-white">Datenschutzerklärung</strong> transparent erweitert:');
             const item1 = document.getElementById('privacy-modal-item1-el');
-            if (item1) item1.innerHTML = t('privacy_modal_item1', '<strong class="text-slate-200">Mehrsprachiges Songtext-Vorlesen:</strong> Lokale Spracherkennung.');
+            if (item1) item1.innerHTML = t('privacy_modal_item1', 'Öffentliche GitHub-Speicherung: Wünsche und Stimmen sind mit deinem GitHub-Konto öffentlich verknüpft.');
             const item2 = document.getElementById('privacy-modal-item2-el');
-            if (item2) item2.innerHTML = t('privacy_modal_item2', '<strong class="text-slate-200">Einstellbares Vorlesetempo:</strong> Anpassbare Geschwindigkeiten.');
+            if (item2) item2.innerHTML = t('privacy_modal_item2', 'Übertragung an GitHub: Bereits das Öffnen des vorausgefüllten Formulars sendet deine Texte; die Roadmap lädt öffentliche Daten über die GitHub-API.');
             const item3 = document.getElementById('privacy-modal-item3-el');
-            if (item3) item3.innerHTML = t('privacy_modal_item3', '<strong class="text-slate-200">Keine Datenübertragung:</strong> Sämtliche Einstellungen verbleiben rein lokal.');
+            if (item3) item3.innerHTML = t('privacy_modal_item3', 'Lokaler Lesecache und Löschung: Browserdaten und GitHub-Beiträge werden getrennt gespeichert. Details und Kontakt stehen in der Erklärung.');
             const readBtn = document.getElementById('privacy-modal-read-btn');
             if (readBtn) readBtn.textContent = t('privacy_modal_read', 'Erklärung lesen ↗');
             const acceptBtn = document.getElementById('privacy-modal-accept-btn');
@@ -14764,12 +14765,10 @@ window.generateShareCard = function() {
 
         // Dedicated Tutorial state management
         try {
-            localStorage.removeItem('tutorialCompletedV5');
-            localStorage.removeItem('tutorialCompletedV2');
-            localStorage.removeItem('tutorialCompleted');
-            localStorage.removeItem('tutorial_completed');
             if (localStorage.getItem('app_tutorial_completed') === null) {
-                localStorage.setItem('app_tutorial_completed', '0');
+                const completed = ['tutorialCompletedV5', 'tutorial_completed', 'onboarding_completed']
+                    .some(key => ['true', '1'].includes(localStorage.getItem(key)));
+                localStorage.setItem('app_tutorial_completed', completed ? '1' : '0');
             }
         } catch(e) {}
 
@@ -17395,7 +17394,7 @@ window.generateShareCard = function() {
         // --- Egg 6: 3x auf den Footer-Badge klicken -> geheime Botschaft ---
         let footerClickCount = 0;
         let footerClickTimer = null;
-        const footerBadgeEl = document.querySelector('footer .inline-flex');
+        const footerBadgeEl = document.getElementById('footer-established');
         function getSecretMessages() {
             return [t('secret_1'), t('secret_2'), t('secret_3'), t('secret_4'), t('secret_5')];
         }
@@ -17729,7 +17728,7 @@ window.generateShareCard = function() {
             isCompleted() {
                 try {
                     const val = localStorage.getItem('onboarding_completed');
-                    return val === '1' || val === 'true';
+                    return (val === '1' || val === 'true') && localStorage.getItem('onboarding_completed_version') === SITE_VERSION;
                 } catch(e) { return false; }
             },
 
@@ -17741,6 +17740,12 @@ window.generateShareCard = function() {
 
             recordCompletion() {
                 try {
+                    window.setTutorialCompleted(true);
+                    localStorage.setItem('onboarding_completed_version', SITE_VERSION);
+                    // Force links should run once, not restart on the final reload.
+                    const url = new URL(window.location.href);
+                    ['first_visit', 'onboarding', 'tutorial'].forEach(key => url.searchParams.delete(key));
+                    window.history.replaceState(window.history.state, '', url.href);
                     localStorage.setItem('onboarding_completed', 'true');
                     localStorage.setItem('tutorialCompletedV5', 'true');
                     localStorage.setItem('whatsNewSeenVersion', SITE_VERSION);
@@ -17751,6 +17756,7 @@ window.generateShareCard = function() {
 
             reset() {
                 try {
+                    localStorage.removeItem('onboarding_completed_version');
                     localStorage.removeItem('onboarding_completed');
                     localStorage.removeItem('tutorialCompletedV5');
                     localStorage.removeItem('whatsNewSeenVersion');
@@ -17787,6 +17793,7 @@ window.generateShareCard = function() {
                 window.OnboardingTracker.reset();
             } else {
                 try {
+                    localStorage.removeItem('onboarding_completed_version');
                     localStorage.removeItem('onboarding_completed');
                     localStorage.removeItem('tutorialCompletedV5');
                     localStorage.removeItem('whatsNewSeenVersion');
@@ -20818,14 +20825,14 @@ window.setLyricsStyle = function(style) {
                 return localStorage.getItem('onboarding_completed');
             } catch(e) { return null; }
         })();
-        const _isCompleted = (_onbCompletedVal === '1' || _onbCompletedVal === 'true');
+        const _isCompleted = window.OnboardingTracker.isCompleted();
 
         // Gespeicherte Nutzersprache sofort synchron anwenden
         const effectiveLang = _savedLang || currentLang || 'de';
         applyLanguage(effectiveLang);
 
         // Nur beim allerersten Besuch (keine Sprache hinterlegt) oder explizitem Aufruf öffnen
-        const _needsLanguageSelection = (!_savedLang || _forceOnboarding);
+        const _needsLanguageSelection = (!_savedLang || !_isCompleted || _forceOnboarding);
 
         if (_needsLanguageSelection) {
             document.documentElement.classList.add('needs-onboarding');
@@ -20846,14 +20853,7 @@ window.setLyricsStyle = function(style) {
                 _lpOverlay.classList.remove('lp-active');
                 _lpOverlay.style.display = 'none';
             }
-            // Auto-start tutorial if not yet completed ('0'), independent of any other flag!
-            if (window.getTutorialStatus() !== '1') {
-                setTimeout(() => {
-                    if (!document.documentElement.classList.contains('needs-onboarding')) {
-                        if (typeof startTutorial === 'function') startTutorial();
-                    }
-                }, 600);
-            }
+
         }
     </script>
 <script>
