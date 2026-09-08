@@ -3154,13 +3154,30 @@
             localStorage.setItem('app_visit_count', String(_visitCount));
 
             // 🛡️ INSTANT ONBOARDING SHIELD
-            const _currVer = 'v24.152.0 · 2026-09-07';
+            const _currVer = 'v24.153.0 · 2026-09-08';
             const _installedVer = localStorage.getItem('site_version_installed');
             if (_installedVer !== _currVer) {
                 localStorage.setItem('site_version_installed', _currVer);
             }
 
-            // Single source of truth: tutorial_completed
+            // Global Onboarding & Tutorial Counter Reset for EVERY user/device
+            const GLOBAL_ONBOARDING_CYCLE = '2026-09-08_v24_153';
+            const _userOnboardingCycle = localStorage.getItem('gp_onboarding_cycle');
+            if (_userOnboardingCycle !== GLOBAL_ONBOARDING_CYCLE) {
+                try {
+                    localStorage.removeItem('tutorial_completed');
+                    localStorage.removeItem('onboarding_completed');
+                    localStorage.removeItem('tutorialCompletedV5');
+                    localStorage.removeItem('tutorialCompletedV6');
+                    localStorage.removeItem('whatsNewSeenVersion');
+                    localStorage.removeItem('accepted_privacy_version');
+                    localStorage.setItem('gp_tutorial_counter', '0');
+                    localStorage.setItem('app_visit_count', '1');
+                    localStorage.setItem('gp_onboarding_cycle', GLOBAL_ONBOARDING_CYCLE);
+                } catch(e) {}
+            }
+
+            // Single source of truth: tutorial_completed & onboarding_completed
             const _rawTutorialDone = localStorage.getItem('tutorial_completed') || localStorage.getItem('onboarding_completed');
             const _isTutorialDone = (_rawTutorialDone === 'true' || _rawTutorialDone === '1');
             const _urlP = new URLSearchParams(window.location.search);
@@ -3826,10 +3843,19 @@
     }
 }
 #lyrics-settings-menu.settings-opening {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
     animation: lyrics-menu-pop-in 0.38s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards !important;
+    transform-origin: top right !important;
 }
 #lyrics-settings-menu.settings-closing {
+    display: flex !important;
+    visibility: visible !important;
+    pointer-events: none !important;
     animation: lyrics-menu-pop-out 0.22s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
+    transform-origin: top right !important;
 }
 
 /* Focus Dimming */
@@ -4543,9 +4569,18 @@
         #lyrics-container::-webkit-scrollbar-track { background: transparent; }
         #lyrics-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
 
-        #modal-overlay { backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); transition: opacity 0.5s var(--apple-ease); will-change: opacity; opacity: 0; }
+        #modal-overlay { backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); transition: opacity 0.3s var(--apple-ease); will-change: opacity; opacity: 0; }
         #modal-overlay.flex { opacity: 1; }
-        #modal-overlay.modal-closing { opacity: 0; }
+        #modal-overlay.modal-closing {
+            display: flex !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+            transition: opacity 0.3s var(--apple-ease) !important;
+        }
+        #modal-overlay.modal-closing .modal-content {
+            animation: std-pop-out 0.28s var(--apple-ease) forwards !important;
+            pointer-events: none !important;
+        }
         
         /* FIX v24.76 (KRITISCH): Nutzer meldete - Cover-Art-2x-Tap-Bug besteht TROTZ v24.73-Fix
            weiterhin. Der v24.73-Fix (Timeout-Race-Condition) war real, aber nicht die einzige
@@ -6639,7 +6674,7 @@
                 <div id="footer-expandable-menu" class="hidden absolute bottom-full mb-3 left-1/2 -translate-x-1/2 z-50 p-3 rounded-2xl bg-slate-900/95 border border-slate-700/80 shadow-2xl backdrop-blur-xl min-w-[280px] max-w-[92vw] text-xs space-y-2 animate-in fade-in duration-200">
                     <div class="flex items-center justify-between px-1 pb-1 border-b border-white/10">
                         <span class="font-bold text-slate-400 text-[10px] uppercase tracking-wider">Navigation &amp; Rechtliches</span>
-                        <span id="footer-menu-hint" class="text-[9px] text-slate-500 font-mono">v24.152.0</span>
+                        <span id="footer-menu-hint" class="text-[9px] text-slate-500 font-mono">v24.153.0</span>
                     </div>
                     <div class="grid grid-cols-2 gap-2 text-left">
                         <button onclick="openEpicWhatsNewTour(false); toggleFooterMenu(false)" id="footer-whats-new-btn" class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/90 text-slate-200 hover:text-white font-medium flex items-center gap-2 transition-colors active:scale-[0.98]">
@@ -6673,7 +6708,7 @@
                 <div class="inline-flex items-center gap-2 sm:gap-2.5 px-4 py-2 rounded-full bg-slate-900/85 backdrop-blur-xl border border-white/15 shadow-xl text-[11px] sm:text-xs text-slate-300">
                     <span id="footer-established" class="font-bold tracking-tight text-slate-300">© 2026 GAMINGPIG</span>
                     <span class="text-white/20 select-none">•</span>
-                    <span id="footer-version-label" class="font-mono font-bold text-pink-400">v24.152.0</span>
+                    <span id="footer-version-label" class="font-mono font-bold text-pink-400">v24.153.0</span>
                     <span class="text-white/20 select-none">•</span>
                     <button id="footer-menu-toggle-btn" onclick="toggleFooterMenu()" class="text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1 transition-colors px-1 py-0.5 rounded hover:bg-white/5 active:scale-95" aria-expanded="false" aria-label="Mehr Menü öffnen">
                         <span id="footer-more-label">Mehr</span>
@@ -15562,13 +15597,13 @@ window.generateShareCard = function() {
             const overlay = document.getElementById('modal-overlay');
             if (overlay) {
                 clearTimeout(modalTimeout);
-                overlay.classList.remove('modal-opening', 'flex');
+                overlay.classList.remove('modal-opening');
                 overlay.classList.add('modal-closing');
                 setTimeout(() => {
+                    overlay.classList.remove('modal-closing', 'flex');
                     overlay.classList.add('hidden');
-                    overlay.classList.remove('modal-closing');
                     document.body.style.overflow = ''; 
-                }, 300); 
+                }, 280); 
             }
         };
 
