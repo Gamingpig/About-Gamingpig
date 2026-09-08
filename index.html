@@ -6988,6 +6988,28 @@
         <button onclick="openLyricsSettingsFromGlobal(event)" class="text-[9px] xxs:text-[10px] px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold transition-all border border-blue-400/30">Öffnen ➔</button>
     </div>
 
+    <!-- 🎓 TUTORIAL STATUS & RESET ZONE -->
+    <div class="p-3 rounded-2xl bg-slate-800/60 border border-white/10 flex flex-col gap-2">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <span class="text-base">🎓</span>
+                <div>
+                    <div id="settings-tutorial-title" data-i18n="settings_tutorial_title" class="text-[11px] font-bold uppercase tracking-wider text-slate-200">Interactive Tutorial</div>
+                    <div id="tutorial-status-badge" class="text-[9px] font-bold text-amber-400">Status: Nicht abgeschlossen (0)</div>
+                </div>
+            </div>
+            <span id="tutorial-counter-badge" class="px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-300 font-mono text-[10px] font-bold">0</span>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+            <button onclick="window.resetTutorialAndStart()" id="btn-restart-tutorial" class="py-2 px-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-[10px] sm:text-xs transition-all active:scale-95 flex items-center justify-center gap-1.5 border border-blue-400/30">
+                <span>▶️</span> <span id="btn-restart-tutorial-text" data-i18n="settings_tutorial_restart">Tutorial starten</span>
+            </button>
+            <button onclick="window.toggleTutorialCompletedStatus()" id="btn-toggle-tutorial-status" class="py-2 px-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-[10px] sm:text-xs transition-all active:scale-95 flex items-center justify-center gap-1.5 border border-white/10">
+                <span>🔄</span> <span id="btn-toggle-tutorial-text">Auf 0 setzen</span>
+            </button>
+        </div>
+    </div>
+
     <!-- 🎯 ONBOARDING & STATUS-COUNTER ZONE -->
     <div class="p-3 rounded-2xl bg-slate-800/60 border border-white/10 flex flex-col gap-2">
         <div class="flex items-center justify-between">
@@ -8601,17 +8623,15 @@
                 overlay.style.display = 'none';
             }
             
-            const _curOnbVal = (function() { try { return localStorage.getItem('onboarding_completed'); } catch(e) { return null; } })();
-            const _isAlreadyDone = (_curOnbVal === '1' || _curOnbVal === 'true');
-            const isFirstFlow = (window.OnboardingCoordinator && window.OnboardingCoordinator.isOnboarding) || 
-                                (!_isAlreadyDone && !window._manualLangChange);
-            
-            if (isFirstFlow) {
-                if (window.OnboardingCoordinator) {
+            // Tutorial auto-start: independent of first visit or onboarding!
+            if (!window._manualLangChange && window.getTutorialStatus() !== '1') {
+                setTimeout(() => {
+                    if (typeof startTutorial === 'function') startTutorial();
+                }, 400);
+            } else if (window.OnboardingCoordinator && window.OnboardingCoordinator.isOnboarding) {
+                if (typeof window.OnboardingCoordinator.step2_tutorial === 'function') {
                     window.OnboardingCoordinator.step2_tutorial();
                 }
-            } else if (!localStorage.getItem('tutorialCompletedV5') && !window._manualLangChange) {
-                setTimeout(startTutorial, 500);
             }
             window._manualLangChange = false;
         };
@@ -13869,6 +13889,88 @@ window.generateShareCard = function() {
             });
         }
 
+        // Dedicated Tutorial state management
+        try {
+            localStorage.removeItem('tutorialCompletedV5');
+            localStorage.removeItem('tutorialCompletedV2');
+            localStorage.removeItem('tutorialCompleted');
+            localStorage.removeItem('tutorial_completed');
+            if (localStorage.getItem('app_tutorial_completed') === null) {
+                localStorage.setItem('app_tutorial_completed', '0');
+            }
+        } catch(e) {}
+
+        window.getTutorialStatus = function() {
+            try {
+                const val = localStorage.getItem('app_tutorial_completed');
+                if (val === null) {
+                    localStorage.setItem('app_tutorial_completed', '0');
+                    return '0';
+                }
+                return val === '1' ? '1' : '0';
+            } catch(e) {
+                return '0';
+            }
+        };
+
+        window.isTutorialCompleted = function() {
+            return window.getTutorialStatus() === '1';
+        };
+
+        window.setTutorialCompleted = function(val) {
+            try {
+                const strVal = (val === true || val === '1' || val === 1) ? '1' : '0';
+                localStorage.setItem('app_tutorial_completed', strVal);
+                if (typeof updateSettingsTutorialUI === 'function') updateSettingsTutorialUI();
+                return strVal;
+            } catch(e) {
+                return '0';
+            }
+        };
+
+        window.resetTutorialAndStart = function() {
+            window.setTutorialCompleted(false);
+            if (typeof toggleStandaloneSettings === 'function' && typeof isGlobalSettingsOpen !== 'undefined' && isGlobalSettingsOpen) {
+                toggleStandaloneSettings();
+            }
+            if (typeof showToast === 'function') {
+                showToast('🔄 Tutorial auf 0 gesetzt – startet jetzt...', 2500);
+            }
+            setTimeout(() => {
+                if (typeof startTutorial === 'function') startTutorial();
+            }, 250);
+        };
+
+        window.toggleTutorialCompletedStatus = function() {
+            const current = window.getTutorialStatus();
+            const next = current === '1' ? '0' : '1';
+            window.setTutorialCompleted(next === '1');
+            if (typeof showToast === 'function') {
+                showToast(next === '1' ? '✓ Tutorial auf 1 gesetzt (Abgeschlossen)' : '🔄 Tutorial auf 0 gesetzt (Offen)', 2500);
+            }
+        };
+
+        window.updateSettingsTutorialUI = function() {
+            const isDone = window.isTutorialCompleted();
+            const statusBadge = document.getElementById('tutorial-status-badge');
+            const counterBadge = document.getElementById('tutorial-counter-badge');
+            const toggleBtnText = document.getElementById('btn-toggle-tutorial-text');
+            
+            if (statusBadge) {
+                statusBadge.textContent = isDone ? 'Status: Abgeschlossen (1)' : 'Status: Nicht abgeschlossen (0)';
+                statusBadge.className = isDone ? 'text-[9px] font-bold text-emerald-400' : 'text-[9px] font-bold text-amber-400';
+            }
+            if (counterBadge) {
+                counterBadge.textContent = isDone ? '1 ✓' : '0';
+                counterBadge.className = isDone
+                    ? 'px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 font-mono text-[10px] font-bold'
+                    : 'px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-300 font-mono text-[10px] font-bold';
+            }
+            if (toggleBtnText) {
+                toggleBtnText.textContent = isDone ? 'Auf 0 setzen' : 'Auf 1 setzen';
+            }
+        };
+
         function clearTutorialHighlights() {
             document.querySelectorAll('.tutorial-active-element').forEach(el => {
                 el.classList.remove('tutorial-active-element');
@@ -13916,7 +14018,7 @@ window.generateShareCard = function() {
                     tutorialBox.classList.remove('tutorial-closing');
                 }
                 clearTutorialHighlights();
-                localStorage.setItem('tutorialCompletedV5', 'true');
+                window.setTutorialCompleted(true);
                 
                 if (originalPerfModeState !== 'true' && window.innerWidth >= 360) {
                     applyPerformanceMode(false);
@@ -14101,8 +14203,7 @@ window.generateShareCard = function() {
             document.querySelectorAll('.quest-highlight-target, .tutorial-target-active, .tutorial-active-element, .is-highlighted, .is-spotlighted').forEach(el => {
                 el.classList.remove('quest-highlight-target', 'tutorial-target-active', 'tutorial-active-element', 'is-highlighted', 'is-spotlighted');
             });
-            localStorage.setItem('tutorial_completed', 'true');
-            localStorage.setItem('tutorialCompletedV5', 'true');
+            window.setTutorialCompleted(true);
             localStorage.setItem('onboarding_completed', 'true');
             showToast((window.I18nManager && window.I18nManager.t) ? window.I18nManager.t('quest_dismissed_toast') : 'Quest beendet ✓', 2000);
             setTimeout(() => {
@@ -14155,7 +14256,7 @@ window.generateShareCard = function() {
                 
                 if (completedCount === totalCount) {
                     interactiveTutorialActive = false;
-                    localStorage.setItem('tutorialCompletedV5', 'true');
+                    window.setTutorialCompleted(true);
                     updateQuestTargetGlows();
                     setTimeout(() => {
                         const hud = document.getElementById('interactive-quest-hud');
@@ -14188,7 +14289,7 @@ window.generateShareCard = function() {
                     '<button onclick="window.closeModal(); if(window.OnboardingCoordinator) window.OnboardingCoordinator.step3_whatsNew();" class="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs text-center transition-all active:scale-[0.98] border border-blue-400/30">' +
                         t('onboarding_to_whatsnew', 'Weiter zu Neuerungen ➔') +
                     '</button>' +
-                    '<button onclick="localStorage.setItem(\'tutorial_completed\', \'true\'); localStorage.setItem(\'tutorialCompletedV5\', \'true\'); localStorage.setItem(\'onboarding_completed\', \'true\'); window.closeModal(); window.location.reload();" class="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs text-center transition-all active:scale-[0.98] border border-white/10">' +
+                    '<button onclick="window.setTutorialCompleted(true); localStorage.setItem(\'onboarding_completed\', \'true\'); window.closeModal(); window.location.reload();" class="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs text-center transition-all active:scale-[0.98] border border-white/10">' +
                         t('onboarding_maybe_later', 'Vielleicht später') +
                     '</button>' +
                 '</div>' +
@@ -14240,7 +14341,7 @@ window.generateShareCard = function() {
 
         window.skipTutorialChoice = function() {
             window._tutorialChoiceModalOpen = false;
-            localStorage.setItem('tutorialCompletedV5', 'skipped');
+            window.setTutorialCompleted(true);
             if (modalOverlay) {
                 modalOverlay.classList.remove('flex');
                 modalOverlay.classList.add('hidden');
@@ -14263,7 +14364,7 @@ window.generateShareCard = function() {
                 search_tested: false,
                 standby_or_music: false
             };
-            try { localStorage.removeItem('tutorialCompletedV5'); } catch(e) {}
+            window.setTutorialCompleted(false);
             updateQuestHudUI();
             updateQuestTargetGlows();
             showToast('🎮 Quest gestartet: Folge den leuchtenden Stationen!', 4000);
@@ -14299,7 +14400,7 @@ window.generateShareCard = function() {
             showTutorialStep(currentStepIndex);
         }
 
-        function startTutorial() {
+        window.startTutorial = function startTutorial() {
             showTutorialModeChoiceModal();
         }
 
@@ -15802,7 +15903,7 @@ window.generateShareCard = function() {
 
         window.closeModal = function() {
             if (window._tutorialChoiceModalOpen) {
-                localStorage.setItem('tutorialCompletedV5', 'skipped');
+                window.setTutorialCompleted(true);
                 window._tutorialChoiceModalOpen = false;
                 if (window.OnboardingCoordinator && window.OnboardingCoordinator.isOnboarding) {
                     window.OnboardingCoordinator.step3_whatsNew();
@@ -16620,6 +16721,7 @@ window.generateShareCard = function() {
         };
 
         window.resetOnboarding = function() {
+            window.setTutorialCompleted(false);
             document.documentElement.classList.add('needs-onboarding');
             if (window.OnboardingTracker) {
                 window.OnboardingTracker.reset();
@@ -16656,6 +16758,7 @@ window.generateShareCard = function() {
 
             try {
                 localStorage.clear();
+                localStorage.setItem('app_tutorial_completed', '0');
             } catch(e) {}
 
             try {
@@ -17064,6 +17167,7 @@ window.generateShareCard = function() {
             }
 
             const currentAnim = localStorage.getItem('app_animation_style') || 'smooth';
+            if (typeof updateSettingsTutorialUI === 'function') updateSettingsTutorialUI();
             const animSelect = document.getElementById('app-animation-style-select');
             if (animSelect) animSelect.value = currentAnim;
             const lyricsAnimSelect = document.getElementById('lyrics-anim-style-select');
@@ -19458,6 +19562,14 @@ window.setLyricsStyle = function(style) {
                 _lpOverlay.classList.add('hidden');
                 _lpOverlay.classList.remove('lp-active');
                 _lpOverlay.style.display = 'none';
+            }
+            // Auto-start tutorial if not yet completed ('0'), independent of any other flag!
+            if (window.getTutorialStatus() !== '1') {
+                setTimeout(() => {
+                    if (!document.documentElement.classList.contains('needs-onboarding')) {
+                        if (typeof startTutorial === 'function') startTutorial();
+                    }
+                }, 600);
             }
         }
     </script>
