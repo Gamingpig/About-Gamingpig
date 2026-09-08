@@ -3157,7 +3157,7 @@
             AppStorage.setItem('app_visit_count', String(_visitCount));
 
             // 🛡️ INSTANT ONBOARDING SHIELD
-            const _currVer = window.ONBOARDING_VERSION = 'v24.157.0 · 2026-09-08';
+            const _currVer = window.ONBOARDING_VERSION = 'v24.158.0 · 2026-09-08';
             const _installedVer = AppStorage.getItem('site_version_installed');
             if (_installedVer !== _currVer) {
                 AppStorage.setItem('site_version_installed', _currVer);
@@ -3365,6 +3365,21 @@
             background: rgba(59, 130, 246, 0.4);
             color: #ffffff;
         }
+
+        /* StandBy owns the visible UI. Preserve page layout/state while suspending paint/animation. */
+        body.standby-mode #dynamic-island { display: none !important; }
+        body.standby-mode > :not(#standby-overlay),
+        body.standby-mode > :not(#standby-overlay) *,
+        body.standby-mode > :not(#standby-overlay)::before,
+        body.standby-mode > :not(#standby-overlay)::after,
+        body.standby-mode > :not(#standby-overlay) *::before,
+        body.standby-mode > :not(#standby-overlay) *::after {
+            visibility: hidden !important;
+            pointer-events: none !important;
+            animation-play-state: paused !important;
+        }
+        #ai-version-notice { position: fixed; inset: 0 0 auto; z-index: 2147483647; padding: 14px 18px; background: #facc15; color: #111827; border-bottom: 3px solid #111827; font: 700 15px/1.4 system-ui; text-align: center; }
+        #ai-version-notice button { margin-left: 12px; padding: 5px 12px; border: 2px solid currentColor; border-radius: 8px; cursor: pointer; }
 
         /* Lyrics Settings Menu (Dropdown anchored directly in lyrics center header) */
         #lyrics-settings-menu {
@@ -5806,6 +5821,11 @@
 </script>
 </head>
 <body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen selection:bg-blue-500/30 overflow-x-hidden">
+    <aside id="ai-version-notice" role="alert" aria-label="KI-Hinweis zur aktuellen Version">
+        <strong>WICHTIG · VERSION 24.158.0: Die Änderungen in dieser Version sind zu 100 % KI-generiert.</strong><br>
+        <span lang="en">All changes in this version are 100% AI-generated.</span>
+        <button type="button" onclick="document.getElementById('ai-version-notice').remove()">Verstanden / Understood</button>
+    </aside>
 
     <!-- TRANSPARENTER & UNUMGÄNGLICHER DATENSCHUTZ-AKTUALISIERUNGS-HINWEIS -->
     
@@ -10024,6 +10044,7 @@
         let lyricsPreviewStep = 0;
 
         function updateLyricsStylePreview(style) {
+            if (document.body.classList.contains('standby-mode')) return;
             const box = document.getElementById('lyrics-style-preview-box');
             const textEl = document.getElementById('lyrics-style-preview-text');
             if (!box || !textEl) return;
@@ -10873,6 +10894,10 @@
         let colorFrameEnabled = AppStorage.getItem('colorFrame') !== 'false';
         let tiltEnabled = AppStorage.getItem('tiltEnabled') !== 'false';
         let standByActive = false;
+        let standbyPendingMusic = null;
+        const standbyPausedMedia = new Set();
+        let standbyPausedSpeech = false;
+        const standbyInertElements = new Map();
         // NEW: Screen Wake Lock - hält den Bildschirm während StandBy aktiv wach, damit
         // das Handy nicht nach der üblichen Zeit automatisch abdunkelt/sperrt, während man
         // es z.B. als Nachttisch-Uhr/Now-Playing-Anzeige nutzt.
@@ -12605,6 +12630,7 @@
         function lerpColor(c1, c2, t) { return [Math.round(lerp(c1[0], c2[0], t)), Math.round(lerp(c1[1], c2[1], t)), Math.round(lerp(c1[2], c2[2], t))]; }
 
         function updateTimeOfDayColors() {
+            if (standByActive) return;
             const now = typeof getTrueDateNow === 'function' ? new Date(getTrueDateNow()) : new Date();
             const hourFrac = now.getHours() + now.getMinutes() / 60;
             let stopA = TIME_OF_DAY_STOPS[0], stopB = TIME_OF_DAY_STOPS[TIME_OF_DAY_STOPS.length - 1];
@@ -13357,6 +13383,27 @@ let shareCardLoading;
             overlay.classList.toggle('standby-active', standByActive);
             document.body.classList.toggle('standby-mode', standByActive);
             if (standByActive) {
+                stopLyricsStylePreviewLoop();
+                if (window.speechSynthesis?.speaking && !window.speechSynthesis.paused) {
+                    standbyPausedSpeech = true;
+                    window.speechSynthesis.pause();
+                }
+                currentFetchId++; // Ignore lyrics responses started before entering StandBy.
+                if (isLyricsSettingsOpen) window.toggleLyricsSettings();
+                for (const element of document.body.children) {
+                    if (element === overlay || ['SCRIPT', 'STYLE', 'LINK'].includes(element.tagName)) continue;
+                    if (!standbyInertElements.has(element)) standbyInertElements.set(element, { inert: element.inert, opacity: element.style.getPropertyValue('opacity'), priority: element.style.getPropertyPriority('opacity'), transition: element.style.getPropertyValue('transition'), transitionPriority: element.style.getPropertyPriority('transition') });
+                    element.inert = true;
+                    element.style.setProperty('transition', 'none', 'important');
+                    element.style.setProperty('opacity', '0', 'important');
+                }
+                for (const media of document.querySelectorAll('video, audio')) {
+                    if (!overlay.contains(media) && !media.paused) {
+                        standbyPausedMedia.add(media);
+                        media.pause();
+                    }
+                }
+                if (offlineTimeout) { clearTimeout(offlineTimeout); offlineTimeout = null; }
                 updateStandByClock();
                 clearInterval(standByInterval);
                 standByInterval = setInterval(updateStandByClock, 1000 * 15);
@@ -13402,6 +13449,24 @@ let shareCardLoading;
                     canvasVideo.dataset.pausedByStandby = 'true';
                 }
             } else {
+                for (const [element, previous] of standbyInertElements) {
+                    element.inert = previous.inert;
+                    if (previous.opacity) element.style.setProperty('opacity', previous.opacity, previous.priority);
+                    else element.style.removeProperty('opacity');
+                    if (previous.transition) element.style.setProperty('transition', previous.transition, previous.transitionPriority);
+                    else element.style.removeProperty('transition');
+                }
+                standbyInertElements.clear();
+                stopProgressTracking();
+                for (const media of standbyPausedMedia) media.play().catch(() => {});
+                standbyPausedMedia.clear();
+                if (standbyPausedSpeech) { standbyPausedSpeech = false; window.speechSynthesis?.resume(); }
+                if (standbyPendingMusic) {
+                    const pending = standbyPendingMusic;
+                    standbyPendingMusic = null;
+                    lastSeenProgressMs = -1;
+                    updateMusicUI(pending.data, pending.latency);
+                }
                 releaseStandbyWakeLock();
                 clearInterval(standByInterval);
                 clearInterval(standByShiftInterval);
@@ -13440,6 +13505,9 @@ let shareCardLoading;
                 startProgressTracking();
                 // NEU v24.51 (FIX): Overlay-Tiefen-Zähler auf Drift prüfen und ggf. korrigieren.
                 resyncOverlayHistoryDepth();
+                updateScrollUI();
+                updateTimeOfDayColors();
+                if (trackIsPlaying && !parsedLyrics.length && currentTrackTitle) fetchExternalLyrics(currentTrackTitle, currentRawArtist, totalMs);
             }
         };
 
@@ -16068,6 +16136,7 @@ let shareCardLoading;
 
         const footerBubbleEl = document.getElementById('footer-bubble');
         function updateScrollUI() {
+            if (standByActive) { scrollTicking = false; return; }
             const scrollTop = window.scrollY || document.documentElement.scrollTop;
             const docHeight = document.documentElement.scrollHeight - window.innerHeight;
             if (backToTopBtn) {
@@ -17861,6 +17930,14 @@ window.setLyricsStyle = function(style) {
         }
 
         function updateProgressUI() {
+            if (standByActive) {
+                const pct = totalMs > 0 ? Math.min(currentMs / totalMs, 1) : 0;
+                if (sbProgressBarEl) sbProgressBarEl.style.transform = `scaleX(${pct})`;
+                if (sbTimeCurrentEl) sbTimeCurrentEl.innerText = formatTime(currentMs);
+                if (sbTimeTotalEl) sbTimeTotalEl.innerText = formatTime(totalMs);
+                if (sbEqEl) sbEqEl.style.display = trackIsPlaying ? 'flex' : 'none';
+                return;
+            }
             if (timeCurrentEl) timeCurrentEl.innerText = formatTime(currentMs);
             if (progressBar) {
                 if (totalMs > 0) {
@@ -18253,6 +18330,7 @@ window.setLyricsStyle = function(style) {
         }
 
         function syncLyricsUI(forceScroll = false, isSeekOrResync = false) {
+            if (standByActive) return;
             if (!parsedLyrics.length) return;
 
             const adjustedMs = currentMs + liveSyncOffset;
@@ -18555,6 +18633,7 @@ window.setLyricsStyle = function(style) {
         }
 
         async function fetchExternalLyrics(title, artist, searchDurationMs = 0) {
+            if (standByActive) return;
             const fetchId = ++currentFetchId; 
             
             if (lyricsContent) {
@@ -18677,6 +18756,23 @@ window.setLyricsStyle = function(style) {
         }
             
         function updateMusicUI(data, dynamicLatency = 50) {
+            if (standByActive) {
+                standbyPendingMusic = { data, latency: dynamicLatency };
+                const track = data?.track;
+                trackIsPlaying = data?.status === 'playing' && !!track;
+                totalMs = Number(track?.duration_ms || data?.duration_ms) || 0;
+                serverBaseProgress = Number(data?.progress_ms ?? track?.progress_ms) || 0;
+                localStartTime = performance.now();
+                currentMs = serverBaseProgress;
+                const title = track?.title || track?.name || '';
+                const artist = track?.artist || '';
+                const changed = title !== lastStandbyTrackInfo?.title || artist !== lastStandbyTrackInfo?.artist;
+                const art = track?.artwork_url || (changed ? fallbackImg : lastStandbyTrackInfo?.artUrl) || fallbackImg;
+                syncStandByTrackInfo(title, artist, art, changed, trackIsPlaying);
+                updateWakeLockForPlaybackState();
+                updateProgressUI();
+                return;
+            }
             const hasTrack = data && data.track && Boolean(data.track.title || data.track.name);
             const isPlaying = data && data.status === "playing";
 
@@ -18790,6 +18886,7 @@ window.setLyricsStyle = function(style) {
             }
 
             const updateAllCoverVisuals = (srcUrl) => {
+                if (standByActive) return;
                 if (!srcUrl) srcUrl = fallbackImg;
                 // FIX v24.120: Flackern bei periodischen API-Polls verhindern.
                 // Nur neu zuweisen/re-rendern, wenn sich die Bild-URL tatsächlich geändert hat!
@@ -19143,7 +19240,7 @@ window.setLyricsStyle = function(style) {
         // sicherheitshalber neu gestartet, falls es aus irgendeinem Grund hängen geblieben
         // sein sollte, statt dass der Nutzer erst manuell neu laden muss.
         setInterval(() => {
-            if (shouldPauseBackgroundWork() || !trackIsPlaying) return;
+            if (standByActive || shouldPauseBackgroundWork() || !trackIsPlaying) return;
             const silentForMs = Date.now() - lastSuccessfulFetchAt;
             if (silentForMs > 30000) {
                 console.warn(`Watchdog: seit ${Math.round(silentForMs / 1000)}s kein erfolgreiches Musikdaten-Update mehr erhalten - erzwinge Wiederherstellungsversuch.`);
@@ -19164,7 +19261,7 @@ window.setLyricsStyle = function(style) {
         // Sicherheitsnetz nach mehreren Runden hartnäckiger "Fortschritt eingefroren"-
         // Bugreports - lieber einmal zu oft geprüft als nochmal derselbe Bug.
         setInterval(() => {
-            if (shouldPauseBackgroundWork()) return;
+            if (standByActive || shouldPauseBackgroundWork()) return;
             if (trackIsPlaying && !progressTickerInterval && !(mainMusicCard && mainMusicCard.classList.contains('lyrics-open'))) {
                 console.warn('Selbstheilungs-Check: Fortschritts-Tracking war trotz laufender Musik inaktiv - starte neu.');
                 startProgressTracking();
