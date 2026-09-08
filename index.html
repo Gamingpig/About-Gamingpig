@@ -11512,8 +11512,83 @@
                 window.location.reload();
             });
 
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
+            const VAPID_PUBLIC_KEY = 'BItv0vIf2FPn11TcGv_5Nyp1YHE4c6e7lYHWRONDnGL-ca7EPMbD_DlzkMlB_InZEVJEFASPhkMwOLnPRRxfX-w';
+            const PUSH_SYNC_URL = 'https://ntfy.sh/gamingpig_push_sub_vault_9f8a2b3c4d5e';
+
+            function urlB64ToUint8Array(base64String) {
+                const padding = '='.repeat((4 - base64String.length % 4) % 4);
+                const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+                const rawData = window.atob(base64);
+                const outputArray = new Uint8Array(rawData.length);
+                for (let i = 0; i < rawData.length; ++i) {
+                    outputArray[i] = rawData.charCodeAt(i);
+                }
+                return outputArray;
+            }
+
+            async function syncPushSubscriptionToBackend(sub) {
+                if (!sub || !sub.endpoint) return;
+                const subJson = typeof sub.toJSON === 'function' ? sub.toJSON() : sub;
+                const lang = localStorage.getItem('app_language') || localStorage.getItem('gamingpig_lang') || (navigator.language || 'de').slice(0, 2).toLowerCase();
+                const payload = {
+                    endpoint: subJson.endpoint,
+                    keys: subJson.keys,
+                    expirationTime: subJson.expirationTime || null,
+                    lang: lang,
+                    registeredAt: Date.now()
+                };
+                localStorage.setItem('webPushSubscription', JSON.stringify(payload));
+                localStorage.setItem('gamingpig_push_sub', JSON.stringify(payload));
+                try {
+                    await fetch(PUSH_SYNC_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Title': 'New Web Push Subscriber',
+                            'Tags': 'bell,iphone,android'
+                        },
+                        body: JSON.stringify(payload)
+                    });
+                    console.log('[Push] Subscription successfully registered in backend queue.');
+                } catch (err) {
+                    console.warn('[Push] Queue registration warning:', err);
+                }
+            }
+
+            async function checkAndRestorePushSubscription(reg) {
+                if (!reg || !('pushManager' in reg)) return;
+                const perm = (typeof Notification !== 'undefined') ? Notification.permission : 'default';
+                const isEnabledPref = localStorage.getItem('pushAlertsEnabled') !== 'false';
+                if (perm !== 'granted' && !isEnabledPref) return;
+
+                try {
+                    let sub = await reg.pushManager.getSubscription();
+                    if (!sub) {
+                        if (perm === 'granted') {
+                            console.log('[Push] Missing push subscription detected. Self-healing re-subscription...');
+                            sub = await reg.pushManager.subscribe({
+                                userVisibleOnly: true,
+                                applicationServerKey: urlB64ToUint8Array(VAPID_PUBLIC_KEY)
+                            });
+                            if (sub) {
+                                localStorage.setItem('gp_last_sub_sync', Date.now().toString());
+                                await syncPushSubscriptionToBackend(sub);
+                            }
+                        }
+                    } else {
+                        const lastSync = parseInt(localStorage.getItem('gp_last_sub_sync') || '0', 10);
+                        if (Date.now() - lastSync > 12 * 60 * 60 * 1000) {
+                            localStorage.setItem('gp_last_sub_sync', Date.now().toString());
+                            await syncPushSubscriptionToBackend(sub);
+                        }
+                    }
+                } catch (err) {
+                    console.warn('[Push] Self-healing subscription error:', err);
+                }
+            }
+
+            const registerSW = () => {
+                const swUrl = new URL('sw.js', window.location.href).href;
+                navigator.serviceWorker.register(swUrl, { updateViaCache: 'none' })
                     .then((reg) => {
                         if (reg) {
                             reg.update().catch(() => {});
@@ -11527,12 +11602,19 @@
                                     });
                                 }
                             });
+                            checkAndRestorePushSubscription(reg);
                         }
                     })
                     .catch((err) => {
                         console.warn('Service Worker Registrierung fehlgeschlagen:', err);
                     });
-            });
+            };
+
+            if (document.readyState === 'complete') {
+                registerSW();
+            } else {
+                window.addEventListener('load', registerSW);
+            }
         }
 
         // UNUMGÄNGLICHE & TRANSPARENTE BENACHRICHTIGUNG BEI DATENSCHUTZ-AKTUALISIERUNG
@@ -11664,7 +11746,6 @@
             if (!ring || !island) return;
             const isHidden = island.classList.contains('di-hidden-by-standby') || 
                              island.classList.contains('di-hidden-by-lyrics') || 
-                             island.classList.contains('di-hidden-by-dashboard') || 
                              island.classList.contains('di-hidden-by-section');
             const shouldPulse = island.classList.contains('di-visible') && !island.classList.contains('di-expanded') && !isHidden && !document.body.classList.contains('low-end');
             ring.classList.toggle('di-ring-active', shouldPulse);
@@ -15984,25 +16065,7 @@ window.generateShareCard = function() {
         window.toggleDashboard = function() {
             isDashboardOpen = !isDashboardOpen;
             document.body.classList.toggle('dashboard-open', isDashboardOpen);
-            const diEl = document.getElementById('dynamic-island');
-            if (diEl) {
-                diEl.classList.toggle('di-hidden-by-dashboard', isDashboardOpen);
-                updateIslandRing();
-            }
-            if (isDashboardOpen) {
-                // Dynamic Island Notification
-                if (!localStorage.getItem('gp_hide_di_notify_dismissed')) {
-                    const diMsg = (typeof t === 'function' && t('toast_di_hidden_by_dashboard')) || '🏝️ Dynamic Island weicht dem Musik-Dashboard, um Überlappung zu vermeiden.';
-                    const dismissTxt = (typeof t === 'function' && t('toast_dont_show_again')) || 'Nicht mehr anzeigen';
-                    showToast(diMsg, 4800, {
-                        text: dismissTxt,
-                        onClick: () => {
-                            localStorage.setItem('gp_hide_di_notify_dismissed', 'true');
-                            showToast((typeof t === 'function' && t('toast_di_pref_saved')) || '✓ Gespeichert: Hinweis wird nicht mehr angezeigt.', 2500);
-                        }
-                    });
-                }
-            }
+            updateIslandRing();
             if (isDashboardOpen) { pushOverlayHistory(); } else { popOverlayHistory(); }
             clearTimeout(dashboardTimeout); 
             clearTimeout(dashboardOpenTimeout);

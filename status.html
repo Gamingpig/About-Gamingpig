@@ -1442,20 +1442,29 @@
                 btnToggle.className = "px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition-all active:scale-95 border border-slate-700 cursor-pointer";
                 if (btnTest) btnTest.classList.remove('hidden');
 
-                // Automatische Hintergrund-Synchronisation des bestehenden Abonnements
+                // Automatische Hintergrund-Synchronisation & Self-Healing des Abonnements
                 if ('serviceWorker' in navigator) {
-                    const lastSync = parseInt(localStorage.getItem('gp_last_sub_sync') || '0', 10);
-                    if (Date.now() - lastSync > 12 * 60 * 60 * 1000) {
-                        navigator.serviceWorker.ready.then(async (reg) => {
-                            try {
-                                const sub = await reg.pushManager.getSubscription();
-                                if (sub) {
+                    navigator.serviceWorker.ready.then(async (reg) => {
+                        try {
+                            let sub = await reg.pushManager.getSubscription();
+                            if (!sub && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+                                console.log('[Push] Self-healing push subscription in status page...');
+                                const subJson = await subscribeToWebPush();
+                                if (subJson) {
+                                    localStorage.setItem('gp_last_sub_sync', Date.now().toString());
+                                    await autoRegisterSubscription(subJson);
+                                }
+                            } else if (sub) {
+                                const lastSync = parseInt(localStorage.getItem('gp_last_sub_sync') || '0', 10);
+                                if (Date.now() - lastSync > 12 * 60 * 60 * 1000) {
                                     localStorage.setItem('gp_last_sub_sync', Date.now().toString());
                                     await autoRegisterSubscription(JSON.stringify(sub.toJSON()));
                                 }
-                            } catch (e) {}
-                        }).catch(() => {});
-                    }
+                            }
+                        } catch (e) {
+                            console.warn('[Push] Status sync error:', e);
+                        }
+                    }).catch(() => {});
                 }
             } else {
                 badge.innerText = "⚪ " + t('push_disabled');
@@ -2225,18 +2234,50 @@
         // Service Worker & Startup Listeners                        //
         // ========================================================= //
         if ('serviceWorker' in navigator) {
+            let hadController = Boolean(navigator.serviceWorker.controller);
             let isRefreshing = false;
             navigator.serviceWorker.addEventListener('controllerchange', () => {
                 if (isRefreshing) return;
+                if (!hadController) {
+                    hadController = true;
+                    return;
+                }
+                const now = Date.now();
+                const lastReload = parseInt(sessionStorage.getItem('sw_last_reload') || '0', 10);
+                if (now - lastReload < 10000) {
+                    return;
+                }
                 isRefreshing = true;
+                sessionStorage.setItem('sw_last_reload', now.toString());
                 window.location.reload();
             });
 
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
-                    .then((reg) => { if (reg) reg.update().catch(() => {}); })
+            const registerSW = () => {
+                const swUrl = new URL('sw.js', window.location.href).href;
+                navigator.serviceWorker.register(swUrl, { updateViaCache: 'none' })
+                    .then((reg) => {
+                        if (reg) {
+                            reg.update().catch(() => {});
+                            reg.addEventListener('updatefound', () => {
+                                const newWorker = reg.installing;
+                                if (newWorker) {
+                                    newWorker.addEventListener('statechange', () => {
+                                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                            newWorker.postMessage({ type: 'SKIP_WAITING' });
+                                        }
+                                    });
+                                }
+                            });
+                        }
+                    })
                     .catch(() => {});
-            });
+            };
+
+            if (document.readyState === 'complete') {
+                registerSW();
+            } else {
+                window.addEventListener('load', registerSW);
+            }
         }
 
         // Auto Network Status Listeners

@@ -7,7 +7,7 @@
 // - Sofortige Übernahme: self.skipWaiting() & clients.claim()
 // ==============================================================================
 
-const SW_VERSION = "24.152.1";
+const SW_VERSION = "24.153.0";
 const CURRENT_CACHE_VERSION = `gamingpig-cache-v${SW_VERSION}`;
 const CACHE_NAME = CURRENT_CACHE_VERSION;
 
@@ -142,84 +142,61 @@ function getStoredAppLanguage() {
     });
 }
 
-// In-Memory Push Deduplication Cache
-const recentPushDedupeMap = new Map();
-
-// Web Push Event Handler für Android / iOS / Web Push mit Multi-Language Erkennung & Anti-Doppel-Filter
+// Web Push Event Handler für Android / iOS / Desktop
+// Robust: Garantiert, dass self.registration.showNotification immer aufgerufen wird und niemals rejected
 self.addEventListener("push", (event) => {
-    event.waitUntil((async () => {
-        let data = {
-            title: "⚠️ Gamingpig System-Status",
-            body: "Status-Änderung bei Spotify, Lyrics oder Server-Verbindung festgestellt.",
-            url: "./status.html",
-            icon: "icon-192.png",
-            badge: "icon-192.png"
-        };
-        if (event.data) {
+    let payload = {
+        title: "Gamingpig Update",
+        body: "Neue Inhalte verfügbar!",
+        url: "./status.html",
+        icon: "icon-192.png",
+        badge: "icon-192.png"
+    };
+
+    if (event.data) {
+        try {
+            const parsed = event.data.json();
+            if (parsed && typeof parsed === "object") {
+                payload = Object.assign(payload, parsed);
+            }
+        } catch (e) {
             try {
-                const parsed = event.data.json();
-                if (parsed && typeof parsed === 'object') {
-                    data = Object.assign(data, parsed);
-                }
-            } catch (e) {
-                try {
-                    const text = event.data.text();
-                    if (text) data.body = text;
-                } catch(err) {}
-            }
+                const text = event.data.text();
+                if (text) payload.body = text;
+            } catch (err) {}
         }
+    }
 
-        // 1. Hole vom Nutzer in der Web-App gewählte Sprache
-        const storedLang = await getStoredAppLanguage();
-        // 2. Fallback: targetLang vom Server oder Browser-Sprache
-        const deviceLang = (navigator.language || "de").slice(0, 2).toLowerCase();
-        const effectiveLang = (storedLang || data.targetLang || deviceLang || "de").slice(0, 2).toLowerCase();
-
-        let title = data.title || "⚠️ Gamingpig System-Status";
-        let body = data.body || "Status-Aktualisierung.";
-
-        if (data.translations && typeof data.translations === 'object') {
-            if (data.translations[effectiveLang]) {
-                title = data.translations[effectiveLang].title || title;
-                body = data.translations[effectiveLang].body || body;
-            } else if (data.translations.de) {
-                title = data.translations.de.title || title;
-                body = data.translations.de.body || body;
-            } else if (data.translations.en) {
-                title = data.translations.en.title || title;
-                body = data.translations.en.body || body;
-            }
+    // Sprach-Unterstützung falls im Payload hinterlegt
+    let title = payload.title || "Gamingpig Update";
+    let body = payload.body || "Neue Inhalte verfügbar!";
+    if (payload.translations && typeof payload.translations === "object") {
+        const lang = (navigator.language || "de").slice(0, 2).toLowerCase();
+        if (payload.translations[lang]) {
+            title = payload.translations[lang].title || title;
+            body = payload.translations[lang].body || body;
+        } else if (payload.translations.de) {
+            title = payload.translations.de.title || title;
+            body = payload.translations.de.body || body;
+        } else if (payload.translations.en) {
+            title = payload.translations.en.title || title;
+            body = payload.translations.en.body || body;
         }
+    }
 
-        // 3. Intelligente Deduplizierung: Verhindert mehrfaches Aufpoppen innerhalb von 45 Sekunden
-        const dedupeKey = data.broadcastId || (title + ':::' + body);
-        const now = Date.now();
-        if (recentPushDedupeMap.has(dedupeKey)) {
-            const lastSeen = recentPushDedupeMap.get(dedupeKey);
-            if (now - lastSeen < 45000) {
-                console.log("[SW] Ignoriere doppelte Push-Nachricht:", dedupeKey);
-                return;
-            }
-        }
-        recentPushDedupeMap.set(dedupeKey, now);
+    const iconUrl = payload.icon || "icon-192.png";
+    const badgeUrl = payload.badge || "icon-192.png";
 
-        // Aufräumen alter Einträge
-        for (const [k, time] of recentPushDedupeMap.entries()) {
-            if (now - time > 120000) recentPushDedupeMap.delete(k);
-        }
-
-        const tag = data.broadcastId || ('gp-alert-' + Math.floor(now / 30000));
-        const options = {
+    event.waitUntil(
+        self.registration.showNotification(title, {
             body: body,
-            icon: data.icon || "icon-192.png",
-            badge: data.badge || "icon-192.png",
-            tag: tag,
-            renotify: false,
-            timestamp: data.timestamp || now,
-            data: { url: data.url || "./status.html" }
-        };
-        return self.registration.showNotification(title, options);
-    })());
+            icon: iconUrl,
+            badge: badgeUrl,
+            data: { url: payload.url || "./status.html" }
+        }).catch((err) => {
+            console.error("[SW] showNotification error:", err);
+        })
+    );
 });
 
 // Intelligenter Fetch-Handler
