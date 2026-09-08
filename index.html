@@ -10974,6 +10974,7 @@
         let tiltEnabled = AppStorage.getItem('tiltEnabled') !== 'false';
         let standByActive = false;
         let standbyPendingMusic = null;
+        let standbyProgressSample = null;
         const standbyPausedMedia = new Set();
         let standbyPausedSpeech = false;
         const standbyInertElements = new Map();
@@ -13462,6 +13463,7 @@ let shareCardLoading;
             overlay.classList.toggle('standby-active', standByActive);
             document.body.classList.toggle('standby-mode', standByActive);
             if (standByActive) {
+                if (!wasActive) standbyProgressSample = { id: currentTrackId, progress: lastSeenProgressMs, playing: trackIsPlaying };
                 stopLyricsStylePreviewLoop();
                 if (window.speechSynthesis?.speaking && !window.speechSynthesis.paused) {
                     standbyPausedSpeech = true;
@@ -18839,13 +18841,42 @@ window.setLyricsStyle = function(style) {
             if (standByActive) {
                 standbyPendingMusic = { data, latency: dynamicLatency };
                 const track = data?.track;
-                trackIsPlaying = data?.status === 'playing' && !!track;
-                totalMs = Number(track?.duration_ms || data?.duration_ms) || 0;
-                serverBaseProgress = Number(data?.progress_ms ?? track?.progress_ms) || 0;
-                localStartTime = performance.now();
-                currentMs = serverBaseProgress;
+                const playing = data?.status === 'playing' && !!track;
                 const title = track?.title || track?.name || '';
                 const artist = track?.artist || '';
+                const id = title + '-' + artist.replace(/\s*•\s*From Smart Shuffle/gi, '').trim();
+                const raw = data?.progress_ms ?? track?.progress_ms;
+                const progress = raw !== null && raw !== undefined && Number.isFinite(Number(raw)) ? Math.max(0, Number(raw)) : null;
+                const previous = standbyProgressSample;
+                const newTrack = !previous || previous.id !== id;
+                const playbackChanged = !previous || previous.playing !== playing;
+                totalMs = Number(track?.duration_ms || data?.duration_ms) || 0;
+                const now = performance.now();
+                const expected = serverBaseProgress + (trackIsPlaying ? now - localStartTime : 0);
+                // Repeated API snapshots must not restart the locally advancing clock.
+                if (newTrack || playbackChanged || (progress !== null && progress !== previous.progress)) {
+                    let target = progress ?? (newTrack ? 0 : expected);
+                    if (playing && progress !== null) {
+                        const timestamp = data.timestamp || data.updated_at || data.fetched_at || track?.timestamp;
+                        const stamp = typeof timestamp === 'number' ? (timestamp < 20000000000 ? timestamp * 1000 : timestamp) : Date.parse(timestamp);
+                        const age = getTrueDateNow() - stamp;
+                        if (age >= 0 && age <= (totalMs || 600000)) target += age;
+                        target += dynamicLatency;
+                    }
+                    target = Math.max(0, totalMs > 0 ? Math.min(target, totalMs) : target);
+                    const drift = target - expected;
+                    if (newTrack || playbackChanged || Math.abs(drift) > 1200) {
+                        serverBaseProgress = target;
+                        localStartTime = now;
+                    } else if (Math.abs(drift) > 120) {
+                        serverBaseProgress = expected + drift * 0.35;
+                        localStartTime = now;
+                    }
+                }
+                trackIsPlaying = playing;
+                currentMs = serverBaseProgress + (playing ? now - localStartTime : 0);
+                if (totalMs > 0) currentMs = Math.min(currentMs, totalMs);
+                standbyProgressSample = { id, progress: progress ?? (newTrack ? null : previous.progress), playing };
                 const changed = title !== lastStandbyTrackInfo?.title || artist !== lastStandbyTrackInfo?.artist;
                 const art = track?.artwork_url || (changed ? fallbackImg : lastStandbyTrackInfo?.artUrl) || fallbackImg;
                 syncStandByTrackInfo(title, artist, art, changed, trackIsPlaying);
