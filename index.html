@@ -3158,12 +3158,7 @@
                 document.documentElement.classList.add('needs-onboarding');
             }
             
-            // Force PWA cache refresh in background
-            if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.getRegistrations().then(regs => {
-                    regs.forEach(r => r.update());
-                }).catch(() => {});
-            }
+            // Service Worker wird sauber im Load-Event registriert
         } catch(e) {}
     </script>
     <style id="onboarding-shield-style">
@@ -11405,16 +11400,28 @@
         // --- NEW: INSTALLIERBARE PWA & SERVICE WORKER LIFECYCLE --- //
         // ========================================================= //
         if ('serviceWorker' in navigator) {
+            let hadController = Boolean(navigator.serviceWorker.controller);
             let isRefreshing = false;
+
             navigator.serviceWorker.addEventListener('controllerchange', () => {
                 if (isRefreshing) return;
+                if (!hadController) {
+                    hadController = true;
+                    return;
+                }
+                const now = Date.now();
+                const lastReload = parseInt(sessionStorage.getItem('sw_last_reload') || '0', 10);
+                if (now - lastReload < 10000) {
+                    return; // Anti-loop throttle
+                }
                 isRefreshing = true;
+                sessionStorage.setItem('sw_last_reload', now.toString());
                 console.log('[SW] Neuer Service Worker aktiv – führe sauberen Refresh durch.');
                 window.location.reload();
             });
 
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js?v=24.152.1', { updateViaCache: 'none' })
+                navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
                     .then((reg) => {
                         if (reg) {
                             reg.update().catch(() => {});

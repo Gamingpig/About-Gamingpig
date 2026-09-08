@@ -1019,14 +1019,25 @@
     }
   });
 
-  // Service Worker Update-Registration
+    // Service Worker Update-Registration mit Anti-Loop Guard
   if ('serviceWorker' in navigator) {
+    let hadController = Boolean(navigator.serviceWorker.controller);
     let isRefreshing = false;
+
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       if (isRefreshing) return;
+      if (!hadController) {
+        hadController = true;
+        return;
+      }
+      const now = Date.now();
+      const lastReload = parseInt(sessionStorage.getItem('sw_last_reload') || '0', 10);
+      if (now - lastReload < 10000) return;
       isRefreshing = true;
+      sessionStorage.setItem('sw_last_reload', now.toString());
       window.location.reload();
     });
+
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
         .then((reg) => { if (reg) reg.update().catch(() => {}); })
