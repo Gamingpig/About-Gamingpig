@@ -3142,23 +3142,31 @@
             const savedAppLang = localStorage.getItem('app_language') || localStorage.getItem('selectedLanguage');
             if (savedAppLang) document.documentElement.setAttribute('lang', savedAppLang);
             
-            // 🛡️ INSTANT ONBOARDING SHIELD (v24.152.0)
+            // Animation Style Initialisierung
+            const savedAnimStyle = localStorage.getItem('app_animation_style') || 'smooth';
+            document.documentElement.setAttribute('data-animation-style', savedAnimStyle);
+
+            // Visit-Counter Tracking
+            let _visitCount = parseInt(localStorage.getItem('app_visit_count') || '0', 10);
+            _visitCount++;
+            localStorage.setItem('app_visit_count', _visitCount.toString());
+
+            // 🛡️ INSTANT ONBOARDING SHIELD
             const _currVer = 'v24.152.0 · 2026-09-07';
             const _installedVer = localStorage.getItem('site_version_installed');
             if (_installedVer !== _currVer) {
                 localStorage.setItem('site_version_installed', _currVer);
             }
-            // Onboarding startet NUR wenn noch NIE abgeschlossen oder per URL erzwungen
-            const _rawOnb = localStorage.getItem('onboarding_completed');
-            const _onbCompleted = (_rawOnb === '1' || _rawOnb === 'true');
+
+            // Single source of truth: tutorial_completed
+            const _rawTutorialDone = localStorage.getItem('tutorial_completed') || localStorage.getItem('onboarding_completed');
+            const _isTutorialDone = (_rawTutorialDone === 'true' || _rawTutorialDone === '1');
             const _urlP = new URLSearchParams(window.location.search);
             const _forceStart = _urlP.has('first_visit') || _urlP.has('onboarding') || _urlP.has('tutorial');
             
-            if (!_onbCompleted || _forceStart) {
+            if (!_isTutorialDone || _forceStart) {
                 document.documentElement.classList.add('needs-onboarding');
             }
-            
-            // Service Worker wird sauber im Load-Event registriert
         } catch(e) {}
     </script>
     <style id="onboarding-shield-style">
@@ -3250,6 +3258,11 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@500;800&display=swap');
         
         :root {
+            /* Global Animation Engine Tokens */
+            --anim-duration: 250ms;
+            --anim-easing: cubic-bezier(0.25, 0.1, 0.25, 1);
+            --anim-scale: 0.96;
+
             /* Apple iOS Spring & Ease Curves */
             --apple-spring: cubic-bezier(0.32, 0.72, 0, 1);
             --apple-ease: cubic-bezier(0.25, 0.1, 0.25, 1);
@@ -3262,6 +3275,35 @@
             --gl-shadow-idle: 0 15px 35px rgba(0,0,0,0.1), inset 0 1px 1px rgba(255,255,255,0.6), inset 0 -1px 2px rgba(255,255,255,0.1);
             --gl-shadow-idle-2: 0 18px 40px rgba(0,0,0,0.12), inset 0 1px 2px rgba(255,255,255,0.7), inset 0 -1px 2px rgba(255,255,255,0.15);
             --gl-shadow-idle-3: 0 12px 30px rgba(0,0,0,0.08), inset 0 1px 1px rgba(255,255,255,0.5), inset 0 -1px 1px rgba(255,255,255,0.05);
+        }
+
+        html[data-animation-style="smooth"] {
+            --anim-duration: 250ms;
+            --anim-easing: cubic-bezier(0.25, 0.1, 0.25, 1);
+            --anim-scale: 0.96;
+        }
+        html[data-animation-style="dynamic"] {
+            --anim-duration: 350ms;
+            --anim-easing: cubic-bezier(0.34, 1.56, 0.64, 1);
+            --anim-scale: 0.92;
+        }
+        html[data-animation-style="minimal"] {
+            --anim-duration: 110ms;
+            --anim-easing: cubic-bezier(0.16, 1, 0.3, 1);
+            --anim-scale: 0.98;
+        }
+        html[data-animation-style="reduced"] {
+            --anim-duration: 0ms !important;
+            --anim-easing: linear !important;
+            --anim-scale: 1 !important;
+        }
+        html[data-animation-style="reduced"] *,
+        html[data-animation-style="reduced"] *::before,
+        html[data-animation-style="reduced"] *::after {
+            animation-duration: 0.001ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.001ms !important;
+            transform: none !important;
         }
 
         html.dark {
@@ -6807,11 +6849,29 @@
         <button onclick="toggleSitePerf()" id="btn-toggle-perf" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-green-400 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-green-500/25 transition-all font-bold truncate active:scale-95 flex items-center justify-center gap-1">
             <span>🚀</span> <span>60 FPS</span>
         </button>
-        <button onclick="toggleSiteLiquid()" id="btn-toggle-liquid" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-cyan-300 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold truncate active:scale-95 flex items-center justify-center gap-1">
+        <button onclick="toggleSiteLiquid()" id="btn-toggle-liquid" class="col-span-2 text-center text-[9px] xxs:text-[10px] sm:text-xs text-cyan-300 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold truncate active:scale-95 flex items-center justify-center gap-1">
             <span>💧</span> <span>Liquid Glass</span>
         </button>
-        <button onclick="toggleUiSoundEnabled()" id="btn-toggle-sound" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-teal-400 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold whitespace-nowrap active:scale-95">UI-Sounds: AN</button>
-        <button onclick="toggleHapticEnabled()" id="btn-toggle-haptic" class="col-span-2 text-center text-[9px] xxs:text-[10px] sm:text-xs text-teal-400 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold whitespace-nowrap active:scale-95">Haptik: AN</button>
+    </div>
+
+    <div class="h-px w-full bg-slate-700/70 my-0.5"></div>
+
+    <!-- Animationen & Feedback (Audio / Haptik) -->
+    <p class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-slate-400 px-1">Animationen &amp; Feedback</p>
+    <div class="px-1 flex flex-col gap-1.5">
+        <div>
+            <label for="app-animation-style-select" class="text-[9px] xxs:text-[10px] sm:text-xs font-bold text-slate-300 block mb-1">Animationsstil</label>
+            <select id="app-animation-style-select" onchange="setAnimationStyle(this.value)" class="w-full text-[10px] xxs:text-xs bg-slate-800 text-indigo-300 border border-slate-700 rounded-xl px-2.5 py-2 font-bold">
+                <option value="smooth">Smooth (Cubic 250ms)</option>
+                <option value="dynamic">Dynamic (Spring &amp; Bounce)</option>
+                <option value="minimal">Minimal (Micro-Fade 110ms)</option>
+                <option value="reduced">Reduced (Aus / 0ms)</option>
+            </select>
+        </div>
+        <div class="grid grid-cols-2 gap-1.5 w-full mt-0.5">
+            <button onclick="toggleUiSoundEnabled()" id="btn-toggle-sound" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-teal-400 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold whitespace-nowrap active:scale-95">UI-Sounds: AN</button>
+            <button onclick="toggleHapticEnabled()" id="btn-toggle-haptic" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-teal-400 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold whitespace-nowrap active:scale-95">Haptik: AN</button>
+        </div>
     </div>
 
     <div class="h-px w-full bg-slate-700/70 my-0.5"></div>
@@ -16606,7 +16666,13 @@ window.generateShareCard = function() {
             const btnHaptic = document.getElementById('btn-toggle-haptic');
             if (btnHaptic && typeof hapticEnabled !== 'undefined') {
                 btnHaptic.textContent = (typeof t === 'function' ? (t('settings_haptic') || 'Haptik') : 'Haptik') + ': ' + (hapticEnabled ? 'AN' : 'AUS');
-                btnHaptic.className = `col-span-2 text-center text-[9px] xxs:text-[10px] sm:text-xs px-2 py-2 rounded-xl border font-bold transition-all active:scale-95 ${hapticEnabled ? 'text-teal-400 bg-teal-500/15 border-teal-500/30' : 'text-slate-400 bg-slate-800/80 border-white/5'}`;
+                btnHaptic.className = `text-center text-[9px] xxs:text-[10px] sm:text-xs px-2 py-2 rounded-xl border font-bold transition-all active:scale-95 ${hapticEnabled ? 'text-teal-400 bg-teal-500/15 border-teal-500/30' : 'text-slate-400 bg-slate-800/80 border-white/5'}`;
+            }
+
+            const animSelect = document.getElementById('app-animation-style-select');
+            if (animSelect) {
+                const currentAnim = localStorage.getItem('app_animation_style') || 'smooth';
+                animSelect.value = currentAnim;
             }
 
             const btnWake = document.getElementById('btn-toggle-wakelock');
@@ -16619,6 +16685,16 @@ window.generateShareCard = function() {
             const currentScale = parseFloat(document.documentElement.style.getPropertyValue('--app-zoom')) || 1.0;
             if (sliderZoom) sliderZoom.value = currentScale;
             if (labelZoom) labelZoom.textContent = Math.round(currentScale * 100) + '%';
+        };
+
+        window.setAnimationStyle = function(style) {
+            const validStyles = ['smooth', 'dynamic', 'minimal', 'reduced'];
+            const targetStyle = validStyles.includes(style) ? style : 'smooth';
+            localStorage.setItem('app_animation_style', targetStyle);
+            document.documentElement.setAttribute('data-animation-style', targetStyle);
+            if (typeof playUISound === 'function') playUISound('click');
+            if (typeof haptic === 'function') haptic(10);
+            updateSettingsStatusButtons();
         };
 
         window.toggleSiteTheme = function() {
