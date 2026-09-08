@@ -13757,11 +13757,16 @@ window.generateShareCard = function() {
             interactiveTutorialActive = false;
             const hud = document.getElementById('interactive-quest-hud');
             if (hud) hud.classList.add('hidden');
-            document.querySelectorAll('.quest-highlight-target, .tutorial-target-active, .tutorial-active-element').forEach(el => {
-                el.classList.remove('quest-highlight-target', 'tutorial-target-active', 'tutorial-active-element');
+            document.querySelectorAll('.quest-highlight-target, .tutorial-target-active, .tutorial-active-element, .is-highlighted, .is-spotlighted').forEach(el => {
+                el.classList.remove('quest-highlight-target', 'tutorial-target-active', 'tutorial-active-element', 'is-highlighted', 'is-spotlighted');
             });
+            localStorage.setItem('tutorial_completed', 'true');
             localStorage.setItem('tutorialCompletedV5', 'true');
-            showToast('Quest beendet ✓', 2000);
+            localStorage.setItem('onboarding_completed', 'true');
+            showToast((window.I18nManager && window.I18nManager.t) ? window.I18nManager.t('quest_dismissed_toast') : 'Quest beendet ✓', 2000);
+            setTimeout(() => {
+                window.location.reload();
+            }, 300);
         };
 
         function spawnXpFloatBadge(text) {
@@ -13825,17 +13830,27 @@ window.generateShareCard = function() {
         function showTutorialCompletionModal() {
             const modalOverlay = document.getElementById('modal-overlay');
             const modalBody = document.getElementById('modal-body');
+            const modalCloseBtn = document.getElementById('close-modal') || document.getElementById('modal-close');
+            if (modalCloseBtn) modalCloseBtn.classList.remove('hidden');
+
+            const t = (k, def) => (window.I18nManager && window.I18nManager.t) ? window.I18nManager.t(k) : def;
+
             if (!modalOverlay || !modalBody) {
-                showToast('🏆 Großartig! Du hast alle interaktiven Quests gemeistert! 🎉', 5000);
+                showToast(t('onboarding_exploration_done', '🏆 Großartig! Du hast alle interaktiven Quests gemeistert! 🎉'), 5000);
                 return;
             }
             modalBody.innerHTML = '<div class="flex flex-col items-center text-center p-4 sm:p-6">' +
-                '<div class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-800 text-slate-400 text-[10px] font-semibold uppercase tracking-wider mb-4 border border-white/10"><span>Schritt 2 von 5</span> • <span>Einführung abgeschlossen</span></div>' +
-                '<h2 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white mb-2 tracking-tight">Erkundung abgeschlossen</h2>' +
-                '<p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-md mb-6 leading-relaxed">Du hast alle Stationen des Portfolios erfolgreich kennengelernt.</p>' +
-                '<button onclick="window.closeModal(); if(window.OnboardingCoordinator) window.OnboardingCoordinator.step3_whatsNew();" class="w-full max-w-xs py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs text-center transition-all active:scale-[0.98] border border-blue-400/30 mx-auto">' +
-                    'Weiter zu Neuerungen ➔' +
-                '</button>' +
+                '<div class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-800 text-slate-400 text-[10px] font-semibold uppercase tracking-wider mb-4 border border-white/10"><span>' + t('onboarding_step_2_5', 'Schritt 2 von 5') + '</span> • <span>' + t('onboarding_intro_done', 'Einführung abgeschlossen') + '</span></div>' +
+                '<h2 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white mb-2 tracking-tight">' + t('onboarding_exploration_done', 'Erkundung abgeschlossen') + '</h2>' +
+                '<p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-md mb-6 leading-relaxed">' + t('onboarding_exploration_desc', 'Du hast alle Stationen des Portfolios erfolgreich kennengelernt.') + '</p>' +
+                '<div class="flex flex-col sm:flex-row items-center gap-2.5 w-full max-w-xs mx-auto">' +
+                    '<button onclick="window.closeModal(); if(window.OnboardingCoordinator) window.OnboardingCoordinator.step3_whatsNew();" class="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs text-center transition-all active:scale-[0.98] border border-blue-400/30">' +
+                        t('onboarding_to_whatsnew', 'Weiter zu Neuerungen ➔') +
+                    '</button>' +
+                    '<button onclick="localStorage.setItem(\'tutorial_completed\', \'true\'); localStorage.setItem(\'tutorialCompletedV5\', \'true\'); localStorage.setItem(\'onboarding_completed\', \'true\'); window.closeModal(); window.location.reload();" class="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs text-center transition-all active:scale-[0.98] border border-white/10">' +
+                        t('onboarding_maybe_later', 'Vielleicht später') +
+                    '</button>' +
+                '</div>' +
             '</div>';
             modalOverlay.classList.remove('hidden');
             modalOverlay.classList.add('flex');
@@ -16421,17 +16436,44 @@ window.generateShareCard = function() {
                 // Clean Abschluss-Modal für Schritt 5
                 const modalOverlay = document.getElementById('modal-overlay');
                 const modalBody = document.getElementById('modal-body');
+                const modalCloseBtn = document.getElementById('close-modal') || document.getElementById('modal-close');
+                if (modalCloseBtn) modalCloseBtn.classList.add('hidden'); // Hide 'X' close button during celebration
+
                 if (modalOverlay && modalBody) {
+                    const t = (k, ...args) => (window.I18nManager && window.I18nManager.t) ? window.I18nManager.t(k, ...args) : '';
                     modalBody.innerHTML = '<div class="flex flex-col items-center text-center p-4 sm:p-6">' +
-                        '<div class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-semibold uppercase tracking-wider mb-4 border border-emerald-500/20"><span>Schritt 5 von 5</span> • <span>Bereit</span></div>' +
-                        '<h2 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white mb-2 tracking-tight">Alles eingerichtet</h2>' +
-                        '<p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-md mb-6 leading-relaxed">Deine Konfiguration wurde dauerhaft gespeichert. Viel Spaß beim Erkunden!</p>' +
-                        '<button onclick="window.closeModal()" class="w-full max-w-xs py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs text-center transition-all active:scale-[0.98] border border-blue-400/30 mx-auto">' +
-                            'Starten ➔' +
+                        '<div class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-semibold uppercase tracking-wider mb-4 border border-emerald-500/20"><span>' + (t('onboarding_step_5_5') || 'Schritt 5 von 5') + '</span> • <span>' + (t('onboarding_ready') || 'Bereit') + '</span></div>' +
+                        '<h2 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white mb-2 tracking-tight">' + (t('onboarding_all_set') || 'Alles eingerichtet') + '</h2>' +
+                        '<p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-md mb-6 leading-relaxed">' + (t('onboarding_all_set_desc') || 'Deine Konfiguration wurde dauerhaft gespeichert. Viel Spaß beim Erkunden!') + '</p>' +
+                        '<button id="btn-onboard-finish" disabled class="w-full max-w-xs py-3 px-4 rounded-xl bg-blue-600/40 text-white/50 cursor-not-allowed font-semibold text-xs text-center transition-all border border-blue-400/20 mx-auto">' +
+                            (t('onboarding_start_countdown', 5) || 'Starten (5s) ➔') +
                         '</button>' +
                     '</div>';
                     modalOverlay.classList.remove('hidden');
                     modalOverlay.classList.add('flex');
+
+                    let countdown = 5;
+                    const finishBtn = document.getElementById('btn-onboard-finish');
+                    const interval = setInterval(() => {
+                        countdown--;
+                        if (countdown > 0) {
+                            if (finishBtn) finishBtn.innerText = t('onboarding_start_countdown', countdown) || ('Starten (' + countdown + 's) ➔');
+                        } else {
+                            clearInterval(interval);
+                            if (finishBtn) {
+                                finishBtn.disabled = false;
+                                finishBtn.className = 'w-full max-w-xs py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs text-center transition-all active:scale-[0.98] border border-blue-400/30 mx-auto cursor-pointer shadow-lg shadow-blue-500/20';
+                                finishBtn.innerText = t('onboarding_start_btn') || 'Starten ➔';
+                                finishBtn.onclick = () => {
+                                    localStorage.setItem('tutorial_completed', 'true');
+                                    localStorage.setItem('tutorialCompletedV5', 'true');
+                                    localStorage.setItem('onboarding_completed', 'true');
+                                    window.closeModal();
+                                    window.location.reload();
+                                };
+                            }
+                        }
+                    }, 1000);
                 } else {
                     showToast('Alles eingerichtet und gespeichert!', 3000);
                 }
