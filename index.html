@@ -4576,9 +4576,9 @@
 
         /* Toast-Benachrichtigungen (z.B. für Easter Egg) */
         #toast-container {
-            position: fixed; bottom: 5.5rem; left: 50%; transform: translateX(-50%);
-            z-index: 9997; display: flex; flex-direction: column; gap: 0.5rem;
-            align-items: center; pointer-events: none; width: 90%; max-width: 380px;
+            position: fixed; bottom: max(2rem, env(safe-area-inset-bottom, 24px) + 20px); left: 50%; transform: translateX(-50%);
+            z-index: 100010; display: flex; flex-direction: column; gap: 0.5rem;
+            align-items: center; pointer-events: none; width: 90%; max-width: 400px;
         }
         .toast {
             background: rgba(15, 23, 42, 0.92); color: white; border: 1px solid rgba(255,255,255,0.15);
@@ -4707,8 +4707,7 @@
         /* NEW: Insel ausblenden wenn StandBy, Lyrics, Dashboard oder Musikbereich aktiv/im Bild ist (verhindert Überlappungen und doppelte Player) */
         #dynamic-island.di-hidden-by-standby,
         #dynamic-island.di-hidden-by-lyrics,
-        #dynamic-island.di-hidden-by-dashboard,
-        #dynamic-island.di-hidden-by-section {
+        #dynamic-island.di-hidden-by-dashboard {
             opacity: 0 !important;
             pointer-events: none !important;
             transform: translateX(-50%) scale(0.85) translateZ(0) !important;
@@ -11410,33 +11409,7 @@
             navigator.serviceWorker.addEventListener('controllerchange', () => {
                 if (isRefreshing) return;
                 isRefreshing = true;
-                console.log('[SW] Neuer Service Worker aktiv – führe automatischen Refresh durch.');
-                try {
-                    const pushAllowed = (typeof Notification !== 'undefined' && Notification.permission === 'granted' && localStorage.getItem('pushAlertsEnabled') !== 'false');
-                    if (pushAllowed) {
-                        const lang = localStorage.getItem('selectedLanguage') || 'de';
-                        const titles = {
-                            de: '🚀 Neues Update verfügbar!',
-                            en: '🚀 New Update Available!',
-                            es: '🚀 ¡Nueva actualización disponible!',
-                            fr: '🚀 Nouvelle mise à jour disponible !',
-                            pt: '🚀 Nova atualização disponível!',
-                            tr: '🚀 Yeni Güncelleme Yayında!'
-                        };
-                        const bodies = {
-                            de: 'Gamingpig Portfolio ist jetzt live mit neuen Features und Optimierungen (v24.152.1).',
-                            en: 'Gamingpig Portfolio is live with fresh features and improvements (v24.152.1).',
-                            es: 'Gamingpig Portfolio ya está disponible con nuevas mejoras (v24.152.1).',
-                            fr: 'Gamingpig Portfolio est disponible avec de nouvelles fonctionnalités (v24.152.1).',
-                            pt: 'Gamingpig Portfolio está disponível com novos recursos (v24.152.1).',
-                            tr: 'Gamingpig Portfolio yeni özelliklerle yayında (v24.152.1).'
-                        };
-                        new Notification(titles[lang] || titles.de, {
-                            body: bodies[lang] || bodies.de,
-                            icon: 'icon-192.png'
-                        });
-                    }
-                } catch(e) {}
+                console.log('[SW] Neuer Service Worker aktiv – führe sauberen Refresh durch.');
                 window.location.reload();
             });
 
@@ -15513,19 +15486,7 @@ window.generateShareCard = function() {
             } catch(e) {}
         })();
 
-        // Versteckt die Dynamic Island automatisch wenn der Musik-Bereich/Player im Blickfeld ist
-        const musicSectionEl = document.getElementById('music-section');
-        if (musicSectionEl && 'IntersectionObserver' in window) {
-            const diMusicObserver = new IntersectionObserver((entries) => {
-                const island = document.getElementById('dynamic-island');
-                if (!island) return;
-                entries.forEach(entry => {
-                    island.classList.toggle('di-hidden-by-section', entry.isIntersecting);
-                    updateIslandRing();
-                });
-            }, { threshold: 0.08 });
-            diMusicObserver.observe(musicSectionEl);
-        }
+        // Dynamic Island bleibt beim Scrollen permanent sichtbar (kein Ausblenden im Musik-Bereich)
 
         // ========================================================= //
         // --- NEUES FEATURE: Back-to-Top-Button -------------------- //
@@ -18994,11 +18955,16 @@ window.setLyricsStyle = function(style) {
 
         if (!_isCompleted || _forceOnboarding) {
             document.documentElement.classList.add('needs-onboarding');
-            setTimeout(() => {
-                if (window.OnboardingCoordinator && typeof window.OnboardingCoordinator.step1_language === 'function') {
-                    window.OnboardingCoordinator.step1_language();
-                }
-            }, 100);
+            // Automatischer Sofortstart des Onboardings für Erstbesucher & nach Reset
+            if (window.OnboardingCoordinator && typeof window.OnboardingCoordinator.step1_language === 'function') {
+                window.OnboardingCoordinator.step1_language();
+            } else {
+                setTimeout(() => {
+                    if (window.OnboardingCoordinator && typeof window.OnboardingCoordinator.step1_language === 'function') {
+                        window.OnboardingCoordinator.step1_language();
+                    }
+                }, 50);
+            }
         }
     </script>
 <script>

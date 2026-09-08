@@ -71,13 +71,14 @@ self.addEventListener("message", (event) => {
 // Benachrichtigungs-Klick-Handler (öffnet oder fokussiert die Status-Seite)
 self.addEventListener("notificationclick", (event) => {
     event.notification.close();
-    const targetUrl = (event.notification.data && event.notification.data.url) ? event.notification.data.url : "./status.html";
+    const rawUrl = (event.notification.data && event.notification.data.url) ? event.notification.data.url : "./status.html";
+    const targetUrl = new URL(rawUrl, self.location.origin).href;
 
     event.waitUntil(
         clients.matchAll({ type: "window", includeUncontrolled: true }).then((windowClients) => {
             for (const client of windowClients) {
-                if (client.url.includes("status.html") && "focus" in client) {
-                    return client.focus();
+                if (client.url === targetUrl || (targetUrl.includes("status.html") && client.url.includes("status.html"))) {
+                    if ("focus" in client) return client.focus();
                 }
             }
             if (clients.openWindow) {
