@@ -9493,6 +9493,7 @@
             if (typeof populateTtsVoiceDropdown === 'function') populateTtsVoiceDropdown();
             if (window._tutorialChoiceModalOpen && typeof showTutorialModeChoiceModal === 'function') showTutorialModeChoiceModal();
             if (typeof updateQuestHudUI === 'function') updateQuestHudUI();
+            if (typeof updateQuestTargetGlows === 'function') updateQuestTargetGlows();
             if (typeof updatePrivacyModalUI === 'function') updatePrivacyModalUI();
 
             const whatsNewModal = document.getElementById('whats-new-epic-modal');
@@ -14840,15 +14841,17 @@ window.generateShareCard = function() {
             if (!interactiveTutorialActive) return;
             const taskKeys = ['card_opened', 'settings_opened', 'search_tested', 'standby_or_music'];
             const targets = {
-                card_opened: document.getElementById('cards-section'),
-                settings_opened: document.getElementById('settings-global-toggle'),
-                search_tested: document.getElementById('cp-trigger'),
-                standby_or_music: document.getElementById('main-music-card')
+                card_opened: [document.getElementById('cards-section')],
+                settings_opened: [document.getElementById('settings-global-toggle')],
+                search_tested: [document.getElementById('cp-trigger')],
+                standby_or_music: [document.getElementById('standby-toggle'), document.getElementById('main-music-card')].filter(Boolean)
             };
             for (const key of taskKeys) {
                 if (!interactiveTutorialTasks[key]) {
-                    const el = targets[key];
-                    if (el) el.classList.add('quest-highlight-target');
+                    const els = targets[key] || [];
+                    els.forEach(el => {
+                        if (el) el.classList.add('quest-highlight-target');
+                    });
                     break;
                 }
             }
@@ -14883,6 +14886,9 @@ window.generateShareCard = function() {
         };
 
         function showTutorialCompletionModal() {
+            if (typeof standByActive !== 'undefined' && standByActive && typeof toggleStandBy === 'function') {
+                toggleStandBy(false);
+            }
             const modalOverlay = document.getElementById('modal-overlay');
             const modalBody = document.getElementById('modal-body');
             const modalCloseBtn = document.getElementById('close-modal') || document.getElementById('modal-close');
