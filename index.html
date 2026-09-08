@@ -3375,16 +3375,32 @@
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.18) !important;
             backdrop-filter: blur(28px) !important;
             -webkit-backdrop-filter: blur(28px) !important;
-            background-color: #0b1120 !important;
+            background-color: #0f172a !important;
             -webkit-overflow-scrolling: touch !important;
             overscroll-behavior-y: contain !important;
             transform-origin: top right !important;
             overflow-y: auto !important;
             overflow-x: hidden !important;
             border-radius: 1.25rem !important;
+            will-change: transform, opacity;
         }
         #lyrics-settings-menu:not(.settings-opening):not(.settings-closing) {
             display: none !important;
+        }
+        #lyrics-settings-menu.settings-opening {
+            display: flex !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            pointer-events: auto !important;
+            animation: settings-menu-in var(--anim-duration, 0.22s) var(--anim-easing, cubic-bezier(0.16, 1, 0.3, 1)) forwards !important;
+            transform-origin: top right !important;
+        }
+        #lyrics-settings-menu.settings-closing {
+            display: flex !important;
+            visibility: visible !important;
+            pointer-events: none !important;
+            animation: settings-menu-out calc(var(--anim-duration, 0.22s) * 0.8) var(--anim-easing, cubic-bezier(0.4, 0, 0.2, 1)) forwards !important;
+            transform-origin: top right !important;
         }
 
         
@@ -3421,7 +3437,7 @@
         @keyframes settings-menu-in {
             0% {
                 opacity: 0;
-                transform: scale(0.96) translateY(-8px);
+                transform: scale(var(--anim-scale, 0.96)) translateY(-8px);
                 filter: blur(4px);
             }
             100% {
@@ -3438,7 +3454,7 @@
             }
             100% {
                 opacity: 0;
-                transform: scale(0.96) translateY(-8px);
+                transform: scale(var(--anim-scale, 0.96)) translateY(-8px);
                 filter: blur(4px);
             }
         }
@@ -3467,13 +3483,13 @@
             visibility: visible !important;
             opacity: 1 !important;
             pointer-events: auto !important;
-            animation: settings-menu-in 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+            animation: settings-menu-in var(--anim-duration, 0.22s) var(--anim-easing, cubic-bezier(0.16, 1, 0.3, 1)) forwards !important;
         }
         #global-settings-menu.settings-closing {
             display: flex !important;
             visibility: visible !important;
             pointer-events: none !important;
-            animation: settings-menu-out 0.18s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
+            animation: settings-menu-out calc(var(--anim-duration, 0.22s) * 0.8) var(--anim-easing, cubic-bezier(0.4, 0, 0.2, 1)) forwards !important;
         }
         #privacy-update-modal.hidden { display: none !important; }
         #privacy-update-modal:not(.hidden) { display: flex !important; }
@@ -3790,55 +3806,6 @@
             display: flex !important; /* Sicherstellen, dass es sichtbar bleibt während Animation */
         }
 
-        /* Dedizierte, extrem flüssige Dropdown-Animationen für Einstellungen */
-        @keyframes lyrics-menu-pop-in {
-    0% {
-        opacity: 0;
-        transform: scale(0.72) translateY(-16px);
-        filter: blur(10px);
-    }
-    55% {
-        opacity: 1;
-        transform: scale(1.04) translateY(2px);
-        filter: blur(0px);
-    }
-    78% {
-        transform: scale(0.98) translateY(-1px);
-    }
-    100% {
-        opacity: 1;
-        transform: scale(1) translateY(0);
-        filter: blur(0px);
-    }
-}
-@keyframes lyrics-menu-pop-out {
-    0% {
-        opacity: 1;
-        transform: scale(1) translateY(0);
-        filter: blur(0px);
-    }
-    100% {
-        opacity: 0;
-        transform: scale(0.8) translateY(-12px);
-        filter: blur(8px);
-    }
-}
-#lyrics-settings-menu.settings-opening {
-    display: flex !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    pointer-events: auto !important;
-    animation: lyrics-menu-pop-in 0.38s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards !important;
-    transform-origin: top right !important;
-}
-#lyrics-settings-menu.settings-closing {
-    display: flex !important;
-    visibility: visible !important;
-    pointer-events: none !important;
-    animation: lyrics-menu-pop-out 0.22s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
-    transform-origin: top right !important;
-}
-
 /* Focus Dimming */
 #lyrics-container.lyrics-dim-deep .lyric-line:not(.active) {
     opacity: 0.12 !important;
@@ -3850,13 +3817,6 @@
     filter: blur(0px);
     transition: opacity 0.35s ease, filter 0.35s ease;
 }
-        #lyrics-settings-menu {
-            background-color: #0f172a !important;
-            -webkit-overflow-scrolling: touch !important;
-            overscroll-behavior-y: contain !important;
-            transform: translate3d(0, 0, 0) !important;
-            will-change: scroll-position !important;
-        }
         #lyrics-style-preview-box {
             contain: paint layout !important;
             transform: translate3d(0, 0, 0) !important;
@@ -6279,6 +6239,20 @@
                                         <button onclick="generateShareCard()" id="btn-share-card" class="text-center text-[10px] xxs:text-xs text-pink-300 px-2 py-2 rounded-xl bg-pink-500/15 hover:bg-pink-500/25 border border-pink-500/20 transition-all font-bold truncate active:scale-95">🎴 Share Card</button>
                                         <button onclick="quickExportSongCard()" id="btn-quick-export" class="text-center text-[10px] xxs:text-xs text-pink-300 px-2 py-2 rounded-xl bg-pink-500/15 hover:bg-pink-500/25 border border-pink-500/20 transition-all font-bold truncate active:scale-95">📸 Export</button>
                                     </div>
+
+                                    <!-- Fenster- & UI-Animationen -->
+                                    <div class="h-px w-full bg-slate-700/70 my-0.5"></div>
+                                    <div class="flex items-center justify-between px-1">
+                                        <label for="lyrics-anim-style-select" class="text-[8px] xxs:text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-slate-400 flex items-center gap-1">
+                                            <span>✨</span> <span data-i18n="lyrics_anim_title">Fenster- &amp; UI-Animationen</span>
+                                        </label>
+                                    </div>
+                                    <select id="lyrics-anim-style-select" onchange="setAnimationStyle(this.value)" class="w-full text-[10px] xxs:text-xs bg-slate-800 text-indigo-300 border border-slate-700 rounded-xl px-2.5 py-1.5 font-bold">
+                                        <option value="smooth">Smooth (Cubic 250ms)</option>
+                                        <option value="dynamic">Dynamic (Spring &amp; Bounce)</option>
+                                        <option value="minimal">Minimal (Micro-Fade 110ms)</option>
+                                        <option value="reduced">Reduced (Aus / 0ms)</option>
+                                    </select>
 
                                     <!-- Shortcut zu Website-Einstellungen -->
                                     <button onclick="openGlobalSettingsFromLyrics(event)" class="w-full text-center text-[9px] xxs:text-[10px] text-slate-400 hover:text-white py-1.5 rounded-xl hover:bg-white/5 border border-white/5 font-bold transition-all mt-1 flex items-center justify-center gap-1">
@@ -16826,11 +16800,11 @@ window.generateShareCard = function() {
                 btnHaptic.className = `text-center text-[9px] xxs:text-[10px] sm:text-xs px-2 py-2 rounded-xl border font-bold transition-all active:scale-95 ${hapticEnabled ? 'text-teal-400 bg-teal-500/15 border-teal-500/30' : 'text-slate-400 bg-slate-800/80 border-white/5'}`;
             }
 
+            const currentAnim = localStorage.getItem('app_animation_style') || 'smooth';
             const animSelect = document.getElementById('app-animation-style-select');
-            if (animSelect) {
-                const currentAnim = localStorage.getItem('app_animation_style') || 'smooth';
-                animSelect.value = currentAnim;
-            }
+            if (animSelect) animSelect.value = currentAnim;
+            const lyricsAnimSelect = document.getElementById('lyrics-anim-style-select');
+            if (lyricsAnimSelect) lyricsAnimSelect.value = currentAnim;
 
             const btnWake = document.getElementById('btn-toggle-wakelock');
             if (btnWake && typeof standbyWakeLockEnabled !== 'undefined') {
@@ -16901,6 +16875,7 @@ window.generateShareCard = function() {
                 setTimeout(() => {
                     populateLyricsStyleDropdown();
                     updateLyricsStylePreview(currentLyricsStyle);
+                    if (typeof updateSettingsStatusButtons === 'function') updateSettingsStatusButtons();
                 }, 20);
             } else {
                 stopLyricsStylePreviewLoop();
@@ -16909,7 +16884,7 @@ window.generateShareCard = function() {
                 lyricsSettingsTimeout = setTimeout(() => {
                     lyricsMenu.classList.add('hidden');
                     lyricsMenu.classList.remove('settings-closing');
-                }, 220);
+                }, 180);
             }
         };
 
