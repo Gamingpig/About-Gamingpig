@@ -5843,10 +5843,32 @@
     </dialog>
     <script>
     (() => {
+        const noticeVersion = '24.158.0';
+        const noticeKey = 'gp_ai_notice_v1';
+        const readNotice = () => {
+            try { return JSON.parse(AppStorage.getItem(noticeKey) || '{}') || {}; }
+            catch (_) { return {}; }
+        };
+        window.updateAiNoticeCounter = () => {
+            const lang = (AppStorage.getItem('app_language') || document.documentElement.lang || 'de').slice(0, 2);
+            const copy = { de: ['KI-Hinweis bestätigt', 'Zurücksetzen (Hinweis beim nächsten Besuch)'], en: ['AI notice completed', 'Reset (show on next visit)'], es: ['Aviso de IA completado', 'Restablecer (próxima visita)'], fr: ['Avis IA terminé', 'Réinitialiser (prochaine visite)'], pt: ['Aviso de IA concluído', 'Redefinir (próxima visita)'], tr: ['Yapay zekâ bildirimi tamamlandı', 'Sıfırla (sonraki ziyarette göster)'] };
+            const text = copy[lang] || copy.de;
+            const count = Number(readNotice().count) || 0;
+            const label = document.getElementById('ai-notice-counter');
+            const reset = document.getElementById('ai-notice-reset');
+            if (label) label.textContent = text[0] + ': ' + count;
+            if (reset) reset.textContent = text[1];
+        };
+        window.resetAiNotice = () => { AppStorage.removeItem(noticeKey); window.updateAiNoticeCounter(); };
+        document.addEventListener('DOMContentLoaded', window.updateAiNoticeCounter, { once: true });
+        const saved = readNotice();
         const dialog = document.getElementById('ai-version-notice');
+        if (saved.version === noticeVersion && saved.completed) { dialog.remove(); return; }
+        const startedAt = saved.version === noticeVersion && Number.isFinite(saved.startedAt) ? saved.startedAt : Date.now();
+        AppStorage.setItem(noticeKey, JSON.stringify({ version: noticeVersion, startedAt, count: Number(saved.count) || 0, completed: false }));
         const button = document.getElementById('ai-notice-continue');
         const clock = document.getElementById('ai-notice-time');
-        const deadline = performance.now() + 120000;
+        const deadline = startedAt + 120000;
         let locked = true;
         const originalState = history.state;
         history.pushState(originalState, '', location.href);
@@ -5864,16 +5886,18 @@
         dialog.addEventListener('close', () => { if (locked) dialog.showModal(); });
         dialog.showModal();
         const timer = setInterval(() => {
-            const seconds = Math.max(0, Math.ceil((deadline - performance.now()) / 1000));
+            const seconds = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
             clock.textContent = Math.floor(seconds / 60) + ':' + String(seconds % 60).padStart(2, '0');
             if (!seconds) {
                 clearInterval(timer);
                 locked = false;
+                AppStorage.setItem(noticeKey, JSON.stringify({ version: noticeVersion, completed: true, count: (Number(saved.count) || 0) + 1 }));
+                window.updateAiNoticeCounter();
                 button.disabled = false;
                 window.removeEventListener('popstate', blockBack, true);
                 window.removeEventListener('keydown', blockEscape, true);
             }
-        }, 250);
+        }, 1000);
         button.addEventListener('click', () => { if (!locked) { dialog.close(); dialog.remove(); } });
     })();
     </script>
@@ -7191,6 +7215,10 @@
 
 <!-- Global Standalone Website Settings Modal -->
 <div id="global-settings-menu" class="fixed top-[calc(env(safe-area-inset-top,0px)+4.5rem)] right-3 sm:right-5 bg-[#0f172a] border border-slate-700/80 rounded-2xl p-2.5 xxs:p-3 sm:p-3.5 shadow-2xl hidden flex flex-col gap-2 w-[295px] xxs:w-[325px] sm:w-[355px] max-w-[calc(100vw-1.5rem)] z-[10000] origin-top-right max-h-[85vh] overflow-y-auto" style="-webkit-overflow-scrolling: touch; overscroll-behavior-y: contain;" onclick="event.stopPropagation()">
+    <div class="p-2 rounded-xl border border-white/10 text-xs text-slate-200">
+        <p id="ai-notice-counter" aria-live="polite">KI-Hinweis bestätigt: 0</p>
+        <button id="ai-notice-reset" type="button" onclick="resetAiNotice()" class="mt-1 text-blue-300 underline">Zurücksetzen (Hinweis beim nächsten Besuch)</button>
+    </div>
     <!-- Header -->
     <div class="flex items-center justify-between pb-1.5 mb-0.5 border-b border-white/10">
         <span class="text-xs font-black uppercase tracking-wider text-slate-200 flex items-center gap-1.5">
@@ -17649,6 +17677,7 @@ let shareCardLoading;
 
             if (isGlobalSettingsOpen) {
                 if (isLyricsSettingsOpen) window.toggleLyricsSettings();
+                window.updateAiNoticeCounter();
                 globalMenu.classList.remove('hidden', 'settings-closing');
                 globalMenu.classList.add('settings-opening');
                 updateSettingsStatusButtons();
