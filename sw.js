@@ -68,11 +68,16 @@ self.addEventListener("message", (event) => {
 });
 
 
-// Benachrichtigungs-Klick-Handler (öffnet oder fokussiert die Status-Seite)
+// Benachrichtigungs-Klick-Handler (öffnet oder fokussiert die Status-Seite / Ziel-URL)
 self.addEventListener("notificationclick", (event) => {
     event.notification.close();
     const rawUrl = (event.notification.data && event.notification.data.url) ? event.notification.data.url : "./status.html";
-    const targetUrl = new URL(rawUrl, self.location.origin).href;
+    let targetUrl;
+    try {
+        targetUrl = new URL(rawUrl, self.location.origin).href;
+    } catch(e) {
+        targetUrl = new URL("./status.html", self.location.origin).href;
+    }
 
     event.waitUntil(
         clients.matchAll({ type: "window", includeUncontrolled: true }).then((windowClients) => {
@@ -84,13 +89,16 @@ self.addEventListener("notificationclick", (event) => {
             if (clients.openWindow) {
                 return clients.openWindow(targetUrl);
             }
+        }).catch((err) => {
+            console.error("[SW] notificationclick error:", err);
         })
     );
 });
 
-// Helper: Liest die in der App gespeicherte Nutzersprache aus IndexedDB
+// Helper: Liest die in der App gespeicherte Nutzersprache aus IndexedDB (mit Timeout)
 function getStoredAppLanguage() {
     return new Promise((resolve) => {
+        const timer = setTimeout(() => resolve(null), 300);
         try {
             const req = indexedDB.open('gamingpig_pwa_db', 1);
             req.onupgradeneeded = (e) => {
@@ -103,20 +111,32 @@ function getStoredAppLanguage() {
                 try {
                     const db = e.target.result;
                     if (!db.objectStoreNames.contains('settings')) {
+                        clearTimeout(timer);
                         resolve(null);
                         return;
                     }
                     const tx = db.transaction('settings', 'readonly');
                     const store = tx.objectStore('settings');
                     const getReq = store.get('app_lang');
-                    getReq.onsuccess = () => resolve(getReq.result || null);
-                    getReq.onerror = () => resolve(null);
+                    getReq.onsuccess = () => {
+                        clearTimeout(timer);
+                        resolve(getReq.result || null);
+                    };
+                    getReq.onerror = () => {
+                        clearTimeout(timer);
+                        resolve(null);
+                    };
                 } catch(err) {
+                    clearTimeout(timer);
                     resolve(null);
                 }
             };
-            req.onerror = () => resolve(null);
+            req.onerror = () => {
+                clearTimeout(timer);
+                resolve(null);
+            };
         } catch (e) {
+            clearTimeout(timer);
             resolve(null);
         }
     });
@@ -131,13 +151,21 @@ self.addEventListener("push", (event) => {
         let data = {
             title: "⚠️ Gamingpig System-Status",
             body: "Status-Änderung bei Spotify, Lyrics oder Server-Verbindung festgestellt.",
-            url: "./status.html"
+            url: "./status.html",
+            icon: "icon-192.png",
+            badge: "icon-192.png"
         };
         if (event.data) {
             try {
-                data = event.data.json();
+                const parsed = event.data.json();
+                if (parsed && typeof parsed === 'object') {
+                    data = Object.assign(data, parsed);
+                }
             } catch (e) {
-                data.body = event.data.text();
+                try {
+                    const text = event.data.text();
+                    if (text) data.body = text;
+                } catch(err) {}
             }
         }
 
@@ -147,8 +175,8 @@ self.addEventListener("push", (event) => {
         const deviceLang = (navigator.language || "de").slice(0, 2).toLowerCase();
         const effectiveLang = (storedLang || data.targetLang || deviceLang || "de").slice(0, 2).toLowerCase();
 
-        let title = data.title;
-        let body = data.body;
+        let title = data.title || "⚠️ Gamingpig System-Status";
+        let body = data.body || "Status-Aktualisierung.";
 
         if (data.translations && typeof data.translations === 'object') {
             if (data.translations[effectiveLang]) {
@@ -183,8 +211,8 @@ self.addEventListener("push", (event) => {
         const tag = data.broadcastId || ('gp-alert-' + Math.floor(now / 30000));
         const options = {
             body: body,
-            icon: "icon-192.png",
-            badge: "icon-192.png",
+            icon: data.icon || "icon-192.png",
+            badge: data.badge || "icon-192.png",
             tag: tag,
             renotify: false,
             timestamp: data.timestamp || now,

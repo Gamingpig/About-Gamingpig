@@ -1043,7 +1043,8 @@
         async function sendBroadcastPush() {
             const title = document.getElementById('msg-title').value.trim() || '⚠️ Gamingpig Status-Alarm';
             const body = document.getElementById('msg-body').value.trim() || 'Status-Aktualisierung.';
-            const url = document.getElementById('msg-url').value.trim() || 'https://gamingpig.github.io/About-Gamingpig/status.html';
+            const rawUrl = document.getElementById('msg-url').value.trim() || 'status.html';
+            const url = rawUrl.startsWith('http') ? rawUrl : (window.location.origin + '/' + rawUrl.replace(/^\.?\//, ''));
             const token = await getStoredGitHubToken();
 
             if (!token || token.length < 5) {
@@ -1058,13 +1059,26 @@
                 btn.classList.add('opacity-50');
             }
 
-            showToast('Sende Broadcast-Auftrag an GitHub Actions...', '📡');
+            showToast('Sende Broadcast-Auftrag an GitHub Actions & Queue...', '📡');
 
             try {
                 let success = false;
-                let errorMsg = '';
-
+                let errorDetails = [];
                 const broadcastId = 'gp_bcast_' + Date.now();
+
+                // Direct ntfy instant dispatch
+                try {
+                    fetch('https://ntfy.sh/gamingpig_status', {
+                        method: 'POST',
+                        headers: {
+                            'Title': title,
+                            'Priority': 'urgent',
+                            'Tags': 'warning,bell',
+                            'Click': url
+                        },
+                        body: body
+                    }).catch(() => {});
+                } catch(e) {}
 
                 // 1. Commit Pending Push to data/pending_push.json via GitHub Contents API
                 try {
@@ -1076,6 +1090,13 @@
                             'X-GitHub-Api-Version': '2022-11-28'
                         }
                     });
+
+                    if (getRes.status === 401) {
+                        throw new Error('401 Unauthorized: GitHub Token ist abgelaufen oder ungültig');
+                    } else if (getRes.status === 403) {
+                        throw new Error('403 Forbidden: Token besitzt keine Schreibrechte für dieses Repository');
+                    }
+
                     if (getRes.ok) {
                         const fileData = await getRes.json();
                         sha = fileData.sha;
@@ -1087,6 +1108,12 @@
                         title: title,
                         body: body,
                         url: url,
+                        icon: 'icon-192.png',
+                        badge: 'icon-192.png',
+                        translations: {
+                            de: { title: title, body: body },
+                            en: { title: title, body: body }
+                        },
                         requestedAt: Date.now()
                     };
 
@@ -1111,12 +1138,16 @@
 
                     if (putRes.ok || putRes.status === 200 || putRes.status === 201) {
                         success = true;
+                    } else {
+                        const errJson = await putRes.json().catch(() => ({}));
+                        errorDetails.push(`Contents API (HTTP ${putRes.status}: ${errJson.message || 'Error'})`);
                     }
                 } catch (e) {
                     console.warn('Contents API update warning:', e);
+                    errorDetails.push(e.message);
                 }
 
-                // 2. Einziger Trigger: Repository Dispatch zur sofortigen Ausführung
+                // 2. Repository Dispatch Trigger zur sofortigen Ausführung
                 try {
                     const resDisp = await fetch('https://api.github.com/repos/Gamingpig/About-Gamingpig/dispatches', {
                         method: 'POST',
@@ -1131,15 +1162,20 @@
                     });
                     if (resDisp.status === 204 || resDisp.ok) {
                         success = true;
+                    } else {
+                        const dispJson = await resDisp.json().catch(() => ({}));
+                        errorDetails.push(`Dispatch API (HTTP ${resDisp.status}: ${dispJson.message || 'Error'})`);
                     }
                 } catch (e) {
                     console.warn('Repository dispatch warning:', e);
+                    errorDetails.push(e.message);
                 }
 
                 if (success) {
-                    showToast('🚀 Push-Auftrag erfolgreich an GitHub Actions übermittelt! Alle Geräte erhalten den Push.', '✅');
+                    showToast('🚀 Push-Auftrag erfolgreich übermittelt! Alle Geräte erhalten den Push.', '✅');
                 } else {
-                    showToast(`❌ GitHub Fehler: Token prüfen oder Berechtigungen vergeben`, '⚠️');
+                    const errSummary = errorDetails.join(' | ') || 'Verbindungsfehler';
+                    showToast(`❌ GitHub Fehler: ${errSummary}`, '⚠️');
                     document.getElementById('token-modal').classList.remove('hidden');
                 }
             } catch (err) {
