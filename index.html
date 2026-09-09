@@ -9,6 +9,14 @@
     [BUGFIX] oder [PERFORMANCE] oder [FEATURE] als Tag, dann kurz
     Symptom/Ziel, Ursache, Fix, und der beobachtbare Effekt.
     Neueste Einträge oben.
+    [ANIMATION FIX] Release v24.138.19: Footer + Mehr-Menü + App-installieren sauber animiert
+      - Footer-Bubble nutzt jetzt einen einzigen Web-Animations-Controller mit weichem Slide/Fade/Scale
+        beim Ein- und Ausblenden; keine verlorenen CSS-Transitions durch display:none mehr.
+      - Mehr-Menü bekommt einen eigenen enter/exit Ablauf und wird erst NACH der Exit-Animation versteckt.
+      - App-installieren-Button animiert seine tatsächliche bottom-Position, statt nur per Transform zu springen.
+      - Beim geöffneten Footer-Menü blendet der Install-Button weich aus und blockiert keine Klicks.
+      - Versteckter Transparenz-/Optikwert wird bei jedem Start auf 100% gesetzt; Reflexions- und Kantenwerte
+        wurden nochmals sichtbar angehoben.
     [FIX + POLISH] Release v24.138.18: stabiler Footer-Ein-/Ausflug + 100%-Reflexionszustand
       - Konkurrierende alte Footer-Controller entfernt; nur noch ein einziger Footer-Zustandscontroller aktiv.
       - Footer-Bubble nutzt reine CSS-Transitions statt restartbarer Keyframes: weicher Slide/Fade/Scale beim
@@ -23639,85 +23647,230 @@ body.liquid-glass-active :is(
 }
 </style>
 
-<script id="liquid-glass-v24-138-18-footer-motion-reflections-js">
-(function () {
-  const KEY = 'liquidGlassTransparency';
-  const HIDDEN_VALUE = 100;
 
-  /* Canonical hidden value: 100%, every load. */
+<!-- LIQUID_GLASS_V24_138_19_FOOTER_ANIMATION_SYSTEM -->
+<style id="liquid-glass-v24-138-19-footer-animation-system">
+/* Keep the dormant legacy transparency control hidden. */
+#lg-transparency-panel { display: none !important; }
+
+/* ---------------------------------------------------------
+   Footer bubble base states.
+   JS performs the actual motion; CSS supplies reliable end states.
+   --------------------------------------------------------- */
+#footer-bubble {
+  will-change: opacity, transform;
+}
+
+#footer-bubble:not(.footer-bubble-visible) {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  transform: translateX(-50%) translateY(22px) scale(.95) !important;
+}
+
+#footer-bubble.footer-bubble-visible {
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  transform: translateX(-50%) translateY(0) scale(1) !important;
+}
+
+/* ---------------------------------------------------------
+   Footer expandable menu.
+   No CSS keyframe race; WAAPI handles open/close.
+   --------------------------------------------------------- */
+#footer-expandable-menu.footer-animating {
+  display: block !important;
+  visibility: visible !important;
+  will-change: opacity, transform, filter;
+}
+
+#footer-expandable-menu:not(.hidden) {
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  transform: translateX(-50%) translateY(0) scale(1) !important;
+}
+
+#footer-expandable-menu.hidden:not(.footer-animating) {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Footer controls remain clickable. */
+#footer-expandable-menu :is(a,button),
+#footer-menu-toggle-btn {
+  pointer-events: auto !important;
+  touch-action: manipulation;
+  cursor: pointer !important;
+}
+
+/* ---------------------------------------------------------
+   App-install button:
+   animate the actual bottom position instead of faking it with transforms.
+   --------------------------------------------------------- */
+#pwa-install-btn {
+  transition:
+    bottom .48s cubic-bezier(.16,1,.3,1),
+    opacity .24s ease,
+    transform .28s cubic-bezier(.16,1,.3,1),
+    visibility 0s linear 0s !important;
+  will-change: bottom, transform, opacity;
+}
+
+#footer-bubble.footer-bubble-visible ~ #pwa-install-btn {
+  bottom: var(--footer-install-bottom, 5rem);
+}
+
+#footer-expandable-menu:not(.hidden) ~ #pwa-install-btn,
+#footer-expandable-menu.footer-animating ~ #pwa-install-btn {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  transform: translateX(-50%) translateY(8px) scale(.96) !important;
+  transition:
+    bottom .48s cubic-bezier(.16,1,.3,1),
+    opacity .20s ease,
+    transform .24s cubic-bezier(.4,0,1,1),
+    visibility 0s linear .20s !important;
+}
+
+#pwa-install-btn:not(.hidden):hover {
+  transform: translateX(-50%) translateY(-2px) scale(1.03);
+}
+
+#pwa-install-btn:not(.hidden):active {
+  transform: translateX(-50%) translateY(0) scale(.97);
+}
+
+/* Reflection/outline emphasis for the 100% dormant optics state. */
+:root {
+  --lg-reflection-edge: .27;
+  --lg-reflection-highlight: .48;
+  --lg-reflection-glow: .17;
+}
+
+body.liquid-glass-active :is(
+  #global-settings-menu,#lyrics-settings-menu,.glass-card,#main-music-card,
+  #mini-player-toggle,#ui-controls,#footer-bubble,#footer-expandable-menu,
+  #tutorial-box,.modal-content,#language-picker-box,#sharecard-picker-box,
+  #command-palette,#dynamic-island
+) {
+  border-color: rgba(255,255,255,var(--lg-reflection-edge)) !important;
+  border-top-color: rgba(255,255,255,var(--lg-reflection-highlight)) !important;
+  border-left-color: rgba(255,255,255,calc(var(--lg-reflection-highlight) * .72)) !important;
+  box-shadow:
+    0 14px 34px -28px rgba(0,0,0,.42),
+    inset 0 1px 0 rgba(255,255,255,var(--lg-reflection-highlight)),
+    inset 1px 0 0 rgba(255,255,255,var(--lg-reflection-glow)),
+    inset 0 -1px 0 rgba(255,255,255,.04) !important;
+}
+</style>
+
+<script id="liquid-glass-v24-138-19-footer-animation-system-js">
+(function () {
+  const HIDDEN_VALUE = 100;
+  const KEY = 'liquidGlassTransparency';
+
   try { localStorage.setItem(KEY, String(HIDDEN_VALUE)); } catch (_) {}
 
-  function syncHiddenControl() {
+  function syncHiddenTransparency() {
     const panel = document.getElementById('lg-transparency-panel');
+    const range = document.getElementById('lg-transparency-range');
+    const value = document.getElementById('lg-transparency-value');
+
     if (panel) {
       panel.hidden = true;
       panel.setAttribute('aria-hidden', 'true');
     }
-    const range = document.getElementById('lg-transparency-range');
     if (range) range.value = String(HIDDEN_VALUE);
-    const label = document.getElementById('lg-transparency-value');
-    if (label) label.textContent = HIDDEN_VALUE + '%';
+    if (value) value.textContent = HIDDEN_VALUE + '%';
 
-    /*
-      Also apply the original v5 optical variables for 100%, so legacy reflection
-      code sees the intended state. Visible panel translucency remains fixed by later CSS.
-    */
-    document.documentElement.style.setProperty('--lg-glass-alpha-strong', '0.00060');
-    document.documentElement.style.setProperty('--lg-glass-alpha', '0.00025');
-    document.documentElement.style.setProperty('--lg-glass-alpha-soft', '0.00008');
-    document.documentElement.style.setProperty('--lg-glass-border', '0.0750');
-    document.documentElement.style.setProperty('--lg-glass-border-hi', '0.1400');
-    document.documentElement.style.setProperty('--lg-glass-blur', '0.08px');
+    /* Legacy optical/reflection variables: force the dormant 100% state. */
+    const root = document.documentElement;
+    root.style.setProperty('--lg-glass-alpha-strong', '0.00060');
+    root.style.setProperty('--lg-glass-alpha', '0.00025');
+    root.style.setProperty('--lg-glass-alpha-soft', '0.00008');
+    root.style.setProperty('--lg-glass-border', '0.0850');
+    root.style.setProperty('--lg-glass-border-hi', '0.1550');
+    root.style.setProperty('--lg-glass-blur', '0.08px');
   }
 
-  function installFooter() {
+  function installFooterAnimationSystem() {
     const bubble = document.getElementById('footer-bubble');
     const menu = document.getElementById('footer-expandable-menu');
     const toggle = document.getElementById('footer-menu-toggle-btn');
     const arrow = document.getElementById('footer-menu-arrow');
+
     if (!bubble) return;
 
-    let footerShown = false;
-    let closeTimer = 0;
+    let bubbleAnimation = null;
+    let menuAnimation = null;
+    let shown = bubble.classList.contains('footer-bubble-visible');
     let raf = 0;
 
-    /*
-      Hysteresis fixes flicker:
-      - show when <= 140px from bottom
-      - once visible, don't hide until user is > 240px from bottom
-      This prevents a tiny layout/scroll-height change from immediately reversing the animation.
-    */
-    function updateFooterVisibility() {
-      const scrollTop = window.scrollY || document.documentElement.scrollTop || 0;
-      const maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
-      const distance = Math.max(0, maxScroll - scrollTop);
+    function animateBubble(show) {
+      if (bubbleAnimation) bubbleAnimation.cancel();
 
-      const shouldShow = footerShown ? distance <= 240 : distance <= 140;
-
-      if (shouldShow === footerShown) return;
-      footerShown = shouldShow;
-
-      if (shouldShow) {
+      if (show) {
         bubble.classList.add('footer-bubble-visible');
         bubble.removeAttribute('aria-hidden');
-      } else {
-        bubble.classList.remove('footer-bubble-visible');
-        bubble.setAttribute('aria-hidden', 'true');
-        closeMenu(true);
-      }
-    }
 
-    function scheduleVisibility() {
-      if (raf) return;
-      raf = requestAnimationFrame(() => {
-        raf = 0;
-        updateFooterVisibility();
-      });
+        bubbleAnimation = bubble.animate([
+          {
+            opacity: 0,
+            transform: 'translateX(-50%) translateY(24px) scale(.94)',
+            filter: 'blur(3px)'
+          },
+          {
+            opacity: .82,
+            transform: 'translateX(-50%) translateY(-2px) scale(1.012)',
+            filter: 'blur(.2px)',
+            offset: .72
+          },
+          {
+            opacity: 1,
+            transform: 'translateX(-50%) translateY(0) scale(1)',
+            filter: 'blur(0)'
+          }
+        ], {
+          duration: 520,
+          easing: 'cubic-bezier(.16,1,.3,1)',
+          fill: 'none'
+        });
+      } else {
+        bubbleAnimation = bubble.animate([
+          {
+            opacity: 1,
+            transform: 'translateX(-50%) translateY(0) scale(1)',
+            filter: 'blur(0)'
+          },
+          {
+            opacity: 0,
+            transform: 'translateX(-50%) translateY(20px) scale(.95)',
+            filter: 'blur(2.5px)'
+          }
+        ], {
+          duration: 330,
+          easing: 'cubic-bezier(.4,0,.2,1)',
+          fill: 'none'
+        });
+
+        bubbleAnimation.onfinish = () => {
+          bubble.classList.remove('footer-bubble-visible');
+          bubble.setAttribute('aria-hidden', 'true');
+          closeMenu(true);
+          bubbleAnimation = null;
+        };
+      }
     }
 
     function setArrow(open) {
       if (arrow) {
-        arrow.style.transition = 'transform .28s cubic-bezier(.16,1,.3,1)';
+        arrow.style.transition = 'transform .34s cubic-bezier(.16,1,.3,1)';
         arrow.style.transform = open ? 'rotate(180deg)' : 'rotate(0deg)';
       }
       if (toggle) toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
@@ -23725,63 +23878,127 @@ body.liquid-glass-active :is(
 
     function openMenu() {
       if (!menu) return;
-      if (closeTimer) {
-        clearTimeout(closeTimer);
-        closeTimer = 0;
-      }
-      menu.classList.remove('menu-closing', 'hidden');
+      if (menuAnimation) menuAnimation.cancel();
+
+      menu.classList.add('footer-animating');
+      menu.classList.remove('hidden');
       menu.style.removeProperty('pointer-events');
       setArrow(true);
+
+      menuAnimation = menu.animate([
+        {
+          opacity: 0,
+          transform: 'translateX(-50%) translateY(16px) scale(.955)',
+          filter: 'blur(4px)'
+        },
+        {
+          opacity: 1,
+          transform: 'translateX(-50%) translateY(-2px) scale(1.008)',
+          filter: 'blur(0)',
+          offset: .72
+        },
+        {
+          opacity: 1,
+          transform: 'translateX(-50%) translateY(0) scale(1)',
+          filter: 'blur(0)'
+        }
+      ], {
+        duration: 430,
+        easing: 'cubic-bezier(.16,1,.3,1)',
+        fill: 'none'
+      });
+
+      menuAnimation.onfinish = () => {
+        menu.classList.remove('footer-animating');
+        menuAnimation = null;
+      };
+
       if (typeof haptic === 'function') haptic(8);
     }
 
     function closeMenu(immediate) {
       if (!menu) return;
-      if (closeTimer) {
-        clearTimeout(closeTimer);
-        closeTimer = 0;
-      }
+      if (menuAnimation) menuAnimation.cancel();
       setArrow(false);
 
       if (immediate || menu.classList.contains('hidden')) {
-        menu.classList.remove('menu-closing');
+        menu.classList.remove('footer-animating');
         menu.classList.add('hidden');
+        menuAnimation = null;
         return;
       }
 
-      menu.classList.add('menu-closing');
-      closeTimer = setTimeout(() => {
+      menu.classList.add('footer-animating');
+
+      menuAnimation = menu.animate([
+        {
+          opacity: 1,
+          transform: 'translateX(-50%) translateY(0) scale(1)',
+          filter: 'blur(0)'
+        },
+        {
+          opacity: 0,
+          transform: 'translateX(-50%) translateY(12px) scale(.97)',
+          filter: 'blur(2px)'
+        }
+      ], {
+        duration: 260,
+        easing: 'cubic-bezier(.4,0,.2,1)',
+        fill: 'none'
+      });
+
+      menuAnimation.onfinish = () => {
         menu.classList.add('hidden');
-        menu.classList.remove('menu-closing');
-        closeTimer = 0;
-      }, 350);
+        menu.classList.remove('footer-animating');
+        menuAnimation = null;
+      };
     }
 
     window.toggleFooterMenu = function(forceState) {
       if (!menu) return;
-      const open = !menu.classList.contains('hidden') && !menu.classList.contains('menu-closing');
-      const next = typeof forceState === 'boolean' ? forceState : !open;
-      if (next) openMenu();
+      const isOpen = !menu.classList.contains('hidden');
+      const shouldOpen = typeof forceState === 'boolean' ? forceState : !isOpen;
+      if (shouldOpen) openMenu();
       else closeMenu(false);
     };
 
-    window.addEventListener('scroll', scheduleVisibility, { passive: true });
-    window.addEventListener('resize', scheduleVisibility, { passive: true });
+    function evaluateFooter() {
+      const scrollTop = window.scrollY || document.documentElement.scrollTop || 0;
+      const maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+      const distanceFromBottom = Math.max(0, maxScroll - scrollTop);
 
-    /* Links stay native and clickable. */
-    if (menu) {
-      menu.querySelectorAll('a[href],button').forEach(el => {
-        el.style.removeProperty('pointer-events');
-        el.removeAttribute('aria-disabled');
+      /* Hysteresis prevents the animation from reversing due to tiny layout changes. */
+      const shouldShow = shown ? distanceFromBottom <= 260 : distanceFromBottom <= 150;
+      if (shouldShow === shown) return;
+
+      shown = shouldShow;
+      animateBubble(shown);
+    }
+
+    function scheduleEvaluate() {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        evaluateFooter();
       });
     }
 
-    updateFooterVisibility();
+    window.addEventListener('scroll', scheduleEvaluate, { passive: true });
+    window.addEventListener('resize', scheduleEvaluate, { passive: true });
+
+    /* Native links remain native; outside tap only closes the menu. */
+    document.addEventListener('pointerdown', (event) => {
+      if (!menu || menu.classList.contains('hidden')) return;
+      if (menu.contains(event.target) || bubble.contains(event.target)) return;
+      closeMenu(false);
+    }, { passive: true });
+
+    evaluateFooter();
   }
 
   function boot() {
-    syncHiddenControl();
-    installFooter();
+    syncHiddenTransparency();
+    installFooterAnimationSystem();
   }
 
   if (document.readyState === 'loading') {
