@@ -9,6 +9,12 @@
     [BUGFIX] oder [PERFORMANCE] oder [FEATURE] als Tag, dann kurz
     Symptom/Ziel, Ursache, Fix, und der beobachtbare Effekt.
     Neueste Einträge oben.
+    [DESIGN] Release v24.138.9: Einheitliche Liquid-Glass-Transparenz auf allen Hauptflächen
+      - Haupt-Musikkarte, Control Center, Footer, Tutorial-Fenster, Modals, Picker, Command Palette,
+        Dynamic Island und normale Glaskarten verwenden jetzt exakt dieselben Transparenz-/Blur-Tokens
+        wie das Einstellungsfenster – im Light- und Dark-Mode.
+      - Keine komponentenspezifischen milchigen Hover-/Fallback-Hintergründe mehr.
+      - Dynamic-Island-Animation bleibt unverändert; nur das Material wurde vereinheitlicht.
     [FIX - KRITISCH] Release v24.138.8: Liquid-Glass-Hintergrund jetzt reine Cover-Art ohne Farb-/Weißschleier
       - Animierte Blob-Ebenen im Liquid-Glass-Modus vollständig deaktiviert statt nur fast transparent.
       - Mesh-Gradient, Ambilight-Bleed und Partikel werden im Liquid-Glass-Modus nicht mehr über den Seitenhintergrund gezeichnet.
@@ -22234,6 +22240,158 @@ body.liquid-glass-active #liquid-blobs::after {
     }
 })();
 </script>
+
+
+<!-- LIQUID_GLASS_V24_138_9_UNIFIED_TRANSPARENCY -->
+<style id="liquid-glass-v24-138-9-unified-transparency">
+/*
+  v24.138.9 — every major Liquid Glass surface uses the SAME optical material
+  as the Settings window. Layout/animation transforms are untouched.
+*/
+
+/* Shared surface material — Light + Dark inherit the same transparency variables. */
+body.liquid-glass-active :is(
+  #main-music-card,
+  #mini-player-toggle,
+  #ui-controls,
+  #footer-bubble,
+  #footer-expandable-menu,
+  #tutorial-box,
+  .modal-content,
+  #language-picker-box,
+  #sharecard-picker-box,
+  #command-palette,
+  #dynamic-island,
+  .glass-card
+) {
+  background:
+    linear-gradient(
+      126deg,
+      rgba(255,255,255,var(--lg-glass-alpha-strong)) 0%,
+      rgba(255,255,255,var(--lg-glass-alpha-soft)) 36%,
+      rgba(255,255,255,var(--lg-glass-alpha)) 58%,
+      rgba(255,255,255,var(--lg-glass-alpha-soft)) 100%
+    ) !important;
+  -webkit-backdrop-filter:
+    blur(var(--lg-glass-blur))
+    saturate(108%) !important;
+  backdrop-filter:
+    blur(var(--lg-glass-blur))
+    saturate(108%) !important;
+  border-color: rgba(255,255,255,var(--lg-glass-border)) !important;
+  border-top-color: rgba(255,255,255,var(--lg-glass-border-hi)) !important;
+  box-shadow:
+    0 16px 38px -31px rgba(0,0,0,.40),
+    inset 0 1px 0 rgba(255,255,255,.08),
+    inset 0 -1px 0 rgba(255,255,255,.018) !important;
+}
+
+/* Dark Mode: same transparency, only neutral dark tint instead of white tint. */
+.dark body.liquid-glass-active :is(
+  #main-music-card,
+  #mini-player-toggle,
+  #ui-controls,
+  #footer-bubble,
+  #footer-expandable-menu,
+  #tutorial-box,
+  .modal-content,
+  #language-picker-box,
+  #sharecard-picker-box,
+  #command-palette,
+  #dynamic-island,
+  .glass-card
+) {
+  background:
+    linear-gradient(
+      126deg,
+      rgba(2,6,23,var(--lg-glass-alpha-strong)) 0%,
+      rgba(15,23,42,var(--lg-glass-alpha-soft)) 40%,
+      rgba(255,255,255,var(--lg-glass-alpha-soft)) 62%,
+      rgba(2,6,23,var(--lg-glass-alpha)) 100%
+    ) !important;
+}
+
+/* Settings is the reference material; explicitly keep it on the same token set. */
+body.liquid-glass-active #global-settings-menu {
+  background:
+    linear-gradient(
+      126deg,
+      rgba(255,255,255,var(--lg-glass-alpha-strong)) 0%,
+      rgba(255,255,255,var(--lg-glass-alpha-soft)) 36%,
+      rgba(255,255,255,var(--lg-glass-alpha)) 58%,
+      rgba(255,255,255,var(--lg-glass-alpha-soft)) 100%
+    ) !important;
+  -webkit-backdrop-filter:
+    blur(var(--lg-glass-blur))
+    saturate(108%) !important;
+  backdrop-filter:
+    blur(var(--lg-glass-blur))
+    saturate(108%) !important;
+}
+
+.dark body.liquid-glass-active #global-settings-menu {
+  background:
+    linear-gradient(
+      126deg,
+      rgba(2,6,23,var(--lg-glass-alpha-strong)) 0%,
+      rgba(15,23,42,var(--lg-glass-alpha-soft)) 40%,
+      rgba(255,255,255,var(--lg-glass-alpha-soft)) 62%,
+      rgba(2,6,23,var(--lg-glass-alpha)) 100%
+    ) !important;
+}
+
+/* Prevent older component-specific rules from making these milky again on hover. */
+body.liquid-glass-active :is(
+  #main-music-card,
+  #mini-player-toggle,
+  #ui-controls,
+  #footer-bubble,
+  #footer-expandable-menu,
+  #tutorial-box,
+  .modal-content,
+  #language-picker-box,
+  #sharecard-picker-box,
+  #command-palette,
+  #dynamic-island,
+  .glass-card
+):hover {
+  -webkit-backdrop-filter:
+    blur(var(--lg-glass-blur))
+    saturate(112%) !important;
+  backdrop-filter:
+    blur(var(--lg-glass-blur))
+    saturate(112%) !important;
+}
+
+/* Light mode must remain truly clear — no white wash from component-specific fallback colors. */
+html:not(.dark) body.liquid-glass-active :is(
+  #main-music-card,
+  #mini-player-toggle,
+  #ui-controls,
+  #footer-bubble,
+  #footer-expandable-menu,
+  #tutorial-box,
+  .modal-content,
+  #language-picker-box,
+  #sharecard-picker-box,
+  #command-palette,
+  #dynamic-island,
+  .glass-card
+) {
+  background-color: transparent !important;
+}
+
+/* Do not touch the special dark tutorial launcher itself; only its surrounding glass panel. */
+html:not(.dark) body.liquid-glass-active #tutorial-start-btn {
+  background: linear-gradient(145deg, rgba(25,35,55,.98), rgba(7,12,22,.94)) !important;
+}
+
+/* Dynamic Island gets only the visual material above; its transform/width/height animation stays authoritative. */
+#dynamic-island {
+  scale: 1 !important;
+  translate: none !important;
+}
+</style>
 
 </body>
 </html>
