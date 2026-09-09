@@ -9,6 +9,16 @@
     [BUGFIX] oder [PERFORMANCE] oder [FEATURE] als Tag, dann kurz
     Symptom/Ziel, Ursache, Fix, und der beobachtbare Effekt.
     Neueste Einträge oben.
+    [FIX - KRITISCH] Release v24.138.7: Cover-Art-Hintergrund + Dynamic-Island-Animation wiederhergestellt
+      - Root Cause Cover-Hintergrund: ein später Liquid-Glass-Override nutzte `background: transparent !important`
+        plus `background-image: none !important` auf #liquid-blobs. Der CSS-Shorthand löschte damit jedes per
+        JavaScript gesetzte Cover wieder. Jetzt wird nur noch background-color transparent gesetzt; Cover-Art
+        wird als wichtiges inline background-image geschrieben und mit cover/center gerendert.
+      - Root Cause Dynamic Island: die globale Liquid-Touch-Engine behandelte #dynamic-island wegen role="button"
+        wie einen normalen Button und legte eigene scale/translate-Eigenschaften darüber. Das kollidierte mit
+        der bereits vorhandenen, spezialisierten width/height/transform-Animation. Dynamic Island und alle
+        relevanten Unterelemente sind jetzt vollständig von der generischen Press-Deformation ausgeschlossen;
+        ihre originale Tap-/Expand-/Collapse-Animation ist wieder alleinige Autorität.
     [FIX & DESIGN - KRITISCH] Release v24.138.2: Liquid Glass Ultra-Transparent + Light-Mode-Kontrast + starke Fluid-Interaktionen
       - Liquid-Glass-Flächen deutlich transparenter gemacht (bewusst transparenter als typische Apple-Glass-Werte), inklusive großer Container, Hover-Zustände und Einstellungsmenü.
       - Weißen Light-Mode-Schleier entfernt: #liquid-blobs ist transparent und übernimmt bei verfügbarer Musik die aktuelle Cover-Art als Vollbild-Hintergrund.
@@ -19890,8 +19900,15 @@ window.setLyricsStyle = function(style) {
                 // echte Seitenhintergrund. Kein weißer Light-Mode-Schleier mehr.
                 const liquidBg = document.getElementById('liquid-blobs');
                 const useCurrentCoverBg = !window.getMainBackgroundMode || window.getMainBackgroundMode() === 'current-cover';
-                if (liquidBg && useCurrentCoverBg && liquidBg.style.backgroundImage !== urlBg) {
-                    liquidBg.style.backgroundImage = urlBg;
+                if (liquidBg && useCurrentCoverBg) {
+                    const currentBg = liquidBg.style.getPropertyValue('background-image');
+                    if (currentBg !== urlBg) {
+                        liquidBg.style.setProperty('background-image', urlBg, 'important');
+                        liquidBg.style.setProperty('background-size', 'cover', 'important');
+                        liquidBg.style.setProperty('background-position', 'center center', 'important');
+                        liquidBg.style.setProperty('background-repeat', 'no-repeat', 'important');
+                        liquidBg.style.setProperty('background-color', 'transparent', 'important');
+                    }
                 }
                 if (mAmbient && mAmbient.style.backgroundImage !== urlBg) mAmbient.style.backgroundImage = urlBg;
                 if (mGlow && coverGlowEnabled && mGlow.style.backgroundImage !== urlBg) mGlow.style.backgroundImage = urlBg;
@@ -21009,18 +21026,43 @@ html:not(.dark) body.liquid-glass-active,
   background-color: transparent !important;
 }
 
+/* IMPORTANT: never use `background: transparent` here.
+   That shorthand clears background-image and was the reason the current cover
+   could never become visible. Only clear the COLOR/veil, keep the image intact. */
 body.liquid-glass-active #liquid-blobs,
 html:not(.dark) body.liquid-glass-active #liquid-blobs,
-.dark body.liquid-glass-active #liquid-blobs,
-html:not(.dark) body.liquid-glass-active .mesh-gradient {
-  background: transparent !important;
+.dark body.liquid-glass-active #liquid-blobs {
   background-color: transparent !important;
-  background-image: none !important;
+  background-size: cover !important;
+  background-position: center center !important;
+  background-repeat: no-repeat !important;
+  background-blend-mode: normal !important;
   box-shadow: none !important;
+}
+
+/* The normal mesh background must not sit above the cover while Liquid Glass is active. */
+html:not(.dark) body.liquid-glass-active .mesh-gradient,
+.dark body.liquid-glass-active .mesh-gradient {
+  display: none !important;
+  background: transparent !important;
+  opacity: 0 !important;
 }
 
 body.liquid-glass-active #liquid-blobs .blob-container {
   opacity: .008 !important;
+}
+
+/* The cover itself is the visual background. Blobs are only a nearly invisible accent.
+   Body must stay transparent so the negative-z cover layer is not hidden behind an opaque body paint. */
+html:not(.dark) body.liquid-glass-active,
+.dark body.liquid-glass-active {
+  background-color: transparent !important;
+}
+html:not(.dark) body.liquid-glass-active #liquid-blobs {
+  background-color: transparent !important;
+}
+.dark body.liquid-glass-active #liquid-blobs {
+  background-color: transparent !important;
 }
 
 /* =========================
@@ -21216,6 +21258,51 @@ body.liquid-glass-active #tutorial-next {
   background: linear-gradient(135deg,#2563eb,#4f46e5) !important;
   color: white !important;
   border: 1px solid rgba(255,255,255,.22) !important;
+}
+
+
+/* =========================
+   DYNAMIC ISLAND: ORIGINAL ANIMATION IS AUTHORITATIVE
+   The island already has a dedicated liquid width/height animation.
+   Never add scale/translate/press animation from the global glass engine.
+   ========================= */
+#dynamic-island,
+#dynamic-island.di-visible,
+#dynamic-island.di-expanded {
+  scale: 1 !important;
+  translate: none !important;
+  transform-origin: center center !important;
+}
+
+/* Preserve the original center transform and original transition exactly. */
+#dynamic-island {
+  transform: translateX(-50%) translateZ(0) !important;
+  transition:
+    width 0.7s var(--liquid-fluid),
+    height 0.7s var(--liquid-fluid),
+    border-radius 0.6s var(--liquid-fluid),
+    opacity 0.4s ease,
+    padding 0.7s var(--liquid-fluid),
+    box-shadow 0.4s ease,
+    top 0.4s ease,
+    left 0.4s ease !important;
+}
+#dynamic-island.di-expanded:active {
+  transform: translateX(-50%) scale(0.97) !important;
+}
+
+/* If an older hot-reloaded DOM still carries generic liquid classes, neutralize them. */
+#dynamic-island.lg-touch-liquid,
+#dynamic-island.lg-touch-liquid.lg-touch-down,
+#dynamic-island.lg-touch-liquid.lg-touch-release {
+  scale: 1 !important;
+  translate: none !important;
+  filter: none !important;
+  border-radius: inherit;
+  animation: none !important;
+}
+#dynamic-island.lg-touch-liquid::after {
+  display: none !important;
 }
 
 /* =========================
@@ -21485,7 +21572,11 @@ html:not(.dark) #lg-transparency-panel {
     'ui-controls', 'footer-bubble', 'footer-expandable-menu',
     'global-settings-menu', 'lyrics-settings-menu', 'tutorial-box',
     'command-palette', 'language-picker-box', 'sharecard-picker-box',
-    'btn-resync', 'sync-slider', 'sync-value'
+    'btn-resync', 'sync-slider', 'sync-value',
+    /* Dynamic Island has its own carefully tuned width/height/transform animation.
+       Generic press deformation MUST NEVER touch it. */
+    'dynamic-island', 'dynamic-island-ring',
+    'dynamic-island-row', 'di-art', 'di-progress-track', 'di-progress-bar'
   ]);
 
   function candidateFrom(target) {
@@ -21612,6 +21703,20 @@ html:not(.dark) #lg-transparency-panel {
   function boot() {
     addControl(saved);
     applyTransparency(saved);
+
+    /* Dynamic Island owns its animation. Remove any stale classes left by
+       previous experimental Liquid-Glass builds / bfcache restoration. */
+    const di = document.getElementById('dynamic-island');
+    if (di) {
+      di.classList.remove(
+        'lg-touch-liquid','lg-touch-down','lg-touch-release',
+        'lg-liquid-interactive','lg-pressed','lg-releasing'
+      );
+      [
+        '--lg-sx','--lg-sy','--lg-shift-x','--lg-shift-y',
+        '--lg-touch-x','--lg-touch-y','--lg-depth','--lg-rx','--lg-ry','--lg-tx','--lg-ty'
+      ].forEach(p => di.style.removeProperty(p));
+    }
 
     /*
       Repair stale v4 classes if a browser restored DOM state from bfcache/dev hot reload.
@@ -21740,9 +21845,15 @@ html:not(.dark) #lg-transparency-panel {
     if (bg) {
       if (mode === 'current-cover') {
         const cover = currentCoverUrl();
-        if (cover) bg.style.backgroundImage = `url("${cover.replace(/"/g, '\\"')}")`;
+        if (cover) {
+          bg.style.setProperty('background-image', `url("${cover.replace(/"/g, '\\"')}")`, 'important');
+          bg.style.setProperty('background-size', 'cover', 'important');
+          bg.style.setProperty('background-position', 'center center', 'important');
+          bg.style.setProperty('background-repeat', 'no-repeat', 'important');
+          bg.style.setProperty('background-color', 'transparent', 'important');
+        }
       } else {
-        bg.style.backgroundImage = 'none';
+        bg.style.setProperty('background-image', 'none', 'important');
       }
     }
 
