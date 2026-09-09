@@ -9,6 +9,12 @@
     [BUGFIX] oder [PERFORMANCE] oder [FEATURE] als Tag, dann kurz
     Symptom/Ziel, Ursache, Fix, und der beobachtbare Effekt.
     Neueste Einträge oben.
+    [FIX - VISUAL] Release v24.138.12: Crystal-Clear Glass statt milchiger Karten
+      - Screenshot-Ursache identifiziert: Der verbleibende weiße Karten-Look kam vom starken Backdrop-Blur,
+        der helle Bereiche des Cover-Bildes zu einer grauweißen Fläche mittelte — nicht mehr von einer CSS-Hintergrundfarbe.
+      - Karten/Fenster bleiben vollständig ohne Fill; Blur wird jetzt nicht-linear über den Transparenzregler gesteuert.
+      - Bei 70% Transparenz nur noch ca. 1,6px Blur; bei 100% exakt 0px Blur/Kante/Schatten.
+      - Saturation/Brightness aus dem Glass-Filter entfernt und alte Glare-Pseudoelemente deaktiviert.
     [DESIGN - KRITISCH] Release v24.138.11: Zero-Fill Liquid Glass
       - Karten, Fenster, Settings, Modals und Dynamic Island besitzen im Liquid-Glass-Modus keinerlei weiße,
         dunkle oder farbige Flächenfüllung mehr.
@@ -22965,6 +22971,233 @@ body.liquid-glass-active :is(img,video,canvas,#artwork,#liquid-blobs) {
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', boot, {once:true});
+  } else {
+    boot();
+  }
+})();
+</script>
+
+
+<!-- LIQUID_GLASS_V24_138_12_CRYSTAL_CLEAR -->
+<style id="liquid-glass-v24-138-12-crystal-clear">
+/*
+  CRYSTAL CLEAR:
+  The screenshot showed the remaining "white card" was not a fill anymore —
+  it was the BACKDROP BLUR itself averaging the bright cover into a milky rectangle.
+  So: zero fill stays, but blur is now much weaker/non-linear at high transparency.
+*/
+
+:root {
+  --lg-crystal-blur: 1.62px;
+  --lg-crystal-edge: .028;
+  --lg-crystal-highlight: .042;
+  --lg-crystal-shadow: .05;
+}
+
+body.liquid-glass-active :is(
+  .glass-card,
+  #global-settings-menu,
+  #lyrics-settings-menu,
+  #main-music-card,
+  #mini-player-toggle,
+  #ui-controls,
+  #footer-bubble,
+  #footer-expandable-menu,
+  #tutorial-box,
+  .modal-content,
+  #language-picker-box,
+  #sharecard-picker-box,
+  #command-palette,
+  #dynamic-island
+) {
+  /* absolutely no painted surface */
+  background: none !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  background-blend-mode: normal !important;
+
+  /* pure optical glass — NO brightness/saturation wash */
+  -webkit-backdrop-filter: blur(var(--lg-crystal-blur)) !important;
+  backdrop-filter: blur(var(--lg-crystal-blur)) !important;
+
+  border-color: rgba(255,255,255,var(--lg-crystal-edge)) !important;
+  border-top-color: rgba(255,255,255,var(--lg-crystal-highlight)) !important;
+  border-left-color: rgba(255,255,255,var(--lg-crystal-highlight)) !important;
+
+  box-shadow:
+    0 10px 24px -22px rgba(0,0,0,var(--lg-crystal-shadow)),
+    inset 0 1px 0 rgba(255,255,255,var(--lg-crystal-highlight)) !important;
+}
+
+/* Light/Dark mode are optically identical. Neither may tint the pane. */
+html:not(.dark) body.liquid-glass-active :is(
+  .glass-card,#global-settings-menu,#lyrics-settings-menu,#main-music-card,
+  #mini-player-toggle,#ui-controls,#footer-bubble,#footer-expandable-menu,
+  #tutorial-box,.modal-content,#language-picker-box,#sharecard-picker-box,
+  #command-palette,#dynamic-island
+),
+.dark body.liquid-glass-active :is(
+  .glass-card,#global-settings-menu,#lyrics-settings-menu,#main-music-card,
+  #mini-player-toggle,#ui-controls,#footer-bubble,#footer-expandable-menu,
+  #tutorial-box,.modal-content,#language-picker-box,#sharecard-picker-box,
+  #command-palette,#dynamic-island
+) {
+  background: none !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  -webkit-backdrop-filter: blur(var(--lg-crystal-blur)) !important;
+  backdrop-filter: blur(var(--lg-crystal-blur)) !important;
+}
+
+/* No state is allowed to reintroduce a frosted/white/dark fill. */
+body.liquid-glass-active :is(
+  .glass-card,#global-settings-menu,#lyrics-settings-menu,#main-music-card,
+  #mini-player-toggle,#ui-controls,#footer-bubble,#footer-expandable-menu,
+  #tutorial-box,.modal-content,#language-picker-box,#sharecard-picker-box,
+  #command-palette,#dynamic-island
+):is(:hover,:active,:focus,:focus-within) {
+  background: none !important;
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+/* Remove old glare/wash pseudo layers completely. */
+body.liquid-glass-active :is(
+  .glass-card,#global-settings-menu,#lyrics-settings-menu,#main-music-card,
+  #mini-player-toggle,#ui-controls,#footer-bubble,#footer-expandable-menu,
+  #tutorial-box,.modal-content,#language-picker-box,#sharecard-picker-box,
+  #command-palette,#dynamic-island
+)::before,
+body.liquid-glass-active :is(
+  .glass-card,#global-settings-menu,#lyrics-settings-menu,#main-music-card,
+  #mini-player-toggle,#ui-controls,#footer-bubble,#footer-expandable-menu,
+  #tutorial-box,.modal-content,#language-picker-box,#sharecard-picker-box,
+  #command-palette,#dynamic-island
+)::after {
+  background: none !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+/* Neutral utility fills inside glass windows also stay transparent. */
+body.liquid-glass-active :is(
+  .glass-card,#global-settings-menu,#lyrics-settings-menu,.modal-content,
+  #tutorial-box,#language-picker-box,#sharecard-picker-box,#command-palette
+) :is(
+  [class*="bg-white"],[class*="bg-black"],
+  [class*="bg-slate-50"],[class*="bg-slate-100"],[class*="bg-slate-200"],
+  [class*="bg-slate-700"],[class*="bg-slate-800"],[class*="bg-slate-900"]
+) {
+  background: none !important;
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+/* Actual cover/media stays untouched. */
+body.liquid-glass-active #liquid-blobs {
+  background-size: cover !important;
+  background-position: center center !important;
+  background-repeat: no-repeat !important;
+}
+</style>
+
+<script id="liquid-glass-v24-138-12-crystal-clear-js">
+(function () {
+  const KEY = 'liquidGlassTransparency';
+  const DEFAULT = 70;
+  const clamp = v => Math.max(0, Math.min(100, Number(v) || 0));
+
+  function applyCrystalTransparency(v) {
+    v = clamp(v);
+
+    /*
+      Non-linear optical model:
+      transparency 100 -> absolutely invisible pane (0 blur, 0 edge, 0 shadow)
+      transparency  70 -> ~1.6px blur: clearly transparent, only a faint glass cue
+      transparency  50 -> ~4.5px blur
+      transparency   0 -> 18px blur
+
+      This avoids the "big white frosted rectangle" visible in the screenshot.
+    */
+    const visible = 1 - (v / 100);
+    const optical = visible * visible;
+
+    const blur = 18 * optical;
+    const edge = 0.31 * optical;
+    const highlight = 0.47 * optical;
+    const shadow = 0.55 * optical;
+
+    const root = document.documentElement;
+    root.style.setProperty('--lg-crystal-blur', blur.toFixed(2) + 'px');
+    root.style.setProperty('--lg-crystal-edge', edge.toFixed(4));
+    root.style.setProperty('--lg-crystal-highlight', highlight.toFixed(4));
+    root.style.setProperty('--lg-crystal-shadow', shadow.toFixed(4));
+
+    /* Keep every old Liquid-Glass fill variable at literal zero. */
+    root.style.setProperty('--lg-glass-alpha', '0');
+    root.style.setProperty('--lg-glass-alpha-soft', '0');
+    root.style.setProperty('--lg-glass-alpha-strong', '0');
+    root.style.setProperty('--lg-glass-blur', blur.toFixed(2) + 'px');
+    root.style.setProperty('--lg-window-blur', blur.toFixed(2) + 'px');
+    root.style.setProperty('--lg-zf-blur', blur.toFixed(2) + 'px');
+    root.style.setProperty('--lg-zf-edge', edge.toFixed(4));
+    root.style.setProperty('--lg-zf-highlight', highlight.toFixed(4));
+    root.style.setProperty('--lg-zf-shadow', shadow.toFixed(4));
+
+    const range = document.getElementById('lg-transparency-range');
+    if (range && Number(range.value) !== v) range.value = v;
+    const value = document.getElementById('lg-transparency-value');
+    if (value) value.textContent = Math.round(v) + '%';
+  }
+
+  window.applyTransparency = applyCrystalTransparency;
+
+  function stored() {
+    try {
+      const raw = localStorage.getItem(KEY);
+      return raw === null ? DEFAULT : clamp(raw);
+    } catch (_) { return DEFAULT; }
+  }
+
+  function bind() {
+    const range = document.getElementById('lg-transparency-range');
+    if (!range || range.dataset.crystalBound === '1') return;
+    range.dataset.crystalBound = '1';
+
+    const v = stored();
+    range.value = v;
+    applyCrystalTransparency(v);
+
+    range.addEventListener('input', e => {
+      const next = clamp(e.target.value);
+      try { localStorage.setItem(KEY, String(next)); } catch (_) {}
+      applyCrystalTransparency(next);
+    }, { passive: true });
+  }
+
+  function boot() {
+    const MIGRATION = 'liquidGlassTransparency_v12_crystal_clear';
+    let v = stored();
+
+    try {
+      if (localStorage.getItem(MIGRATION) !== '1') {
+        v = DEFAULT;
+        localStorage.setItem(KEY, String(DEFAULT));
+        localStorage.setItem(MIGRATION, '1');
+      }
+    } catch (_) {}
+
+    applyCrystalTransparency(v);
+    bind();
+
+    /* UI is partly injected dynamically; no polling, only DOM-change binding. */
+    const observer = new MutationObserver(bind);
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot, { once: true });
   } else {
     boot();
   }
