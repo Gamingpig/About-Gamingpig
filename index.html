@@ -9,6 +9,13 @@
     [BUGFIX] oder [PERFORMANCE] oder [FEATURE] als Tag, dann kurz
     Symptom/Ziel, Ursache, Fix, und der beobachtbare Effekt.
     Neueste Einträge oben.
+    [UI] Release v24.138.15: Transparenzregler vorerst versteckt + klareres Glas
+      - Der bisherige Glas-Transparenzregler bleibt vollständig im Code erhalten, wird im Settings-Menü
+        aber ausgeblendet, da er aktuell nur noch optische Schatten/Reflexionen beeinflusst.
+      - Dormanter Reglerwert standardmäßig auf 0% gesetzt und einmalig migriert.
+      - Sichtbares Liquid Glass etwas transparenter gemacht: Light-Tint 18% -> 12%, Dark-Tint 24% -> 17%,
+        Button-Tints ebenfalls reduziert und Blur von 10px auf 8px gesenkt.
+      - Footer-Scroll-Fix aus v24.138.14 bleibt unverändert erhalten.
     [FIX + DESIGN] Release v24.138.14: Lesbarer Light/Dark-Glass-Tint + Footer-Scroll-Fix
       - Kontrollierten hellen/dunklen Translucent-Tint wieder auf Karten, Fenster, Modals, Settings,
         Control Center, Footer, Dynamic Island und Glass-Buttons angewendet.
@@ -23703,6 +23710,76 @@ html:not(.dark) body.liquid-glass-active :is(
   ro.observe(document.documentElement);
 
   forceFooterState();
+})();
+</script>
+
+
+<!-- LIQUID_GLASS_V24_138_15_HIDDEN_OPTICS_CONTROL -->
+<style id="liquid-glass-v24-138-15-hidden-optics-control">
+/*
+  The old "Glas-Transparenz" slider no longer controls actual surface transparency.
+  Keep the implementation for future experiments, but hide its complete settings row.
+*/
+#lg-transparency-panel {
+  display: none !important;
+}
+
+/* Slightly clearer default glass than v24.138.14. */
+:root {
+  --lg-readable-light: .12;
+  --lg-readable-dark: .17;
+  --lg-readable-button-light: .075;
+  --lg-readable-button-dark: .11;
+  --lg-readable-blur: 8px;
+}
+</style>
+
+<script id="liquid-glass-v24-138-15-hidden-optics-control-js">
+(function () {
+  const KEY = 'liquidGlassTransparency';
+  const HIDDEN_DEFAULT = 0;
+  const MIGRATION = 'liquidGlassTransparency_v15_hidden_zero';
+
+  function applyHiddenOpticsDefault() {
+    /*
+      Preserve all slider code for later, but pin its stored/UI value to 0.
+      We intentionally do NOT call the legacy applyTransparency() here:
+      the visible glass material is now controlled by the readable-tint tokens above,
+      while this hidden value is retained only as a dormant future control.
+    */
+    try {
+      if (localStorage.getItem(MIGRATION) !== '1') {
+        localStorage.setItem(KEY, String(HIDDEN_DEFAULT));
+        localStorage.setItem(MIGRATION, '1');
+      }
+    } catch (_) {}
+
+    const range = document.getElementById('lg-transparency-range');
+    if (range) range.value = String(HIDDEN_DEFAULT);
+
+    const label = document.getElementById('lg-transparency-value');
+    if (label) label.textContent = HIDDEN_DEFAULT + '%';
+
+    const panel = document.getElementById('lg-transparency-panel');
+    if (panel) {
+      panel.hidden = true;
+      panel.setAttribute('aria-hidden', 'true');
+    }
+  }
+
+  function boot() {
+    applyHiddenOpticsDefault();
+
+    /* Settings markup can appear later. Bind only on DOM changes; no polling. */
+    const observer = new MutationObserver(applyHiddenOpticsDefault);
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot, { once: true });
+  } else {
+    boot();
+  }
 })();
 </script>
 
