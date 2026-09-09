@@ -4843,7 +4843,8 @@
             min-height: 2.75rem;
             box-sizing: border-box;
             bottom: 1.25rem;
-            max-width: calc(100vw - 6.5rem); /* leave room for ⌘K left + ↑ right */
+            left: var(--footer-center, 50%);
+            max-width: var(--footer-space, calc(100vw - 6.5rem)); /* leave room for ⌘K left + ↑ right */
             transform: translateX(-50%) translateY(20px);
             transition: opacity 0.35s var(--apple-ease), transform 0.35s var(--apple-spring);
         }
@@ -4857,9 +4858,13 @@
                 height: 3.25rem;
                 min-height: 3.25rem;
                 bottom: 2rem;
-                max-width: calc(100vw - 9rem);
+                max-width: var(--footer-space, calc(100vw - 9rem));
             }
         }
+        #footer-bubble.footer-bubble-visible ~ #pwa-install-btn { bottom: var(--footer-install-bottom, 5rem); }
+        #footer-expandable-menu:not(.hidden) ~ #pwa-install-btn { visibility: hidden; }
+        #footer-established { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+        #footer-bubble > :not(#footer-established) { flex-shrink: 0; }
         /* Popup menu: fixed, appears above the bubble */
         #footer-expandable-menu {
             bottom: calc(1.25rem + 2.75rem + 0.75rem); /* bubble bottom + height + gap */
@@ -6025,7 +6030,7 @@
     </div>
 
     <!-- Footer Bubble (fixed, centered between #cp-trigger and #back-to-top) -->
-    <div id="footer-bubble" class="fixed z-[91] left-1/2 -translate-x-1/2 inline-flex items-center justify-center gap-1.5 sm:gap-3 px-3 sm:px-6 rounded-full bg-slate-900/85 backdrop-blur-xl border border-white/15 shadow-xl text-[10px] xs:text-xs sm:text-sm text-slate-300 transition-all select-none opacity-0 pointer-events-none" style="bottom:1.25rem;">
+    <div id="footer-bubble" class="fixed z-[91] left-1/2 -translate-x-1/2 inline-flex items-center justify-center gap-1.5 sm:gap-3 px-3 sm:px-6 rounded-full bg-slate-900/85 backdrop-blur-xl border border-white/15 shadow-xl text-[10px] xs:text-xs sm:text-sm text-slate-300 transition-all select-none opacity-0 pointer-events-none">
         <span id="footer-established" class="font-bold tracking-tight text-slate-300 whitespace-nowrap">© 2026 GAMINGPIG</span>
         <span class="text-white/20 select-none">•</span>
         <span id="footer-version-label" class="font-mono font-bold text-pink-400 whitespace-nowrap">v24.156.0</span>
@@ -16179,6 +16184,22 @@ let shareCardLoading;
         let scrollTicking = false;
 
         const footerBubbleEl = document.getElementById('footer-bubble');
+        function fitFooterBubble() {
+            const left = document.getElementById('cp-trigger');
+            if (!footerBubbleEl || !left || !backToTopBtn || standByActive) return;
+            // Layout offsets exclude hover/entrance transforms on the buttons.
+            const gapStart = left.offsetLeft + left.offsetWidth;
+            const gapEnd = backToTopBtn.offsetLeft;
+            footerBubbleEl.style.setProperty('--footer-center', ((gapStart + gapEnd) / 2) + 'px');
+            footerBubbleEl.style.setProperty('--footer-space', Math.max(0, gapEnd - gapStart - 16) + 'px');
+            const leftCenter = parseFloat(getComputedStyle(left).bottom) + left.offsetHeight / 2;
+            const rightCenter = parseFloat(getComputedStyle(backToTopBtn).bottom) + backToTopBtn.offsetHeight / 2;
+            footerBubbleEl.style.bottom = ((leftCenter + rightCenter - footerBubbleEl.offsetHeight) / 2) + 'px';
+            document.getElementById('pwa-install-btn')?.style.setProperty('--footer-install-bottom', ((leftCenter + rightCenter + footerBubbleEl.offsetHeight) / 2 + 12) + 'px');
+        }
+        const footerButtonObserver = new ResizeObserver(fitFooterBubble);
+        for (const button of [document.getElementById('cp-trigger'), backToTopBtn]) if (button) footerButtonObserver.observe(button);
+        window.addEventListener('resize', () => { fitFooterBubble(); updateScrollUI(); }, { passive: true });
         function updateScrollUI() {
             if (standByActive) { scrollTicking = false; return; }
             const scrollTop = window.scrollY || document.documentElement.scrollTop;
@@ -16188,9 +16209,12 @@ let shareCardLoading;
                 else backToTopBtn.classList.remove('visible');
             }
             if (footerBubbleEl) {
-                // Show bubble when scrolled at least 80% to bottom
-                const pct = docHeight > 0 ? scrollTop / docHeight : 0;
-                if (pct >= 0.8) footerBubbleEl.classList.add('footer-bubble-visible');
+                // A fixed end distance avoids appearing far too early on long pages.
+                const nearEnd = docHeight > 0 && docHeight - scrollTop <= 80;
+                if (nearEnd) {
+                    if (!footerBubbleEl.classList.contains('footer-bubble-visible')) fitFooterBubble();
+                    footerBubbleEl.classList.add('footer-bubble-visible');
+                }
                 else footerBubbleEl.classList.remove('footer-bubble-visible');
             }
             scrollTicking = false;
@@ -19604,6 +19628,8 @@ window.setLyricsStyle = function(style) {
         // ==============================================================================
 
         let audioCtxInstance = null;
+        let uiFeedbackClick = false;
+        let uiFeedbackSoundPlayed = false;
 
         function getAudioContext() {
             if (!audioCtxInstance && typeof window !== 'undefined') {
@@ -19626,15 +19652,17 @@ window.setLyricsStyle = function(style) {
         });
 
         function playUISound(type = 'click') {
-            if (!uiSoundEnabled) return;
+            if (!uiSoundEnabled || (uiFeedbackClick && uiFeedbackSoundPlayed)) return;
             try {
                 const ctx = getAudioContext();
                 if (!ctx) return;
+                if (uiFeedbackClick) uiFeedbackSoundPlayed = true;
                 const now = ctx.currentTime;
                 const osc = ctx.createOscillator();
                 const gain = ctx.createGain();
                 osc.connect(gain);
                 gain.connect(ctx.destination);
+                osc.onended = () => { osc.disconnect(); gain.disconnect(); };
 
                 if (type === 'click') {
                     osc.frequency.setValueAtTime(650, now);
@@ -19666,13 +19694,26 @@ window.setLyricsStyle = function(style) {
             }
         };
 
-        // Attach universal UI sound and haptic to interactive buttons
+        // Capture also covers controls inside menus that stop click propagation.
+        const uiFeedbackMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+        const uiFeedbackAnimations = new WeakMap();
         document.addEventListener('click', (e) => {
-            const target = e.target.closest('button, .lang-picker-btn, #theme-toggle, #perf-toggle, #standby-toggle, #btn-spotify-wrapped');
-            if (target && !target.id?.includes('toggle-sound') && !target.id?.includes('toggle-haptic')) {
-                playUISound('click');
+            const target = e.target instanceof Element && e.target.closest('button, a[href], [role="button"], input[type="button"], input[type="submit"], input[type="checkbox"], input[type="radio"], .lang-picker-btn, [onclick]');
+            if (!target || target.closest('[inert], [disabled], [aria-disabled="true"]')) return;
+            if (standByActive && !target.closest('#standby-overlay')) return;
+            uiFeedbackClick = true;
+            uiFeedbackSoundPlayed = false;
+            setTimeout(() => { uiFeedbackClick = false; uiFeedbackSoundPlayed = false; }, 0);
+            // Enabling sound has its own confirmation; disabling remains silent.
+            if (!target.id.includes('toggle-sound')) playUISound('click');
+            if (!standByActive && !uiFeedbackMotion.matches && !document.body.classList.contains('low-end') && target.animate) {
+                uiFeedbackAnimations.get(target)?.cancel();
+                const animation = target.animate([
+                    { scale: '1' }, { scale: '0.96', offset: 0.3 }, { scale: '1' }
+                ], { duration: 180, easing: 'ease-out' });
+                uiFeedbackAnimations.set(target, animation);
             }
-        }, { passive: true });
+        }, { capture: true, passive: true });
 
         let currentWrappedRange = 'weeks';
         let currentWrappedSlide = 0;
