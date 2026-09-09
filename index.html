@@ -13539,6 +13539,7 @@ let shareCardLoading;
                     else element.style.removeProperty('transition');
                 }
                 standbyInertElements.clear();
+                cancelStandbyIdleTransition();
                 cancelStandbyArtwork();
                 stopProgressTracking();
                 for (const media of standbyPausedMedia) media.play().catch(() => {});
@@ -13677,6 +13678,14 @@ let shareCardLoading;
         // hält die zuletzt bekannten Track-Infos fest, auch wenn StandBy gerade geschlossen
         // ist und die eigentlichen Bilder deshalb noch nicht geladen wurden.
         let lastStandbyTrackInfo = { title: null, artist: null, artUrl: null, isPlaying: undefined };
+        // Bridge two normal 5s polls between songs without adding a polling loop.
+        let standbyIdleTimer = null;
+        let standbyIdleRequest = null;
+        function cancelStandbyIdleTransition() {
+            if (standbyIdleTimer !== null) clearTimeout(standbyIdleTimer);
+            standbyIdleTimer = null;
+            standbyIdleRequest = null;
+        }
         let standbyArtRevision = 0;
         let standbyArtJob = null;
         function cancelStandbyArtwork() {
@@ -13687,7 +13696,7 @@ let shareCardLoading;
             }
             standbyArtJob = null;
         }
-        function syncStandByTrackInfo(title, artist, artUrl, isNewTrack, isPlaying, fromStandby = false) {
+        function syncStandByTrackInfo(title, artist, artUrl, isNewTrack, isPlaying, fromStandby = false, confirmIdle = false) {
             title = typeof title === 'string' ? title : '';
             artist = typeof artist === 'string' ? artist : '';
             // Late dashboard artwork callbacks are not authoritative during StandBy.
@@ -13700,6 +13709,19 @@ let shareCardLoading;
             }
             const idle = !title || isPlaying === false;
             const previous = lastStandbyTrackInfo;
+            if (standByActive && idle && previous.isPlaying && !confirmIdle) {
+                standbyIdleRequest = [title, artist, artUrl, isNewTrack, isPlaying, fromStandby, true];
+                if (standbyIdleTimer === null) {
+                    standbyIdleTimer = setTimeout(() => {
+                        const request = standbyIdleRequest;
+                        standbyIdleTimer = null;
+                        standbyIdleRequest = null;
+                        if (standByActive && request) syncStandByTrackInfo(...request);
+                    }, 10000);
+                }
+                return;
+            }
+            cancelStandbyIdleTransition();
             const textChanged = previous.title !== title || previous.artist !== artist || previous.isPlaying !== !idle;
             lastStandbyTrackInfo = { title, artist, artUrl, isPlaying: !idle };
             const titleEl = document.getElementById('standby-track-title-inner');
