@@ -19,6 +19,86 @@
                 }
             }
         }
+
+        let currentRoadmapSha = null;
+
+async function loadRoadmapMeta() {
+    try {
+        const res = await fetch('https://api.github.com/repos/Gamingpig/About-Gamingpig/contents/data/roadmap_meta.json', {
+            cache: 'no-store'
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        currentRoadmapSha = data.sha;
+        const config = JSON.parse(decodeURIComponent(escape(atob(data.content))));
+
+        document.getElementById('rm-release-version').value = config.releaseVersion || '';
+        if (config.items) {
+            if (config.items['1']) document.getElementById('rm-card-1-target').value = config.items['1'].target || '';
+            if (config.items['2']) document.getElementById('rm-card-2-target').value = config.items['2'].target || '';
+            if (config.items['3']) document.getElementById('rm-card-3-target').value = config.items['3'].target || '';
+            if (config.items['4']) document.getElementById('rm-card-4-target').value = config.items['4'].target || '';
+        }
+        showToast('Roadmap-Daten geladen.', '🗺️');
+    } catch (e) {
+        console.warn('Roadmap Meta konnte nicht geladen werden:', e);
+    }
+}
+
+async function saveRoadmapMeta() {
+    const token = await getStoredGitHubToken();
+    if (!token) {
+        showToast('Bitte erst GitHub-Token speichern.', '⚠️');
+        return;
+    }
+
+    const payload = {
+        releaseVersion: document.getElementById('rm-release-version').value.trim() || 'v24.158.0',
+        items: {
+            "1": { target: document.getElementById('rm-card-1-target').value.trim() || 'Ziel: v24.160', status: "in_progress" },
+            "2": { target: document.getElementById('rm-card-2-target').value.trim() || 'Ziel: v24.165', status: "in_progress" },
+            "3": { target: document.getElementById('rm-card-3-target').value.trim() || 'Ziel: Herbst 2026', status: "planned" },
+            "4": { target: document.getElementById('rm-card-4-target').value.trim() || 'Ziel: Herbst 2026', status: "planned" }
+        }
+    };
+
+    const rawContent = JSON.stringify(payload, null, 2);
+    const encodedContent = btoa(unescape(encodeURIComponent(rawContent)));
+
+    const body = {
+        message: 'chore(roadmap): update milestone targets via admin panel [skip ci]',
+        content: encodedContent
+    };
+    if (currentRoadmapSha) body.sha = currentRoadmapSha;
+
+    const btn = document.getElementById('btn-save-roadmap');
+    if (btn) btn.disabled = true;
+
+    try {
+        const res = await fetch('https://api.github.com/repos/Gamingpig/About-Gamingpig/contents/data/roadmap_meta.json', {
+            method: 'PUT',
+            headers: {
+                'Accept': 'application/vnd.github+json',
+                'Authorization': `Bearer ${token}`,
+                'X-GitHub-Api-Version': '2022-11-28'
+            },
+            body: JSON.stringify(body)
+        });
+
+        if (res.ok) {
+            const resData = await res.json();
+            currentRoadmapSha = resData.content.sha;
+            showToast('Roadmap-Ziele erfolgreich aktualisiert!', '✅');
+        } else {
+            const err = await res.json().catch(() => ({}));
+            showToast(`Fehler: ${err.message || res.status}`, '❌');
+        }
+    } catch (e) {
+        showToast('Netzwerkfehler: ' + e.message, '⚠️');
+    } finally {
+        if (btn) btn.disabled = false;
+    }
+}
     </script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap');
