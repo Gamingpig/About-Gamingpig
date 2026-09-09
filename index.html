@@ -9,13 +9,14 @@
     [BUGFIX] oder [PERFORMANCE] oder [FEATURE] als Tag, dann kurz
     Symptom/Ziel, Ursache, Fix, und der beobachtbare Effekt.
     Neueste Einträge oben.
-    [UI] Release v24.138.15: Transparenzregler vorerst versteckt + klareres Glas
-      - Der bisherige Glas-Transparenzregler bleibt vollständig im Code erhalten, wird im Settings-Menü
-        aber ausgeblendet, da er aktuell nur noch optische Schatten/Reflexionen beeinflusst.
-      - Dormanter Reglerwert standardmäßig auf 0% gesetzt und einmalig migriert.
-      - Sichtbares Liquid Glass etwas transparenter gemacht: Light-Tint 18% -> 12%, Dark-Tint 24% -> 17%,
-        Button-Tints ebenfalls reduziert und Blur von 10px auf 8px gesenkt.
-      - Footer-Scroll-Fix aus v24.138.14 bleibt unverändert erhalten.
+    [HOTFIX - STABILITY] Release v24.138.16: Page-freeze / unresponsive UI behoben
+      - Vier veraltete observer-basierte Transparenz-Controller (v10-v13) entfernt, die parallel dieselben
+        Slider-/CSS-Werte überschrieben und sich gegenseitig beeinflussten.
+      - Kritischer Performance-Fall beseitigt: versteckter 0%-Wert konnte zuvor über alte Logik bis zu 45px
+        Backdrop-Blur auf vielen großen Flächen aktivieren und den Browser/GPU massiv belasten.
+      - Sichtbares Glass-Material jetzt fest auf moderate 8px Blur (Buttons 5px) gekoppelt und vollständig
+        vom versteckten Slider entkoppelt.
+      - Slider bleibt im Code, ist versteckt und intern 0%; keine neuen MutationObserver oder Polling-Loops.
     [FIX + DESIGN] Release v24.138.14: Lesbarer Light/Dark-Glass-Tint + Footer-Scroll-Fix
       - Kontrollierten hellen/dunklen Translucent-Tint wieder auf Karten, Fenster, Modals, Settings,
         Control Center, Footer, Dynamic Island und Glass-Buttons angewendet.
@@ -22604,100 +22605,6 @@ body.liquid-glass-active #global-settings-menu :is(
 }
 </style>
 
-<script id="liquid-glass-v24-138-10-js">
-(function () {
-  const KEY = 'liquidGlassTransparency';
-  const DEFAULT = 70;
-
-  const clamp = v => Math.max(0, Math.min(100, Number(v) || 0));
-
-  /*
-    True-window model:
-    - Surface fill stays 100% transparent at ALL slider values.
-    - Slider changes optical obscurity through backdrop blur.
-    - 100% transparency => 0px blur.
-    - 70% transparency (default) => ~9px blur.
-    - 0% transparency => ~30px blur.
-  */
-  function applyTrueWindowTransparency(v) {
-    v = clamp(v);
-
-    const opacityAmount = 1 - (v / 100);
-    const blurPx = 30 * opacityAmount;
-    const border = 0.08 + (opacityAmount * 0.16);
-    const highlight = 0.14 + (opacityAmount * 0.22);
-
-    const root = document.documentElement;
-    root.style.setProperty('--lg-window-transparency', String(v));
-    root.style.setProperty('--lg-window-blur', blurPx.toFixed(2) + 'px');
-    root.style.setProperty('--lg-window-border', border.toFixed(4));
-    root.style.setProperty('--lg-window-highlight', highlight.toFixed(4));
-
-    /* Keep legacy vars harmless so older CSS cannot reintroduce tint. */
-    root.style.setProperty('--lg-glass-alpha', '0');
-    root.style.setProperty('--lg-glass-alpha-soft', '0');
-    root.style.setProperty('--lg-glass-alpha-strong', '0');
-    root.style.setProperty('--lg-glass-blur', blurPx.toFixed(2) + 'px');
-
-    const range = document.getElementById('lg-transparency-range');
-    if (range && Number(range.value) !== v) range.value = v;
-
-    const out = document.getElementById('lg-transparency-value');
-    if (out) out.textContent = Math.round(v) + '%';
-  }
-
-  window.applyTransparency = applyTrueWindowTransparency;
-
-  function migrateDefaultOnce() {
-    const MIGRATION = 'liquidGlassTransparency_v10_true_window';
-    try {
-      if (localStorage.getItem(MIGRATION) !== '1') {
-        localStorage.setItem(KEY, String(DEFAULT));
-        localStorage.setItem(MIGRATION, '1');
-        return DEFAULT;
-      }
-      const raw = localStorage.getItem(KEY);
-      return raw === null ? DEFAULT : clamp(raw);
-    } catch (_) {
-      return DEFAULT;
-    }
-  }
-
-  function wireRange(value) {
-    const range = document.getElementById('lg-transparency-range');
-    if (!range || range.dataset.trueWindowBound === '1') return;
-
-    range.dataset.trueWindowBound = '1';
-    range.value = value;
-
-    range.addEventListener('input', e => {
-      const v = clamp(e.target.value);
-      try { localStorage.setItem(KEY, String(v)); } catch (_) {}
-      applyTrueWindowTransparency(v);
-    }, {passive:true});
-  }
-
-  function boot() {
-    const value = migrateDefaultOnce();
-    applyTrueWindowTransparency(value);
-
-    const tryWire = () => wireRange(value);
-    tryWire();
-
-    /* Settings can be rendered/opened later; observe only for that control appearing. */
-    const observer = new MutationObserver(() => tryWire());
-    observer.observe(document.body, {childList:true, subtree:true});
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', boot, {once:true});
-  } else {
-    boot();
-  }
-})();
-</script>
-
-
 <!-- LIQUID_GLASS_V24_138_11_ZERO_FILL_GLASS -->
 <style id="liquid-glass-v24-138-11-zero-fill-glass">
 /*
@@ -22904,102 +22811,6 @@ body.liquid-glass-active :is(img,video,canvas,#artwork,#liquid-blobs) {
 }
 </style>
 
-<script id="liquid-glass-v24-138-11-zero-fill-js">
-(function () {
-  const KEY = 'liquidGlassTransparency';
-  const DEFAULT = 70;
-  const clamp = v => Math.max(0, Math.min(100, Number(v) || 0));
-
-  function readStored() {
-    try {
-      const v = localStorage.getItem(KEY);
-      return v === null ? DEFAULT : clamp(v);
-    } catch (_) { return DEFAULT; }
-  }
-
-  function applyZeroFillTransparency(v) {
-    v = clamp(v);
-    const visibility = 1 - (v / 100);
-
-    /*
-      100% transparency:
-        blur 0, borders 0, highlights 0, shadow 0 => pane is effectively invisible.
-      70% transparency:
-        ~9px blur plus very subtle edges.
-      0% transparency:
-        strongest blur/edge visibility, still NO color fill.
-    */
-    const blur = 30 * visibility;
-    const edge = 0.35 * visibility;
-    const highlight = 0.53 * visibility;
-    const shadow = 0.60 * visibility;
-
-    const root = document.documentElement;
-    root.style.setProperty('--lg-zf-blur', blur.toFixed(2) + 'px');
-    root.style.setProperty('--lg-zf-edge', edge.toFixed(4));
-    root.style.setProperty('--lg-zf-highlight', highlight.toFixed(4));
-    root.style.setProperty('--lg-zf-shadow', shadow.toFixed(4));
-
-    /* Neutralize all legacy fill variables permanently. */
-    root.style.setProperty('--lg-glass-alpha', '0');
-    root.style.setProperty('--lg-glass-alpha-soft', '0');
-    root.style.setProperty('--lg-glass-alpha-strong', '0');
-    root.style.setProperty('--lg-window-blur', blur.toFixed(2) + 'px');
-    root.style.setProperty('--lg-glass-blur', blur.toFixed(2) + 'px');
-
-    const range = document.getElementById('lg-transparency-range');
-    if (range && Number(range.value) !== v) range.value = v;
-    const out = document.getElementById('lg-transparency-value');
-    if (out) out.textContent = Math.round(v) + '%';
-  }
-
-  window.applyTransparency = applyZeroFillTransparency;
-
-  function bindRange() {
-    const range = document.getElementById('lg-transparency-range');
-    if (!range || range.dataset.zeroFillBound === '1') return;
-    range.dataset.zeroFillBound = '1';
-
-    const value = readStored();
-    range.value = value;
-    applyZeroFillTransparency(value);
-
-    range.addEventListener('input', e => {
-      const v = clamp(e.target.value);
-      try { localStorage.setItem(KEY, String(v)); } catch (_) {}
-      applyZeroFillTransparency(v);
-    }, {passive:true});
-  }
-
-  function boot() {
-    const MIGRATION = 'liquidGlassTransparency_v11_zero_fill';
-    let value = readStored();
-
-    try {
-      if (localStorage.getItem(MIGRATION) !== '1') {
-        value = DEFAULT;
-        localStorage.setItem(KEY, String(DEFAULT));
-        localStorage.setItem(MIGRATION, '1');
-      }
-    } catch (_) {}
-
-    applyZeroFillTransparency(value);
-    bindRange();
-
-    /* Settings/control markup can be injected later. Event-driven only, no timer. */
-    const observer = new MutationObserver(() => bindRange());
-    observer.observe(document.body, { childList: true, subtree: true });
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', boot, {once:true});
-  } else {
-    boot();
-  }
-})();
-</script>
-
-
 <!-- LIQUID_GLASS_V24_138_12_CRYSTAL_CLEAR -->
 <style id="liquid-glass-v24-138-12-crystal-clear">
 /*
@@ -23123,109 +22934,6 @@ body.liquid-glass-active #liquid-blobs {
   background-repeat: no-repeat !important;
 }
 </style>
-
-<script id="liquid-glass-v24-138-12-crystal-clear-js">
-(function () {
-  const KEY = 'liquidGlassTransparency';
-  const DEFAULT = 70;
-  const clamp = v => Math.max(0, Math.min(100, Number(v) || 0));
-
-  function applyCrystalTransparency(v) {
-    v = clamp(v);
-
-    /*
-      Non-linear optical model:
-      transparency 100 -> absolutely invisible pane (0 blur, 0 edge, 0 shadow)
-      transparency  70 -> ~1.6px blur: clearly transparent, only a faint glass cue
-      transparency  50 -> ~4.5px blur
-      transparency   0 -> 18px blur
-
-      This avoids the "big white frosted rectangle" visible in the screenshot.
-    */
-    const visible = 1 - (v / 100);
-    const optical = visible * visible;
-
-    const blur = 18 * optical;
-    const edge = 0.31 * optical;
-    const highlight = 0.47 * optical;
-    const shadow = 0.55 * optical;
-
-    const root = document.documentElement;
-    root.style.setProperty('--lg-crystal-blur', blur.toFixed(2) + 'px');
-    root.style.setProperty('--lg-crystal-edge', edge.toFixed(4));
-    root.style.setProperty('--lg-crystal-highlight', highlight.toFixed(4));
-    root.style.setProperty('--lg-crystal-shadow', shadow.toFixed(4));
-
-    /* Keep every old Liquid-Glass fill variable at literal zero. */
-    root.style.setProperty('--lg-glass-alpha', '0');
-    root.style.setProperty('--lg-glass-alpha-soft', '0');
-    root.style.setProperty('--lg-glass-alpha-strong', '0');
-    root.style.setProperty('--lg-glass-blur', blur.toFixed(2) + 'px');
-    root.style.setProperty('--lg-window-blur', blur.toFixed(2) + 'px');
-    root.style.setProperty('--lg-zf-blur', blur.toFixed(2) + 'px');
-    root.style.setProperty('--lg-zf-edge', edge.toFixed(4));
-    root.style.setProperty('--lg-zf-highlight', highlight.toFixed(4));
-    root.style.setProperty('--lg-zf-shadow', shadow.toFixed(4));
-
-    const range = document.getElementById('lg-transparency-range');
-    if (range && Number(range.value) !== v) range.value = v;
-    const value = document.getElementById('lg-transparency-value');
-    if (value) value.textContent = Math.round(v) + '%';
-  }
-
-  window.applyTransparency = applyCrystalTransparency;
-
-  function stored() {
-    try {
-      const raw = localStorage.getItem(KEY);
-      return raw === null ? DEFAULT : clamp(raw);
-    } catch (_) { return DEFAULT; }
-  }
-
-  function bind() {
-    const range = document.getElementById('lg-transparency-range');
-    if (!range || range.dataset.crystalBound === '1') return;
-    range.dataset.crystalBound = '1';
-
-    const v = stored();
-    range.value = v;
-    applyCrystalTransparency(v);
-
-    range.addEventListener('input', e => {
-      const next = clamp(e.target.value);
-      try { localStorage.setItem(KEY, String(next)); } catch (_) {}
-      applyCrystalTransparency(next);
-    }, { passive: true });
-  }
-
-  function boot() {
-    const MIGRATION = 'liquidGlassTransparency_v12_crystal_clear';
-    let v = stored();
-
-    try {
-      if (localStorage.getItem(MIGRATION) !== '1') {
-        v = DEFAULT;
-        localStorage.setItem(KEY, String(DEFAULT));
-        localStorage.setItem(MIGRATION, '1');
-      }
-    } catch (_) {}
-
-    applyCrystalTransparency(v);
-    bind();
-
-    /* UI is partly injected dynamically; no polling, only DOM-change binding. */
-    const observer = new MutationObserver(bind);
-    observer.observe(document.body, { childList: true, subtree: true });
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', boot, { once: true });
-  } else {
-    boot();
-  }
-})();
-</script>
-
 
 <!-- LIQUID_GLASS_V24_138_13_SETTINGS_REFERENCE_MATERIAL -->
 <style id="liquid-glass-v24-138-13-settings-reference-material">
@@ -23402,96 +23110,6 @@ body.liquid-glass-active #liquid-blobs {
   translate: none !important;
 }
 </style>
-
-<script id="liquid-glass-v24-138-13-settings-reference-js">
-(function () {
-  const KEY = 'liquidGlassTransparency';
-  const DEFAULT = 98;
-  const clamp = v => Math.max(0, Math.min(100, Number(v) || 0));
-
-  function readTransparency() {
-    try {
-      const raw = localStorage.getItem(KEY);
-      return raw === null ? DEFAULT : clamp(raw);
-    } catch (_) { return DEFAULT; }
-  }
-
-  function applyReferenceMaterial(v) {
-    v = clamp(v);
-    const visible = 1 - (v / 100);
-
-    /*
-      Match the extremely clear Settings-panel look:
-      98% => ~0.18px blur, barely-visible edge
-      70% => ~4.05px blur
-      0%  => 45px blur
-      100% => completely optically invisible surface
-    */
-    const optical = visible * visible;
-    const blur = 45 * optical;
-    const edge = 0.30 * optical;
-    const highlight = 0.46 * optical;
-    const shadow = 0.52 * optical;
-
-    const root = document.documentElement;
-    root.style.setProperty('--lg-ref-blur', blur.toFixed(3) + 'px');
-    root.style.setProperty('--lg-ref-edge', edge.toFixed(4));
-    root.style.setProperty('--lg-ref-highlight', highlight.toFixed(4));
-    root.style.setProperty('--lg-ref-shadow', shadow.toFixed(4));
-
-    /* Neutralize all legacy tint variables. */
-    root.style.setProperty('--lg-glass-alpha', '0');
-    root.style.setProperty('--lg-glass-alpha-soft', '0');
-    root.style.setProperty('--lg-glass-alpha-strong', '0');
-
-    /* Feed old blur variables the exact same value, so old rules cannot diverge. */
-    root.style.setProperty('--lg-glass-blur', blur.toFixed(3) + 'px');
-    root.style.setProperty('--lg-window-blur', blur.toFixed(3) + 'px');
-    root.style.setProperty('--lg-zf-blur', blur.toFixed(3) + 'px');
-    root.style.setProperty('--lg-crystal-blur', blur.toFixed(3) + 'px');
-
-    const range = document.getElementById('lg-transparency-range');
-    if (range && Number(range.value) !== v) range.value = v;
-    const label = document.getElementById('lg-transparency-value');
-    if (label) label.textContent = Math.round(v) + '%';
-  }
-
-  window.applyTransparency = applyReferenceMaterial;
-
-  function bindSlider() {
-    const range = document.getElementById('lg-transparency-range');
-    if (!range || range.dataset.settingsReferenceBound === '1') return;
-    range.dataset.settingsReferenceBound = '1';
-
-    const v = readTransparency();
-    range.value = v;
-    applyReferenceMaterial(v);
-
-    range.addEventListener('input', e => {
-      const next = clamp(e.target.value);
-      try { localStorage.setItem(KEY, String(next)); } catch (_) {}
-      applyReferenceMaterial(next);
-    }, { passive: true });
-  }
-
-  function boot() {
-    const v = readTransparency();
-    applyReferenceMaterial(v);
-    bindSlider();
-
-    /* Settings may be injected later. Event driven; no polling loop. */
-    const observer = new MutationObserver(bindSlider);
-    observer.observe(document.body, { childList: true, subtree: true });
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', boot, { once: true });
-  } else {
-    boot();
-  }
-})();
-</script>
-
 
 <!-- LIQUID_GLASS_V24_138_14_READABLE_TINT_FOOTER_FIX -->
 <style id="liquid-glass-v24-138-14-readable-tint-footer-fix">
@@ -23714,71 +23332,92 @@ html:not(.dark) body.liquid-glass-active :is(
 </script>
 
 
-<!-- LIQUID_GLASS_V24_138_15_HIDDEN_OPTICS_CONTROL -->
-<style id="liquid-glass-v24-138-15-hidden-optics-control">
+<!-- LIQUID_GLASS_V24_138_16_STABILITY_FIX -->
+<style id="liquid-glass-v24-138-16-stability-fix">
 /*
-  The old "Glas-Transparenz" slider no longer controls actual surface transparency.
-  Keep the implementation for future experiments, but hide its complete settings row.
+  Stability fix:
+  - Hide the obsolete transparency control.
+  - Do NOT let any legacy transparency variable change the visible glass anymore.
+  - Use fixed, GPU-reasonable material values.
 */
 #lg-transparency-panel {
   display: none !important;
 }
 
-/* Slightly clearer default glass than v24.138.14. */
-:root {
-  --lg-readable-light: .12;
-  --lg-readable-dark: .17;
-  --lg-readable-button-light: .075;
-  --lg-readable-button-dark: .11;
-  --lg-readable-blur: 8px;
+/* Fixed readable glass material, independent from the hidden slider. */
+html:not(.dark) body.liquid-glass-active :is(
+  #global-settings-menu,#lyrics-settings-menu,.glass-card,#main-music-card,
+  #mini-player-toggle,#ui-controls,#footer-bubble,#footer-expandable-menu,
+  #tutorial-box,.modal-content,#language-picker-box,#sharecard-picker-box,
+  #command-palette,#dynamic-island
+) {
+  background-color: rgba(255,255,255,.12) !important;
+  background-image: none !important;
+  -webkit-backdrop-filter: blur(8px) saturate(112%) !important;
+  backdrop-filter: blur(8px) saturate(112%) !important;
+}
+
+.dark body.liquid-glass-active :is(
+  #global-settings-menu,#lyrics-settings-menu,.glass-card,#main-music-card,
+  #mini-player-toggle,#ui-controls,#footer-bubble,#footer-expandable-menu,
+  #tutorial-box,.modal-content,#language-picker-box,#sharecard-picker-box,
+  #command-palette,#dynamic-island
+) {
+  background-color: rgba(2,6,23,.17) !important;
+  background-image: none !important;
+  -webkit-backdrop-filter: blur(8px) saturate(112%) !important;
+  backdrop-filter: blur(8px) saturate(112%) !important;
+}
+
+/* Buttons keep a lighter readable tint, again with fixed values. */
+html:not(.dark) body.liquid-glass-active :is(
+  #ui-controls,#global-settings-menu,#lyrics-settings-menu,#footer-bubble,
+  #footer-expandable-menu,.glass-card,.modal-content,#tutorial-box,
+  #language-picker-box,#sharecard-picker-box,#command-palette
+) button:not(.preserve-solid-button) {
+  background-color: rgba(255,255,255,.075) !important;
+  -webkit-backdrop-filter: blur(5px) !important;
+  backdrop-filter: blur(5px) !important;
+}
+
+.dark body.liquid-glass-active :is(
+  #ui-controls,#global-settings-menu,#lyrics-settings-menu,#footer-bubble,
+  #footer-expandable-menu,.glass-card,.modal-content,#tutorial-box,
+  #language-picker-box,#sharecard-picker-box,#command-palette
+) button:not(.preserve-solid-button) {
+  background-color: rgba(2,6,23,.11) !important;
+  -webkit-backdrop-filter: blur(5px) !important;
+  backdrop-filter: blur(5px) !important;
 }
 </style>
 
-<script id="liquid-glass-v24-138-15-hidden-optics-control-js">
+<script id="liquid-glass-v24-138-16-stability-js">
 (function () {
-  const KEY = 'liquidGlassTransparency';
-  const HIDDEN_DEFAULT = 0;
-  const MIGRATION = 'liquidGlassTransparency_v15_hidden_zero';
+  /*
+    Keep the old control's dormant value at 0 for future use,
+    but do it ONCE. No MutationObserver, no polling, no repeated DOM writes.
+  */
+  try {
+    localStorage.setItem('liquidGlassTransparency', '0');
+  } catch (_) {}
 
-  function applyHiddenOpticsDefault() {
-    /*
-      Preserve all slider code for later, but pin its stored/UI value to 0.
-      We intentionally do NOT call the legacy applyTransparency() here:
-      the visible glass material is now controlled by the readable-tint tokens above,
-      while this hidden value is retained only as a dormant future control.
-    */
-    try {
-      if (localStorage.getItem(MIGRATION) !== '1') {
-        localStorage.setItem(KEY, String(HIDDEN_DEFAULT));
-        localStorage.setItem(MIGRATION, '1');
-      }
-    } catch (_) {}
+  function hideLegacyControl() {
+    const panel = document.getElementById('lg-transparency-panel');
+    if (!panel) return;
+    panel.hidden = true;
+    panel.setAttribute('aria-hidden', 'true');
 
     const range = document.getElementById('lg-transparency-range');
-    if (range) range.value = String(HIDDEN_DEFAULT);
+    if (range) range.value = '0';
 
     const label = document.getElementById('lg-transparency-value');
-    if (label) label.textContent = HIDDEN_DEFAULT + '%';
-
-    const panel = document.getElementById('lg-transparency-panel');
-    if (panel) {
-      panel.hidden = true;
-      panel.setAttribute('aria-hidden', 'true');
-    }
-  }
-
-  function boot() {
-    applyHiddenOpticsDefault();
-
-    /* Settings markup can appear later. Bind only on DOM changes; no polling. */
-    const observer = new MutationObserver(applyHiddenOpticsDefault);
-    observer.observe(document.body, { childList: true, subtree: true });
+    if (label) label.textContent = '0%';
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', boot, { once: true });
+    document.addEventListener('DOMContentLoaded', hideLegacyControl, { once: true });
   } else {
-    boot();
+    hideLegacyControl();
   }
 })();
 </script>
