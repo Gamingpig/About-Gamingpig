@@ -3257,6 +3257,98 @@
             }
         }
     </script>
+    
+    /* Popup menu: fixed, appears above the bubble */
+        #footer-expandable-menu {
+            bottom: calc(1.25rem + 2.75rem + 0.75rem); /* bubble bottom + height + gap */
+            left: 50%;
+            transform: translateX(-50%);
+        }
+```[cite: 15]
+
+**Ersetze diesen Block (und die nachfolgende Regel bis vor `#back-to-top`) durch folgendes:**
+
+```css
+        /* Popup menu: fixed, appears above the bubble */
+        #footer-expandable-menu {
+            bottom: calc(1.25rem + 2.75rem + 0.75rem); /* bubble bottom + height + gap */
+            left: 50%;
+            transform-origin: bottom center;
+            will-change: transform, opacity;
+        }
+        @media (min-width: 640px) {
+            #footer-expandable-menu {
+                bottom: calc(2rem + 3.25rem + 0.75rem);
+            }
+        }
+
+        /* Standard iOS/Android Spring Pop-In Animation */
+        #footer-expandable-menu:not(.hidden) {
+            animation: footer-menu-pop-in var(--anim-duration, 0.28s) var(--apple-spring, cubic-bezier(0.34, 1.56, 0.64, 1)) forwards !important;
+        }
+        #footer-expandable-menu.menu-closing {
+            animation: footer-menu-pop-out 0.2s var(--apple-ease, cubic-bezier(0.25, 0.1, 0.25, 1)) forwards !important;
+            pointer-events: none !important;
+        }
+
+        @keyframes footer-menu-pop-in {
+            0% {
+                opacity: 0;
+                transform: translateX(-50%) translateY(16px) scale(0.88);
+                filter: blur(4px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0) scale(1);
+                filter: blur(0px);
+            }
+        }
+
+        @keyframes footer-menu-pop-out {
+            0% {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0) scale(1);
+                filter: blur(0px);
+            }
+            100% {
+                opacity: 0;
+                transform: translateX(-50%) translateY(12px) scale(0.92);
+                filter: blur(4px);
+            }
+        }
+
+        body.liquid-glass-active #footer-expandable-menu:not(.hidden) {
+            animation: ext-footer-menu-in 0.5s var(--liquid-fluid) forwards !important;
+            transform-origin: bottom center !important;
+        }
+```[cite: 15]
+
+---
+
+### 2. JavaScript-Funktion (im `<script>`-Bereich)
+
+Suche in deinem Script nach der Funktion, die das Menü umschaltet (üblicherweise `toggleFooterMenu` oder ähnlich beim Klick auf „Mehr“) und stelle sicher, dass sie das Schließen animiert:
+
+```javascript
+function toggleFooterMenu(forceState) {
+    const menu = document.getElementById('footer-expandable-menu');
+    if (!menu) return;
+
+    const isCurrentlyOpen = !menu.classList.contains('hidden') && !menu.classList.contains('menu-closing');
+    const shouldOpen = typeof forceState === 'boolean' ? forceState : !isCurrentlyOpen;
+
+    if (shouldOpen) {
+        menu.classList.remove('hidden', 'menu-closing');
+        if (typeof haptic === 'function') haptic(8);
+    } else if (isCurrentlyOpen) {
+        menu.classList.add('menu-closing');
+        setTimeout(() => {
+            menu.classList.add('hidden');
+            menu.classList.remove('menu-closing');
+        }, 190);
+    }
+}
+    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@500;800&display=swap');
         
