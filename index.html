@@ -9,6 +9,14 @@
     [BUGFIX] oder [PERFORMANCE] oder [FEATURE] als Tag, dann kurz
     Symptom/Ziel, Ursache, Fix, und der beobachtbare Effekt.
     Neueste Einträge oben.
+    [FIX + POLISH] Release v24.138.18: stabiler Footer-Ein-/Ausflug + 100%-Reflexionszustand
+      - Konkurrierende alte Footer-Controller entfernt; nur noch ein einziger Footer-Zustandscontroller aktiv.
+      - Footer-Bubble nutzt reine CSS-Transitions statt restartbarer Keyframes: weicher Slide/Fade/Scale beim
+        Einblenden und dieselbe Bewegung rückwärts beim Ausblenden.
+      - Hysterese eingebaut (140px rein / 240px raus), damit der Footer nicht direkt nach dem Einblenden wieder
+        verschwindet, wenn sich Scrollhöhe oder Layout minimal ändern.
+      - Versteckter Transparenzwert wird kanonisch auf 100% gesetzt; Legacy-Optikvariablen werden ebenfalls
+        auf den 100%-Zustand gesetzt und zusätzliche Kanten-/Reflexions-Highlights verstärkt.
     [HOTFIX] Release v24.138.17: Footer-Menü vollständig repariert + versteckter Wert 100%
       - Versteckter Liquid-Glass-Regler bleibt im Code, wird intern aber auf 100% gesetzt.
       - Footer-Link-/Button-Bug behoben: altes Scroll-Close hinterließ pointer-events:none inline und machte
@@ -23287,59 +23295,6 @@ html:not(.dark) body.liquid-glass-active :is(
 }
 </style>
 
-<script id="liquid-glass-v24-138-14-footer-visibility-js">
-(function () {
-  const bubble = document.getElementById('footer-bubble');
-  const menu = document.getElementById('footer-expandable-menu');
-  if (!bubble) return;
-
-  function forceFooterState() {
-    const scrollTop = window.scrollY || document.documentElement.scrollTop || 0;
-    const maxScroll = Math.max(
-      0,
-      document.documentElement.scrollHeight - window.innerHeight
-    );
-
-    /* Show only inside the last 80px of actual scroll range. */
-    const nearEnd = maxScroll > 0 && (maxScroll - scrollTop) <= 80;
-
-    if (nearEnd) {
-      bubble.classList.add('footer-bubble-visible');
-      bubble.removeAttribute('aria-hidden');
-    } else {
-      bubble.classList.remove('footer-bubble-visible');
-      bubble.setAttribute('aria-hidden', 'true');
-
-      /* If the expandable footer menu was open, close it too. */
-      if (menu) {
-        menu.classList.add('hidden');
-        menu.style.pointerEvents = 'none';
-      }
-    }
-  }
-
-  let raf = 0;
-  function scheduleFooterCheck() {
-    if (raf) return;
-    raf = requestAnimationFrame(() => {
-      raf = 0;
-      forceFooterState();
-    });
-  }
-
-  window.addEventListener('scroll', scheduleFooterCheck, { passive: true });
-  window.addEventListener('resize', scheduleFooterCheck, { passive: true });
-
-  /* Content height can change after images/fonts/music UI load.
-     ResizeObserver updates only when layout size actually changes. */
-  const ro = new ResizeObserver(scheduleFooterCheck);
-  ro.observe(document.documentElement);
-
-  forceFooterState();
-})();
-</script>
-
-
 <!-- LIQUID_GLASS_V24_138_16_STABILITY_FIX -->
 <style id="liquid-glass-v24-138-16-stability-fix">
 /*
@@ -23398,38 +23353,6 @@ html:not(.dark) body.liquid-glass-active :is(
   backdrop-filter: blur(5px) !important;
 }
 </style>
-
-<script id="liquid-glass-v24-138-16-stability-js">
-(function () {
-  /*
-    Keep the old control's dormant value at 0 for future use,
-    but do it ONCE. No MutationObserver, no polling, no repeated DOM writes.
-  */
-  try {
-    localStorage.setItem('liquidGlassTransparency', '0');
-  } catch (_) {}
-
-  function hideLegacyControl() {
-    const panel = document.getElementById('lg-transparency-panel');
-    if (!panel) return;
-    panel.hidden = true;
-    panel.setAttribute('aria-hidden', 'true');
-
-    const range = document.getElementById('lg-transparency-range');
-    if (range) range.value = '0';
-
-    const label = document.getElementById('lg-transparency-value');
-    if (label) label.textContent = '0%';
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', hideLegacyControl, { once: true });
-  } else {
-    hideLegacyControl();
-  }
-})();
-</script>
-
 
 <!-- LIQUID_GLASS_V24_138_17_FOOTER_REPAIR -->
 <style id="liquid-glass-v24-138-17-footer-repair">
@@ -23590,120 +23513,275 @@ body.liquid-glass-active #footer-menu-toggle-btn:active {
 }
 </style>
 
-<script id="liquid-glass-v24-138-17-footer-repair-js">
+
+<!-- LIQUID_GLASS_V24_138_18_FOOTER_MOTION_REFLECTIONS -->
+<style id="liquid-glass-v24-138-18-footer-motion-reflections">
+/* Hidden legacy control stays hidden. */
+#lg-transparency-panel { display: none !important; }
+
+/*
+  Hidden legacy value is now 100%.
+  Since actual translucency is fixed elsewhere, use that state to maximize
+  edge/reflection visibility instead of changing the card fill.
+*/
+:root {
+  --lg-reflection-edge: .24;
+  --lg-reflection-highlight: .42;
+  --lg-reflection-glow: .14;
+}
+
+/* Sharper Apple-like edge/reflection cues on cards, windows and controls. */
+body.liquid-glass-active :is(
+  #global-settings-menu,#lyrics-settings-menu,.glass-card,#main-music-card,
+  #mini-player-toggle,#ui-controls,#footer-bubble,#footer-expandable-menu,
+  #tutorial-box,.modal-content,#language-picker-box,#sharecard-picker-box,
+  #command-palette,#dynamic-island
+) {
+  border-color: rgba(255,255,255,var(--lg-reflection-edge)) !important;
+  border-top-color: rgba(255,255,255,var(--lg-reflection-highlight)) !important;
+  border-left-color: rgba(255,255,255,calc(var(--lg-reflection-highlight) * .72)) !important;
+  box-shadow:
+    0 14px 34px -28px rgba(0,0,0,.42),
+    inset 0 1px 0 rgba(255,255,255,var(--lg-reflection-highlight)),
+    inset 1px 0 0 rgba(255,255,255,var(--lg-reflection-glow)),
+    inset 0 -1px 0 rgba(255,255,255,.035) !important;
+}
+
+body.liquid-glass-active :is(
+  #ui-controls,#global-settings-menu,#lyrics-settings-menu,#footer-bubble,
+  #footer-expandable-menu,.glass-card,.modal-content,#tutorial-box,
+  #language-picker-box,#sharecard-picker-box,#command-palette
+) button:not(.preserve-solid-button) {
+  border-color: rgba(255,255,255,.20) !important;
+  border-top-color: rgba(255,255,255,.34) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.28),
+    inset 1px 0 0 rgba(255,255,255,.08),
+    0 7px 18px -16px rgba(0,0,0,.48) !important;
+}
+
+/* =========================================================
+   FOOTER BUBBLE — transition-only, no restartable keyframes.
+   This prevents the "pop in and instantly fly out" look.
+   ========================================================= */
+#footer-bubble {
+  animation: none !important;
+  will-change: opacity, transform;
+  transition:
+    opacity .34s cubic-bezier(.22,1,.36,1),
+    transform .52s cubic-bezier(.16,1,.3,1),
+    visibility 0s linear .52s !important;
+}
+
+#footer-bubble:not(.footer-bubble-visible) {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  transform: translateX(-50%) translateY(22px) scale(.94) !important;
+}
+
+#footer-bubble.footer-bubble-visible {
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  transform: translateX(-50%) translateY(0) scale(1) !important;
+  transition:
+    opacity .34s cubic-bezier(.22,1,.36,1),
+    transform .52s cubic-bezier(.16,1,.3,1),
+    visibility 0s linear 0s !important;
+}
+
+/* Footer menu itself gets the same clean enter/exit language. */
+#footer-expandable-menu {
+  animation: none !important;
+  transform-origin: bottom center !important;
+  transition:
+    opacity .26s cubic-bezier(.22,1,.36,1),
+    transform .34s cubic-bezier(.16,1,.3,1),
+    visibility 0s linear .34s !important;
+}
+
+#footer-expandable-menu:not(.hidden):not(.menu-closing) {
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  transform: translateX(-50%) translateY(0) scale(1) !important;
+  transition:
+    opacity .26s cubic-bezier(.22,1,.36,1),
+    transform .34s cubic-bezier(.16,1,.3,1),
+    visibility 0s linear 0s !important;
+}
+
+#footer-expandable-menu.menu-closing {
+  display: block !important;
+  opacity: 0 !important;
+  visibility: visible !important;
+  pointer-events: none !important;
+  transform: translateX(-50%) translateY(10px) scale(.975) !important;
+}
+
+#footer-expandable-menu.hidden:not(.menu-closing) {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Ensure footer controls remain clickable. */
+#footer-bubble a,
+#footer-bubble button,
+#footer-expandable-menu a,
+#footer-expandable-menu button {
+  pointer-events: auto !important;
+  touch-action: manipulation;
+  cursor: pointer !important;
+}
+</style>
+
+<script id="liquid-glass-v24-138-18-footer-motion-reflections-js">
 (function () {
-  const TRANSPARENCY_KEY = 'liquidGlassTransparency';
+  const KEY = 'liquidGlassTransparency';
   const HIDDEN_VALUE = 100;
 
-  /* Dormant transparency control: retain code, but default/store 100%. */
-  try {
-    localStorage.setItem(TRANSPARENCY_KEY, String(HIDDEN_VALUE));
-  } catch (_) {}
+  /* Canonical hidden value: 100%, every load. */
+  try { localStorage.setItem(KEY, String(HIDDEN_VALUE)); } catch (_) {}
 
-  function syncHiddenTransparencyUI() {
-    const range = document.getElementById('lg-transparency-range');
-    if (range) range.value = String(HIDDEN_VALUE);
-
-    const value = document.getElementById('lg-transparency-value');
-    if (value) value.textContent = HIDDEN_VALUE + '%';
-
+  function syncHiddenControl() {
     const panel = document.getElementById('lg-transparency-panel');
     if (panel) {
       panel.hidden = true;
       panel.setAttribute('aria-hidden', 'true');
     }
+    const range = document.getElementById('lg-transparency-range');
+    if (range) range.value = String(HIDDEN_VALUE);
+    const label = document.getElementById('lg-transparency-value');
+    if (label) label.textContent = HIDDEN_VALUE + '%';
+
+    /*
+      Also apply the original v5 optical variables for 100%, so legacy reflection
+      code sees the intended state. Visible panel translucency remains fixed by later CSS.
+    */
+    document.documentElement.style.setProperty('--lg-glass-alpha-strong', '0.00060');
+    document.documentElement.style.setProperty('--lg-glass-alpha', '0.00025');
+    document.documentElement.style.setProperty('--lg-glass-alpha-soft', '0.00008');
+    document.documentElement.style.setProperty('--lg-glass-border', '0.0750');
+    document.documentElement.style.setProperty('--lg-glass-border-hi', '0.1400');
+    document.documentElement.style.setProperty('--lg-glass-blur', '0.08px');
   }
 
-  function installFooterController() {
-    const menu = document.getElementById('footer-expandable-menu');
+  function installFooter() {
     const bubble = document.getElementById('footer-bubble');
-    const arrow = document.getElementById('footer-menu-arrow');
+    const menu = document.getElementById('footer-expandable-menu');
     const toggle = document.getElementById('footer-menu-toggle-btn');
-    if (!menu || !bubble || !toggle) return;
+    const arrow = document.getElementById('footer-menu-arrow');
+    if (!bubble) return;
 
+    let footerShown = false;
     let closeTimer = 0;
+    let raf = 0;
+
+    /*
+      Hysteresis fixes flicker:
+      - show when <= 140px from bottom
+      - once visible, don't hide until user is > 240px from bottom
+      This prevents a tiny layout/scroll-height change from immediately reversing the animation.
+    */
+    function updateFooterVisibility() {
+      const scrollTop = window.scrollY || document.documentElement.scrollTop || 0;
+      const maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+      const distance = Math.max(0, maxScroll - scrollTop);
+
+      const shouldShow = footerShown ? distance <= 240 : distance <= 140;
+
+      if (shouldShow === footerShown) return;
+      footerShown = shouldShow;
+
+      if (shouldShow) {
+        bubble.classList.add('footer-bubble-visible');
+        bubble.removeAttribute('aria-hidden');
+      } else {
+        bubble.classList.remove('footer-bubble-visible');
+        bubble.setAttribute('aria-hidden', 'true');
+        closeMenu(true);
+      }
+    }
+
+    function scheduleVisibility() {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        updateFooterVisibility();
+      });
+    }
 
     function setArrow(open) {
-      if (arrow) arrow.style.transform = open ? 'rotate(180deg)' : 'rotate(0deg)';
-      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (arrow) {
+        arrow.style.transition = 'transform .28s cubic-bezier(.16,1,.3,1)';
+        arrow.style.transform = open ? 'rotate(180deg)' : 'rotate(0deg)';
+      }
+      if (toggle) toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
     }
 
     function openMenu() {
+      if (!menu) return;
       if (closeTimer) {
         clearTimeout(closeTimer);
         closeTimer = 0;
       }
-      menu.classList.remove('menu-closing');
-      menu.classList.remove('hidden');
-
-      /* Repair stale inline state left by the old scroll-close logic. */
+      menu.classList.remove('menu-closing', 'hidden');
       menu.style.removeProperty('pointer-events');
-      menu.style.removeProperty('opacity');
-      menu.style.removeProperty('visibility');
-
       setArrow(true);
-      if (typeof haptic === 'function') haptic(10);
+      if (typeof haptic === 'function') haptic(8);
     }
 
-    function closeMenu(immediate = false) {
+    function closeMenu(immediate) {
+      if (!menu) return;
       if (closeTimer) {
         clearTimeout(closeTimer);
         closeTimer = 0;
       }
-
       setArrow(false);
 
       if (immediate || menu.classList.contains('hidden')) {
         menu.classList.remove('menu-closing');
         menu.classList.add('hidden');
-        menu.style.removeProperty('pointer-events');
         return;
       }
 
       menu.classList.add('menu-closing');
-      closeTimer = window.setTimeout(() => {
+      closeTimer = setTimeout(() => {
         menu.classList.add('hidden');
         menu.classList.remove('menu-closing');
-        menu.style.removeProperty('pointer-events');
         closeTimer = 0;
-      }, 210);
+      }, 350);
     }
 
-    function toggleMenu(forceState) {
-      const isOpen = !menu.classList.contains('hidden') && !menu.classList.contains('menu-closing');
-      const shouldOpen = typeof forceState === 'boolean' ? forceState : !isOpen;
-      if (shouldOpen) openMenu();
+    window.toggleFooterMenu = function(forceState) {
+      if (!menu) return;
+      const open = !menu.classList.contains('hidden') && !menu.classList.contains('menu-closing');
+      const next = typeof forceState === 'boolean' ? forceState : !open;
+      if (next) openMenu();
       else closeMenu(false);
+    };
+
+    window.addEventListener('scroll', scheduleVisibility, { passive: true });
+    window.addEventListener('resize', scheduleVisibility, { passive: true });
+
+    /* Links stay native and clickable. */
+    if (menu) {
+      menu.querySelectorAll('a[href],button').forEach(el => {
+        el.style.removeProperty('pointer-events');
+        el.removeAttribute('aria-disabled');
+      });
     }
 
-    /* Replace the global inline-handler target with the repaired controller. */
-    window.toggleFooterMenu = toggleMenu;
-
-    /* Native links must remain native. Do not preventDefault. */
-    menu.querySelectorAll('a[href]').forEach(link => {
-      link.style.pointerEvents = 'auto';
-      link.removeAttribute('aria-disabled');
-    });
-
-    /* If footer scrolls away, close menu immediately so no invisible overlay remains. */
-    const footerObserver = new MutationObserver(() => {
-      if (!bubble.classList.contains('footer-bubble-visible')) {
-        closeMenu(true);
-      }
-    });
-    footerObserver.observe(bubble, { attributes: true, attributeFilter: ['class'] });
-
-    /* Safety close outside; no preventDefault so hyperlinks still navigate. */
-    document.addEventListener('pointerdown', (event) => {
-      if (menu.classList.contains('hidden')) return;
-      if (menu.contains(event.target) || bubble.contains(event.target)) return;
-      closeMenu(false);
-    }, { passive: true });
+    updateFooterVisibility();
   }
 
   function boot() {
-    syncHiddenTransparencyUI();
-    installFooterController();
+    syncHiddenControl();
+    installFooter();
   }
 
   if (document.readyState === 'loading') {
