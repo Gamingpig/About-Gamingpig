@@ -9,6 +9,13 @@
     [BUGFIX] oder [PERFORMANCE] oder [FEATURE] als Tag, dann kurz
     Symptom/Ziel, Ursache, Fix, und der beobachtbare Effekt.
     Neueste Einträge oben.
+    [FIX - VISUAL] Release v24.138.13: Settings-Menü als Referenzmaterial für die gesamte UI
+      - Alle Karten, Fenster, Modals, Control Center, Footer und Dynamic Island nutzen nun denselben
+        zero-fill/translucent Materialpfad wie das geöffnete Settings-Menü.
+      - Restliche weiße/dunkle Utility-Hintergründe innerhalb der Glasflächen werden entfernt.
+      - Auch Glass-Buttons in diesen Bereichen bekommen keine feste weiße/dunkle Fläche mehr.
+      - Der bestehende Transparenzwert bleibt erhalten; bei 98% ist die Oberfläche fast unsichtbar,
+        bei 100% vollständig optisch transparent.
     [FIX - VISUAL] Release v24.138.12: Crystal-Clear Glass statt milchiger Karten
       - Screenshot-Ursache identifiziert: Der verbleibende weiße Karten-Look kam vom starken Backdrop-Blur,
         der helle Bereiche des Cover-Bildes zu einer grauweißen Fläche mittelte — nicht mehr von einer CSS-Hintergrundfarbe.
@@ -23193,6 +23200,273 @@ body.liquid-glass-active #liquid-blobs {
 
     /* UI is partly injected dynamically; no polling, only DOM-change binding. */
     const observer = new MutationObserver(bind);
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot, { once: true });
+  } else {
+    boot();
+  }
+})();
+</script>
+
+
+<!-- LIQUID_GLASS_V24_138_13_SETTINGS_REFERENCE_MATERIAL -->
+<style id="liquid-glass-v24-138-13-settings-reference-material">
+/*
+  v24.138.13
+  The open Settings panel is now the visual reference material.
+  Cards, windows and glass UI buttons use the same zero-fill optical surface.
+*/
+
+:root {
+  --lg-ref-blur: .18px;
+  --lg-ref-edge: .012;
+  --lg-ref-highlight: .018;
+  --lg-ref-shadow: .02;
+}
+
+/* === ONE MATERIAL FOR SETTINGS + EVERY GLASS SURFACE === */
+body.liquid-glass-active :is(
+  #global-settings-menu,
+  #lyrics-settings-menu,
+  .glass-card,
+  #main-music-card,
+  #mini-player-toggle,
+  #ui-controls,
+  #footer-bubble,
+  #footer-expandable-menu,
+  #tutorial-box,
+  .modal-content,
+  #language-picker-box,
+  #sharecard-picker-box,
+  #command-palette,
+  #dynamic-island,
+  #whats-new-epic-modal > div,
+  #privacy-update-modal > div,
+  #interactive-quest-hud > div,
+  #spotify-wrapped-modal > div
+) {
+  background: none !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  background-blend-mode: normal !important;
+  opacity: 1 !important;
+  filter: none !important;
+  mix-blend-mode: normal !important;
+
+  -webkit-backdrop-filter: blur(var(--lg-ref-blur)) !important;
+  backdrop-filter: blur(var(--lg-ref-blur)) !important;
+
+  border-color: rgba(255,255,255,var(--lg-ref-edge)) !important;
+  border-top-color: rgba(255,255,255,var(--lg-ref-highlight)) !important;
+  border-left-color: rgba(255,255,255,var(--lg-ref-highlight)) !important;
+
+  box-shadow:
+    0 8px 22px -20px rgba(0,0,0,var(--lg-ref-shadow)),
+    inset 0 1px 0 rgba(255,255,255,var(--lg-ref-highlight)) !important;
+}
+
+/* Light and Dark must NOT tint the material differently. */
+html:not(.dark) body.liquid-glass-active :is(
+  #global-settings-menu,#lyrics-settings-menu,.glass-card,#main-music-card,
+  #mini-player-toggle,#ui-controls,#footer-bubble,#footer-expandable-menu,
+  #tutorial-box,.modal-content,#language-picker-box,#sharecard-picker-box,
+  #command-palette,#dynamic-island
+),
+.dark body.liquid-glass-active :is(
+  #global-settings-menu,#lyrics-settings-menu,.glass-card,#main-music-card,
+  #mini-player-toggle,#ui-controls,#footer-bubble,#footer-expandable-menu,
+  #tutorial-box,.modal-content,#language-picker-box,#sharecard-picker-box,
+  #command-palette,#dynamic-island
+) {
+  background: none !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  filter: none !important;
+  -webkit-backdrop-filter: blur(var(--lg-ref-blur)) !important;
+  backdrop-filter: blur(var(--lg-ref-blur)) !important;
+}
+
+/* No hover/press/open state may paint the pane again. */
+body.liquid-glass-active :is(
+  #global-settings-menu,#lyrics-settings-menu,.glass-card,#main-music-card,
+  #mini-player-toggle,#ui-controls,#footer-bubble,#footer-expandable-menu,
+  #tutorial-box,.modal-content,#language-picker-box,#sharecard-picker-box,
+  #command-palette,#dynamic-island
+):is(:hover,:active,:focus,:focus-within) {
+  background: none !important;
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+/* Remove old glare/tint layers from glass panes. */
+body.liquid-glass-active :is(
+  #global-settings-menu,#lyrics-settings-menu,.glass-card,#main-music-card,
+  #mini-player-toggle,#ui-controls,#footer-bubble,#footer-expandable-menu,
+  #tutorial-box,.modal-content,#language-picker-box,#sharecard-picker-box,
+  #command-palette,#dynamic-island
+)::before,
+body.liquid-glass-active :is(
+  #global-settings-menu,#lyrics-settings-menu,.glass-card,#main-music-card,
+  #mini-player-toggle,#ui-controls,#footer-bubble,#footer-expandable-menu,
+  #tutorial-box,.modal-content,#language-picker-box,#sharecard-picker-box,
+  #command-palette,#dynamic-island
+)::after {
+  background: none !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+/*
+  Neutral fills inside cards/windows were the remaining source of opaque rectangles.
+  Strip them too. Accent icon colors/text remain intact.
+*/
+body.liquid-glass-active :is(
+  .glass-card,#global-settings-menu,#lyrics-settings-menu,.modal-content,
+  #tutorial-box,#language-picker-box,#sharecard-picker-box,#command-palette,
+  #ui-controls,#footer-bubble,#footer-expandable-menu
+) :is(
+  [class*="bg-white"],
+  [class*="bg-black"],
+  [class*="bg-slate-"],
+  [class*="dark:bg-white"],
+  [class*="dark:bg-black"],
+  [class*="dark:bg-slate-"]
+) {
+  background: none !important;
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+/* === GLASS BUTTONS: same pane material instead of white/dark pills === */
+body.liquid-glass-active :is(
+  #ui-controls,
+  #global-settings-menu,
+  #lyrics-settings-menu,
+  #footer-bubble,
+  #footer-expandable-menu,
+  .glass-card,
+  .modal-content,
+  #tutorial-box,
+  #language-picker-box,
+  #sharecard-picker-box,
+  #command-palette
+) button:not(.preserve-solid-button) {
+  background: none !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  -webkit-backdrop-filter: blur(var(--lg-ref-blur)) !important;
+  backdrop-filter: blur(var(--lg-ref-blur)) !important;
+  border-color: rgba(255,255,255,var(--lg-ref-edge)) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,var(--lg-ref-highlight)) !important;
+}
+
+/* Button hover/press = optical feedback only, never a filled rectangle. */
+body.liquid-glass-active :is(
+  #ui-controls,#global-settings-menu,#lyrics-settings-menu,#footer-bubble,
+  #footer-expandable-menu,.glass-card,.modal-content,#tutorial-box,
+  #language-picker-box,#sharecard-picker-box,#command-palette
+) button:not(.preserve-solid-button):is(:hover,:active,:focus) {
+  background: none !important;
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+/* Keep real media/background untouched. */
+body.liquid-glass-active #liquid-blobs {
+  background-size: cover !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+}
+
+/* Dynamic Island geometry/animation remains untouched. */
+#dynamic-island {
+  scale: 1 !important;
+  translate: none !important;
+}
+</style>
+
+<script id="liquid-glass-v24-138-13-settings-reference-js">
+(function () {
+  const KEY = 'liquidGlassTransparency';
+  const DEFAULT = 98;
+  const clamp = v => Math.max(0, Math.min(100, Number(v) || 0));
+
+  function readTransparency() {
+    try {
+      const raw = localStorage.getItem(KEY);
+      return raw === null ? DEFAULT : clamp(raw);
+    } catch (_) { return DEFAULT; }
+  }
+
+  function applyReferenceMaterial(v) {
+    v = clamp(v);
+    const visible = 1 - (v / 100);
+
+    /*
+      Match the extremely clear Settings-panel look:
+      98% => ~0.18px blur, barely-visible edge
+      70% => ~4.05px blur
+      0%  => 45px blur
+      100% => completely optically invisible surface
+    */
+    const optical = visible * visible;
+    const blur = 45 * optical;
+    const edge = 0.30 * optical;
+    const highlight = 0.46 * optical;
+    const shadow = 0.52 * optical;
+
+    const root = document.documentElement;
+    root.style.setProperty('--lg-ref-blur', blur.toFixed(3) + 'px');
+    root.style.setProperty('--lg-ref-edge', edge.toFixed(4));
+    root.style.setProperty('--lg-ref-highlight', highlight.toFixed(4));
+    root.style.setProperty('--lg-ref-shadow', shadow.toFixed(4));
+
+    /* Neutralize all legacy tint variables. */
+    root.style.setProperty('--lg-glass-alpha', '0');
+    root.style.setProperty('--lg-glass-alpha-soft', '0');
+    root.style.setProperty('--lg-glass-alpha-strong', '0');
+
+    /* Feed old blur variables the exact same value, so old rules cannot diverge. */
+    root.style.setProperty('--lg-glass-blur', blur.toFixed(3) + 'px');
+    root.style.setProperty('--lg-window-blur', blur.toFixed(3) + 'px');
+    root.style.setProperty('--lg-zf-blur', blur.toFixed(3) + 'px');
+    root.style.setProperty('--lg-crystal-blur', blur.toFixed(3) + 'px');
+
+    const range = document.getElementById('lg-transparency-range');
+    if (range && Number(range.value) !== v) range.value = v;
+    const label = document.getElementById('lg-transparency-value');
+    if (label) label.textContent = Math.round(v) + '%';
+  }
+
+  window.applyTransparency = applyReferenceMaterial;
+
+  function bindSlider() {
+    const range = document.getElementById('lg-transparency-range');
+    if (!range || range.dataset.settingsReferenceBound === '1') return;
+    range.dataset.settingsReferenceBound = '1';
+
+    const v = readTransparency();
+    range.value = v;
+    applyReferenceMaterial(v);
+
+    range.addEventListener('input', e => {
+      const next = clamp(e.target.value);
+      try { localStorage.setItem(KEY, String(next)); } catch (_) {}
+      applyReferenceMaterial(next);
+    }, { passive: true });
+  }
+
+  function boot() {
+    const v = readTransparency();
+    applyReferenceMaterial(v);
+    bindSlider();
+
+    /* Settings may be injected later. Event driven; no polling loop. */
+    const observer = new MutationObserver(bindSlider);
     observer.observe(document.body, { childList: true, subtree: true });
   }
 
