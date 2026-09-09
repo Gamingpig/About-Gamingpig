@@ -9,6 +9,13 @@
     [BUGFIX] oder [PERFORMANCE] oder [FEATURE] als Tag, dann kurz
     Symptom/Ziel, Ursache, Fix, und der beobachtbare Effekt.
     Neueste Einträge oben.
+    [FIX & DESIGN - KRITISCH] Release v24.138.2: Liquid Glass Ultra-Transparent + Light-Mode-Kontrast + starke Fluid-Interaktionen
+      - Liquid-Glass-Flächen deutlich transparenter gemacht (bewusst transparenter als typische Apple-Glass-Werte), inklusive großer Container, Hover-Zustände und Einstellungsmenü.
+      - Weißen Light-Mode-Schleier entfernt: #liquid-blobs ist transparent und übernimmt bei verfügbarer Musik die aktuelle Cover-Art als Vollbild-Hintergrund.
+      - Globales Einstellungsmenü im Light Mode vollständig auf helle, lesbare Glasfarben umgestellt; dunkle Tailwind-Hintergründe/Inputs werden gezielt überschrieben.
+      - Tutorial-Button im Light Mode als kontrastreiches dunkles Glas ausgeführt.
+      - Liquid-Glass-Öffnen/Schließen- und Press-Animationen wiederhergestellt und deutlich stärker/flüssiger als im normalen Modus.
+
     [FEATURE & SECURITY - KRITISCH] Release v24.138.1: Live-Status Cockpit & Telemetrie + Hardware AES-256 GCM Push-Control + Anti-Doppel-Filter & DSGVO 2026
       - Live-Status Voice-Briefing & 7-Dienste-Telemetrie: Intelligente Sprachausgabe auf status.html mit echter Berücksichtigung aller 7 Services (Spotify, Stats.fm, Lyrics, Cover CDN, Discord, PWA Cache, DNS/Netzwerk) und dynamischer Begrüßung in 6 Sprachen.
       - Hardware-gebundene AES-256 GCM Token-Verschlüsselung: Das Admin Push Control Center speichert GitHub Tokens mit PBKDF2 (100.000 Iterationen) und Web Crypto AES-GCM ab. Keine Klartext-Exposition im DOM oder LocalStorage.
@@ -3167,7 +3174,8 @@
             const _urlP = new URLSearchParams(window.location.search);
             const _forceStart = _urlP.has('first_visit') || _urlP.has('onboarding') || _urlP.has('tutorial');
             
-            if (!savedAppLang || AppStorage.getItem('onboarding_completed_version') !== _currVer || _forceStart) {
+            const _onboardingDone = ['1','true'].includes(String(AppStorage.getItem('onboarding_completed') || '').toLowerCase());
+            if (!savedAppLang || !_onboardingDone || _forceStart) {
                 document.documentElement.classList.add('needs-onboarding');
             }
         } catch(e) {}
@@ -3677,208 +3685,317 @@
         }
         .dark .mesh-gradient::before { opacity: 0; }
         .dark .mesh-gradient::after { opacity: 1; }
+/* ========================================================= */
+/* --- TRUE LIQUID GLASS MODE ------------------------------ */
+/* ========================================================= */
 
-        /* ========================================================= */
-        /* --- TRUE LIQUID GLASS MODE (FULL EFFECTS RESTORED) ------ */
-        /* ========================================================= */
-        
-        body.liquid-glass-active .mesh-gradient { display: none !important; } 
+body.liquid-glass-active .mesh-gradient {
+    display: none !important;
+}
 
-        /* IDLE ZUSTAND - GPU Beschleunigung forciert */
-        .glass-card {
-            background: rgba(255, 255, 255, 0.9); border: 1px solid rgba(0, 0, 0, 0.05);
-            transition: transform 0.4s var(--apple-spring), border-color 0.4s ease, box-shadow 0.4s ease, border-radius 0.4s ease, background-color 0.6s var(--apple-ease);
-            transform: translate3d(0,0,0); backface-visibility: hidden;
-            /* NEW: Performance-Fix - will-change wurde vorher DAUERHAFT auf JEDER einzelnen
-               Karte gesetzt (teils über 10 Karten gleichzeitig auf der Seite). Das zwingt
-               den Browser, für jede einzelne davon eine eigene, permanente GPU-Ebene
-               vorzuhalten - das kostet GPU-Speicher/Bandbreite kontinuierlich, auch wenn
-               gerade gar nichts animiert, und ist ein bekannter Anti-Pattern (will-change
-               sollte laut Spezifikation nur kurz vor einer echten Animation gesetzt und
-               danach wieder entfernt werden). Jetzt nur noch beim tatsächlichen Hover
-               aktiv (siehe Regel weiter unten), nicht mehr permanent.
-               Zusätzlich: content-visibility überspringt Layout/Render-Arbeit für Karten,
-               die gerade gar nicht im sichtbaren Bereich sind - spürbar weniger Arbeit
-               beim Scrollen über viele Karten hinweg. */
-            content-visibility: auto;
-            contain-intrinsic-size: auto 220px;
-        }
-        .dark .glass-card { background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255, 255, 255, 0.05); }
-        @media (hover: hover) and (pointer: fine) {
-            .glass-card:hover { will-change: transform, background-color; }
-        }
+/* Basis-Karten */
+.glass-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.05);
 
-        body.liquid-glass-active .glass-card {
-            position: relative;
-            overflow: hidden; 
-            background: linear-gradient(120deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.15) 35%, rgba(255, 255, 255, 0.6) 50%, rgba(255, 255, 255, 0.15) 65%, rgba(255, 255, 255, 0.4) 100%) !important;
-            background-size: 250% 250% !important;
-            border: 1px solid rgba(255, 255, 255, 0.6) !important;
-            border-top: 1px solid rgba(255, 255, 255, 0.9) !important;
-            border-left: 1px solid rgba(255, 255, 255, 0.7) !important;
-            
-            /* PERF-FIX v24.14 (radikal, auf Nutzerwunsch): backdrop-filter komplett entfernt.
-               Das war die teuerste CSS-Eigenschaft auf JEDER einzelnen Dashboard-Karte
-               gleichzeitig (dieser Effekt gilt für ALLE .glass-card-Elemente). Stattdessen
-               nur noch der solide Gradient-Hintergrund, der ohnehin schon da war - sieht
-               weiterhin wie eine "Glas"-Karte aus, kostet aber keine laufende Weichzeichnung
-               mehr. */
-            
-            /* Idle Animation für kleine Karten deaktiviert um VRAM zu sparen */
-            border-radius: 24px !important;
-            box-shadow: var(--gl-shadow-idle) !important;
-            
-            /* HARDWARE ACCELERATION HACKS */
-            transform: translate3d(0,0,0);
-            backface-visibility: hidden;
-            will-change: transform; 
-            transition: transform 0.6s var(--apple-spring), box-shadow 0.6s var(--apple-spring), border-radius 0.4s var(--apple-ease), background-color 0.4s ease, backdrop-filter 0.4s ease !important;
-        }
-        
-        /* NEW: Performance-Fix - Low-End-Modus überschreibt jetzt AUCH die teure
-           card-liquid-idle-Animation (animiert border-radius/box-shadow - keine
-           GPU-Eigenschaften, erzwingt bei jedem Schritt ein Neu-Zeichnen) sowie den
-           30px-Blur der großen Liquid-Glass-Karten. Vorher war nur der Hintergrund-
-           Blob-Effekt abgedeckt, falls Liquid Glass UND Low-End gleichzeitig aktiv waren. */
-        body.low-end.liquid-glass-active #main-music-card,
-        body.low-end.liquid-glass-active #mini-player-toggle,
-        body.low-end.liquid-glass-active .modal-content,
-        body.low-end.liquid-glass-active #global-settings-menu,
-        body.low-end.liquid-glass-active #lyrics-settings-menu,
-        body.low-end.liquid-glass-active #tutorial-box,
-        body.low-end.liquid-glass-active #language-picker-box,
-        body.low-end.liquid-glass-active #whats-new-epic-modal > div,
-        body.low-end.liquid-glass-active #privacy-update-modal > div,
-        body.low-end.liquid-glass-active #interactive-quest-hud > div,
-        body.low-end.liquid-glass-active #sharecard-picker-box,
-        body.low-end.liquid-glass-active #command-palette,
-        body.low-end.liquid-glass-active #spotify-wrapped-modal > div,
-        body.low-end.liquid-glass-active #footer-bubble,
-        body.low-end.liquid-glass-active #footer-expandable-menu {
-            animation: none !important;
-        }
+    transition:
+        transform 0.4s var(--apple-spring),
+        border-color 0.4s ease,
+        box-shadow 0.4s ease,
+        border-radius 0.4s ease,
+        background-color 0.6s var(--apple-ease);
 
-        .dark body.liquid-glass-active .glass-card {
-            background: linear-gradient(120deg, rgba(15, 23, 42, 0.3) 0%, rgba(255, 255, 255, 0.01) 35%, rgba(255, 255, 255, 0.12) 50%, rgba(255, 255, 255, 0.01) 65%, rgba(15, 23, 42, 0.2) 100%) !important;
-            border-top: 1px solid rgba(255, 255, 255, 0.25) !important;
-            border-left: 1px solid rgba(255, 255, 255, 0.1) !important;
-            border-color: rgba(255, 255, 255, 0.08) !important;
-        }
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
 
-        /* Voller Blur und fette Idle-Animation NUR für die großen/wichtigen Container */
-        /* PERF-FIX v24.7 (radikal): Das war der bisher größte verbleibende Verursacher - diese
-           Regel animierte border-radius auf einem Element mit backdrop-filter: blur(30px) FÜR
-           IMMER, komplett unabhängig davon ob Musik läuft. Eine Radius-Änderung auf einer
-           geblurrten Ebene zwingt den Browser, die Weichzeichnungs-Maske bei JEDEM Frame neu
-           zuzuschneiden und neu zu berechnen - eine der teuersten denkbaren CSS-Kombinationen
-           überhaupt, dazu noch auf der größten/prominentesten Karte der ganzen Seite.
-           infinite alternate -> einmalig + forwards: die organische Form wird einmal beim
-           Erscheinen der Karte "eingeschwungen" und bleibt danach fix stehen. */
-        body.liquid-glass-active #main-music-card,
-        body.liquid-glass-active #mini-player-toggle,
-        body.liquid-glass-active .modal-content,
-        body.liquid-glass-active #global-settings-menu,
-        body.liquid-glass-active #lyrics-settings-menu,
-        body.liquid-glass-active #tutorial-box,
-        body.liquid-glass-active #language-picker-box,
-        body.liquid-glass-active #whats-new-epic-modal > div,
-        body.liquid-glass-active #privacy-update-modal > div,
-        body.liquid-glass-active #interactive-quest-hud > div,
-        body.liquid-glass-active #sharecard-picker-box,
-        body.liquid-glass-active #command-palette,
-        body.liquid-glass-active #spotify-wrapped-modal > div,
-        body.liquid-glass-active #footer-bubble,
-        body.liquid-glass-active #footer-expandable-menu {
-            -webkit-backdrop-filter: blur(32px) saturate(180%) brightness(1.1) !important;
-            backdrop-filter: blur(32px) saturate(180%) brightness(1.1) !important;
-            box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.12), inset 0 1px 1.5px rgba(255, 255, 255, 0.35) !important;
-            border-radius: 26px !important;
-        }
-        body.liquid-glass-active #footer-bubble {
-            border-radius: 9999px !important;
-        }
-        .dark body.liquid-glass-active #main-music-card,
-        .dark body.liquid-glass-active #mini-player-toggle,
-        .dark body.liquid-glass-active .modal-content,
-        .dark body.liquid-glass-active #global-settings-menu,
-        .dark body.liquid-glass-active #lyrics-settings-menu,
-        .dark body.liquid-glass-active #tutorial-box,
-        .dark body.liquid-glass-active #language-picker-box,
-        .dark body.liquid-glass-active #whats-new-epic-modal > div,
-        .dark body.liquid-glass-active #privacy-update-modal > div,
-        .dark body.liquid-glass-active #interactive-quest-hud > div,
-        .dark body.liquid-glass-active #sharecard-picker-box,
-        .dark body.liquid-glass-active #command-palette,
-        .dark body.liquid-glass-active #spotify-wrapped-modal > div,
-        .dark body.liquid-glass-active #footer-bubble,
-        .dark body.liquid-glass-active #footer-expandable-menu {
-            -webkit-backdrop-filter: blur(34px) saturate(200%) brightness(1.15) !important;
-            backdrop-filter: blur(34px) saturate(200%) brightness(1.15) !important;
-            background: linear-gradient(135deg, rgba(15, 23, 42, 0.76) 0%, rgba(30, 41, 59, 0.45) 40%, rgba(255, 255, 255, 0.08) 60%, rgba(15, 23, 42, 0.72) 100%) !important;
-            border: 1px solid rgba(255, 255, 255, 0.18) !important;
-            border-top: 1px solid rgba(255, 255, 255, 0.45) !important;
-            border-left: 1px solid rgba(255, 255, 255, 0.28) !important;
-            box-shadow: 0 28px 60px -12px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.1), inset 0 1px 1px rgba(255, 255, 255, 0.25) !important;
-        }
-        html:not(.dark) body.liquid-glass-active #global-settings-menu,
-        html:not(.dark) body.liquid-glass-active #lyrics-settings-menu,
-        html:not(.dark) body.liquid-glass-active #tutorial-box,
-        html:not(.dark) body.liquid-glass-active #language-picker-box,
-        html:not(.dark) body.liquid-glass-active #whats-new-epic-modal > div,
-        html:not(.dark) body.liquid-glass-active #privacy-update-modal > div,
-        html:not(.dark) body.liquid-glass-active #interactive-quest-hud > div,
-        html:not(.dark) body.liquid-glass-active #sharecard-picker-box,
-        html:not(.dark) body.liquid-glass-active #command-palette,
-        html:not(.dark) body.liquid-glass-active #spotify-wrapped-modal > div,
-        html:not(.dark) body.liquid-glass-active #footer-bubble,
-        html:not(.dark) body.liquid-glass-active #footer-expandable-menu {
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.88) 0%, rgba(255, 255, 255, 0.45) 40%, rgba(255, 255, 255, 0.92) 60%, rgba(255, 255, 255, 0.55) 100%) !important;
-            border: 1px solid rgba(255, 255, 255, 0.75) !important;
-            border-top: 1px solid rgba(255, 255, 255, 0.95) !important;
-            border-left: 1px solid rgba(255, 255, 255, 0.82) !important;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15), inset 0 1px 2px rgba(255, 255, 255, 0.9) !important;
-            color: #0f172a !important;
-        }
+    content-visibility: auto;
+    contain-intrinsic-size: auto 220px;
+}
 
-        /* FIX: Liquid Glass Mode Transition Update für die Music Card (Damit Dimensionen mit animiert werden) */
-        body.liquid-glass-active #main-music-card {
-            transition: max-width 1.2s var(--liquid-fluid), min-height 1.2s var(--liquid-fluid), transform 0.6s var(--apple-spring), box-shadow 0.6s var(--apple-spring), border-radius 0.4s var(--apple-ease), background-color 0.4s ease, backdrop-filter 0.4s ease !important;
-        }
+.dark .glass-card {
+    background: rgba(15, 23, 42, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
 
-        body.liquid-glass-active .glass-card::before {
-            content: '';
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle 350px at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255,255,255,0.6), transparent 50%);
-            z-index: -1;
-            opacity: var(--glare-opacity, 0);
-            transition: opacity 0.4s var(--apple-ease);
-            pointer-events: none;
-            mix-blend-mode: overlay;
-        }
-        .dark body.liquid-glass-active .glass-card::before {
-            background: radial-gradient(circle 350px at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255,255,255,0.15), transparent 50%);
-        }
+@media (hover: hover) and (pointer: fine) {
+    .glass-card:hover {
+        will-change: transform, background-color;
+    }
+}
 
-        @keyframes card-liquid-idle {
-            0% { border-radius: 24px; box-shadow: var(--gl-shadow-idle); }
-            50% { border-radius: 28px 20px 26px 22px; box-shadow: var(--gl-shadow-idle-2); }
-            100% { border-radius: 22px 26px 20px 28px; box-shadow: var(--gl-shadow-idle-3); }
-        }
 
-        @media (hover: hover) and (pointer: fine) {
-            body.liquid-glass-active .glass-card:hover::before { opacity: 1; }
+/* Liquid Glass Karten */
+body.liquid-glass-active .glass-card {
+    position: relative;
+    overflow: hidden;
 
-            body.liquid-glass-active .glass-card:not(#main-music-card):not(#mini-player-toggle):hover {
-                transform: scale(1.04) translateY(-4px) translate3d(0,0,0) !important; 
-                border: 1px solid rgba(255, 255, 255, 0.4) !important;
-                background-color: rgba(255, 255, 255, 0.3) !important;
-                box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.25) !important;
-                -webkit-backdrop-filter: blur(20px) saturate(130%) !important; 
-                backdrop-filter: blur(20px) saturate(130%) !important;
-                border-radius: 24px !important;
-                z-index: 50;
-            }
+    background: linear-gradient(
+        120deg,
+        rgba(255, 255, 255, 0.055) 0%,
+        rgba(255, 255, 255, 0.035) 35%,
+        rgba(255, 255, 255, 0.06) 50%,
+        rgba(255, 255, 255, 0.035) 65%,
+        rgba(255, 255, 255, 0.025) 100%
+    ) !important;
 
+    background-size: 250% 250% !important;
+
+    border: 1px solid rgba(255, 255, 255, 0.18) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.35) !important;
+    border-left: 1px solid rgba(255, 255, 255, 0.24) !important;
+
+    border-radius: 24px !important;
+    box-shadow: var(--gl-shadow-idle) !important;
+
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+    will-change: transform;
+
+    transition:
+        transform 0.6s var(--apple-spring),
+        box-shadow 0.6s var(--apple-spring),
+        border-radius 0.4s var(--apple-ease),
+        background-color 0.4s ease,
+        backdrop-filter 0.4s ease !important;
+}
+
+
+/* Dark Mode normale Karten */
+.dark body.liquid-glass-active .glass-card {
+    background: linear-gradient(
+        120deg,
+        rgba(15, 23, 42, 0.07) 0%,
+        rgba(255, 255, 255, 0.012) 35%,
+        rgba(255, 255, 255, 0.03) 50%,
+        rgba(255, 255, 255, 0.012) 65%,
+        rgba(15, 23, 42, 0.045) 100%
+    ) !important;
+
+    border-top: 1px solid rgba(255, 255, 255, 0.22) !important;
+    border-left: 1px solid rgba(255, 255, 255, 0.10) !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+
+/* Große Liquid-Glass-Flächen */
+body.liquid-glass-active #main-music-card,
+body.liquid-glass-active #mini-player-toggle,
+body.liquid-glass-active .modal-content,
+body.liquid-glass-active #global-settings-menu,
+body.liquid-glass-active #lyrics-settings-menu,
+body.liquid-glass-active #tutorial-box,
+body.liquid-glass-active #language-picker-box,
+body.liquid-glass-active #whats-new-epic-modal > div,
+body.liquid-glass-active #privacy-update-modal > div,
+body.liquid-glass-active #interactive-quest-hud > div,
+body.liquid-glass-active #sharecard-picker-box,
+body.liquid-glass-active #command-palette,
+body.liquid-glass-active #spotify-wrapped-modal > div,
+body.liquid-glass-active #footer-bubble,
+body.liquid-glass-active #footer-expandable-menu {
+
+    -webkit-backdrop-filter:
+        blur(12px)
+        saturate(145%)
+        brightness(1.05) !important;
+
+    backdrop-filter:
+        blur(12px)
+        saturate(145%)
+        brightness(1.05) !important;
+
+    box-shadow:
+        0 20px 45px -12px rgba(0, 0, 0, 0.45),
+        0 0 0 1px rgba(255, 255, 255, 0.08),
+        inset 0 1px 1px rgba(255, 255, 255, 0.16) !important;
+
+    border-radius: 26px !important;
+}
+
+body.liquid-glass-active #footer-bubble {
+    border-radius: 9999px !important;
+}
+
+
+/* Dark Mode große Flächen */
+.dark body.liquid-glass-active #main-music-card,
+.dark body.liquid-glass-active #mini-player-toggle,
+.dark body.liquid-glass-active .modal-content,
+.dark body.liquid-glass-active #global-settings-menu,
+.dark body.liquid-glass-active #lyrics-settings-menu,
+.dark body.liquid-glass-active #tutorial-box,
+.dark body.liquid-glass-active #language-picker-box,
+.dark body.liquid-glass-active #whats-new-epic-modal > div,
+.dark body.liquid-glass-active #privacy-update-modal > div,
+.dark body.liquid-glass-active #interactive-quest-hud > div,
+.dark body.liquid-glass-active #sharecard-picker-box,
+.dark body.liquid-glass-active #command-palette,
+.dark body.liquid-glass-active #spotify-wrapped-modal > div,
+.dark body.liquid-glass-active #footer-bubble,
+.dark body.liquid-glass-active #footer-expandable-menu {
+
+    -webkit-backdrop-filter:
+        blur(12px)
+        saturate(150%)
+        brightness(1.05) !important;
+
+    backdrop-filter:
+        blur(12px)
+        saturate(150%)
+        brightness(1.05) !important;
+
+    background: linear-gradient(
+        135deg,
+        rgba(15, 23, 42, 0.11) 0%,
+        rgba(30, 41, 59, 0.07) 40%,
+        rgba(255, 255, 255, 0.045) 60%,
+        rgba(15, 23, 42, 0.09) 100%
+    ) !important;
+
+    border: 1px solid rgba(255, 255, 255, 0.10) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.24) !important;
+    border-left: 1px solid rgba(255, 255, 255, 0.15) !important;
+
+    box-shadow:
+        0 24px 55px -14px rgba(0, 0, 0, 0.50),
+        0 0 0 1px rgba(255, 255, 255, 0.06),
+        inset 0 1px 1px rgba(255, 255, 255, 0.12) !important;
+}
+
+
+/* Light Mode große Flächen */
+html:not(.dark) body.liquid-glass-active #global-settings-menu,
+html:not(.dark) body.liquid-glass-active #lyrics-settings-menu,
+html:not(.dark) body.liquid-glass-active #tutorial-box,
+html:not(.dark) body.liquid-glass-active #language-picker-box,
+html:not(.dark) body.liquid-glass-active #whats-new-epic-modal > div,
+html:not(.dark) body.liquid-glass-active #privacy-update-modal > div,
+html:not(.dark) body.liquid-glass-active #interactive-quest-hud > div,
+html:not(.dark) body.liquid-glass-active #sharecard-picker-box,
+html:not(.dark) body.liquid-glass-active #command-palette,
+html:not(.dark) body.liquid-glass-active #spotify-wrapped-modal > div,
+html:not(.dark) body.liquid-glass-active #footer-bubble,
+html:not(.dark) body.liquid-glass-active #footer-expandable-menu {
+
+    background: linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.16) 0%,
+        rgba(255, 255, 255, 0.07) 40%,
+        rgba(255, 255, 255, 0.18) 60%,
+        rgba(255, 255, 255, 0.09) 100%
+    ) !important;
+
+    border: 1px solid rgba(255, 255, 255, 0.24) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.42) !important;
+    border-left: 1px solid rgba(255, 255, 255, 0.30) !important;
+
+    box-shadow:
+        0 20px 45px -12px rgba(0, 0, 0, 0.10),
+        inset 0 1px 1px rgba(255, 255, 255, 0.32) !important;
+
+    color: #0f172a !important;
+}
+
+
+/* Music Card Transition */
+body.liquid-glass-active #main-music-card {
+    transition:
+        max-width 1.2s var(--liquid-fluid),
+        min-height 1.2s var(--liquid-fluid),
+        transform 0.6s var(--apple-spring),
+        box-shadow 0.6s var(--apple-spring),
+        border-radius 0.4s var(--apple-ease),
+        background-color 0.4s ease,
+        backdrop-filter 0.4s ease !important;
+}
+
+
+/* Maus-Glare */
+body.liquid-glass-active .glass-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+
+    background: radial-gradient(
+        circle 350px at var(--mouse-x, 50%) var(--mouse-y, 50%),
+        rgba(255, 255, 255, 0.055),
+        transparent 60%
+    );
+
+    z-index: -1;
+    opacity: var(--glare-opacity, 0);
+    transition: opacity 0.4s var(--apple-ease);
+    pointer-events: none;
+    mix-blend-mode: overlay;
+}
+
+.dark body.liquid-glass-active .glass-card::before {
+    background: radial-gradient(
+        circle 350px at var(--mouse-x, 50%) var(--mouse-y, 50%),
+        rgba(255, 255, 255, 0.10),
+        transparent 60%
+    );
+}
+
+
+/* Low-End Mode */
+body.low-end.liquid-glass-active #main-music-card,
+body.low-end.liquid-glass-active #mini-player-toggle,
+body.low-end.liquid-glass-active .modal-content,
+body.low-end.liquid-glass-active #global-settings-menu,
+body.low-end.liquid-glass-active #lyrics-settings-menu,
+body.low-end.liquid-glass-active #tutorial-box,
+body.low-end.liquid-glass-active #language-picker-box,
+body.low-end.liquid-glass-active #whats-new-epic-modal > div,
+body.low-end.liquid-glass-active #privacy-update-modal > div,
+body.low-end.liquid-glass-active #interactive-quest-hud > div,
+body.low-end.liquid-glass-active #sharecard-picker-box,
+body.low-end.liquid-glass-active #command-palette,
+body.low-end.liquid-glass-active #spotify-wrapped-modal > div,
+body.low-end.liquid-glass-active #footer-bubble,
+body.low-end.liquid-glass-active #footer-expandable-menu {
+    animation: none !important;
+}
+
+
+/* Hover */
+@media (hover: hover) and (pointer: fine) {
+
+    body.liquid-glass-active .glass-card:hover::before {
+        opacity: 1;
+    }
+
+    body.liquid-glass-active
+    .glass-card:not(#main-music-card):not(#mini-player-toggle):hover {
+
+        transform:
+            scale(1.04)
+            translateY(-4px)
+            translate3d(0, 0, 0) !important;
+
+        border: 1px solid rgba(255, 255, 255, 0.22) !important;
+
+        background-color:
+            rgba(255, 255, 255, 0.07) !important;
+
+        -webkit-backdrop-filter:
+            blur(12px)
+            saturate(130%) !important;
+
+        backdrop-filter:
+            blur(12px)
+            saturate(130%) !important;
+
+        box-shadow:
+            0 20px 40px -15px rgba(0, 0, 0, 0.22) !important;
+
+        border-radius: 24px !important;
+        z-index: 50;
+    }
+}
             .dark body.liquid-glass-active .glass-card:not(#main-music-card):not(#mini-player-toggle):hover {
                 background-color: rgba(15, 23, 42, 0.75) !important;
                 border: 1px solid rgba(255, 255, 255, 0.12) !important;
@@ -4243,8 +4360,8 @@
         .reveal.active { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
 
         @supports (backdrop-filter: blur(12px)) or (-webkit-backdrop-filter: blur(12px)) {
-            .glass-card { background: rgba(255, 255, 255, 0.75); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
-            .dark .glass-card { background: rgba(15, 23, 42, 0.65); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+            .glass-card { background: rgba(255, 255, 255, 0.05); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+            .dark .glass-card { background: rgba(15, 23, 42, 0.05); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
         }
         
         /* ========================================================= */
@@ -6257,6 +6374,279 @@
         })();
 </script>
 <link rel="stylesheet" href="assets/living-design.4e423a2a90529272.css">
+<link rel="stylesheet" href="assets/community-glass.7013916ea0163d76.css">
+
+<style>
+/* <!-- v24.138.2 FINAL ULTRA LIQUID GLASS OVERRIDES -->
+   Intentionally last in <head>: this block is the final visual authority for Liquid Glass. */
+
+/* ===== 1) REAL COVER BACKGROUND, NO WHITE VEIL ===== */
+body.liquid-glass-active #liquid-blobs {
+    background-color: transparent !important;
+    background-size: cover !important;
+    background-position: center center !important;
+    background-repeat: no-repeat !important;
+    background-blend-mode: normal !important;
+}
+html:not(.dark) body.liquid-glass-active #liquid-blobs,
+.dark body.liquid-glass-active #liquid-blobs {
+    background-color: transparent !important;
+}
+body.liquid-glass-active #liquid-blobs .blob-container { opacity: 0.16 !important; }
+.dark body.liquid-glass-active #liquid-blobs .blob-container { opacity: 0.12 !important; }
+
+/* Keep the full-screen cover visible instead of painting a pale sheet over it. */
+html:not(.dark) body.liquid-glass-active { background-color: #e8eef6 !important; }
+.dark body.liquid-glass-active { background-color: #020617 !important; }
+
+/* ===== 2) ULTRA-CLEAR GLASS: deliberately more transparent than standard glass UI ===== */
+body.liquid-glass-active .glass-card {
+    background: linear-gradient(120deg,
+        rgba(255,255,255,.028) 0%,
+        rgba(255,255,255,.012) 34%,
+        rgba(255,255,255,.034) 50%,
+        rgba(255,255,255,.012) 66%,
+        rgba(255,255,255,.018) 100%) !important;
+    border: 1px solid rgba(255,255,255,.13) !important;
+    border-top-color: rgba(255,255,255,.28) !important;
+    border-left-color: rgba(255,255,255,.19) !important;
+    box-shadow: 0 18px 50px -28px rgba(0,0,0,.38),
+                inset 0 1px 0 rgba(255,255,255,.14) !important;
+}
+.dark body.liquid-glass-active .glass-card {
+    background: linear-gradient(120deg,
+        rgba(2,6,23,.045) 0%,
+        rgba(255,255,255,.008) 36%,
+        rgba(255,255,255,.022) 50%,
+        rgba(255,255,255,.008) 64%,
+        rgba(2,6,23,.03) 100%) !important;
+    border-color: rgba(255,255,255,.075) !important;
+    border-top-color: rgba(255,255,255,.20) !important;
+    border-left-color: rgba(255,255,255,.11) !important;
+}
+
+body.liquid-glass-active #main-music-card,
+body.liquid-glass-active #mini-player-toggle,
+body.liquid-glass-active .modal-content,
+body.liquid-glass-active #global-settings-menu,
+body.liquid-glass-active #lyrics-settings-menu,
+body.liquid-glass-active #tutorial-box,
+body.liquid-glass-active #language-picker-box,
+body.liquid-glass-active #whats-new-epic-modal > div,
+body.liquid-glass-active #privacy-update-modal > div,
+body.liquid-glass-active #interactive-quest-hud > div,
+body.liquid-glass-active #sharecard-picker-box,
+body.liquid-glass-active #command-palette,
+body.liquid-glass-active #spotify-wrapped-modal > div,
+body.liquid-glass-active #footer-bubble,
+body.liquid-glass-active #footer-expandable-menu {
+    -webkit-backdrop-filter: blur(9px) saturate(160%) brightness(1.02) !important;
+    backdrop-filter: blur(9px) saturate(160%) brightness(1.02) !important;
+    background: linear-gradient(135deg,
+        rgba(255,255,255,.040) 0%,
+        rgba(255,255,255,.014) 38%,
+        rgba(255,255,255,.050) 58%,
+        rgba(255,255,255,.018) 100%) !important;
+    border: 1px solid rgba(255,255,255,.15) !important;
+    border-top-color: rgba(255,255,255,.30) !important;
+    border-left-color: rgba(255,255,255,.21) !important;
+    box-shadow: 0 24px 64px -32px rgba(0,0,0,.55),
+                0 0 0 1px rgba(255,255,255,.035),
+                inset 0 1px 0 rgba(255,255,255,.16) !important;
+}
+.dark body.liquid-glass-active #main-music-card,
+.dark body.liquid-glass-active #mini-player-toggle,
+.dark body.liquid-glass-active .modal-content,
+.dark body.liquid-glass-active #global-settings-menu,
+.dark body.liquid-glass-active #lyrics-settings-menu,
+.dark body.liquid-glass-active #tutorial-box,
+.dark body.liquid-glass-active #language-picker-box,
+.dark body.liquid-glass-active #whats-new-epic-modal > div,
+.dark body.liquid-glass-active #privacy-update-modal > div,
+.dark body.liquid-glass-active #interactive-quest-hud > div,
+.dark body.liquid-glass-active #sharecard-picker-box,
+.dark body.liquid-glass-active #command-palette,
+.dark body.liquid-glass-active #spotify-wrapped-modal > div,
+.dark body.liquid-glass-active #footer-bubble,
+.dark body.liquid-glass-active #footer-expandable-menu {
+    background: linear-gradient(135deg,
+        rgba(2,6,23,.075) 0%,
+        rgba(15,23,42,.030) 38%,
+        rgba(255,255,255,.020) 58%,
+        rgba(2,6,23,.055) 100%) !important;
+    border-color: rgba(255,255,255,.09) !important;
+    border-top-color: rgba(255,255,255,.22) !important;
+    border-left-color: rgba(255,255,255,.13) !important;
+}
+
+/* Main music card had later hard-coded 0.4 / 25px values. Kill those final overrides here. */
+body.liquid-glass-active #main-music-card {
+    background: linear-gradient(135deg,rgba(255,255,255,.035),rgba(255,255,255,.012)) !important;
+    -webkit-backdrop-filter: blur(9px) saturate(160%) !important;
+    backdrop-filter: blur(9px) saturate(160%) !important;
+}
+.dark body.liquid-glass-active #main-music-card {
+    background: linear-gradient(135deg,rgba(2,6,23,.07),rgba(15,23,42,.025)) !important;
+}
+
+/* Hover must stay clear; no return to 0.30 / 0.75 opacity. */
+@media (hover:hover) and (pointer:fine) {
+    body.liquid-glass-active .glass-card:not(#main-music-card):not(#mini-player-toggle):hover {
+        background: linear-gradient(125deg,rgba(255,255,255,.055),rgba(255,255,255,.018)) !important;
+        -webkit-backdrop-filter: blur(11px) saturate(175%) !important;
+        backdrop-filter: blur(11px) saturate(175%) !important;
+        border-color: rgba(255,255,255,.24) !important;
+        box-shadow: 0 26px 60px -30px rgba(0,0,0,.48), inset 0 1px 0 rgba(255,255,255,.18) !important;
+    }
+    .dark body.liquid-glass-active .glass-card:not(#main-music-card):not(#mini-player-toggle):hover {
+        background: linear-gradient(125deg,rgba(2,6,23,.085),rgba(255,255,255,.018)) !important;
+    }
+}
+
+/* ===== 3) LIGHT-MODE SETTINGS: remove the half-dark panel and make every control readable ===== */
+html:not(.dark) body.liquid-glass-active #global-settings-menu {
+    color: #0f172a !important;
+    background: linear-gradient(135deg,rgba(255,255,255,.075),rgba(255,255,255,.022)) !important;
+    border-color: rgba(255,255,255,.26) !important;
+    text-shadow: 0 1px 2px rgba(255,255,255,.62);
+}
+html:not(.dark) body.liquid-glass-active #global-settings-menu .text-slate-200,
+html:not(.dark) body.liquid-glass-active #global-settings-menu .text-slate-300,
+html:not(.dark) body.liquid-glass-active #global-settings-menu .text-slate-400,
+html:not(.dark) body.liquid-glass-active #global-settings-menu .text-slate-500 {
+    color: #1e293b !important;
+}
+html:not(.dark) body.liquid-glass-active #global-settings-menu .bg-slate-800\/40,
+html:not(.dark) body.liquid-glass-active #global-settings-menu .bg-slate-800\/50,
+html:not(.dark) body.liquid-glass-active #global-settings-menu .bg-slate-800\/60,
+html:not(.dark) body.liquid-glass-active #global-settings-menu .bg-slate-800\/80,
+html:not(.dark) body.liquid-glass-active #global-settings-menu .bg-slate-800 {
+    background: rgba(255,255,255,.075) !important;
+    border-color: rgba(15,23,42,.11) !important;
+}
+html:not(.dark) body.liquid-glass-active #global-settings-menu .hover\:bg-slate-700\/80:hover,
+html:not(.dark) body.liquid-glass-active #global-settings-menu .hover\:bg-slate-700:hover,
+html:not(.dark) body.liquid-glass-active #global-settings-menu .hover\:bg-slate-800:hover {
+    background: rgba(255,255,255,.15) !important;
+}
+html:not(.dark) body.liquid-glass-active #global-settings-menu select,
+html:not(.dark) body.liquid-glass-active #global-settings-menu input[type="text"] {
+    color: #0f172a !important;
+    background: rgba(255,255,255,.12) !important;
+    border-color: rgba(15,23,42,.14) !important;
+    -webkit-backdrop-filter: blur(10px) saturate(150%) !important;
+    backdrop-filter: blur(10px) saturate(150%) !important;
+}
+html:not(.dark) body.liquid-glass-active #global-settings-menu select option {
+    color: #0f172a !important;
+    background: #f8fafc !important;
+}
+html:not(.dark) body.liquid-glass-active #global-settings-menu .h-px { background: rgba(15,23,42,.12) !important; }
+html:not(.dark) body.liquid-glass-active #global-settings-menu fieldset,
+html:not(.dark) body.liquid-glass-active #global-settings-menu > div {
+    border-color: rgba(15,23,42,.10);
+}
+
+/* Keep semantic/accent buttons readable instead of forcing all spans to dark. */
+html:not(.dark) body.liquid-glass-active #global-settings-menu #btn-toggle-theme,
+html:not(.dark) body.liquid-glass-active #global-settings-menu #btn-toggle-perf,
+html:not(.dark) body.liquid-glass-active #global-settings-menu #btn-toggle-liquid,
+html:not(.dark) body.liquid-glass-active #global-settings-menu #btn-toggle-sound,
+html:not(.dark) body.liquid-glass-active #global-settings-menu #btn-toggle-haptic,
+html:not(.dark) body.liquid-glass-active #global-settings-menu #btn-toggle-tutorial-status,
+html:not(.dark) body.liquid-glass-active #global-settings-menu #btn-reset-onboarding {
+    background: rgba(255,255,255,.10) !important;
+}
+
+/* ===== 4) TUTORIAL BUTTON: intentionally dark glass in Light Mode ===== */
+html:not(.dark) body.liquid-glass-active #tutorial-start-btn {
+    background: rgba(15,23,42,.50) !important;
+    border-color: rgba(255,255,255,.30) !important;
+    color: #fff !important;
+    -webkit-backdrop-filter: blur(10px) saturate(160%) !important;
+    backdrop-filter: blur(10px) saturate(160%) !important;
+    box-shadow: 0 14px 34px -18px rgba(2,6,23,.65), inset 0 1px 0 rgba(255,255,255,.18) !important;
+}
+html:not(.dark) body.liquid-glass-active #tutorial-start-btn:hover { background: rgba(15,23,42,.62) !important; }
+
+/* ===== 5) STRONG LIQUID MOTION: only Liquid Glass, normal mode stays calmer ===== */
+@keyframes liquid-ultra-in {
+    0%   { opacity:0; transform:translate3d(0,72px,0) scale(.55,1.42); border-radius:52px; filter:blur(7px); }
+    38%  { opacity:1; transform:translate3d(0,-18px,0) scale(1.11,.90); border-radius:18px; filter:blur(0); }
+    66%  { transform:translate3d(0,9px,0) scale(.965,1.045); border-radius:34px; }
+    84%  { transform:translate3d(0,-3px,0) scale(1.018,.985); border-radius:22px; }
+    100% { opacity:1; transform:translate3d(0,0,0) scale(1); border-radius:26px; filter:blur(0); }
+}
+@keyframes liquid-ultra-out {
+    0%   { opacity:1; transform:translate3d(0,0,0) scale(1); border-radius:26px; filter:blur(0); }
+    28%  { transform:translate3d(0,-10px,0) scale(1.075,.93); border-radius:18px; }
+    100% { opacity:0; transform:translate3d(0,90px,0) scale(.50,1.55); border-radius:56px; filter:blur(8px); }
+}
+@keyframes liquid-ultra-settings-in {
+    0%   { opacity:0; transform:translate3d(28px,-30px,0) scale(.52,1.46) rotate(.8deg); border-radius:52px; filter:blur(7px); }
+    42%  { opacity:1; transform:translate3d(-5px,6px,0) scale(1.10,.91) rotate(-.35deg); border-radius:17px; filter:blur(0); }
+    72%  { transform:translate3d(2px,-2px,0) scale(.97,1.035); border-radius:31px; }
+    100% { opacity:1; transform:none; border-radius:26px; filter:blur(0); }
+}
+@keyframes liquid-ultra-settings-out {
+    0%   { opacity:1; transform:none; border-radius:26px; }
+    30%  { transform:translate3d(-4px,-4px,0) scale(1.07,.94); border-radius:18px; }
+    100% { opacity:0; transform:translate3d(34px,-34px,0) scale(.48,1.5) rotate(1deg); border-radius:58px; filter:blur(8px); }
+}
+
+body.liquid-glass-active:not(.low-end) .modal-opening .modal-content,
+body.liquid-glass-active:not(.low-end) .picker-opening,
+body.liquid-glass-active:not(.low-end) .tutorial-opening,
+body.liquid-glass-active:not(.low-end) .dashboard-opening #main-music-card {
+    animation: liquid-ultra-in .82s var(--liquid-fluid) both !important;
+}
+body.liquid-glass-active:not(.low-end) .modal-closing .modal-content,
+body.liquid-glass-active:not(.low-end) .picker-closing,
+body.liquid-glass-active:not(.low-end) .tutorial-closing,
+body.liquid-glass-active:not(.low-end) .dashboard-closing #main-music-card {
+    animation: liquid-ultra-out .62s var(--liquid-fluid) both !important;
+}
+body.liquid-glass-active:not(.low-end) #global-settings-menu.settings-opening,
+body.liquid-glass-active:not(.low-end) #lyrics-settings-menu.settings-opening {
+    animation: liquid-ultra-settings-in .78s var(--liquid-fluid) both !important;
+    transform-origin: top right;
+}
+body.liquid-glass-active:not(.low-end) #global-settings-menu.settings-closing,
+body.liquid-glass-active:not(.low-end) #lyrics-settings-menu.settings-closing {
+    animation: liquid-ultra-settings-out .58s var(--liquid-fluid) both !important;
+    transform-origin: top right;
+}
+
+/* Press feedback: obvious elastic squish instead of the old tiny active:scale(.95). */
+body.liquid-glass-active:not(.low-end) button,
+body.liquid-glass-active:not(.low-end) [role="button"],
+body.liquid-glass-active:not(.low-end) .tutorial-choice-card,
+body.liquid-glass-active:not(.low-end) .lang-picker-btn {
+    transition: transform .38s var(--liquid-fluid), border-radius .38s var(--liquid-fluid),
+                box-shadow .38s var(--liquid-fluid), background-color .32s ease !important;
+    transform-origin: center;
+}
+body.liquid-glass-active:not(.low-end) button:active,
+body.liquid-glass-active:not(.low-end) [role="button"]:active,
+body.liquid-glass-active:not(.low-end) .tutorial-choice-card:active,
+body.liquid-glass-active:not(.low-end) .lang-picker-btn:active {
+    transform: scaleX(1.075) scaleY(.86) translateY(2px) !important;
+    border-radius: 34px !important;
+    box-shadow: 0 8px 24px -18px rgba(0,0,0,.55), inset 0 2px 4px rgba(255,255,255,.12) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body.liquid-glass-active:not(.low-end) .modal-opening .modal-content,
+    body.liquid-glass-active:not(.low-end) .picker-opening,
+    body.liquid-glass-active:not(.low-end) .tutorial-opening,
+    body.liquid-glass-active:not(.low-end) .dashboard-opening #main-music-card,
+    body.liquid-glass-active:not(.low-end) #global-settings-menu.settings-opening,
+    body.liquid-glass-active:not(.low-end) #lyrics-settings-menu.settings-opening {
+        animation-duration: .01ms !important;
+    }
+}
+</style>
+
 </head>
 <body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen selection:bg-blue-500/30 overflow-x-hidden">
     <dialog id="ai-version-notice" aria-labelledby="ai-notice-title" aria-modal="true">
@@ -9998,15 +10388,18 @@
                 }, isLiquid ? 220 : 120);
             }
             
-            // Tutorial auto-start: independent of first visit or onboarding!
-            if (!window._manualLangChange && window.getTutorialStatus() !== '1') {
-                setTimeout(() => {
-                    if (typeof startTutorial === 'function') startTutorial();
-                }, 400);
-            } else if (window.OnboardingCoordinator && window.OnboardingCoordinator.isOnboarding) {
+            // Single-source onboarding flow:
+            // During onboarding ONLY the coordinator is allowed to advance.
+            // This prevents the tutorial from opening once here and then a second time
+            // through the onboarding coordinator.
+            if (window.OnboardingCoordinator && window.OnboardingCoordinator.isOnboarding) {
                 if (typeof window.OnboardingCoordinator.step2_tutorial === 'function') {
                     window.OnboardingCoordinator.step2_tutorial();
                 }
+            } else if (!window._manualLangChange && window.getTutorialStatus() !== '1') {
+                setTimeout(() => {
+                    if (typeof startTutorial === 'function') startTutorial();
+                }, 400);
             }
             window._manualLangChange = false;
         };
@@ -17326,7 +17719,8 @@ let shareCardLoading;
             isCompleted() {
                 try {
                     const val = AppStorage.getItem('onboarding_completed');
-                    return (val === '1' || val === 'true') && AppStorage.getItem('onboarding_completed_version') === SITE_VERSION;
+                    const hasLanguage = !!(AppStorage.getItem('app_language') || AppStorage.getItem('selectedLanguage'));
+                    return hasLanguage && (val === '1' || val === 'true');
                 } catch(e) { return false; }
             },
 
@@ -19492,6 +19886,13 @@ window.setLyricsStyle = function(style) {
                     mArtwork.src = srcUrl;
                 }
                 const urlBg = 'url("' + srcUrl + '")';
+                // v24.138.2: Im Liquid-Glass-Modus ist die aktuelle Cover-Art auch der
+                // echte Seitenhintergrund. Kein weißer Light-Mode-Schleier mehr.
+                const liquidBg = document.getElementById('liquid-blobs');
+                const useCurrentCoverBg = !window.getMainBackgroundMode || window.getMainBackgroundMode() === 'current-cover';
+                if (liquidBg && useCurrentCoverBg && liquidBg.style.backgroundImage !== urlBg) {
+                    liquidBg.style.backgroundImage = urlBg;
+                }
                 if (mAmbient && mAmbient.style.backgroundImage !== urlBg) mAmbient.style.backgroundImage = urlBg;
                 if (mGlow && coverGlowEnabled && mGlow.style.backgroundImage !== urlBg) mGlow.style.backgroundImage = urlBg;
                 const lyricsAmbientBg = document.getElementById('lyrics-ambient-bg');
@@ -20580,5 +20981,975 @@ window.setLyricsStyle = function(style) {
         })();
 </script>
 <script src="js/living-design.ef4e0c79a1bced34.js"></script>
+<script src="js/community-glass.6218ac771ca6ae72.js"></script>
+<!-- LIQUID_GLASS_V24_138_5 -->
+<style id="liquid-glass-v24-138-5">
+/*
+  v24.138.5
+  - Keeps ALL structural positioning/transforms of Control Center + footer untouched.
+  - Fixes Light-Mode veil + Tutorial launcher contrast.
+  - Restores stable paint behavior for Liquid cards.
+  - New interaction uses independent CSS scale/translate properties instead of overwriting transform.
+    This is deliberately important because footer/control-center positioning relies on transform.
+*/
+:root {
+  --lg-glass-alpha: .0012;
+  --lg-glass-alpha-soft: .00035;
+  --lg-glass-alpha-strong: .0024;
+  --lg-glass-border: .095;
+  --lg-glass-border-hi: .18;
+  --lg-glass-blur: .20px;
+}
+
+/* =========================
+   FULL-SCREEN VEIL: REMOVE
+   ========================= */
+html:not(.dark) body.liquid-glass-active,
+.dark body.liquid-glass-active {
+  background-color: transparent !important;
+}
+
+body.liquid-glass-active #liquid-blobs,
+html:not(.dark) body.liquid-glass-active #liquid-blobs,
+.dark body.liquid-glass-active #liquid-blobs,
+html:not(.dark) body.liquid-glass-active .mesh-gradient {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+body.liquid-glass-active #liquid-blobs .blob-container {
+  opacity: .008 !important;
+}
+
+/* =========================
+   GLASS MATERIAL
+   NOTE: #ui-controls and footer structural containers are intentionally NOT in this selector.
+   Their existing layout/transform logic stays authoritative.
+   ========================= */
+body.liquid-glass-active .glass-card,
+body.liquid-glass-active #main-music-card,
+body.liquid-glass-active #mini-player-toggle,
+body.liquid-glass-active .modal-content,
+body.liquid-glass-active #global-settings-menu,
+body.liquid-glass-active #tutorial-box,
+body.liquid-glass-active #language-picker-box,
+body.liquid-glass-active #sharecard-picker-box,
+body.liquid-glass-active #command-palette {
+  background: linear-gradient(
+    126deg,
+    rgba(255,255,255,var(--lg-glass-alpha-strong)) 0%,
+    rgba(255,255,255,var(--lg-glass-alpha-soft)) 36%,
+    rgba(255,255,255,var(--lg-glass-alpha)) 58%,
+    rgba(255,255,255,var(--lg-glass-alpha-soft)) 100%
+  ) !important;
+  -webkit-backdrop-filter: blur(var(--lg-glass-blur)) saturate(108%) !important;
+  backdrop-filter: blur(var(--lg-glass-blur)) saturate(108%) !important;
+  border-color: rgba(255,255,255,var(--lg-glass-border)) !important;
+  border-top-color: rgba(255,255,255,var(--lg-glass-border-hi)) !important;
+  border-left-color: rgba(255,255,255,.13) !important;
+  box-shadow:
+    0 16px 38px -31px rgba(0,0,0,.40),
+    inset 0 1px 0 rgba(255,255,255,.08),
+    inset 0 -1px 0 rgba(255,255,255,.018) !important;
+}
+
+.dark body.liquid-glass-active .glass-card,
+.dark body.liquid-glass-active #main-music-card,
+.dark body.liquid-glass-active #mini-player-toggle,
+.dark body.liquid-glass-active .modal-content,
+.dark body.liquid-glass-active #global-settings-menu,
+.dark body.liquid-glass-active #tutorial-box,
+.dark body.liquid-glass-active #language-picker-box,
+.dark body.liquid-glass-active #sharecard-picker-box,
+.dark body.liquid-glass-active #command-palette {
+  background: linear-gradient(
+    126deg,
+    rgba(2,6,23,var(--lg-glass-alpha-strong)) 0%,
+    rgba(15,23,42,var(--lg-glass-alpha-soft)) 40%,
+    rgba(255,255,255,var(--lg-glass-alpha-soft)) 62%,
+    rgba(2,6,23,var(--lg-glass-alpha)) 100%
+  ) !important;
+}
+
+/* Avoid the "painted late / wrong then snaps correct" look in Liquid mode. */
+body.liquid-glass-active .glass-card {
+  content-visibility: visible !important;
+  contain-intrinsic-size: none !important;
+}
+
+/* Hover may never turn glass milky again. */
+body.liquid-glass-active .glass-card:not(#main-music-card):not(#mini-player-toggle):hover {
+  background: rgba(255,255,255,var(--lg-glass-alpha-strong)) !important;
+  -webkit-backdrop-filter: blur(var(--lg-glass-blur)) saturate(112%) !important;
+  backdrop-filter: blur(var(--lg-glass-blur)) saturate(112%) !important;
+}
+.dark body.liquid-glass-active .glass-card:not(#main-music-card):not(#mini-player-toggle):hover {
+  background: rgba(2,6,23,var(--lg-glass-alpha-strong)) !important;
+}
+
+/* =========================
+   CONTROL CENTER: LAYOUT GUARD
+   Never animate or replace its transform/position.
+   ========================= */
+#ui-controls {
+  position: fixed !important;
+  right: max(.5rem, env(safe-area-inset-right, 0px) + .5rem) !important;
+  left: auto !important;
+  width: auto !important;
+  max-width: calc(100vw - 1rem) !important;
+  transform: none !important;
+  translate: none !important;
+  scale: 1 !important;
+  transform-origin: top right !important;
+}
+@media (min-width: 475px) {
+  #ui-controls {
+    right: max(1rem, env(safe-area-inset-right, 0px) + 1rem) !important;
+  }
+}
+@media (min-width: 640px) {
+  #ui-controls {
+    right: max(1.5rem, env(safe-area-inset-right, 0px) + 1.5rem) !important;
+  }
+}
+
+/* Keep the Control Center itself glassy without touching its geometry. */
+body.liquid-glass-active #ui-controls {
+  background: rgba(8,15,28,.055) !important;
+  -webkit-backdrop-filter: blur(4px) saturate(112%) !important;
+  backdrop-filter: blur(4px) saturate(112%) !important;
+  border-color: rgba(255,255,255,.11) !important;
+  box-shadow: 0 14px 34px -24px rgba(0,0,0,.48) !important;
+}
+html:not(.dark) body.liquid-glass-active #ui-controls {
+  background: rgba(255,255,255,.026) !important;
+}
+
+/* =========================
+   FOOTER: RESTORE ITS ORIGINAL POSITIONING CONTRACT
+   Footer uses translateX(-50%) to center itself. Do NOT replace transform.
+   ========================= */
+#footer-bubble {
+  left: var(--footer-center, 50%) !important;
+  translate: none !important;
+  scale: 1 !important;
+}
+#footer-bubble:not(.footer-bubble-visible) {
+  transform: translateX(-50%) translateY(20px) !important;
+}
+#footer-bubble.footer-bubble-visible {
+  transform: translateX(-50%) translateY(0) !important;
+}
+body.liquid-glass-active #footer-bubble {
+  background: rgba(8,15,28,.035) !important;
+  -webkit-backdrop-filter: blur(2px) saturate(108%) !important;
+  backdrop-filter: blur(2px) saturate(108%) !important;
+  border-color: rgba(255,255,255,.10) !important;
+}
+html:not(.dark) body.liquid-glass-active #footer-bubble {
+  background: rgba(255,255,255,.018) !important;
+}
+
+/* Footer popup keeps its own translateX(-50%) animation. */
+#footer-expandable-menu {
+  translate: none !important;
+  scale: 1 !important;
+}
+
+/* =========================
+   LIGHT SETTINGS READABILITY
+   ========================= */
+html:not(.dark) body.liquid-glass-active #global-settings-menu {
+  color: #0b1220 !important;
+  text-shadow: 0 1px 1px rgba(255,255,255,.22) !important;
+}
+html:not(.dark) body.liquid-glass-active #global-settings-menu .text-white,
+html:not(.dark) body.liquid-glass-active #global-settings-menu .text-slate-100,
+html:not(.dark) body.liquid-glass-active #global-settings-menu .text-slate-200,
+html:not(.dark) body.liquid-glass-active #global-settings-menu .text-slate-300,
+html:not(.dark) body.liquid-glass-active #global-settings-menu .text-slate-400,
+html:not(.dark) body.liquid-glass-active #global-settings-menu .text-slate-500 {
+  color: #111827 !important;
+}
+html:not(.dark) body.liquid-glass-active #global-settings-menu input:not([type="range"]):not([type="checkbox"]),
+html:not(.dark) body.liquid-glass-active #global-settings-menu select,
+html:not(.dark) body.liquid-glass-active #global-settings-menu textarea {
+  background: rgba(255,255,255,.035) !important;
+  color: #0b1220 !important;
+  border-color: rgba(15,23,42,.15) !important;
+}
+
+/* =========================
+   TUTORIAL HARD FIX
+   ========================= */
+html:not(.dark) body #tutorial-start-btn,
+html:not(.dark) body.liquid-glass-active #tutorial-start-btn {
+  background: linear-gradient(145deg, rgba(25,35,55,.98), rgba(7,12,22,.94)) !important;
+  border: 1px solid rgba(15,23,42,.95) !important;
+  color: #fff !important;
+  box-shadow:
+    0 12px 28px -16px rgba(2,6,23,.85),
+    inset 0 1px 0 rgba(255,255,255,.11) !important;
+}
+html:not(.dark) body #tutorial-start-btn svg,
+html:not(.dark) body #tutorial-start-btn svg * {
+  color: #fff !important;
+  stroke: currentColor !important;
+}
+html:not(.dark) body #tutorial-start-btn:hover {
+  background: linear-gradient(145deg, rgba(36,49,72,.99), rgba(9,15,28,.97)) !important;
+  border-color: rgba(59,130,246,.60) !important;
+}
+
+html:not(.dark) body.liquid-glass-active #tutorial-box,
+html:not(.dark) body.liquid-glass-active #tutorial-title {
+  color: #0f172a !important;
+}
+html:not(.dark) body.liquid-glass-active #tutorial-text,
+html:not(.dark) body.liquid-glass-active #tutorial-skip,
+html:not(.dark) body.liquid-glass-active #btn-speak-tutorial {
+  color: #334155 !important;
+}
+body.liquid-glass-active #tutorial-next {
+  background: linear-gradient(135deg,#2563eb,#4f46e5) !important;
+  color: white !important;
+  border: 1px solid rgba(255,255,255,.22) !important;
+}
+
+/* =========================
+   LYRICS LIVE-SYNC: LAYOUT GUARD
+   Tiny controls should NEVER be subjected to large liquid deformation.
+   ========================= */
+#label-live-sync {
+  min-width: 0 !important;
+}
+#btn-resync {
+  flex: 0 0 auto !important;
+  transform: none !important;
+  translate: none !important;
+  scale: 1 !important;
+  white-space: nowrap !important;
+}
+#sync-slider {
+  min-width: 0 !important;
+  flex: 1 1 auto !important;
+}
+#sync-value {
+  display: inline-block !important;
+  flex: 0 0 3.5rem !important;
+  width: 3.5rem !important;
+  min-width: 3.5rem !important;
+  text-align: right !important;
+  direction: ltr !important;
+  font-variant-numeric: tabular-nums !important;
+  white-space: nowrap !important;
+  transform: none !important;
+  translate: none !important;
+  scale: 1 !important;
+}
+
+/* =========================
+   LIQUID INTERACTION
+   Uses scale + translate properties so existing `transform:` positioning is preserved.
+   ========================= */
+body.liquid-glass-active .lg-touch-liquid {
+  --lg-touch-x: 50%;
+  --lg-touch-y: 50%;
+  --lg-sx: 1;
+  --lg-sy: 1;
+  --lg-shift-x: 0px;
+  --lg-shift-y: 0px;
+  --lg-ra: 24px;
+  --lg-rb: 24px;
+  --lg-rc: 24px;
+  --lg-rd: 24px;
+  position: relative;
+  transform-origin: var(--lg-touch-x) var(--lg-touch-y);
+  scale: var(--lg-sx) var(--lg-sy);
+  translate: var(--lg-shift-x) var(--lg-shift-y);
+  transition:
+    scale .44s cubic-bezier(.12,1.34,.22,1),
+    translate .44s cubic-bezier(.12,1.34,.22,1),
+    border-radius .44s cubic-bezier(.12,1.34,.22,1),
+    box-shadow .36s ease,
+    filter .30s ease !important;
+}
+
+body.liquid-glass-active .lg-touch-liquid::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 20;
+  opacity: 0;
+  background:
+    radial-gradient(circle 150px at var(--lg-touch-x) var(--lg-touch-y),
+      rgba(255,255,255,.26) 0%,
+      rgba(255,255,255,.07) 34%,
+      transparent 72%);
+  mix-blend-mode: soft-light;
+  transition: opacity .18s ease;
+}
+
+body.liquid-glass-active .lg-touch-liquid.lg-touch-down {
+  border-radius: var(--lg-ra) var(--lg-rb) var(--lg-rc) var(--lg-rd) !important;
+  box-shadow:
+    inset 0 20px 32px -22px rgba(255,255,255,.34),
+    inset 0 -28px 40px -25px rgba(0,0,0,.58),
+    0 2px 7px rgba(0,0,0,.12) !important;
+  filter: brightness(.91) saturate(1.12);
+  transition:
+    scale .085s cubic-bezier(.2,.8,.2,1),
+    translate .085s cubic-bezier(.2,.8,.2,1),
+    border-radius .10s ease,
+    box-shadow .10s ease,
+    filter .10s ease !important;
+}
+body.liquid-glass-active .lg-touch-liquid.lg-touch-down::after {
+  opacity: .92;
+}
+
+@keyframes lg-safe-release-v5 {
+  0%   { scale: .935 .895; }
+  42%  { scale: 1.035 .982; }
+  68%  { scale: .992 1.014; }
+  100% { scale: 1 1; }
+}
+body.liquid-glass-active .lg-touch-liquid.lg-touch-release {
+  animation: lg-safe-release-v5 .46s cubic-bezier(.12,1.34,.22,1) both !important;
+}
+
+/* Small buttons use a restrained press so labels/time controls stay readable. */
+body.liquid-glass-active button.lg-touch-liquid.lg-touch-compact.lg-touch-down,
+body.liquid-glass-active [role="button"].lg-touch-liquid.lg-touch-compact.lg-touch-down {
+  --lg-sx: .95;
+  --lg-sy: .91;
+  --lg-shift-y: 1.5px;
+}
+
+/* Larger cards get the dramatic "pressed into the display" illusion. */
+body.liquid-glass-active .glass-card.lg-touch-liquid.lg-touch-down:not(#footer-bubble):not(#ui-controls) {
+  --lg-sx: .925;
+  --lg-sy: .885;
+  --lg-shift-y: 5px;
+}
+
+/* Explicit structural exclusions — layout-critical transforms remain untouched forever. */
+#ui-controls,
+#footer-bubble,
+#footer-expandable-menu,
+#global-settings-menu,
+#lyrics-settings-menu,
+#tutorial-box,
+#command-palette,
+#language-picker-box,
+#sharecard-picker-box,
+#btn-resync,
+#sync-value,
+#sync-slider {
+  animation-composition: replace;
+}
+
+/* =========================
+   OPEN/CLOSE LIQUID ANIMATIONS
+   Only menu internals animate; fixed structural positioning is not replaced.
+   ========================= */
+@keyframes lg-panel-open-v5 {
+  0%   { opacity:0; scale:.86 .76; translate:0 -8px; border-radius:38px; filter:blur(3px); }
+  48%  { opacity:1; scale:1.035 .965; translate:0 2px; border-radius:21px 31px 23px 29px; filter:blur(0); }
+  72%  { scale:.99 1.018; translate:0 0; border-radius:29px 21px 30px 20px; }
+  100% { opacity:1; scale:1 1; translate:0 0; filter:blur(0); }
+}
+body.liquid-glass-active #global-settings-menu.settings-opening,
+body.liquid-glass-active #lyrics-settings-menu.settings-opening,
+body.liquid-glass-active #tutorial-box.tutorial-opening {
+  animation: lg-panel-open-v5 .58s cubic-bezier(.12,1.32,.22,1) both !important;
+}
+
+/* =========================
+   TRANSPARENCY CONTROL
+   ========================= */
+#lg-transparency-panel {
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 14px;
+  padding: 10px 11px;
+  background: rgba(255,255,255,.012);
+}
+html:not(.dark) #lg-transparency-panel {
+  border-color: rgba(15,23,42,.13);
+  background: rgba(255,255,255,.018);
+  color: #0f172a;
+}
+#lg-transparency-range {
+  accent-color: #22d3ee;
+  width: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.liquid-glass-active .lg-touch-liquid {
+    animation: none !important;
+    scale: 1 !important;
+    translate: 0 0 !important;
+    transition-duration: .01ms !important;
+  }
+}
+</style>
+
+<script id="liquid-glass-v24-138-5-js">
+(function () {
+  const KEY = 'liquidGlassTransparency';
+  const MIGRATION_KEY = 'liquidGlassTransparency_v5_default_migrated';
+  const DEFAULT = 98;
+
+  const clamp = v => Math.max(0, Math.min(100, Number(v) || 0));
+
+  function applyTransparency(v) {
+    v = clamp(v);
+    window.applyTransparency = applyTransparency;
+    const t = v / 100;
+
+    /* 100% is intentionally almost optically clear. */
+    const alphaStrong = 0.18 * (1 - t) + 0.0006 * t;
+    const alpha       = 0.095 * (1 - t) + 0.00025 * t;
+    const alphaSoft   = 0.040 * (1 - t) + 0.00008 * t;
+    const border      = 0.28 * (1 - t) + 0.075 * t;
+    const borderHi    = 0.42 * (1 - t) + 0.14 * t;
+    const blur        = 10 * (1 - t) + 0.08 * t;
+
+    const root = document.documentElement;
+    root.style.setProperty('--lg-glass-alpha-strong', alphaStrong.toFixed(5));
+    root.style.setProperty('--lg-glass-alpha', alpha.toFixed(5));
+    root.style.setProperty('--lg-glass-alpha-soft', alphaSoft.toFixed(5));
+    root.style.setProperty('--lg-glass-border', border.toFixed(4));
+    root.style.setProperty('--lg-glass-border-hi', borderHi.toFixed(4));
+    root.style.setProperty('--lg-glass-blur', blur.toFixed(2) + 'px');
+
+    const value = document.getElementById('lg-transparency-value');
+    if (value) value.textContent = Math.round(v) + '%';
+    const range = document.getElementById('lg-transparency-range');
+    if (range && Number(range.value) !== v) range.value = v;
+  }
+
+  function addControl(value) {
+    const menu = document.getElementById('global-settings-menu');
+    if (!menu) return;
+
+    const old = document.getElementById('lg-transparency-panel');
+    if (old) old.remove();
+
+    const panel = document.createElement('div');
+    panel.id = 'lg-transparency-panel';
+    panel.innerHTML = `
+      <div class="flex items-center justify-between gap-3 mb-1.5">
+        <span class="text-xs font-black">💧 Glas-Transparenz</span>
+        <span id="lg-transparency-value" class="text-[11px] font-mono font-bold">${Math.round(value)}%</span>
+      </div>
+      <input id="lg-transparency-range" type="range" min="0" max="100" step="1" value="${Math.round(value)}" aria-label="Liquid-Glass-Transparenz">
+      <div class="flex justify-between text-[9px] opacity-60 mt-1">
+        <span>milchiger</span><span>maximal klar</span>
+      </div>`;
+
+    const header = Array.from(menu.children).find(el =>
+      el.classList && el.classList.contains('justify-between')
+    );
+    if (header && header.nextSibling) menu.insertBefore(panel, header.nextSibling);
+    else menu.insertBefore(panel, menu.firstChild);
+
+    panel.querySelector('#lg-transparency-range').addEventListener('input', e => {
+      const v = clamp(e.target.value);
+      try { localStorage.setItem(KEY, String(v)); } catch (_) {}
+      applyTransparency(v);
+    }, { passive: true });
+  }
+
+  /* First v5 load migrates earlier 95% default to the requested clearer 98%. */
+  let saved = DEFAULT;
+  try {
+    const migrated = localStorage.getItem(MIGRATION_KEY);
+    if (!migrated) {
+      saved = DEFAULT;
+      localStorage.setItem(KEY, String(DEFAULT));
+      localStorage.setItem(MIGRATION_KEY, '1');
+    } else {
+      const raw = localStorage.getItem(KEY);
+      saved = raw === null ? DEFAULT : clamp(raw);
+    }
+  } catch (_) {}
+
+  applyTransparency(saved);
+
+  const STRUCTURAL = new Set([
+    'ui-controls', 'footer-bubble', 'footer-expandable-menu',
+    'global-settings-menu', 'lyrics-settings-menu', 'tutorial-box',
+    'command-palette', 'language-picker-box', 'sharecard-picker-box',
+    'btn-resync', 'sync-slider', 'sync-value'
+  ]);
+
+  function candidateFrom(target) {
+    if (!(target instanceof Element)) return null;
+
+    /* Inputs/sliders/text fields must never deform. */
+    if (target.closest('input, textarea, select, option')) return null;
+
+    const directControl = target.closest('button, [role="button"]');
+    if (directControl && !STRUCTURAL.has(directControl.id)) return directControl;
+
+    const card = target.closest('.glass-card');
+    if (card && !STRUCTURAL.has(card.id)) return card;
+
+    return null;
+  }
+
+  const active = new Map();
+
+  function setTouchShape(el, ev, state) {
+    const r = state.rect;
+    if (!r.width || !r.height) return;
+
+    const x = Math.max(0, Math.min(r.width, ev.clientX - r.left));
+    const y = Math.max(0, Math.min(r.height, ev.clientY - r.top));
+    const nx = x / r.width;
+    const ny = y / r.height;
+    const dx = ev.clientX - state.startX;
+    const dy = ev.clientY - state.startY;
+
+    const compact = el.matches('button,[role="button"]') && (r.width < 170 || r.height < 52);
+    el.classList.toggle('lg-touch-compact', compact);
+
+    const stretchX = Math.min(.025, Math.abs(dx) / 700);
+    const stretchY = Math.min(.025, Math.abs(dy) / 700);
+
+    if (!compact) {
+      el.style.setProperty('--lg-sx', (0.925 + stretchX - stretchY * .25).toFixed(4));
+      el.style.setProperty('--lg-sy', (0.885 + stretchY - stretchX * .25).toFixed(4));
+      el.style.setProperty('--lg-shift-x', (dx * .018).toFixed(2) + 'px');
+      el.style.setProperty('--lg-shift-y', (5 + dy * .012).toFixed(2) + 'px');
+    }
+
+    el.style.setProperty('--lg-touch-x', (nx * 100).toFixed(1) + '%');
+    el.style.setProperty('--lg-touch-y', (ny * 100).toFixed(1) + '%');
+
+    /* Corners deform toward the finger without disturbing layout geometry. */
+    el.style.setProperty('--lg-ra', (18 + (1-nx)*13 + (1-ny)*5).toFixed(1) + 'px');
+    el.style.setProperty('--lg-rb', (18 + nx*13 + (1-ny)*5).toFixed(1) + 'px');
+    el.style.setProperty('--lg-rc', (18 + nx*13 + ny*5).toFixed(1) + 'px');
+    el.style.setProperty('--lg-rd', (18 + (1-nx)*13 + ny*5).toFixed(1) + 'px');
+  }
+
+  function resetTouch(el) {
+    el.style.setProperty('--lg-sx', '1');
+    el.style.setProperty('--lg-sy', '1');
+    el.style.setProperty('--lg-shift-x', '0px');
+    el.style.setProperty('--lg-shift-y', '0px');
+    el.style.setProperty('--lg-touch-x', '50%');
+    el.style.setProperty('--lg-touch-y', '50%');
+  }
+
+  document.addEventListener('pointerdown', ev => {
+    if (!document.body.classList.contains('liquid-glass-active')) return;
+    if (ev.pointerType === 'mouse' && ev.button !== 0) return;
+
+    const el = candidateFrom(ev.target);
+    if (!el) return;
+
+    const rect = el.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+
+    el.classList.add('lg-touch-liquid', 'lg-touch-down');
+    el.classList.remove('lg-touch-release');
+
+    const state = {
+      el,
+      rect,
+      startX: ev.clientX,
+      startY: ev.clientY
+    };
+    active.set(ev.pointerId, state);
+    setTouchShape(el, ev, state);
+
+    try { el.setPointerCapture(ev.pointerId); } catch (_) {}
+  }, { passive: true });
+
+  document.addEventListener('pointermove', ev => {
+    const state = active.get(ev.pointerId);
+    if (!state) return;
+    setTouchShape(state.el, ev, state);
+  }, { passive: true });
+
+  function release(ev) {
+    const state = active.get(ev.pointerId);
+    if (!state) return;
+    active.delete(ev.pointerId);
+
+    const el = state.el;
+    el.classList.remove('lg-touch-down');
+    el.classList.add('lg-touch-release');
+    resetTouch(el);
+
+    window.setTimeout(() => {
+      el.classList.remove('lg-touch-release', 'lg-touch-compact');
+    }, 500);
+
+    try { el.releasePointerCapture(ev.pointerId); } catch (_) {}
+  }
+
+  document.addEventListener('pointerup', release, { passive: true });
+  document.addEventListener('pointercancel', release, { passive: true });
+
+  window.addEventListener('blur', () => {
+    active.forEach(({el}) => {
+      el.classList.remove('lg-touch-down');
+      el.classList.add('lg-touch-release');
+      resetTouch(el);
+      window.setTimeout(() => el.classList.remove('lg-touch-release', 'lg-touch-compact'), 500);
+    });
+    active.clear();
+  });
+
+  function boot() {
+    addControl(saved);
+    applyTransparency(saved);
+
+    /*
+      Repair stale v4 classes if a browser restored DOM state from bfcache/dev hot reload.
+      Structural elements must never carry those old transform-owning classes.
+    */
+    document.querySelectorAll('.lg-liquid-interactive,.lg-pressed,.lg-releasing').forEach(el => {
+      el.classList.remove('lg-liquid-interactive','lg-pressed','lg-releasing');
+      el.style.removeProperty('--lg-depth');
+      el.style.removeProperty('--lg-rx');
+      el.style.removeProperty('--lg-ry');
+      el.style.removeProperty('--lg-tx');
+      el.style.removeProperty('--lg-ty');
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot, { once: true });
+  } else {
+    boot();
+  }
+})();
+</script>
+
+
+<!-- LIQUID_GLASS_V24_138_6_SETTINGS_ONBOARDING_CLEANUP -->
+<style id="liquid-glass-v24-138-6-style">
+  #lg-appearance-guide {
+    border: 1px solid rgba(56,189,248,.22);
+    background: rgba(14,165,233,.055);
+    border-radius: 16px;
+    padding: 10px 11px;
+  }
+  html:not(.dark) #lg-appearance-guide {
+    background: rgba(255,255,255,.025);
+    border-color: rgba(2,132,199,.22);
+    color: #0f172a;
+  }
+  #lg-first-visit-tip {
+    position: fixed;
+    top: max(5.6rem, calc(env(safe-area-inset-top, 0px) + 5.6rem));
+    right: max(.75rem, calc(env(safe-area-inset-right, 0px) + .75rem));
+    z-index: 100020;
+    width: min(330px, calc(100vw - 1.5rem));
+    padding: 13px;
+    border-radius: 20px;
+    background: rgba(5,12,24,.86);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,.16);
+    box-shadow: 0 22px 60px -22px rgba(0,0,0,.65);
+    -webkit-backdrop-filter: blur(16px) saturate(145%);
+    backdrop-filter: blur(16px) saturate(145%);
+    transform-origin: top right;
+    animation: lg-tip-in-v6 .5s cubic-bezier(.16,1,.3,1) both;
+  }
+  html:not(.dark) #lg-first-visit-tip {
+    background: rgba(248,250,252,.92);
+    color: #0f172a;
+    border-color: rgba(15,23,42,.13);
+  }
+  @keyframes lg-tip-in-v6 {
+    from { opacity:0; transform:translateY(-10px) scale(.94); }
+    to { opacity:1; transform:translateY(0) scale(1); }
+  }
+  #lg-first-visit-tip .lg-tip-actions {
+    display:flex; gap:7px; margin-top:10px;
+  }
+  #lg-first-visit-tip button {
+    min-height:34px; border-radius:11px; padding:0 10px;
+    font-size:11px; font-weight:800;
+  }
+  #lg-first-visit-tip .lg-tip-open {
+    background:#2563eb; color:#fff; flex:1;
+  }
+  #lg-first-visit-tip .lg-tip-dismiss {
+    background:rgba(148,163,184,.16); color:inherit;
+  }
+</style>
+<script id="liquid-glass-v24-138-6-js">
+(function () {
+  const BG_KEY = 'mainBackgroundMode';
+  const TIP_KEY = 'liquidGlassSettingsTipDismissed';
+  const TIP_SEEN_KEY = 'liquidGlassSettingsTipSeen';
+  const DEFAULT_BG = 'current-cover';
+  const DEFAULT_GLASS = 98;
+
+  const store = {
+    get(k) {
+      try {
+        if (window.AppStorage && typeof AppStorage.getItem === 'function') return AppStorage.getItem(k);
+        return localStorage.getItem(k);
+      } catch (_) { return null; }
+    },
+    set(k,v) {
+      try {
+        if (window.AppStorage && typeof AppStorage.setItem === 'function') AppStorage.setItem(k, String(v));
+        else localStorage.setItem(k, String(v));
+      } catch (_) {}
+    },
+    remove(k) {
+      try {
+        if (window.AppStorage && typeof AppStorage.removeItem === 'function') AppStorage.removeItem(k);
+        else localStorage.removeItem(k);
+      } catch (_) {}
+    }
+  };
+
+  window.getMainBackgroundMode = function () {
+    const v = store.get(BG_KEY);
+    return (v === 'classic' || v === 'current-cover') ? v : DEFAULT_BG;
+  };
+
+  function currentCoverUrl() {
+    const artwork = document.getElementById('artwork');
+    if (artwork) {
+      const src = artwork.currentSrc || artwork.src || artwork.getAttribute('src');
+      if (src) return src;
+    }
+    return null;
+  }
+
+  window.applyMainBackgroundMode = function(mode, persist = true) {
+    mode = mode === 'classic' ? 'classic' : 'current-cover';
+    if (persist) store.set(BG_KEY, mode);
+
+    const bg = document.getElementById('liquid-blobs');
+    if (bg) {
+      if (mode === 'current-cover') {
+        const cover = currentCoverUrl();
+        if (cover) bg.style.backgroundImage = `url("${cover.replace(/"/g, '\\"')}")`;
+      } else {
+        bg.style.backgroundImage = 'none';
+      }
+    }
+
+    const select = document.getElementById('lg-background-mode');
+    if (select && select.value !== mode) select.value = mode;
+    const status = document.getElementById('lg-background-status');
+    if (status) status.textContent = mode === 'current-cover' ? 'Aktuelle Cover-Art' : 'Klassisch';
+  };
+
+  function ensureDefaultBackground() {
+    if (!store.get(BG_KEY)) store.set(BG_KEY, DEFAULT_BG);
+    window.applyMainBackgroundMode(window.getMainBackgroundMode(), false);
+  }
+
+  function addAppearanceGuide() {
+    const menu = document.getElementById('global-settings-menu');
+    if (!menu || document.getElementById('lg-appearance-guide')) return;
+
+    const guide = document.createElement('div');
+    guide.id = 'lg-appearance-guide';
+    guide.innerHTML = `
+      <div class="flex items-center justify-between gap-2 mb-1.5">
+        <div class="text-[10px] xxs:text-xs font-black">✨ Liquid Glass & Hintergrund</div>
+        <span id="lg-background-status" class="text-[9px] font-bold opacity-65">Aktuelle Cover-Art</span>
+      </div>
+      <p class="text-[8px] xxs:text-[9px] opacity-65 leading-snug mb-2">
+        Tipp: Liquid Glass, Glas-Transparenz und der Seitenhintergrund lassen sich hier jederzeit ändern.
+      </p>
+      <div class="flex items-center gap-2 mb-2">
+        <label for="lg-background-mode" class="text-[9px] font-bold shrink-0">Hintergrund</label>
+        <select id="lg-background-mode" class="flex-1 min-w-0 rounded-xl px-2 py-1.5 text-[9px] font-bold border border-white/10 bg-slate-800/50">
+          <option value="current-cover">Aktuelle Cover-Art</option>
+          <option value="classic">Klassisch / ohne Cover</option>
+        </select>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <button id="lg-reset-appearance" class="py-2 px-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-[9px] border border-blue-400/30">
+          Standard wiederherstellen
+        </button>
+        <button id="lg-show-tip-again" class="py-2 px-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-[9px] border border-white/10">
+          Tipp wieder anzeigen
+        </button>
+      </div>`;
+
+    const transparency = document.getElementById('lg-transparency-panel');
+    if (transparency && transparency.parentNode === menu) {
+      transparency.insertAdjacentElement('afterend', guide);
+    } else {
+      menu.insertBefore(guide, menu.firstChild);
+    }
+
+    const select = guide.querySelector('#lg-background-mode');
+    select.value = window.getMainBackgroundMode();
+    select.addEventListener('change', e => {
+      window.applyMainBackgroundMode(e.target.value, true);
+      if (typeof showToast === 'function') {
+        showToast(e.target.value === 'current-cover'
+          ? '🖼️ Hintergrund: aktuelle Cover-Art'
+          : '🎨 Hintergrund: klassisch', 2200);
+      }
+    });
+
+    guide.querySelector('#lg-reset-appearance').addEventListener('click', () => {
+      store.set(BG_KEY, DEFAULT_BG);
+      store.remove(TIP_KEY);
+      try {
+        localStorage.setItem('liquidGlassTransparency', String(DEFAULT_GLASS));
+      } catch (_) {}
+      if (typeof window.applyTransparency === 'function') {
+        window.applyTransparency(DEFAULT_GLASS);
+      } else {
+        const range = document.getElementById('lg-transparency-range');
+        if (range) {
+          range.value = DEFAULT_GLASS;
+          range.dispatchEvent(new Event('input', {bubbles:true}));
+        }
+      }
+      window.applyMainBackgroundMode(DEFAULT_BG, false);
+      if (typeof showToast === 'function') showToast('✨ Liquid Glass & Hintergrund auf Standard zurückgesetzt', 2800);
+    });
+
+    guide.querySelector('#lg-show-tip-again').addEventListener('click', () => {
+      store.remove(TIP_KEY);
+      store.remove(TIP_SEEN_KEY);
+      showAppearanceTip(true);
+      if (typeof showToast === 'function') showToast('💡 Tipp wurde wieder aktiviert', 2000);
+    });
+
+    window.applyMainBackgroundMode(window.getMainBackgroundMode(), false);
+  }
+
+  function onboardingVisible() {
+    if (document.documentElement.classList.contains('needs-onboarding')) return true;
+    if (window.OnboardingCoordinator && window.OnboardingCoordinator.isOnboarding) return true;
+    const lang = document.getElementById('language-picker-overlay');
+    if (lang && !lang.classList.contains('hidden') && getComputedStyle(lang).display !== 'none') return true;
+    const tutorial = document.getElementById('tutorial-wrapper');
+    if (tutorial && !tutorial.classList.contains('hidden')) return true;
+    return false;
+  }
+
+  function openSettingsFromTip() {
+    const tip = document.getElementById('lg-first-visit-tip');
+    if (tip) tip.remove();
+    store.set(TIP_KEY, '1');
+    store.set(TIP_SEEN_KEY, '1');
+
+    try {
+      if (typeof toggleStandaloneSettings === 'function') {
+        if (typeof isGlobalSettingsOpen === 'undefined' || !isGlobalSettingsOpen) toggleStandaloneSettings();
+      } else {
+        const gear = document.getElementById('btn-settings') || document.querySelector('[aria-label*="Einstellung"],[aria-label*="Settings"]');
+        if (gear) gear.click();
+      }
+    } catch (_) {}
+  }
+
+  function showAppearanceTip(force = false) {
+    if (!force && store.get(TIP_KEY) === '1') return;
+    if (document.getElementById('lg-first-visit-tip')) return;
+    if (onboardingVisible() && !force) return;
+
+    const tip = document.createElement('div');
+    tip.id = 'lg-first-visit-tip';
+    tip.setAttribute('role','status');
+    tip.innerHTML = `
+      <div class="text-xs font-black mb-1">💧 Dein Look ist anpassbar</div>
+      <div class="text-[10px] leading-relaxed opacity-80">
+        Liquid Glass, Transparenz und der Hintergrund können in den Einstellungen geändert werden.
+        Standardmäßig nutzt die Hauptseite die <b>aktuelle Cover-Art</b>.
+      </div>
+      <div class="lg-tip-actions">
+        <button class="lg-tip-open">Einstellungen öffnen</button>
+        <button class="lg-tip-dismiss">Später</button>
+      </div>`;
+    document.body.appendChild(tip);
+
+    tip.querySelector('.lg-tip-open').addEventListener('click', openSettingsFromTip);
+    tip.querySelector('.lg-tip-dismiss').addEventListener('click', () => {
+      store.set(TIP_KEY, '1');
+      store.set(TIP_SEEN_KEY, '1');
+      tip.remove();
+    });
+  }
+  window.showLiquidGlassSettingsTip = () => showAppearanceTip(true);
+
+  function scheduleTip() {
+    let attempts = 0;
+    const timer = setInterval(() => {
+      attempts++;
+      if (!onboardingVisible()) {
+        clearInterval(timer);
+        setTimeout(() => showAppearanceTip(false), 900);
+      } else if (attempts > 120) {
+        clearInterval(timer);
+      }
+    }, 500);
+  }
+
+  function repairOnboardingState() {
+    const force = new URLSearchParams(location.search);
+    const isForced = force.has('first_visit') || force.has('onboarding') || force.has('tutorial');
+    const lang = store.get('app_language') || store.get('selectedLanguage');
+    const done = ['1','true'].includes(String(store.get('onboarding_completed') || '').toLowerCase());
+
+    // A completed onboarding must stay completed across ordinary version bumps.
+    if (lang && done && !isForced) {
+      document.documentElement.classList.remove('needs-onboarding');
+      if (window.OnboardingCoordinator) window.OnboardingCoordinator.isOnboarding = false;
+      const overlay = document.getElementById('language-picker-overlay');
+      if (overlay) {
+        overlay.classList.add('hidden');
+        overlay.classList.remove('lp-active');
+        overlay.style.display = 'none';
+        overlay.style.visibility = 'hidden';
+      }
+    }
+  }
+
+  function boot() {
+    ensureDefaultBackground();
+    addAppearanceGuide();
+    repairOnboardingState();
+
+    // Keep cover background synced even after image source changes outside the music polling function.
+    const artwork = document.getElementById('artwork');
+    if (artwork) {
+      artwork.addEventListener('load', () => {
+        if (window.getMainBackgroundMode() === 'current-cover') {
+          window.applyMainBackgroundMode('current-cover', false);
+        }
+      });
+    }
+
+    // The full first-visit reset already clears AppStorage/local data.
+    // Because all v6 keys live there, reset automatically restores:
+    // current-cover background, 98% glass, tip visible, onboarding incomplete.
+    scheduleTip();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot, {once:true});
+  } else {
+    boot();
+  }
+})();
+</script>
+
 </body>
 </html>
