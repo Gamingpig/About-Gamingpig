@@ -969,6 +969,37 @@
             if (currentLang !== 'de') changeLanguage(currentLang);
             window.GitHubRoadmap.updateCopy();
         });
+
+        async function applyDynamicRoadmapMeta() {
+    try {
+        const res = await fetch('data/roadmap_meta.json', { cache: 'no-cache' });
+        if (!res.ok) return;
+        const meta = await res.json();
+
+        // Release-Badge oben & Footer-Link
+        if (meta.releaseVersion) {
+            const badge = document.querySelector('#section-lawine-tag')?.parentElement?.nextElementSibling;
+            if (badge) badge.innerText = 'Release: ' + meta.releaseVersion;
+        }
+
+        // Card-Ziele
+        if (meta.items) {
+            const cards = document.querySelectorAll('#roadmap-grid > div');
+            cards.forEach((card, idx) => {
+                const id = String(idx + 1);
+                if (meta.items[id]?.target) {
+                    const targetEl = card.querySelector('span.font-mono.text-slate-400');
+                    if (targetEl) targetEl.innerText = meta.items[id].target;
+                }
+            });
+        }
+    } catch (_) {}
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+    applyDynamicRoadmapMeta();
+});
+        
     </script>
 </body>
 </html>
