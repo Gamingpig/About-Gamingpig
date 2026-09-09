@@ -9,6 +9,14 @@
     [BUGFIX] oder [PERFORMANCE] oder [FEATURE] als Tag, dann kurz
     Symptom/Ziel, Ursache, Fix, und der beobachtbare Effekt.
     Neueste Einträge oben.
+    [FIX + DESIGN] Release v24.138.14: Lesbarer Light/Dark-Glass-Tint + Footer-Scroll-Fix
+      - Kontrollierten hellen/dunklen Translucent-Tint wieder auf Karten, Fenster, Modals, Settings,
+        Control Center, Footer, Dynamic Island und Glass-Buttons angewendet.
+      - Footer-Bug behoben: v13 hatte versehentlich opacity:1!important auf alle Glasflächen gesetzt und
+        damit den versteckten Footer sichtbar gehalten. Hidden-State gewinnt jetzt explizit.
+      - Footer wird nur noch in den letzten 80px des tatsächlichen Scrollbereichs eingeblendet und beim
+        Hochscrollen sofort wieder ausgeblendet; ein offenes Footer-Menü wird dabei ebenfalls geschlossen.
+      - Größenänderungen werden ereignisgesteuert per ResizeObserver berücksichtigt, kein Polling.
     [FIX - VISUAL] Release v24.138.13: Settings-Menü als Referenzmaterial für die gesamte UI
       - Alle Karten, Fenster, Modals, Control Center, Footer und Dynamic Island nutzen nun denselben
         zero-fill/translucent Materialpfad wie das geöffnete Settings-Menü.
@@ -23252,7 +23260,6 @@ body.liquid-glass-active :is(
   background-color: transparent !important;
   background-image: none !important;
   background-blend-mode: normal !important;
-  opacity: 1 !important;
   filter: none !important;
   mix-blend-mode: normal !important;
 
@@ -23475,6 +23482,227 @@ body.liquid-glass-active #liquid-blobs {
   } else {
     boot();
   }
+})();
+</script>
+
+
+<!-- LIQUID_GLASS_V24_138_14_READABLE_TINT_FOOTER_FIX -->
+<style id="liquid-glass-v24-138-14-readable-tint-footer-fix">
+/*
+  v24.138.14
+  Bring back a controlled light/dark glass tint everywhere for readability.
+  IMPORTANT: tint is translucent, not an opaque card background.
+*/
+
+:root {
+  --lg-readable-light: .18;
+  --lg-readable-dark: .24;
+  --lg-readable-button-light: .12;
+  --lg-readable-button-dark: .18;
+  --lg-readable-blur: 10px;
+}
+
+/* LIGHT MODE: translucent bright glass everywhere */
+html:not(.dark) body.liquid-glass-active :is(
+  #global-settings-menu,
+  #lyrics-settings-menu,
+  .glass-card,
+  #main-music-card,
+  #mini-player-toggle,
+  #ui-controls,
+  #footer-bubble,
+  #footer-expandable-menu,
+  #tutorial-box,
+  .modal-content,
+  #language-picker-box,
+  #sharecard-picker-box,
+  #command-palette,
+  #dynamic-island,
+  #whats-new-epic-modal > div,
+  #privacy-update-modal > div,
+  #interactive-quest-hud > div,
+  #spotify-wrapped-modal > div
+) {
+  background-color: rgba(255,255,255,var(--lg-readable-light)) !important;
+  background-image: none !important;
+  -webkit-backdrop-filter: blur(var(--lg-readable-blur)) saturate(118%) !important;
+  backdrop-filter: blur(var(--lg-readable-blur)) saturate(118%) !important;
+  border-color: rgba(255,255,255,.28) !important;
+  border-top-color: rgba(255,255,255,.42) !important;
+  box-shadow:
+    0 14px 34px -28px rgba(15,23,42,.42),
+    inset 0 1px 0 rgba(255,255,255,.26) !important;
+}
+
+/* DARK MODE: translucent dark glass everywhere */
+.dark body.liquid-glass-active :is(
+  #global-settings-menu,
+  #lyrics-settings-menu,
+  .glass-card,
+  #main-music-card,
+  #mini-player-toggle,
+  #ui-controls,
+  #footer-bubble,
+  #footer-expandable-menu,
+  #tutorial-box,
+  .modal-content,
+  #language-picker-box,
+  #sharecard-picker-box,
+  #command-palette,
+  #dynamic-island,
+  #whats-new-epic-modal > div,
+  #privacy-update-modal > div,
+  #interactive-quest-hud > div,
+  #spotify-wrapped-modal > div
+) {
+  background-color: rgba(2,6,23,var(--lg-readable-dark)) !important;
+  background-image: none !important;
+  -webkit-backdrop-filter: blur(var(--lg-readable-blur)) saturate(118%) !important;
+  backdrop-filter: blur(var(--lg-readable-blur)) saturate(118%) !important;
+  border-color: rgba(255,255,255,.14) !important;
+  border-top-color: rgba(255,255,255,.24) !important;
+  box-shadow:
+    0 16px 40px -28px rgba(0,0,0,.72),
+    inset 0 1px 0 rgba(255,255,255,.12) !important;
+}
+
+/* Buttons/compact controls get the same readable translucent treatment. */
+html:not(.dark) body.liquid-glass-active :is(
+  #ui-controls,
+  #global-settings-menu,
+  #lyrics-settings-menu,
+  #footer-bubble,
+  #footer-expandable-menu,
+  .glass-card,
+  .modal-content,
+  #tutorial-box,
+  #language-picker-box,
+  #sharecard-picker-box,
+  #command-palette
+) button:not(.preserve-solid-button) {
+  background-color: rgba(255,255,255,var(--lg-readable-button-light)) !important;
+  background-image: none !important;
+  -webkit-backdrop-filter: blur(calc(var(--lg-readable-blur) * .72)) !important;
+  backdrop-filter: blur(calc(var(--lg-readable-blur) * .72)) !important;
+  border-color: rgba(255,255,255,.22) !important;
+}
+
+.dark body.liquid-glass-active :is(
+  #ui-controls,
+  #global-settings-menu,
+  #lyrics-settings-menu,
+  #footer-bubble,
+  #footer-expandable-menu,
+  .glass-card,
+  .modal-content,
+  #tutorial-box,
+  #language-picker-box,
+  #sharecard-picker-box,
+  #command-palette
+) button:not(.preserve-solid-button) {
+  background-color: rgba(2,6,23,var(--lg-readable-button-dark)) !important;
+  background-image: none !important;
+  -webkit-backdrop-filter: blur(calc(var(--lg-readable-blur) * .72)) !important;
+  backdrop-filter: blur(calc(var(--lg-readable-blur) * .72)) !important;
+  border-color: rgba(255,255,255,.12) !important;
+}
+
+/* Hover may increase legibility a little, but never become opaque. */
+html:not(.dark) body.liquid-glass-active :is(
+  .glass-card,.modal-content,#global-settings-menu,#lyrics-settings-menu,
+  #tutorial-box,#language-picker-box,#sharecard-picker-box,#command-palette
+):hover {
+  background-color: rgba(255,255,255,calc(var(--lg-readable-light) + .04)) !important;
+}
+.dark body.liquid-glass-active :is(
+  .glass-card,.modal-content,#global-settings-menu,#lyrics-settings-menu,
+  #tutorial-box,#language-picker-box,#sharecard-picker-box,#command-palette
+):hover {
+  background-color: rgba(2,6,23,calc(var(--lg-readable-dark) + .04)) !important;
+}
+
+/* === FOOTER VISIBILITY CONTRACT ===
+   v13 accidentally forced opacity:1 on every glass surface, including the footer.
+   Hidden must WIN absolutely whenever the visible class is absent.
+*/
+#footer-bubble:not(.footer-bubble-visible) {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  transform: translateX(-50%) translateY(20px) !important;
+}
+
+#footer-bubble.footer-bubble-visible {
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  transform: translateX(-50%) translateY(0) !important;
+}
+
+/* Popup must also be gone whenever the footer itself is not active. */
+#footer-bubble:not(.footer-bubble-visible) ~ #footer-expandable-menu,
+#footer-expandable-menu.hidden {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Keep Dynamic Island's own animation untouched. */
+#dynamic-island {
+  scale: 1 !important;
+  translate: none !important;
+}
+</style>
+
+<script id="liquid-glass-v24-138-14-footer-visibility-js">
+(function () {
+  const bubble = document.getElementById('footer-bubble');
+  const menu = document.getElementById('footer-expandable-menu');
+  if (!bubble) return;
+
+  function forceFooterState() {
+    const scrollTop = window.scrollY || document.documentElement.scrollTop || 0;
+    const maxScroll = Math.max(
+      0,
+      document.documentElement.scrollHeight - window.innerHeight
+    );
+
+    /* Show only inside the last 80px of actual scroll range. */
+    const nearEnd = maxScroll > 0 && (maxScroll - scrollTop) <= 80;
+
+    if (nearEnd) {
+      bubble.classList.add('footer-bubble-visible');
+      bubble.removeAttribute('aria-hidden');
+    } else {
+      bubble.classList.remove('footer-bubble-visible');
+      bubble.setAttribute('aria-hidden', 'true');
+
+      /* If the expandable footer menu was open, close it too. */
+      if (menu) {
+        menu.classList.add('hidden');
+        menu.style.pointerEvents = 'none';
+      }
+    }
+  }
+
+  let raf = 0;
+  function scheduleFooterCheck() {
+    if (raf) return;
+    raf = requestAnimationFrame(() => {
+      raf = 0;
+      forceFooterState();
+    });
+  }
+
+  window.addEventListener('scroll', scheduleFooterCheck, { passive: true });
+  window.addEventListener('resize', scheduleFooterCheck, { passive: true });
+
+  /* Content height can change after images/fonts/music UI load.
+     ResizeObserver updates only when layout size actually changes. */
+  const ro = new ResizeObserver(scheduleFooterCheck);
+  ro.observe(document.documentElement);
+
+  forceFooterState();
 })();
 </script>
 
