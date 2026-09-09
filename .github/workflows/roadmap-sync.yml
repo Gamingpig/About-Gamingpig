@@ -1,18 +1,22 @@
 name: Sync votes and wishes
+
 on:
-  schedule:
-    - cron: '7,22,37,52 * * * *'
+  repository_dispatch:
+    types: [new-vote-or-wish]
   workflow_dispatch:
   push:
     paths:
       - '.github/workflows/roadmap-sync.yml'
       - 'scripts/sync-roadmap.cjs'
       - 'js/roadmap-protocol.js'
+
 permissions:
   contents: write
+
 concurrency:
   group: portfolio-data-writer
   cancel-in-progress: false
+
 jobs:
   sync:
     runs-on: ubuntu-latest
