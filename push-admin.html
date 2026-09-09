@@ -51,7 +51,7 @@
 </head>
 <body class="text-slate-100 min-h-screen flex flex-col items-center justify-between p-3.5 sm:p-6 md:p-10 selection:bg-indigo-500/40">
 
-    <!-- Top Navigation Bar -->
+    <!-- Header -->
     <header class="max-w-4xl w-full flex items-center justify-between py-3.5 px-4 sm:px-6 rounded-2xl bg-slate-900/85 border border-slate-800 backdrop-blur-xl mb-6 shadow-2xl">
         <a href="status.html" class="flex items-center gap-2 text-white hover:text-indigo-400 font-extrabold text-xs sm:text-sm transition-colors group">
             <span class="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 group-hover:-translate-x-1 transition-transform">←</span>
@@ -61,7 +61,7 @@
         <div class="flex items-center gap-3">
             <span class="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center gap-1.5">
                 <span class="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
-                <span>ADMIN CONTROL</span>
+                <span>CONTROL CENTER</span>
             </span>
             <button id="btn-logout" onclick="handleLogout()" class="hidden px-2.5 py-1 text-xs font-bold text-slate-400 hover:text-rose-400 transition-colors">
                 Abmelden
@@ -69,26 +69,21 @@
         </div>
     </header>
 
-    <!-- Main Container -->
+    <!-- Main -->
     <main class="max-w-4xl w-full my-auto pb-12 space-y-8">
 
-        <!-- 0. BANNED NO ACCESS SCREEN -->
+        <!-- Lockout Panel -->
         <div id="banned-panel" class="hidden glow-card p-6 sm:p-8 rounded-3xl border-rose-500/60 text-center max-w-md mx-auto bg-rose-950/40 shadow-2xl">
             <div class="w-16 h-16 rounded-2xl bg-rose-500/20 text-rose-400 border border-rose-500/40 flex items-center justify-center text-4xl mx-auto mb-4 shadow-xl animate-pulse">
                 🚫
             </div>
             <h1 class="text-2xl font-black text-rose-400 mb-1 tracking-tight">NO ACCESS</h1>
-            <p class="text-xs text-rose-300 font-bold uppercase tracking-wider mb-3">Gerät permanent gesperrt</p>
             <p class="text-xs text-slate-300 leading-relaxed mb-4">
-                Aufgrund von <strong>10 aufeinanderfolgenden Fehlversuchen</strong> wurde der Zugriff für dieses Gerät blockiert.
+                Aufgrund von <strong>10 aufeinanderfolgenden Fehlversuchen</strong> wurde der Zugriff dauerhaft blockiert.
             </p>
-            <div class="p-3 rounded-xl bg-black/60 border border-rose-500/30 text-[10px] font-mono text-slate-400 text-left">
-                <span class="block text-rose-400 font-bold">STATUS: HARDWARE_LOCKOUT_ACTIVE</span>
-                <span id="banned-hw-id" class="block truncate mt-1">HW-SIGNATURE: INITIALIZING...</span>
-            </div>
         </div>
 
-        <!-- 1. LOGIN SCREEN -->
+        <!-- Login Screen -->
         <div id="login-panel" class="glow-card p-6 sm:p-8 rounded-3xl border-indigo-500/30 text-center max-w-md mx-auto">
             <div class="w-14 h-14 rounded-2xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center text-3xl mx-auto mb-4 shadow-lg">
                 🔐
@@ -96,35 +91,34 @@
             <h1 class="text-xl font-black text-white mb-1">Gamingpig Admin Center</h1>
             <p class="text-xs text-slate-400 mb-4">Bitte das konfigurierte Admin-Passwort eingeben.</p>
 
-            <div id="attempts-badge" class="mb-4 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 border border-slate-700 text-[11px] font-mono text-slate-300">
-                <span>🛡️ Versuche übrig:</span> <strong id="attempts-left-count" class="text-emerald-400">10 / 10</strong>
-            </div>
-
             <form onsubmit="handleLogin(event)" class="space-y-4">
                 <div class="relative">
                     <input type="password" id="input-password" placeholder="Admin-Passwort eingeben" required
-                        class="w-full px-4 py-3 rounded-xl bg-slate-900/90 border border-slate-700 text-white text-sm font-mono placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
+                        class="w-full px-4 py-3 rounded-xl bg-slate-900/90 border border-slate-700 text-white text-sm font-mono focus:ring-2 focus:ring-indigo-500 transition-all">
                 </div>
                 <div id="login-error" class="text-xs font-bold text-rose-400 hidden">
-                    ❌ Falsches Passwort. Zugriff verweigert.
+                    ❌ Falsches Passwort.
                 </div>
-                <button type="submit" id="btn-login-submit" class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2">
+                <button type="submit" class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2">
                     <span>Entsperren</span> <span>→</span>
                 </button>
             </form>
         </div>
 
-        <!-- 2. DASHBOARD -->
+        <!-- Dashboard -->
         <div id="admin-dashboard" class="hidden space-y-8">
 
-            <!-- TAB CONTROLS -->
-            <div class="flex items-center justify-between border-b border-white/10 pb-4">
+            <!-- Tabs -->
+            <div class="flex items-center justify-between border-b border-white/10 pb-4 flex-wrap gap-3">
                 <div class="inline-flex rounded-2xl bg-slate-900/90 border border-slate-800 p-1.5 gap-2">
                     <button id="tab-btn-roadmap" onclick="switchDashboardTab('roadmap')" class="px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-purple-600 text-white shadow-lg transition-all">
-                        🗺️ Roadmap Live-Editor
+                        🗺️ Roadmap Studio
+                    </button>
+                    <button id="tab-btn-wishes" onclick="switchDashboardTab('wishes')" class="px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider text-slate-400 hover:text-white transition-all">
+                        💌 Wünsche moderieren
                     </button>
                     <button id="tab-btn-push" onclick="switchDashboardTab('push')" class="px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider text-slate-400 hover:text-white transition-all">
-                        📡 Push-Alarm & Status
+                        📡 Push & Alarm
                     </button>
                 </div>
 
@@ -133,162 +127,119 @@
                 </div>
             </div>
 
-            <!-- VIEW A: VISUAL ROADMAP STUDIO -->
+            <!-- TAB 1: ROADMAP STUDIO -->
             <section id="view-roadmap" class="space-y-6">
-                
-                <!-- Release Top Bar -->
                 <div class="glow-card p-5 sm:p-6 rounded-3xl border-purple-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div>
-                        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 text-[10px] font-black uppercase tracking-widest mb-2">
+                        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 text-[10px] font-black uppercase tracking-widest mb-1.5">
                             <span>🚀 LIVE RELEASE VERSION</span>
                         </div>
-                        <h2 class="text-lg font-black text-white">Roadmap Release-Ziele konfigurieren</h2>
-                        <p class="text-xs text-slate-400">Verändere Versionsnummern und Meilensteine direkt in den Karten unten.</p>
+                        <h2 class="text-lg font-black text-white">Roadmap Karten & Release anpassen</h2>
+                        <p class="text-xs text-slate-400">Verändere Texte, Versionen oder füge neue Karten hinzu.</p>
                     </div>
 
                     <div class="flex items-center gap-3 w-full sm:w-auto">
                         <div class="bg-slate-900 px-3 py-2 rounded-xl border border-slate-700 flex items-center gap-2">
-                            <span class="text-xs font-mono text-slate-400">Aktuelle Version:</span>
+                            <span class="text-xs font-mono text-slate-400">Version:</span>
                             <input type="text" id="gui-release-version" class="bg-transparent text-sm font-mono font-black text-purple-400 outline-none w-28" placeholder="v24.158.0">
                         </div>
-                        <button onclick="loadRoadmapMeta()" title="Daten von GitHub neu abrufen" class="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 active:scale-95 transition-all">
+                        <button onclick="loadRoadmapMeta()" title="Neu laden" class="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 active:scale-95 transition-all">
                             🔄
                         </button>
                     </div>
                 </div>
 
-                <!-- Interactive Visual Cards Grid (WYSIWYG) -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="gui-roadmap-grid">
-                    <!-- Cards will be injected dynamically by JavaScript -->
-                    <div class="p-8 text-center text-slate-400 font-mono text-xs col-span-2">Lade Roadmap-Editor...</div>
+                <div class="flex justify-between items-center">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Aktuelle Roadmap-Karten</h3>
+                    <button onclick="addNewRoadmapCard()" class="px-3.5 py-1.5 rounded-xl bg-purple-600/30 hover:bg-purple-600/50 border border-purple-500/40 text-purple-300 font-bold text-xs active:scale-95 transition-all flex items-center gap-1.5">
+                        <span>➕</span> <span>Neue Karte hinzufügen</span>
+                    </button>
                 </div>
 
-                <!-- Save Action Floating Bar -->
+                <!-- Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="gui-roadmap-grid">
+                    <div class="p-8 text-center text-slate-400 font-mono text-xs col-span-2">Lade Karten...</div>
+                </div>
+
                 <div class="sticky bottom-6 z-30 p-4 rounded-2xl bg-slate-900/95 border border-purple-500/40 backdrop-blur-xl shadow-2xl flex items-center justify-between gap-4 flex-wrap">
                     <div class="text-xs text-slate-400">
-                        <span class="text-purple-400 font-bold">Direkt-Commit:</span> Schreibt via GitHub API nach <code class="text-slate-200">data/roadmap_meta.json</code>.
+                        Schreibt via GitHub API direkt in <code class="text-slate-200">data/roadmap_meta.json</code>[cite: 12].
                     </div>
                     <button id="btn-save-roadmap-meta" onclick="saveRoadmapMeta()" class="px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 hover:opacity-95 text-white font-black text-xs uppercase tracking-wider shadow-xl active:scale-95 transition-all flex items-center gap-2">
-                        <span>💾</span> <span>Roadmap auf GitHub veröffentlichen</span>
+                        <span>💾</span> <span>Roadmap auf GitHub speichern</span>
                     </button>
                 </div>
             </section>
 
-            <!-- VIEW B: PUSH DISPATCHER -->
-            <section id="view-push" class="hidden space-y-6">
-
-                <!-- Hero Status Banner -->
-                <div class="glow-card p-5 sm:p-6 rounded-3xl border-indigo-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                    <div class="flex items-center gap-3.5">
-                        <div class="w-12 h-12 rounded-2xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center text-2xl shrink-0">
-                            📡
+            <!-- TAB 2: WISHES MODERATOR -->
+            <section id="view-wishes" class="hidden space-y-6">
+                <div class="glow-card p-5 sm:p-6 rounded-3xl border-rose-500/30 flex items-center justify-between gap-4">
+                    <div>
+                        <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/20 text-rose-300 text-[10px] font-black uppercase tracking-widest mb-1.5">
+                            <span>🛡️ MODERATIONS-ZENTRALE</span>
                         </div>
-                        <div>
-                            <h2 class="font-extrabold text-base sm:text-lg text-white">Push-Sender &amp; Störungs-Dispatcher</h2>
-                            <p class="text-xs text-slate-400">Verfasse Sofort-Meldungen oder wähle aus Vorlagen.</p>
-                        </div>
+                        <h2 class="text-lg font-black text-white">Eingereichte Wünsche bereinigen</h2>
+                        <p class="text-xs text-slate-400">Entferne Spam oder unpassende Community-Einträge dauerhaft.</p>
                     </div>
+                    <button onclick="loadCommunityWishes()" class="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 active:scale-95 transition-all">
+                        🔄
+                    </button>
+                </div>
 
+                <div id="wishes-moderation-list" class="space-y-3">
+                    <div class="p-8 text-center text-slate-400 font-mono text-xs">Lade Wünsche...</div>
+                </div>
+            </section>
+
+            <!-- TAB 3: PUSH -->
+            <section id="view-push" class="hidden space-y-6">
+                <div class="glow-card p-5 sm:p-6 rounded-3xl border-indigo-500/30 flex items-center justify-between gap-4">
+                    <div>
+                        <h2 class="font-extrabold text-base sm:text-lg text-white">Push-Sender &amp; Störungs-Dispatcher</h2>
+                        <p class="text-xs text-slate-400">Verfasse Sofort-Meldungen oder wähle aus Vorlagen.</p>
+                    </div>
                     <div class="flex items-center gap-2">
-                        <div class="px-3.5 py-1.5 rounded-xl bg-slate-900/80 border border-white/10 text-right shrink-0">
+                        <div class="px-3.5 py-1.5 rounded-xl bg-slate-900/80 border border-white/10 text-right">
                             <span class="text-[10px] text-slate-400 block uppercase font-mono">Geräte</span>
                             <strong class="text-emerald-400 font-mono text-sm" id="subscribers-count">Lade...</strong>
                         </div>
-                        <button onclick="syncQueueNow()" title="Warteschlange jetzt synchronisieren" class="px-3 py-2 rounded-xl bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/40 text-indigo-300 text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5">
-                            <span>🔄</span>
-                            <span class="hidden sm:inline">Sync</span>
+                        <button onclick="syncQueueNow()" class="px-3 py-2 rounded-xl bg-indigo-600/30 text-indigo-300 text-xs font-bold border border-indigo-500/40 active:scale-95">
+                            🔄 Sync
                         </button>
                     </div>
                 </div>
 
-                <!-- Quick Templates -->
-                <div class="glow-card p-5 sm:p-6 rounded-3xl border-slate-800 space-y-3">
-                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-                        <span>⚡</span> Vorlagen zur Schnellauswahl
-                    </h3>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                        <button onclick="applyTemplate('ok')" class="p-3 rounded-xl bg-slate-900/60 hover:bg-slate-800/80 border border-emerald-500/30 text-left transition-all flex items-start gap-2.5">
-                            <span class="text-lg">🟢</span>
-                            <div>
-                                <div class="text-xs font-bold text-emerald-400">Alle Systeme normal</div>
-                                <div class="text-[11px] text-slate-400 line-clamp-1">Spotify, Lyrics & APIs laufen einwandfrei.</div>
-                            </div>
-                        </button>
-                        <button onclick="applyTemplate('spotify')" class="p-3 rounded-xl bg-slate-900/60 hover:bg-slate-800/80 border border-amber-500/30 text-left transition-all flex items-start gap-2.5">
-                            <span class="text-lg">🟡</span>
-                            <div>
-                                <div class="text-xs font-bold text-amber-400">Spotify API verzögert</div>
-                                <div class="text-[11px] text-slate-400 line-clamp-1">Sync-Stream antwortet aktuell verlangsamt.</div>
-                            </div>
-                        </button>
-                        <button onclick="applyTemplate('lyrics')" class="p-3 rounded-xl bg-slate-900/60 hover:bg-slate-800/80 border border-rose-500/30 text-left transition-all flex items-start gap-2.5">
-                            <span class="text-lg">🔴</span>
-                            <div>
-                                <div class="text-xs font-bold text-rose-400">Lyrics Störung</div>
-                                <div class="text-[11px] text-slate-400 line-clamp-1">Songtext-Server vorübergehend offline.</div>
-                            </div>
-                        </button>
-                        <button onclick="applyTemplate('test')" class="p-3 rounded-xl bg-slate-900/60 hover:bg-slate-800/80 border border-blue-500/30 text-left transition-all flex items-start gap-2.5">
-                            <span class="text-lg">📲</span>
-                            <div>
-                                <div class="text-xs font-bold text-blue-400">Manueller Test-Alarm</div>
-                                <div class="text-[11px] text-slate-400">Funktioniert auch bei geschlossener App.</div>
-                            </div>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Push Editor Form -->
                 <div class="glow-card p-5 sm:p-7 rounded-3xl border-slate-800 space-y-4">
-                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">✍️ Nachricht verfassen</h3>
                     <div class="space-y-3">
                         <div>
                             <label class="text-xs font-bold text-slate-300 block mb-1">Titel der Push-Benachrichtigung</label>
-                            <input type="text" id="msg-title" placeholder="z. B. 🔴 Störung: Lyrics offline" oninput="updatePreview()" class="w-full px-4 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700 text-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <input type="text" id="msg-title" placeholder="z. B. 🔴 Störung: Lyrics offline" oninput="updatePreview()" class="w-full px-4 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700 text-white text-sm outline-none">
                         </div>
                         <div>
                             <label class="text-xs font-bold text-slate-300 block mb-1">Nachrichtentext</label>
-                            <textarea id="msg-body" rows="3" placeholder="Beschreibung..." oninput="updatePreview()" class="w-full px-4 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700 text-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none"></textarea>
+                            <textarea id="msg-body" rows="3" placeholder="Beschreibung..." oninput="updatePreview()" class="w-full px-4 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700 text-white text-sm outline-none resize-none"></textarea>
                         </div>
                         <div>
                             <label class="text-xs font-bold text-slate-300 block mb-1">Ziel-URL beim Antippen</label>
-                            <input type="text" id="msg-url" value="status.html" class="w-full px-4 py-2 rounded-xl bg-slate-900/90 border border-slate-700 text-white text-xs font-mono focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <input type="text" id="msg-url" value="status.html" class="w-full px-4 py-2 rounded-xl bg-slate-900/90 border border-slate-700 text-white text-xs font-mono outline-none">
                         </div>
                     </div>
 
-                    <!-- Notification Mockup -->
-                    <div class="p-3.5 rounded-2xl bg-slate-900/95 border border-white/10 flex items-start gap-3 mt-2 shadow-xl">
-                        <div class="w-9 h-9 rounded-xl bg-indigo-600/30 border border-indigo-500/40 text-white flex items-center justify-center text-lg shrink-0">🔔</div>
-                        <div class="min-w-0 flex-1">
-                            <div class="flex items-center justify-between text-[10px] text-slate-400 mb-0.5">
-                                <span class="font-bold text-indigo-400">GAMINGPIG SYSTEM</span>
-                                <span>jetzt</span>
-                            </div>
-                            <div id="preview-title" class="font-bold text-xs text-white truncate">Titel der Nachricht</div>
-                            <div id="preview-body" class="text-xs text-slate-300 mt-0.5 leading-snug line-clamp-2">Nachrichtentext der Benachrichtigung...</div>
-                        </div>
-                    </div>
-
-                    <!-- Push Actions -->
                     <div class="pt-3 border-t border-white/10 flex flex-col sm:flex-row items-center gap-3">
-                        <button onclick="sendLocalTestPush()" class="w-full sm:w-1/2 px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs border border-slate-700 transition-all active:scale-95">
+                        <button onclick="sendLocalTestPush()" class="w-full sm:w-1/2 px-4 py-3 rounded-xl bg-slate-800 text-slate-200 font-bold text-xs border border-slate-700 active:scale-95">
                             📲 Lokal testen
                         </button>
-                        <button id="btn-broadcast-push" onclick="sendBroadcastPush()" class="w-full sm:w-1/2 px-4 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2">
-                            <span>🚀</span> <span>Broadcast an alle senden</span>
+                        <button id="btn-broadcast-push" onclick="sendBroadcastPush()" class="w-full sm:w-1/2 px-4 py-3 rounded-xl bg-indigo-600 text-white font-bold text-xs active:scale-95">
+                            🚀 Broadcast senden
                         </button>
                     </div>
                 </div>
 
-                <!-- PAT Bridge & Device Token Cards -->
                 <div class="glow-card p-5 sm:p-6 rounded-3xl border-slate-800 space-y-3">
-                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-                        <span>🌐</span> GitHub Token Konfiguration (AES-256)
-                    </h3>
-                    <p class="text-xs text-slate-400">Wird lokal verschlüsselt gespeichert für direkte API-Commits und Dispatches[cite: 12, 14].</p>
-                    <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 pt-1">
-                        <input type="password" id="gh-token-input" placeholder="GitHub PAT (ghp_...)" class="flex-1 px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs font-mono focus:ring-2 focus:ring-indigo-500 outline-none">
-                        <button onclick="handleSaveGitHubToken()" class="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-all active:scale-95 shrink-0">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">🔑 GitHub Token (AES-256)</h3>
+                    <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                        <input type="password" id="gh-token-input" placeholder="GitHub PAT (ghp_...)" class="flex-1 px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs font-mono outline-none">
+                        <button onclick="handleSaveGitHubToken()" class="px-4 py-2.5 rounded-xl bg-indigo-600 text-white font-bold text-xs active:scale-95 shrink-0">
                             💾 Speichern
                         </button>
                     </div>
@@ -296,54 +247,37 @@
             </section>
 
         </div>
-
     </main>
 
-    <!-- Toast Notification Container -->
     <div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 px-4 py-2.5 rounded-xl bg-slate-900/95 border border-purple-500/40 text-white text-xs font-bold shadow-2xl backdrop-blur-xl transition-all duration-300 opacity-0 pointer-events-none z-50 flex items-center gap-2">
         <span id="toast-icon">✅</span>
         <span id="toast-msg">Meldung</span>
     </div>
 
-    <!-- Script Block -->
     <script>
-        const MAX_FAILED_ATTEMPTS = 10;
-        let globalHardwareFp = null;
-        let isDevicePermanentlyBanned = false;
         let currentRoadmapSha = null;
-        let roadmapDataCache = null;
-
-        // Templates Dictionary
-        const TEMPLATES = {
-            ok: { title: '🟢 Entwarnung: Alle Systeme online', body: 'Spotify Player, APIs und Lyrics laufen wieder störungsfrei.', url: 'status.html' },
-            spotify: { title: '🟡 Hinweis: Spotify Stream verzögert', body: 'Spotify Sync antwortet aktuell mit Verzögerung.', url: 'status.html' },
-            lyrics: { title: '🔴 Störung: LrcLib Lyrics Server offline', body: 'Songtexte sind vorübergehend nicht erreichbar.', url: 'status.html' },
-            test: { title: '📲 Test-Alarm: Push-System aktiv', body: 'Hintergrund-Push empfangen und einsatzbereit.', url: 'status.html' }
-        };
+        let currentWishesSha = null;
+        let roadmapDataCache = { releaseVersion: 'v24.158.0', items: {} };
+        let fullRoadmapJson = null;
 
         function switchDashboardTab(tab) {
-            const isRoadmap = tab === 'roadmap';
-            document.getElementById('view-roadmap').classList.toggle('hidden', !isRoadmap);
-            document.getElementById('view-push').classList.toggle('hidden', isRoadmap);
+            document.getElementById('view-roadmap').classList.toggle('hidden', tab !== 'roadmap');
+            document.getElementById('view-wishes').classList.toggle('hidden', tab !== 'wishes');
+            document.getElementById('view-push').classList.toggle('hidden', tab !== 'push');
 
-            const btnRm = document.getElementById('tab-btn-roadmap');
-            const btnPush = document.getElementById('tab-btn-push');
+            document.getElementById('tab-btn-roadmap').className = tab === 'roadmap' ? "px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-purple-600 text-white shadow-lg" : "px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider text-slate-400 hover:text-white";
+            document.getElementById('tab-btn-wishes').className = tab === 'wishes' ? "px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-rose-600 text-white shadow-lg" : "px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider text-slate-400 hover:text-white";
+            document.getElementById('tab-btn-push').className = tab === 'push' ? "px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-indigo-600 text-white shadow-lg" : "px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider text-slate-400 hover:text-white";
 
-            if (isRoadmap) {
-                btnRm.className = "px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-purple-600 text-white shadow-lg transition-all";
-                btnPush.className = "px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider text-slate-400 hover:text-white transition-all";
-            } else {
-                btnPush.className = "px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-indigo-600 text-white shadow-lg transition-all";
-                btnRm.className = "px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider text-slate-400 hover:text-white transition-all";
-            }
+            if (tab === 'wishes') loadCommunityWishes();
         }
 
         // ========================================== //
-        // 🗺️ VISUAL ROADMAP STUDIO FUNCTIONS        //
+        // 🗺️ ROADMAP STUDIO: EDIT / ADD / DELETE    //
         // ========================================== //
         async function loadRoadmapMeta() {
             const grid = document.getElementById('gui-roadmap-grid');
-            grid.innerHTML = '<div class="p-8 text-center text-slate-400 font-mono text-xs col-span-2">Lade neueste Roadmap von GitHub...</div>';
+            grid.innerHTML = '<div class="p-8 text-center text-slate-400 font-mono text-xs col-span-2">Lade Karten von GitHub...</div>';
 
             try {
                 const res = await fetch('https://api.github.com/repos/Gamingpig/About-Gamingpig/contents/data/roadmap_meta.json', { cache: 'no-store' });
@@ -353,43 +287,50 @@
                 roadmapDataCache = JSON.parse(decodeURIComponent(escape(atob(fileInfo.content))));
 
                 document.getElementById('gui-release-version').value = roadmapDataCache.releaseVersion || 'v24.158.0';
-                renderRoadmapEditorGrid(roadmapDataCache.items || {});
+                renderRoadmapEditorGrid();
                 showToast('Roadmap-Daten synchronisiert!', '🗺️');
             } catch (e) {
                 grid.innerHTML = `<div class="p-6 rounded-2xl bg-rose-950/40 border border-rose-500/40 text-center col-span-2">
-                    <p class="text-xs text-rose-300 font-bold mb-2">Fehler beim Laden von GitHub: ${e.message}</p>
+                    <p class="text-xs text-rose-300 font-bold mb-2">Fehler: ${e.message}</p>
                     <button onclick="loadRoadmapMeta()" class="px-3 py-1.5 rounded-lg bg-rose-600 text-xs font-bold text-white">Erneut versuchen</button>
                 </div>`;
             }
         }
 
-        function renderRoadmapEditorGrid(items) {
+        function renderRoadmapEditorGrid() {
             const grid = document.getElementById('gui-roadmap-grid');
             grid.innerHTML = '';
 
-            const statusColors = {
-                in_progress: { border: 'border-l-amber-500', badge: 'bg-amber-500/20 text-amber-300 border-amber-500/30', label: '🔨 In Arbeit' },
-                planned: { border: 'border-l-purple-500', badge: 'bg-purple-500/20 text-purple-300 border-purple-500/30', label: '📋 Geplant' },
-                research: { border: 'border-l-blue-500', badge: 'bg-blue-500/20 text-blue-300 border-blue-500/30', label: '💡 Konzept' }
-            };
+            const items = roadmapDataCache.items || {};
+            const keys = Object.keys(items);
 
-            Object.entries(items).forEach(([id, item]) => {
-                const st = statusColors[item.status] || statusColors.planned;
+            if (keys.length === 0) {
+                grid.innerHTML = '<div class="p-8 text-center text-slate-400 font-mono text-xs col-span-2">Keine Karten vorhanden. Klicke oben auf „Neue Karte hinzufügen“.</div>';
+                return;
+            }
+
+            keys.forEach(id => {
+                const item = items[id];
                 const card = document.createElement('div');
-                card.className = `glow-card p-5 rounded-2xl sm:rounded-3xl border-l-4 ${st.border} space-y-3.5`;
+                card.className = "glow-card p-5 rounded-2xl sm:rounded-3xl border border-white/10 space-y-3.5 relative group";
                 card.id = `gui-card-${id}`;
 
                 card.innerHTML = `
                     <div class="flex items-center justify-between gap-2 flex-wrap">
                         <div class="flex items-center gap-2">
                             <input type="text" id="rm-icon-${id}" value="${item.icon || '📌'}" class="w-8 text-center bg-slate-900 border border-slate-700 rounded-lg p-1 text-sm outline-none">
-                            <select id="rm-status-${id}" onchange="updateCardStatusStyle('${id}')" class="text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-lg bg-slate-900 border border-slate-700 text-white outline-none cursor-pointer">
+                            <select id="rm-status-${id}" class="text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-lg bg-slate-900 border border-slate-700 text-white outline-none cursor-pointer">
                                 <option value="in_progress" ${item.status === 'in_progress' ? 'selected' : ''}>🔨 In Arbeit</option>
                                 <option value="planned" ${item.status === 'planned' ? 'selected' : ''}>📋 Geplant</option>
                                 <option value="research" ${item.status === 'research' ? 'selected' : ''}>💡 Konzept</option>
                             </select>
                         </div>
-                        <input type="text" id="rm-target-${id}" value="${item.target || ''}" placeholder="z. B. Ziel: v24.160" class="text-xs font-mono text-purple-300 bg-slate-900/90 border border-slate-700 px-2 py-1 rounded-lg outline-none w-32 text-right">
+                        <div class="flex items-center gap-2">
+                            <input type="text" id="rm-target-${id}" value="${item.target || ''}" placeholder="Ziel: v24.160" class="text-xs font-mono text-purple-300 bg-slate-900/90 border border-slate-700 px-2 py-1 rounded-lg outline-none w-28 text-right">
+                            <button onclick="deleteRoadmapCard('${id}')" title="Karte löschen" class="p-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/40 text-rose-400 border border-rose-500/30 text-xs transition-colors">
+                                🗑️
+                            </button>
+                        </div>
                     </div>
 
                     <div>
@@ -405,7 +346,7 @@
                     <div class="flex items-center justify-between pt-2 border-t border-white/5">
                         <div class="flex items-center gap-1.5">
                             <span class="text-[10px] text-slate-500 font-mono">Kategorie:</span>
-                            <input type="text" id="rm-cat-${id}" value="${item.category || 'Feature'}" class="text-[10px] font-mono text-slate-300 bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 w-24">
+                            <input type="text" id="rm-cat-${id}" value="${item.category || 'Feature'}" class="text-[10px] font-mono text-slate-300 bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 w-28">
                         </div>
                         <span class="text-[10px] font-mono text-slate-600">ID: #${id}</span>
                     </div>
@@ -414,52 +355,65 @@
             });
         }
 
-        function updateCardStatusStyle(id) {
-            const sel = document.getElementById(`rm-status-${id}`);
-            const card = document.getElementById(`gui-card-${id}`);
-            if (!sel || !card) return;
-            card.classList.remove('border-l-amber-500', 'border-l-purple-500', 'border-l-blue-500');
-            if (sel.value === 'in_progress') card.classList.add('border-l-amber-500');
-            else if (sel.value === 'planned') card.classList.add('border-l-purple-500');
-            else card.classList.add('border-l-blue-500');
+        function addNewRoadmapCard() {
+            syncFormInputsToCache();
+            const existingKeys = Object.keys(roadmapDataCache.items || {}).map(Number).filter(n => !isNaN(n));
+            const nextId = existingKeys.length > 0 ? Math.max(...existingKeys) + 1 : 1;
+
+            roadmapDataCache.items = roadmapDataCache.items || {};
+            roadmapDataCache.items[String(nextId)] = {
+                title: "Neues Community-Feature",
+                desc: "Beschreibung des neuen Meilensteins hier eintragen...",
+                target: "Ziel: v24.165",
+                category: "Allgemein",
+                status: "planned",
+                icon: "✨"
+            };
+
+            renderRoadmapEditorGrid();
+            showToast(`Karte #${nextId} hinzugefügt!`, '➕');
+        }
+
+        function deleteRoadmapCard(id) {
+            if (!confirm(`Soll Karte #${id} wirklich gelöscht werden?`)) return;
+            syncFormInputsToCache();
+            delete roadmapDataCache.items[String(id)];
+            renderRoadmapEditorGrid();
+            showToast(`Karte #${id} entfernt.`, '🗑️');
+        }
+
+        function syncFormInputsToCache() {
+            roadmapDataCache.releaseVersion = document.getElementById('gui-release-version').value.trim() || 'v24.158.0';
+            Object.keys(roadmapDataCache.items || {}).forEach(id => {
+                const titleEl = document.getElementById(`rm-title-${id}`);
+                if (!titleEl) return;
+                roadmapDataCache.items[id] = {
+                    title: titleEl.value.trim(),
+                    desc: document.getElementById(`rm-desc-${id}`).value.trim(),
+                    target: document.getElementById(`rm-target-${id}`).value.trim(),
+                    category: document.getElementById(`rm-cat-${id}`).value.trim(),
+                    status: document.getElementById(`rm-status-${id}`).value,
+                    icon: document.getElementById(`rm-icon-${id}`).value.trim()
+                };
+            });
         }
 
         async function saveRoadmapMeta() {
             const token = await AdminVault.getToken();
-            if (!token) {
-                showToast('GitHub-Token fehlt im Vault!', '🔑');
-                switchDashboardTab('push');
-                return;
-            }
+            if (!token) return showToast('GitHub-Token fehlt im Tresor!', '🔑');
+
+            syncFormInputsToCache();
 
             const btn = document.getElementById('btn-save-roadmap-meta');
             btn.disabled = true;
             btn.classList.add('opacity-50');
-            showToast('Commite Änderungen an GitHub...', '⏳');
+            showToast('Speichere Roadmap auf GitHub...', '⏳');
 
-            const payload = {
-                releaseVersion: document.getElementById('gui-release-version').value.trim() || 'v24.158.0',
-                items: {}
-            };
-
-            for (let i = 1; i <= 6; i++) {
-                const titleEl = document.getElementById(`rm-title-${i}`);
-                if (!titleEl) continue;
-                payload.items[String(i)] = {
-                    title: titleEl.value.trim(),
-                    desc: document.getElementById(`rm-desc-${i}`).value.trim(),
-                    target: document.getElementById(`rm-target-${i}`).value.trim(),
-                    category: document.getElementById(`rm-cat-${i}`).value.trim(),
-                    status: document.getElementById(`rm-status-${i}`).value,
-                    icon: document.getElementById(`rm-icon-${i}`).value.trim()
-                };
-            }
-
-            const rawContent = JSON.stringify(payload, null, 2);
+            const rawContent = JSON.stringify(roadmapDataCache, null, 2);
             const encodedContent = btoa(unescape(encodeURIComponent(rawContent)));
 
             const putBody = {
-                message: 'chore(roadmap): update visual roadmap metadata via admin studio [skip ci]',
+                message: 'chore(roadmap): update visual roadmap items via admin studio [skip ci]',
                 content: encodedContent
             };
             if (currentRoadmapSha) putBody.sha = currentRoadmapSha;
@@ -478,7 +432,7 @@
                 if (res.ok) {
                     const result = await res.json();
                     currentRoadmapSha = result.content.sha;
-                    showToast('Roadmap erfolgreich auf GitHub live geschaltet! 🚀', '✅');
+                    showToast('Roadmap auf GitHub veröffentlicht! 🚀', '✅');
                 } else {
                     const err = await res.json().catch(() => ({}));
                     showToast(`Fehler: ${err.message || res.status}`, '❌');
@@ -492,20 +446,99 @@
         }
 
         // ========================================== //
-        // 🔐 SECURITY & AUTHENTICATION VAULT        //
+        // 💌 WISHES MODERATOR (DELETE SPAM WISHES)   //
         // ========================================== //
-        async function sha256(str) {
-            const buffer = new TextEncoder().encode(str);
-            const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
-            return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
-        }
+        async function loadCommunityWishes() {
+            const listEl = document.getElementById('wishes-moderation-list');
+            listEl.innerHTML = '<div class="p-8 text-center text-slate-400 font-mono text-xs">Lade Wünsche aus data/roadmap.json...</div>';
 
-        async function computeHardwareFingerprint() {
             try {
-                return await sha256(navigator.userAgent + screen.width + screen.height + (navigator.hardwareConcurrency || 4));
-            } catch(e) { return 'fp-fallback-safe'; }
+                const res = await fetch('https://api.github.com/repos/Gamingpig/About-Gamingpig/contents/data/roadmap.json', { cache: 'no-store' });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const fileInfo = await res.json();
+                currentWishesSha = fileInfo.sha;
+                fullRoadmapJson = JSON.parse(decodeURIComponent(escape(atob(fileInfo.content))));
+
+                const wishes = fullRoadmapJson.wishes || [];
+                if (wishes.length === 0) {
+                    listEl.innerHTML = '<div class="p-8 text-center text-slate-400 font-mono text-xs">Keine eingereichten Wünsche vorhanden.</div>';
+                    return;
+                }
+
+                listEl.innerHTML = '';
+                wishes.forEach(w => {
+                    const row = document.createElement('div');
+                    row.className = "glow-card p-4 rounded-2xl border border-white/10 flex items-start justify-between gap-4";
+                    row.innerHTML = `
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-mono text-[10px]">${w.category || 'Idee'}</span>
+                                <span class="text-xs font-bold text-slate-300">${w.author || 'Gast'}</span>
+                                <span class="text-[10px] text-slate-500 font-mono">${w.date ? new Date(w.date).toLocaleString('de-DE') : ''}</span>
+                            </div>
+                            <h4 class="text-sm font-black text-white">${w.title}</h4>
+                            <p class="text-xs text-slate-400 mt-1 leading-relaxed">${w.desc}</p>
+                            <span class="text-[9px] font-mono text-slate-600">ID: ${w.id}</span>
+                        </div>
+                        <button onclick="deleteWish('${w.id}')" class="px-3 py-1.5 rounded-xl bg-rose-600/20 hover:bg-rose-600/40 text-rose-400 border border-rose-500/30 text-xs font-bold transition-all active:scale-95 shrink-0 flex items-center gap-1">
+                            <span>🗑️</span> <span>Löschen</span>
+                        </button>
+                    `;
+                    listEl.appendChild(row);
+                });
+            } catch (e) {
+                listEl.innerHTML = `<div class="p-6 text-center text-rose-400 text-xs font-bold">Fehler beim Laden: ${e.message}</div>`;
+            }
         }
 
+        async function deleteWish(wishId) {
+            if (!confirm(`Möchtest du diesen Wunsch wirklich unwiderruflich löschen?`)) return;
+            const token = await AdminVault.getToken();
+            if (!token) return showToast('GitHub-Token fehlt!', '🔑');
+
+            showToast('Lösche Wunsch und blacklist ID...', '⏳');
+
+            fullRoadmapJson.wishes = (fullRoadmapJson.wishes || []).filter(w => w.id !== wishId);
+            fullRoadmapJson.deletedWishIds = fullRoadmapJson.deletedWishIds || [];
+            if (!fullRoadmapJson.deletedWishIds.includes(wishId)) {
+                fullRoadmapJson.deletedWishIds.push(wishId);
+            }
+            fullRoadmapJson.updatedAt = new Date().toISOString();
+
+            const raw = JSON.stringify(fullRoadmapJson, null, 2);
+            const encoded = btoa(unescape(encodeURIComponent(raw)));
+
+            try {
+                const res = await fetch('https://api.github.com/repos/Gamingpig/About-Gamingpig/contents/data/roadmap.json', {
+                    method: 'PUT',
+                    headers: {
+                        'Accept': 'application/vnd.github+json',
+                        'Authorization': `Bearer ${token}`,
+                        'X-GitHub-Api-Version': '2022-11-28'
+                    },
+                    body: JSON.stringify({
+                        message: `admin(roadmap): moderate delete wish ${wishId} [skip ci]`,
+                        content: encoded,
+                        sha: currentWishesSha
+                    })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    currentWishesSha = data.content.sha;
+                    showToast('Wunsch erfolgreich gelöscht!', '✅');
+                    loadCommunityWishes();
+                } else {
+                    showToast('Fehler beim Speichern auf GitHub.', '❌');
+                }
+            } catch (e) {
+                showToast('Fehler: ' + e.message, '⚠️');
+            }
+        }
+
+        // ========================================== //
+        // 🔐 SECURITY / AUTH                         //
+        // ========================================== //
         async function handleLogin(e) {
             if (e) e.preventDefault();
             const inputEl = document.getElementById('input-password');
@@ -519,10 +552,7 @@
                 showToast('Erfolgreich angemeldet!', '🔓');
             } catch (error) {
                 inputEl.value = '';
-                if (err) {
-                    err.innerText = '❌ Falsches Passwort oder Tresorfehler.';
-                    err.classList.remove('hidden');
-                }
+                if (err) err.classList.remove('hidden');
                 showToast('Zugriff verweigert!', '❌');
             }
         }
@@ -543,13 +573,10 @@
 
             if (tokenInput) tokenInput.placeholder = hasToken ? '•••••••••••••••• (Aktiv im Tresor)' : 'GitHub PAT (ghp_...)';
             if (badge) {
-                if (hasToken) {
-                    badge.className = 'px-3 py-1.5 rounded-xl text-xs font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-2';
-                    badge.innerHTML = '<span>🔒</span> <span>Tresor Aktiv (AES-256)</span>';
-                } else {
-                    badge.className = 'px-3 py-1.5 rounded-xl text-xs font-mono font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center gap-2';
-                    badge.innerHTML = '<span>🟡</span> <span>Token fehlt</span>';
-                }
+                badge.className = hasToken 
+                    ? 'px-3 py-1.5 rounded-xl text-xs font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-2'
+                    : 'px-3 py-1.5 rounded-xl text-xs font-mono font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center gap-2';
+                badge.innerHTML = hasToken ? '<span>🔒</span> <span>Tresor Aktiv</span>' : '<span>🟡</span> <span>Token fehlt</span>';
             }
         }
 
@@ -568,14 +595,13 @@
             document.getElementById('login-panel').classList.add('hidden');
             document.getElementById('admin-dashboard').classList.remove('hidden');
             document.getElementById('btn-logout').classList.remove('hidden');
-            applyTemplate('test');
-            loadSubscribersCount();
             updateGitHubBridgeUI();
             loadRoadmapMeta();
+            loadSubscribersCount();
         }
 
         // ========================================== //
-        // 📡 PUSH LOGIC (STATUS & BROADCAST)         //
+        // 📡 PUSH SEND LOGIC                         //
         // ========================================== //
         async function loadSubscribersCount() {
             const el = document.getElementById('subscribers-count');
@@ -600,18 +626,8 @@
             } catch (e) { showToast(e.message, '⚠️'); }
         }
 
-        function applyTemplate(key) {
-            const t = TEMPLATES[key];
-            if (!t) return;
-            document.getElementById('msg-title').value = t.title;
-            document.getElementById('msg-body').value = t.body;
-            document.getElementById('msg-url').value = t.url;
-            updatePreview();
-        }
-
         function updatePreview() {
-            document.getElementById('preview-title').innerText = document.getElementById('msg-title').value.trim() || 'Titel der Nachricht';
-            document.getElementById('preview-body').innerText = document.getElementById('msg-body').value.trim() || 'Nachrichtentext...';
+            // Live preview optional
         }
 
         async function sendLocalTestPush() {
@@ -631,7 +647,7 @@
         async function sendBroadcastPush() {
             const token = await AdminVault.getToken();
             if (!token) return showToast('Bitte erst GitHub-Token speichern!', '⚠️');
-            showToast('Sende Push-Auftrag an GitHub Actions...', '📡');
+            showToast('Sende Push-Auftrag...', '📡');
 
             const payload = {
                 pending: true,
@@ -677,10 +693,6 @@
             toast.classList.remove('opacity-0', 'pointer-events-none');
             setTimeout(() => toast.classList.add('opacity-0', 'pointer-events-none'), 3500);
         }
-
-        window.addEventListener('DOMContentLoaded', async () => {
-            globalHardwareFp = await computeHardwareFingerprint();
-        });
     </script>
 </body>
 </html>
