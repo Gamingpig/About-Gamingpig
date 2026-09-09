@@ -9,6 +9,11 @@
     [BUGFIX] oder [PERFORMANCE] oder [FEATURE] als Tag, dann kurz
     Symptom/Ziel, Ursache, Fix, und der beobachtbare Effekt.
     Neueste Einträge oben.
+    [DESIGN - KRITISCH] Release v24.138.10: True Window Glass
+      - Alle Hauptflächen sind jetzt wirklich transparent: keine weißen, dunklen oder farbigen Kartenfüllungen mehr.
+      - Liquid Glass entsteht ausschließlich durch Backdrop-Blur, feine Kanten/Highlights und Schatten.
+      - Transparenz-Standard auf 70% gesetzt; 70% entspricht ca. 9px Blur, 100% Transparenz = 0px Blur.
+      - Hover/Focus/Pressed dürfen keine milchigen Kartenhintergründe mehr zurückbringen.
     [DESIGN] Release v24.138.9: Einheitliche Liquid-Glass-Transparenz auf allen Hauptflächen
       - Haupt-Musikkarte, Control Center, Footer, Tutorial-Fenster, Modals, Picker, Command Palette,
         Dynamic Island und normale Glaskarten verwenden jetzt exakt dieselben Transparenz-/Blur-Tokens
@@ -22392,6 +22397,270 @@ html:not(.dark) body.liquid-glass-active #tutorial-start-btn {
   translate: none !important;
 }
 </style>
+
+
+<!-- LIQUID_GLASS_V24_138_10_TRUE_WINDOW_GLASS -->
+<style id="liquid-glass-v24-138-10-true-window-glass">
+/*
+  v24.138.10 — TRUE WINDOW GLASS
+  No white tint. No dark tint. No gradient fill.
+  The glass itself is transparent; ONLY backdrop blur + border/reflection
+  make it visually glass-like.
+*/
+
+:root {
+  --lg-window-transparency: 70;
+  --lg-window-blur: 9px;
+  --lg-window-border: .14;
+  --lg-window-highlight: .22;
+}
+
+/* Every major Liquid Glass surface is a transparent pane. */
+body.liquid-glass-active :is(
+  #global-settings-menu,
+  #lyrics-settings-menu,
+  #main-music-card,
+  #mini-player-toggle,
+  #ui-controls,
+  #footer-bubble,
+  #footer-expandable-menu,
+  #tutorial-box,
+  .modal-content,
+  #language-picker-box,
+  #sharecard-picker-box,
+  #command-palette,
+  #dynamic-island,
+  .glass-card
+) {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+
+  -webkit-backdrop-filter:
+    blur(var(--lg-window-blur))
+    saturate(118%) !important;
+  backdrop-filter:
+    blur(var(--lg-window-blur))
+    saturate(118%) !important;
+
+  border-color: rgba(255,255,255,var(--lg-window-border)) !important;
+  border-top-color: rgba(255,255,255,var(--lg-window-highlight)) !important;
+  border-left-color: rgba(255,255,255,calc(var(--lg-window-highlight) * .72)) !important;
+
+  box-shadow:
+    0 16px 38px -32px rgba(0,0,0,.36),
+    inset 0 1px 0 rgba(255,255,255,.10),
+    inset 0 -1px 0 rgba(255,255,255,.018) !important;
+}
+
+/* Dark mode uses the SAME transparent pane. No black fill. */
+.dark body.liquid-glass-active :is(
+  #global-settings-menu,
+  #lyrics-settings-menu,
+  #main-music-card,
+  #mini-player-toggle,
+  #ui-controls,
+  #footer-bubble,
+  #footer-expandable-menu,
+  #tutorial-box,
+  .modal-content,
+  #language-picker-box,
+  #sharecard-picker-box,
+  #command-palette,
+  #dynamic-island,
+  .glass-card
+) {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+/* Light mode uses the SAME transparent pane. No white wash. */
+html:not(.dark) body.liquid-glass-active :is(
+  #global-settings-menu,
+  #lyrics-settings-menu,
+  #main-music-card,
+  #mini-player-toggle,
+  #ui-controls,
+  #footer-bubble,
+  #footer-expandable-menu,
+  #tutorial-box,
+  .modal-content,
+  #language-picker-box,
+  #sharecard-picker-box,
+  #command-palette,
+  #dynamic-island,
+  .glass-card
+) {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+/* Hover/focus/pressed must NEVER add a milky fill back. */
+body.liquid-glass-active :is(
+  #global-settings-menu,
+  #lyrics-settings-menu,
+  #main-music-card,
+  #mini-player-toggle,
+  #ui-controls,
+  #footer-bubble,
+  #footer-expandable-menu,
+  #tutorial-box,
+  .modal-content,
+  #language-picker-box,
+  #sharecard-picker-box,
+  #command-palette,
+  #dynamic-island,
+  .glass-card
+):is(:hover,:focus,:focus-within,:active) {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+/* Kill any old pseudo-element glass wash on those panes. */
+body.liquid-glass-active :is(
+  #global-settings-menu,
+  #lyrics-settings-menu,
+  #main-music-card,
+  #mini-player-toggle,
+  #ui-controls,
+  #footer-bubble,
+  #footer-expandable-menu,
+  #tutorial-box,
+  .modal-content,
+  #language-picker-box,
+  #sharecard-picker-box,
+  #command-palette,
+  #dynamic-island,
+  .glass-card
+)::before {
+  background: transparent !important;
+}
+
+/* Keep special content buttons readable, but don't tint the card/window itself. */
+html:not(.dark) body.liquid-glass-active #tutorial-start-btn {
+  background: linear-gradient(145deg, rgba(25,35,55,.98), rgba(7,12,22,.94)) !important;
+  color: #fff !important;
+}
+
+/* Settings child controls may keep tiny local fills for readability.
+   The SETTINGS WINDOW itself remains 100% transparent. */
+body.liquid-glass-active #global-settings-menu :is(
+  input:not([type="range"]):not([type="checkbox"]),
+  select,
+  textarea
+) {
+  background-color: rgba(255,255,255,.035) !important;
+}
+.dark body.liquid-glass-active #global-settings-menu :is(
+  input:not([type="range"]):not([type="checkbox"]),
+  select,
+  textarea
+) {
+  background-color: rgba(15,23,42,.12) !important;
+}
+
+/* Dynamic Island animation remains untouched: material only. */
+#dynamic-island {
+  scale: 1 !important;
+  translate: none !important;
+}
+</style>
+
+<script id="liquid-glass-v24-138-10-js">
+(function () {
+  const KEY = 'liquidGlassTransparency';
+  const DEFAULT = 70;
+
+  const clamp = v => Math.max(0, Math.min(100, Number(v) || 0));
+
+  /*
+    True-window model:
+    - Surface fill stays 100% transparent at ALL slider values.
+    - Slider changes optical obscurity through backdrop blur.
+    - 100% transparency => 0px blur.
+    - 70% transparency (default) => ~9px blur.
+    - 0% transparency => ~30px blur.
+  */
+  function applyTrueWindowTransparency(v) {
+    v = clamp(v);
+
+    const opacityAmount = 1 - (v / 100);
+    const blurPx = 30 * opacityAmount;
+    const border = 0.08 + (opacityAmount * 0.16);
+    const highlight = 0.14 + (opacityAmount * 0.22);
+
+    const root = document.documentElement;
+    root.style.setProperty('--lg-window-transparency', String(v));
+    root.style.setProperty('--lg-window-blur', blurPx.toFixed(2) + 'px');
+    root.style.setProperty('--lg-window-border', border.toFixed(4));
+    root.style.setProperty('--lg-window-highlight', highlight.toFixed(4));
+
+    /* Keep legacy vars harmless so older CSS cannot reintroduce tint. */
+    root.style.setProperty('--lg-glass-alpha', '0');
+    root.style.setProperty('--lg-glass-alpha-soft', '0');
+    root.style.setProperty('--lg-glass-alpha-strong', '0');
+    root.style.setProperty('--lg-glass-blur', blurPx.toFixed(2) + 'px');
+
+    const range = document.getElementById('lg-transparency-range');
+    if (range && Number(range.value) !== v) range.value = v;
+
+    const out = document.getElementById('lg-transparency-value');
+    if (out) out.textContent = Math.round(v) + '%';
+  }
+
+  window.applyTransparency = applyTrueWindowTransparency;
+
+  function migrateDefaultOnce() {
+    const MIGRATION = 'liquidGlassTransparency_v10_true_window';
+    try {
+      if (localStorage.getItem(MIGRATION) !== '1') {
+        localStorage.setItem(KEY, String(DEFAULT));
+        localStorage.setItem(MIGRATION, '1');
+        return DEFAULT;
+      }
+      const raw = localStorage.getItem(KEY);
+      return raw === null ? DEFAULT : clamp(raw);
+    } catch (_) {
+      return DEFAULT;
+    }
+  }
+
+  function wireRange(value) {
+    const range = document.getElementById('lg-transparency-range');
+    if (!range || range.dataset.trueWindowBound === '1') return;
+
+    range.dataset.trueWindowBound = '1';
+    range.value = value;
+
+    range.addEventListener('input', e => {
+      const v = clamp(e.target.value);
+      try { localStorage.setItem(KEY, String(v)); } catch (_) {}
+      applyTrueWindowTransparency(v);
+    }, {passive:true});
+  }
+
+  function boot() {
+    const value = migrateDefaultOnce();
+    applyTrueWindowTransparency(value);
+
+    const tryWire = () => wireRange(value);
+    tryWire();
+
+    /* Settings can be rendered/opened later; observe only for that control appearing. */
+    const observer = new MutationObserver(() => tryWire());
+    observer.observe(document.body, {childList:true, subtree:true});
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot, {once:true});
+  } else {
+    boot();
+  }
+})();
+</script>
 
 </body>
 </html>
