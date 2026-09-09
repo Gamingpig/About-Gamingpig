@@ -9,6 +9,13 @@
     [BUGFIX] oder [PERFORMANCE] oder [FEATURE] als Tag, dann kurz
     Symptom/Ziel, Ursache, Fix, und der beobachtbare Effekt.
     Neueste Einträge oben.
+    [DESIGN - KRITISCH] Release v24.138.11: Zero-Fill Liquid Glass
+      - Karten, Fenster, Settings, Modals und Dynamic Island besitzen im Liquid-Glass-Modus keinerlei weiße,
+        dunkle oder farbige Flächenfüllung mehr.
+      - Neutral gefärbte innere Utility-Flächen in Glasfenstern werden ebenfalls vollständig transparent.
+      - Der Transparenzregler steuert nur Blur, Kantenreflexion und Schatten. Bei 100% gehen alle drei auf 0,
+        sodass die Glasfläche praktisch unsichtbar wird; Standard bleibt 70%.
+      - Cover-Art und echte Medien bleiben von der Zero-Fill-Regel ausgeschlossen.
     [DESIGN - KRITISCH] Release v24.138.10: True Window Glass
       - Alle Hauptflächen sind jetzt wirklich transparent: keine weißen, dunklen oder farbigen Kartenfüllungen mehr.
       - Liquid Glass entsteht ausschließlich durch Backdrop-Blur, feine Kanten/Highlights und Schatten.
@@ -22652,6 +22659,308 @@ body.liquid-glass-active #global-settings-menu :is(
     /* Settings can be rendered/opened later; observe only for that control appearing. */
     const observer = new MutationObserver(() => tryWire());
     observer.observe(document.body, {childList:true, subtree:true});
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot, {once:true});
+  } else {
+    boot();
+  }
+})();
+</script>
+
+
+<!-- LIQUID_GLASS_V24_138_11_ZERO_FILL_GLASS -->
+<style id="liquid-glass-v24-138-11-zero-fill-glass">
+/*
+  ZERO-FILL GLASS
+  The glass surface has NO fill at all. Visibility comes only from:
+  backdrop blur + edge/reflection + shadow, all driven by the transparency slider.
+*/
+
+:root {
+  --lg-zf-blur: 9px;
+  --lg-zf-edge: .105;
+  --lg-zf-highlight: .16;
+  --lg-zf-shadow: .18;
+}
+
+/* All actual glass windows/cards/panels: absolutely no background paint. */
+body.liquid-glass-active :is(
+  .glass-card,
+  #global-settings-menu,
+  #lyrics-settings-menu,
+  #main-music-card,
+  #mini-player-toggle,
+  #ui-controls,
+  #footer-bubble,
+  #footer-expandable-menu,
+  #tutorial-box,
+  .modal-content,
+  #language-picker-box,
+  #sharecard-picker-box,
+  #command-palette,
+  #dynamic-island
+) {
+  background: none !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  background-blend-mode: normal !important;
+
+  -webkit-backdrop-filter: blur(var(--lg-zf-blur)) saturate(115%) !important;
+  backdrop-filter: blur(var(--lg-zf-blur)) saturate(115%) !important;
+
+  border-color: rgba(255,255,255,var(--lg-zf-edge)) !important;
+  border-top-color: rgba(255,255,255,var(--lg-zf-highlight)) !important;
+  border-left-color: rgba(255,255,255,calc(var(--lg-zf-highlight) * .72)) !important;
+
+  box-shadow:
+    0 14px 34px -27px rgba(0,0,0,var(--lg-zf-shadow)),
+    inset 0 1px 0 rgba(255,255,255,var(--lg-zf-highlight)),
+    inset 0 -1px 0 rgba(255,255,255,.012) !important;
+}
+
+/* Same material in both themes. No light white fill, no dark black fill. */
+html:not(.dark) body.liquid-glass-active :is(
+  .glass-card,
+  #global-settings-menu,
+  #lyrics-settings-menu,
+  #main-music-card,
+  #mini-player-toggle,
+  #ui-controls,
+  #footer-bubble,
+  #footer-expandable-menu,
+  #tutorial-box,
+  .modal-content,
+  #language-picker-box,
+  #sharecard-picker-box,
+  #command-palette,
+  #dynamic-island
+),
+.dark body.liquid-glass-active :is(
+  .glass-card,
+  #global-settings-menu,
+  #lyrics-settings-menu,
+  #main-music-card,
+  #mini-player-toggle,
+  #ui-controls,
+  #footer-bubble,
+  #footer-expandable-menu,
+  #tutorial-box,
+  .modal-content,
+  #language-picker-box,
+  #sharecard-picker-box,
+  #command-palette,
+  #dynamic-island
+) {
+  background: none !important;
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+/* Hover, focus, pressed, opening and closing states are forbidden from adding a fill back. */
+body.liquid-glass-active :is(
+  .glass-card,
+  #global-settings-menu,
+  #lyrics-settings-menu,
+  #main-music-card,
+  #mini-player-toggle,
+  #ui-controls,
+  #footer-bubble,
+  #footer-expandable-menu,
+  #tutorial-box,
+  .modal-content,
+  #language-picker-box,
+  #sharecard-picker-box,
+  #command-palette,
+  #dynamic-island
+):is(:hover,:focus,:focus-within,:active),
+body.liquid-glass-active :is(
+  .settings-opening,.settings-closing,.modal-opening,.modal-closing,
+  .picker-opening,.picker-closing,.tutorial-opening,.tutorial-closing
+) :is(
+  .glass-card,.modal-content,#global-settings-menu,#lyrics-settings-menu,
+  #tutorial-box,#language-picker-box,#sharecard-picker-box,#command-palette
+) {
+  background: none !important;
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+/* Kill old glass-fill pseudo layers. Keep only content-specific pseudo elements elsewhere. */
+body.liquid-glass-active :is(
+  .glass-card,
+  #global-settings-menu,
+  #lyrics-settings-menu,
+  #main-music-card,
+  #mini-player-toggle,
+  #ui-controls,
+  #footer-bubble,
+  #footer-expandable-menu,
+  #tutorial-box,
+  .modal-content,
+  #language-picker-box,
+  #sharecard-picker-box,
+  #command-palette,
+  #dynamic-island
+)::before {
+  background: none !important;
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+/*
+  Remove the common white/black/slate utility fills that live INSIDE glass windows.
+  This gets rid of the last white rectangles in cards/modals/settings without
+  touching actual artwork/images or the page's cover background.
+*/
+body.liquid-glass-active :is(
+  .glass-card,
+  #global-settings-menu,
+  #lyrics-settings-menu,
+  .modal-content,
+  #tutorial-box,
+  #language-picker-box,
+  #sharecard-picker-box,
+  #command-palette
+) :is(
+  [class*="bg-white"],
+  [class*="bg-black"],
+  [class*="bg-slate-50"],
+  [class*="bg-slate-100"],
+  [class*="bg-slate-200"],
+  [class*="bg-slate-700"],
+  [class*="bg-slate-800"],
+  [class*="bg-slate-900"],
+  [class*="dark:bg-white"],
+  [class*="dark:bg-black"],
+  [class*="dark:bg-slate"]
+) {
+  background: none !important;
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+/* Likewise, neutral hover utility fills stay transparent. */
+body.liquid-glass-active :is(
+  .glass-card,
+  #global-settings-menu,
+  #lyrics-settings-menu,
+  .modal-content,
+  #tutorial-box,
+  #language-picker-box,
+  #sharecard-picker-box,
+  #command-palette
+) :is(
+  [class*="hover:bg-white"],
+  [class*="hover:bg-black"],
+  [class*="hover:bg-slate"],
+  [class*="group-hover:bg-white"],
+  [class*="group-hover:bg-black"],
+  [class*="group-hover:bg-slate"]
+):hover {
+  background: none !important;
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+/* Never interfere with real media / cover art. */
+body.liquid-glass-active :is(img,video,canvas,#artwork,#liquid-blobs) {
+  background-image: initial;
+}
+
+/* Dynamic Island keeps its own geometry/animation. Only its visibility material is controlled here. */
+#dynamic-island {
+  scale: 1 !important;
+  translate: none !important;
+}
+</style>
+
+<script id="liquid-glass-v24-138-11-zero-fill-js">
+(function () {
+  const KEY = 'liquidGlassTransparency';
+  const DEFAULT = 70;
+  const clamp = v => Math.max(0, Math.min(100, Number(v) || 0));
+
+  function readStored() {
+    try {
+      const v = localStorage.getItem(KEY);
+      return v === null ? DEFAULT : clamp(v);
+    } catch (_) { return DEFAULT; }
+  }
+
+  function applyZeroFillTransparency(v) {
+    v = clamp(v);
+    const visibility = 1 - (v / 100);
+
+    /*
+      100% transparency:
+        blur 0, borders 0, highlights 0, shadow 0 => pane is effectively invisible.
+      70% transparency:
+        ~9px blur plus very subtle edges.
+      0% transparency:
+        strongest blur/edge visibility, still NO color fill.
+    */
+    const blur = 30 * visibility;
+    const edge = 0.35 * visibility;
+    const highlight = 0.53 * visibility;
+    const shadow = 0.60 * visibility;
+
+    const root = document.documentElement;
+    root.style.setProperty('--lg-zf-blur', blur.toFixed(2) + 'px');
+    root.style.setProperty('--lg-zf-edge', edge.toFixed(4));
+    root.style.setProperty('--lg-zf-highlight', highlight.toFixed(4));
+    root.style.setProperty('--lg-zf-shadow', shadow.toFixed(4));
+
+    /* Neutralize all legacy fill variables permanently. */
+    root.style.setProperty('--lg-glass-alpha', '0');
+    root.style.setProperty('--lg-glass-alpha-soft', '0');
+    root.style.setProperty('--lg-glass-alpha-strong', '0');
+    root.style.setProperty('--lg-window-blur', blur.toFixed(2) + 'px');
+    root.style.setProperty('--lg-glass-blur', blur.toFixed(2) + 'px');
+
+    const range = document.getElementById('lg-transparency-range');
+    if (range && Number(range.value) !== v) range.value = v;
+    const out = document.getElementById('lg-transparency-value');
+    if (out) out.textContent = Math.round(v) + '%';
+  }
+
+  window.applyTransparency = applyZeroFillTransparency;
+
+  function bindRange() {
+    const range = document.getElementById('lg-transparency-range');
+    if (!range || range.dataset.zeroFillBound === '1') return;
+    range.dataset.zeroFillBound = '1';
+
+    const value = readStored();
+    range.value = value;
+    applyZeroFillTransparency(value);
+
+    range.addEventListener('input', e => {
+      const v = clamp(e.target.value);
+      try { localStorage.setItem(KEY, String(v)); } catch (_) {}
+      applyZeroFillTransparency(v);
+    }, {passive:true});
+  }
+
+  function boot() {
+    const MIGRATION = 'liquidGlassTransparency_v11_zero_fill';
+    let value = readStored();
+
+    try {
+      if (localStorage.getItem(MIGRATION) !== '1') {
+        value = DEFAULT;
+        localStorage.setItem(KEY, String(DEFAULT));
+        localStorage.setItem(MIGRATION, '1');
+      }
+    } catch (_) {}
+
+    applyZeroFillTransparency(value);
+    bindRange();
+
+    /* Settings/control markup can be injected later. Event-driven only, no timer. */
+    const observer = new MutationObserver(() => bindRange());
+    observer.observe(document.body, { childList: true, subtree: true });
   }
 
   if (document.readyState === 'loading') {
