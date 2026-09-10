@@ -1,5 +1,5 @@
 // ==============================================================================
-// Gamingpig Portfolio PWA Service Worker (v24.159.0)
+// Gamingpig Portfolio PWA Service Worker (v24.160.0)
 // Robust Update- & Cache-Strategie:
 // - HTML / Navigation: ECHTES Network-First mit Offline-Fallback
 // - Statische Assets (Bilder, Icons, Manifest): Stale-While-Revalidate mit Cache-Fallback
@@ -7,7 +7,7 @@
 // - Sofortige Übernahme: self.skipWaiting() & clients.claim()
 // ==============================================================================
 
-const SW_VERSION = "24.159.0";
+const SW_VERSION = "24.160.0";
 const CURRENT_CACHE_VERSION = `gamingpig-cache-v${SW_VERSION}`;
 const CACHE_NAME = CURRENT_CACHE_VERSION;
 
@@ -190,9 +190,9 @@ self.addEventListener("fetch", (event) => {
         let cache;
         try { cache = await caches.open(CACHE_NAME); }
         catch (_) { return fetch(event.request).catch(() => new Response('Offline', { status: 503 })); }
-        const immutable = /\.[a-f0-9]{16}\.js$/.test(url.pathname);
-        const cached = await cache.match(event.request) || (immutable ? await caches.match(event.request) : null);
-        if (immutable && cached) return cached;
+        // A hash-looking filename is not proof that its content stayed immutable.
+        // Scripts and styles must revalidate so an old cache can never pin a release.
+        const cached = await cache.match(event.request);
         const network = (async () => {
         try {
             const response = await fetch(event.request, { cache: 'no-cache' });
