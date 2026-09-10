@@ -33,8 +33,6 @@ body:not(.standby-mode) :is(
   border-top-color: rgb(255 255 255 / var(--gp-edge-alpha, .28)) !important;
   border-left-color: rgb(255 255 255 / var(--gp-edge-alpha, .28)) !important;
 
-  /* Chromium/Edge fallback so the refraction slider remains visibly useful
-     when SVG backdrop-filter URL filters are unsupported. */
   box-shadow:
     0 16px 38px -28px rgba(0,0,0,.58),
     inset var(--gp-refraction-shadow)
@@ -88,4 +86,164 @@ html.gp-glass-admin-disabled body :is(
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
   box-shadow: none !important;
+}
+
+/* ========================================================================== 
+   v24.159.1 HOME-PAGE AUTHORITY FIX
+   index.html contains older Liquid Glass rules after this stylesheet. The
+   extra specificity below makes the admin config authoritative anyway.
+   ========================================================================== */
+html.gp-glass body.liquid-glass-active {
+  --gp-refract-offset: calc(var(--gp-refraction, 0) * .16px);
+  --gp-refract-soft: calc(var(--gp-refraction, 0) * .42px);
+}
+
+html.gp-glass:not(.gp-glass-saving):not(.gp-glass-admin-disabled)
+body.liquid-glass-active:not(.standby-mode) :is(
+  .glass-card,.glow-card,.glass-stage,.card,
+  #main-music-card,#mini-player-toggle,#ui-controls,
+  #global-settings-menu,#lyrics-settings-menu,#tutorial-box,
+  #language-picker-box,#sharecard-picker-box,#command-palette,
+  #dynamic-island,#cp-trigger,
+  #whats-new-epic-modal>div,#privacy-update-modal>div,
+  #interactive-quest-hud>div,#spotify-wrapped-modal>div,
+  header[class*="bg-slate"],section[class*="bg-slate"],div[class*="bg-slate-900"]
+) {
+  -webkit-backdrop-filter:
+    blur(calc(var(--gp-blur, 7) * 1px))
+    saturate(calc(var(--gp-saturation, 128) * 1%)) !important;
+  backdrop-filter:
+    blur(calc(var(--gp-blur, 7) * 1px))
+    saturate(calc(var(--gp-saturation, 128) * 1%)) !important;
+  border-color: rgb(255 255 255 / var(--gp-edge-alpha, .28)) !important;
+  border-top-color: rgb(255 255 255 / var(--gp-edge-alpha, .28)) !important;
+  border-left-color: rgb(255 255 255 / var(--gp-edge-alpha, .28)) !important;
+  box-shadow:
+    var(--gp-refract-offset) var(--gp-refract-offset) var(--gp-refract-soft) rgba(115,190,255,.22),
+    calc(var(--gp-refract-offset) * -1) calc(var(--gp-refract-offset) * -1) var(--gp-refract-soft) rgba(255,180,225,.16),
+    inset var(--gp-refract-offset) 0 var(--gp-refract-soft) rgba(255,255,255,.20),
+    inset calc(var(--gp-refract-offset) * -1) 0 var(--gp-refract-soft) rgba(100,170,255,.15) !important;
+}
+
+/* Chromium/Edge fallback for visible refraction. */
+html.gp-glass:not(.gp-glass-admin-disabled)
+body.liquid-glass-active:not(.standby-mode) :is(
+  .glass-card,.glow-card,.glass-stage,.card,
+  #main-music-card,#mini-player-toggle,#ui-controls,
+  #global-settings-menu,#dynamic-island,#footer-bubble,#footer-expandable-menu
+)::after {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 !important;
+  border-radius: inherit !important;
+  pointer-events: none !important;
+  background: linear-gradient(115deg,
+    rgba(255,255,255,0) 0%,
+    rgba(255,255,255,.14) 42%,
+    rgba(150,205,255,.10) 50%,
+    rgba(255,170,220,.08) 57%,
+    rgba(255,255,255,0) 70%) !important;
+  opacity: clamp(0, calc(var(--gp-refraction, 0) / 24), .58) !important;
+  transform: translate3d(var(--gp-refract-offset), calc(var(--gp-refract-offset) * -.45), 0) !important;
+  transition: opacity .22s ease, transform .22s ease !important;
+}
+
+/* Social-grid scroll fix: its real height is far above the old fake 500px
+   intrinsic height, which caused scroll jumps when content-visibility activated. */
+html body #socials-section.section-optimized {
+  content-visibility: visible !important;
+  contain-intrinsic-size: auto !important;
+}
+
+/* Footer bubble: one stable animated state contract. */
+html body #footer-bubble {
+  will-change: opacity, transform, filter !important;
+  transition:
+    opacity .34s cubic-bezier(.22,1,.36,1),
+    transform .52s cubic-bezier(.16,1,.3,1),
+    filter .34s ease,
+    visibility 0s linear .52s !important;
+}
+html body #footer-bubble:not(.footer-bubble-visible) {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  transform: translateX(-50%) translateY(24px) scale(.94) !important;
+  filter: blur(2px) !important;
+}
+html body #footer-bubble.footer-bubble-visible {
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  transform: translateX(-50%) translateY(0) scale(1) !important;
+  filter: blur(0) !important;
+  transition:
+    opacity .34s cubic-bezier(.22,1,.36,1),
+    transform .52s cubic-bezier(.16,1,.3,1),
+    filter .34s ease,
+    visibility 0s linear 0s !important;
+}
+
+/* Footer menu: its existing controllers already update aria-expanded before
+   opening/closing; use that as the single CSS state source. */
+html body #footer-expandable-menu.footer-animating,
+html body #footer-expandable-menu:not(.hidden) {
+  display: block !important;
+  will-change: opacity, transform, filter !important;
+  transition:
+    opacity .28s cubic-bezier(.22,1,.36,1),
+    transform .40s cubic-bezier(.16,1,.3,1),
+    filter .28s ease !important;
+}
+html body:has(#footer-menu-toggle-btn[aria-expanded="true"])
+#footer-expandable-menu:not(.hidden) {
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  transform: translateX(-50%) translateY(0) scale(1) !important;
+  filter: blur(0) !important;
+}
+html body:has(#footer-menu-toggle-btn[aria-expanded="false"])
+#footer-expandable-menu.footer-animating {
+  opacity: 0 !important;
+  visibility: visible !important;
+  pointer-events: none !important;
+  transform: translateX(-50%) translateY(14px) scale(.965) !important;
+  filter: blur(2px) !important;
+}
+html body #footer-expandable-menu.hidden:not(.footer-animating) {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+@starting-style {
+  html body:has(#footer-menu-toggle-btn[aria-expanded="true"])
+  #footer-expandable-menu:not(.hidden) {
+    opacity: 0 !important;
+    transform: translateX(-50%) translateY(16px) scale(.955) !important;
+    filter: blur(3px) !important;
+  }
+}
+
+/* Footer glass follows the admin settings too. */
+html.gp-glass:not(.gp-glass-saving):not(.gp-glass-admin-disabled)
+body.liquid-glass-active:not(.standby-mode) :is(#footer-bubble,#footer-expandable-menu) {
+  -webkit-backdrop-filter:
+    blur(calc(var(--gp-blur, 7) * 1px))
+    saturate(calc(var(--gp-saturation, 128) * 1%)) !important;
+  backdrop-filter:
+    blur(calc(var(--gp-blur, 7) * 1px))
+    saturate(calc(var(--gp-saturation, 128) * 1%)) !important;
+}
+
+html.gp-glass-admin-disabled body.liquid-glass-active :is(
+  .glass-card,.glow-card,.glass-stage,.card,
+  #main-music-card,#mini-player-toggle,#ui-controls,
+  #footer-bubble,#footer-expandable-menu,#global-settings-menu,
+  #lyrics-settings-menu,#tutorial-box,#language-picker-box,
+  #sharecard-picker-box,#command-palette,#dynamic-island,#cp-trigger
+) {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
 }
