@@ -6462,7 +6462,6 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
 <link rel="stylesheet" href="assets/living-design.4e423a2a90529272.css">
 <link rel="stylesheet" href="assets/community-glass.20260910.css" data-gp-glass-engine="true">
 
-<template id="retired-liquid-glass-v24-138-2">
 <style>
 /* <!-- v24.138.2 FINAL ULTRA LIQUID GLASS OVERRIDES -->
    Intentionally last in <head>: this block is the final visual authority for Liquid Glass. */
@@ -6733,7 +6732,6 @@ body.liquid-glass-active:not(.low-end) .lang-picker-btn:active {
     }
 }
 </style>
-</template>
 
 </head>
 <body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen selection:bg-blue-500/30 overflow-x-hidden">
@@ -7174,17 +7172,13 @@ body.liquid-glass-active:not(.low-end) .lang-picker-btn:active {
             <button id="close-modal" aria-label="Modal schließen" class="absolute top-2 right-2 xxs:top-3 xxs:right-3 sm:top-6 sm:right-6 p-1.5 sm:p-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-blue-500 transition-all">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="sm:w-6 sm:h-6"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
             </button>
-            <div
-... 609353 bytes omitted ...
-rTutorialEvent = function(eventName) {
-            if (!interactiveTutorialActive) return;
-            if (interactiveTutorialTasks.hasOwnProperty(eventName) && !interactiveTutorialTasks[eventName]) {
-                interactiveTutorialTasks[eventName] = true;
-                const completedCount = Object.values(interactiveTutorialTasks).filter(Boolean).length;
-                const totalCount = Object.keys(interactiveTutorialTasks).length;
-                
-                spawnXpFloatBadge('+250 XP 🚀');
-                if (typeof launchConfetti === 'function') launchConfetti();
+            <div id="modal-body"></div>
+        </div>
+    </div>
+
+    <main id="main-content" 
+... 609804 bytes omitted ...
+f (typeof launchConfetti === 'function') launchConfetti();
                 haptic([40, 30, 60]);
                 updateQuestHudUI();
                 updateQuestTargetGlows();
@@ -9093,6 +9087,7 @@ rTutorialEvent = function(eventName) {
                 document.getElementById('cards-section'),
                 document.getElementById('music-section'),
                 document.getElementById('support-section'),
+                document.getElementById('socials-section'),
                 document.getElementById('kart-section'),
                 document.getElementById('footer-section')
             ].filter(Boolean);
@@ -9198,6 +9193,15 @@ rTutorialEvent = function(eventName) {
             if (backToTopBtn) {
                 if (scrollTop > 500) backToTopBtn.classList.add('visible');
                 else backToTopBtn.classList.remove('visible');
+            }
+            if (footerBubbleEl) {
+                // A fixed end distance avoids appearing far too early on long pages.
+                const nearEnd = docHeight > 0 && docHeight - scrollTop <= 80;
+                if (nearEnd) {
+                    if (!footerBubbleEl.classList.contains('footer-bubble-visible')) fitFooterBubble();
+                    footerBubbleEl.classList.add('footer-bubble-visible');
+                }
+                else footerBubbleEl.classList.remove('footer-bubble-visible');
             }
             scrollTicking = false;
         }
@@ -13130,7 +13134,6 @@ window.setLyricsStyle = function(style) {
 </script>
 <script src="js/living-design.ef4e0c79a1bced34.js"></script>
 <script src="js/community-glass.20260910.js"></script>
-<template id="retired-liquid-glass-patches">
 <!-- LIQUID_GLASS_V24_138_5 -->
 <style id="liquid-glass-v24-138-5">
 /*
@@ -16065,6 +16068,5 @@ body.liquid-glass-active :is(
 })();
 </script>
 
-</template>
 </body>
 </html>
