@@ -166,14 +166,14 @@ test('privacy update notifies returning visitors once and stays out of onboardin
             documentElement: { classList: { contains: () => onboarding } },
             getElementById: () => ({ classList: { remove() { shown++; }, add() {} } })
         },
-        localStorage: { getItem: () => accepted },
+        AppStorage: { getItem: () => accepted },
         updatePrivacyModalUI() { refreshed++; }
     };
     vm.createContext(context);
     vm.runInContext(version + '\n' + check, context);
     context.checkPrivacyPolicyUpdate();
     assert.equal(shown, 1); assert.equal(refreshed, 1);
-    accepted = '2026-09-08-github-roadmap';
+    accepted = '2026-09-08-security-v3';
     context.checkPrivacyPolicyUpdate();
     assert.equal(shown, 1);
     accepted = null; onboarding = true;
