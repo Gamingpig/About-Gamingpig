@@ -204,6 +204,10 @@
                             <span class="text-[10px] text-slate-400 block uppercase font-mono">Geräte</span>
                             <strong class="text-emerald-400 font-mono text-sm" id="subscribers-count">Lade...</strong>
                         </div>
+                        <div class="px-3.5 py-1.5 rounded-xl bg-slate-900/80 border border-white/10 text-right">
+                            <span class="text-[10px] text-slate-400 block uppercase font-mono">Queue</span>
+                            <strong class="text-amber-300 font-mono text-sm" id="push-queue-count">Lade...</strong>
+                        </div>
                         <button onclick="syncQueueNow()" class="px-3 py-2 rounded-xl bg-indigo-600/30 text-indigo-300 text-xs font-bold border border-indigo-500/40 active:scale-95">
                             🔄 Sync
                         </button>
@@ -560,6 +564,7 @@
 
         function handleLogout() {
             AdminVault.lock();
+            const glassAdmin = document.getElementById('gp-glass-admin'); if (glassAdmin) glassAdmin.hidden = true;
             document.getElementById('admin-dashboard').classList.add('hidden');
             document.getElementById('login-panel').classList.remove('hidden');
             document.getElementById('btn-logout').classList.add('hidden');
@@ -596,6 +601,7 @@
             document.getElementById('login-panel').classList.add('hidden');
             document.getElementById('admin-dashboard').classList.remove('hidden');
             document.getElementById('btn-logout').classList.remove('hidden');
+            const glassAdmin = document.getElementById('gp-glass-admin'); if (glassAdmin) glassAdmin.hidden = false;
             updateGitHubBridgeUI();
             loadRoadmapMeta();
             loadSubscribersCount();
@@ -606,12 +612,18 @@
         // ========================================== //
         async function loadSubscribersCount() {
             const el = document.getElementById('subscribers-count');
+            const queueEl = document.getElementById('push-queue-count');
             if (!el) return;
             try {
                 const res = await fetch('https://raw.githubusercontent.com/Gamingpig/About-Gamingpig/main/data/push-summary.json', { cache: 'no-store' });
                 const data = await res.json();
                 el.textContent = `${data.count || 0} Geräte`;
-            } catch (_) { el.textContent = 'Bereit'; }
+                const since = Math.floor(new Date(data.updatedAt || 0).getTime() / 1000);
+                const queued = await fetch(`https://ntfy.sh/gamingpig_push_sub_vault_v2_9f8a2b3c4d5e/json?poll=1&since=${Math.max(0, since)}`, { cache: 'no-store' });
+                const text = queued.ok ? await queued.text() : '';
+                const count = text.split('\n').filter(Boolean).reduce((sum, line) => { try { const item=JSON.parse(line); return sum + (item.event === 'message' && item.message ? 1 : 0); } catch (_) { return sum; } }, 0);
+                if (queueEl) queueEl.textContent = `${count} wartend`;
+            } catch (_) { el.textContent = 'Unbekannt'; if (queueEl) queueEl.textContent = 'Unbekannt'; }
         }
 
         async function syncQueueNow() {
@@ -623,7 +635,7 @@
                     headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' },
                     body: JSON.stringify({ event_type: 'monitor' })
                 });
-                if (response.ok) showToast('GitHub-Sync gestartet.', '⏳');
+                if (response.ok) { showToast('GitHub-Sync gestartet.', '⏳'); setTimeout(loadSubscribersCount, 15000); setTimeout(loadSubscribersCount, 45000); }
             } catch (e) { showToast(e.message, '⚠️'); }
         }
 
