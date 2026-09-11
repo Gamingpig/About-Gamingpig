@@ -41,7 +41,7 @@ function installOptics(){
 }
 
 function installUniversalFooter(){
- if(body.hasAttribute('data-glass-overlay'))return;
+ if(body.hasAttribute('data-glass-overlay')||document.getElementById('liquid-glass-toggle'))return;
  let oldMenu=document.getElementById('footer-expandable-menu');
  let oldBubble=document.getElementById('footer-bubble');
  if(oldMenu){const fresh=oldMenu.cloneNode(false);oldMenu.replaceWith(fresh);oldMenu=fresh;}else{oldMenu=document.createElement('nav');oldMenu.id='footer-expandable-menu';body.append(oldMenu);}
