@@ -3390,6 +3390,44 @@
         /* --- NEXT-LEVEL LIQUID GLASS INTERACTION ENGINE ---------- */
         /* ========================================================= */
         
+
+        /* Spekulare Kantenbrechung & Apple Glass Reflektions-Glanz */
+        body.liquid-glass-active :is(.glass-card, #header-section, #footer-bubble, #footer-expandable-menu, #cp-trigger) {
+            border: 1px solid rgba(255, 255, 255, 0.22) !important;
+            border-top: 1.5px solid rgba(255, 255, 255, 0.85) !important;
+            border-left: 1.5px solid rgba(255, 255, 255, 0.45) !important;
+            border-right: 1px solid rgba(255, 255, 255, 0.15) !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.10) !important;
+            box-shadow: 
+                0 20px 45px -15px rgba(0, 0, 0, 0.45),
+                inset 0 1.5px 2px rgba(255, 255, 255, 0.75),
+                inset 1px 0 1.5px rgba(255, 255, 255, 0.35),
+                inset -1px -1px 2px rgba(255, 255, 255, 0.08),
+                0 0 1px 1px rgba(255, 255, 255, 0.12) !important;
+            position: relative;
+        }
+
+        /* Dynamischer Licht-Glanzstreifen über die Glaskante */
+        body.liquid-glass-active :is(.glass-card, #header-section)::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 35%;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.02) 60%, transparent 100%);
+            border-radius: inherit;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* Universeller Scroll-Bug-Fix: Kein ruckelndes Steckenbleiben auf Touchscreens */
+        html, body {
+            overscroll-behavior-y: auto !important;
+            touch-action: pan-y pinch-zoom !important;
+            -webkit-overflow-scrolling: touch !important;
+        }
+        main, #main-content, section {
+            overflow: visible !important;
+        }
+
         /* Glass Click Spring & Morph */
         body.liquid-glass-active .glass-card {
             cursor: pointer;
