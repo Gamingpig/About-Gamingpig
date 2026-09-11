@@ -7,7 +7,7 @@
 // - Sofortige Übernahme: self.skipWaiting() & clients.claim()
 // ==============================================================================
 
-const SW_VERSION = "24.159.0";
+const SW_VERSION = "24.160.0";
 const CURRENT_CACHE_VERSION = `gamingpig-cache-v${SW_VERSION}`;
 const CACHE_NAME = CURRENT_CACHE_VERSION;
 
@@ -50,7 +50,7 @@ self.addEventListener("activate", (event) => {
             const previous = keys.filter(key => key.startsWith('gamingpig-cache-v') && key !== CURRENT_CACHE_VERSION).pop();
             return Promise.all(
                 keys.map((key) => {
-                    if (key.startsWith("gamingpig-cache-v") && key !== CURRENT_CACHE_VERSION && key !== previous) {
+                    if (key.startsWith("gamingpig-cache-v") && key !== CURRENT_CACHE_VERSION) {
                         console.log("[SW] Lösche veralteten Cache:", key);
                         return caches.delete(key);
                     }
