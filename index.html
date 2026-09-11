@@ -5131,32 +5131,46 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
                 bottom: calc(2rem + 3.25rem + 0.75rem);
             }
         }
-        body.liquid-glass-active #footer-expandable-menu:not(.hidden) {
-            animation: ext-footer-menu-in 0.5s var(--liquid-fluid) forwards !important;
+        #footer-expandable-menu:not(.hidden) {
+            display: flex !important;
+            flex-direction: column !important;
+        }
+        #footer-expandable-menu.menu-opening {
+            animation: ext-footer-menu-in 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
             transform-origin: bottom center !important;
+        }
+        #footer-expandable-menu.menu-closing {
+            animation: ext-footer-menu-out 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
+            transform-origin: bottom center !important;
+            pointer-events: none !important;
         }
         @keyframes ext-footer-menu-in {
             0% {
-                transform: translate(-50%, 18px) scale(0.72, 1.28);
+                transform: translate(-50%, 20px) scale(0.85);
                 opacity: 0;
-                border-radius: 40px;
-                filter: blur(6px);
+                filter: blur(8px);
             }
-            50% {
-                transform: translate(-50%, -3px) scale(1.03, 0.97);
+            70% {
+                transform: translate(-50%, -2px) scale(1.015);
                 opacity: 1;
-                border-radius: 22px;
                 filter: blur(0px);
-            }
-            75% {
-                transform: translate(-50%, 1px) scale(0.99, 1.01);
-                border-radius: 27px;
             }
             100% {
-                transform: translate(-50%, 0) scale(1, 1);
+                transform: translate(-50%, 0) scale(1);
                 opacity: 1;
-                border-radius: 26px;
                 filter: blur(0px);
+            }
+        }
+        @keyframes ext-footer-menu-out {
+            0% {
+                transform: translate(-50%, 0) scale(1);
+                opacity: 1;
+                filter: blur(0px);
+            }
+            100% {
+                transform: translate(-50%, 16px) scale(0.9);
+                opacity: 0;
+                filter: blur(6px);
             }
         }
         body.liquid-glass-active #footer-expandable-menu button,
@@ -6460,7 +6474,7 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
         })();
 </script>
 <link rel="stylesheet" href="assets/living-design.4e423a2a90529272.css">
-<link rel="stylesheet" href="assets/community-glass.7013916ea0163d76.css?v=24.160.0">
+<link rel="stylesheet" href="assets/community-glass.7013916ea0163d76.css?v=24.161.0">
 
 <style>
 /* <!-- v24.138.2 FINAL ULTRA LIQUID GLASS OVERRIDES -->
@@ -7483,12 +7497,13 @@ body.liquid-glass-active:not(.low-end) .lang-picker-btn:active {
                                     <span class="hidden sm:inline">Lyrics: </span><span id="lyrics-synced-label">Synced</span>
                                 </div>
 
-                                <button onclick="toggleLyricsSettings(event)" id="btn-lyrics-settings" aria-label="Lyrics Einstellungen" class="p-1 xxs:p-1.5 sm:p-2 hover:bg-white/10 rounded-full transition-colors text-white shrink-0 mr-0.5 xxs:mr-1">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-4 xxs:h-4 sm:w-5 sm:h-5"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/></svg>
-                                </button>
+                                <div class="relative flex items-center">
+                                    <button onclick="toggleLyricsSettings(event)" id="btn-lyrics-settings" aria-label="Lyrics Einstellungen" class="p-1 xxs:p-1.5 sm:p-2 hover:bg-white/10 rounded-full transition-colors text-white shrink-0 mr-0.5 xxs:mr-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-4 xxs:h-4 sm:w-5 sm:h-5"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/></svg>
+                                    </button>
                                     
-                                <!-- Das Lyrics Settings Menü Fenster (Direkt am Button im Lyrics Center verankert!) -->
-                                <div id="lyrics-settings-menu" class="absolute top-full right-0 mt-2 xxs:mt-3 bg-[#0f172a] border border-slate-700/80 rounded-2xl p-2.5 xxs:p-3 sm:p-3.5 shadow-2xl hidden flex flex-col gap-2 w-[285px] xxs:w-[315px] sm:w-[345px] max-w-[calc(100vw-1.5rem)] z-[9999] origin-top-right max-h-[75vh] sm:max-h-[460px] overflow-y-auto" style="-webkit-overflow-scrolling: touch; overscroll-behavior-y: contain;" onclick="event.stopPropagation()">
+                                    <!-- Das Lyrics Settings Menü Fenster (Direkt am Button im Lyrics Center verankert!) -->
+                                    <div id="lyrics-settings-menu" class="absolute top-full right-0 mt-2 xxs:mt-3 bg-[#0f172a] border border-slate-700/80 rounded-2xl p-2.5 xxs:p-3 sm:p-3.5 shadow-2xl hidden flex flex-col gap-2 w-[285px] xxs:w-[315px] sm:w-[345px] max-w-[calc(100vw-1.5rem)] z-[9999] origin-top-right max-h-[75vh] sm:max-h-[460px] overflow-y-auto" style="-webkit-overflow-scrolling: touch; overscroll-behavior-y: contain;" onclick="event.stopPropagation()">
                                     <!-- Header -->
                                     <div class="flex items-center justify-between pb-1.5 mb-0.5 border-b border-white/10">
                                         <span class="text-xs font-black uppercase tracking-wider text-slate-200 flex items-center gap-1.5">
@@ -7589,9 +7604,9 @@ body.liquid-glass-active:not(.low-end) .lang-picker-btn:active {
                                         <span>⚙️</span> <span>Zu den Website-Einstellungen ➔</span>
                                     </button>
                                 </div>
+                                </div>
                                     
-                                    
-                                    <button onclick="toggleLyrics(false)" id="btn-lyrics-close" aria-label="Lyrics schließen" class="p-1 xxs:p-1.5 sm:p-2 hover:bg-white/10 rounded-full transition-colors text-white shrink-0">
+                                <button onclick="toggleLyrics(false)" id="btn-lyrics-close" aria-label="Lyrics schließen" class="p-1 xxs:p-1.5 sm:p-2 hover:bg-white/10 rounded-full transition-colors text-white shrink-0">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-4 xxs:h-4 sm:w-5 sm:h-5"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                                     </button>
                                 </div>
@@ -8456,19 +8471,27 @@ body.liquid-glass-active:not(.low-end) .lang-picker-btn:active {
         const footerMenuArrow = document.getElementById('footer-menu-arrow');
         const footerMenuToggleBtn = document.getElementById('footer-menu-toggle-btn');
         
+        let footerMenuCloseTimer = null;
         function toggleFooterMenu(forceState) {
             if (!footerExpandableMenu) return;
-            const isCurrentlyOpen = !footerExpandableMenu.classList.contains('hidden');
+            clearTimeout(footerMenuCloseTimer);
+            const isCurrentlyOpen = !footerExpandableMenu.classList.contains('hidden') && !footerExpandableMenu.classList.contains('menu-closing');
             const shouldOpen = typeof forceState === 'boolean' ? forceState : !isCurrentlyOpen;
             if (shouldOpen) {
-                footerExpandableMenu.classList.remove('hidden');
+                footerExpandableMenu.classList.remove('hidden', 'menu-closing');
+                footerExpandableMenu.classList.add('menu-opening');
                 if (footerMenuArrow) footerMenuArrow.style.transform = 'rotate(180deg)';
                 if (footerMenuToggleBtn) footerMenuToggleBtn.setAttribute('aria-expanded', 'true');
                 if (typeof haptic === 'function') haptic(10);
             } else {
-                footerExpandableMenu.classList.add('hidden');
+                footerExpandableMenu.classList.remove('menu-opening');
+                footerExpandableMenu.classList.add('menu-closing');
                 if (footerMenuArrow) footerMenuArrow.style.transform = 'rotate(0deg)';
                 if (footerMenuToggleBtn) footerMenuToggleBtn.setAttribute('aria-expanded', 'false');
+                footerMenuCloseTimer = setTimeout(() => {
+                    footerExpandableMenu.classList.add('hidden');
+                    footerExpandableMenu.classList.remove('menu-closing');
+                }, 240);
             }
         }
 
@@ -21158,7 +21181,7 @@ window.setLyricsStyle = function(style) {
         })();
 </script>
 <script src="js/living-design.ef4e0c79a1bced34.js"></script>
-<script src="js/community-glass.6218ac771ca6ae72.js?v=24.160.0"></script>
+<script src="js/community-glass.6218ac771ca6ae72.js?v=24.161.0"></script>
 <!-- LIQUID_GLASS_V24_138_5 -->
 <style id="liquid-glass-v24-138-5">
 /*
