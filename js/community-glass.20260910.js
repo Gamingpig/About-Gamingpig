@@ -136,7 +136,7 @@ function footer(){
 
   const update=()=>{
     const max=Math.max(0,document.documentElement.scrollHeight-innerHeight);
-    const atEnd=(max<=60)||(max>0&&(max-scrollY<=240));
+    const atEnd=(max<=120)||(max>0&&(max-scrollY<=320));
     bubbleState(atEnd&&!body.classList.contains('standby-mode'));
   };
 
@@ -147,7 +147,7 @@ function footer(){
   },true);
 
   document.addEventListener('pointerdown',e=>{
-    if(open&&!menu.contains(e.target)&&!bubble.contains(e.target))closeMenu();
+    if(open&&!menu.contains(e.target)&&!bubble.contains(e.target)){e.stopPropagation();closeMenu();}
   },true);
 
   document.addEventListener('keydown',e=>{
