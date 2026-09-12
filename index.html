@@ -17449,18 +17449,7 @@ let shareCardLoading;
                 if (scrollTop > 500) backToTopBtn.classList.add('visible');
                 else backToTopBtn.classList.remove('visible');
             }
-            if (footerBubbleEl) {
-                // Erscheint erst wirklich ganz unten am Seitenende (Socials / Fußbereich)
-                const nearEnd = docHeight > 0 && (docHeight - scrollTop <= 80 || (scrollTop / docHeight) >= 0.96);
-                if (nearEnd) {
-                    if (!footerBubbleEl.classList.contains('footer-bubble-visible')) fitFooterBubble();
-                    footerBubbleEl.classList.add('footer-bubble-visible');
-                }
-                else {
-                    footerBubbleEl.classList.remove('footer-bubble-visible');
-                    if (typeof toggleFooterMenu === 'function') toggleFooterMenu(false);
-                }
-            }
+            // Footer-Sichtbarkeit wird vom IntersectionObserver an #footer-scroll-anchor gesteuert
             scrollTicking = false;
         }
 
@@ -21423,5 +21412,33 @@ window.setLyricsStyle = function(style) {
     })();
     </script>
 
+<script>
+        // ========================================================= //
+        // --- FOOTER BUBBLE INTERSECTION OBSERVER ----------------- //
+        // ========================================================= //
+        (function setupFooterIntersectionObserver() {
+            const footerAnchor = document.getElementById('footer-scroll-anchor');
+            const footerBubble = document.getElementById('footer-bubble');
+            if (!footerAnchor || !footerBubble) return;
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        if (typeof fitFooterBubble === 'function') fitFooterBubble();
+                        footerBubble.classList.add('footer-bubble-visible');
+                    } else {
+                        footerBubble.classList.remove('footer-bubble-visible');
+                        if (typeof toggleFooterMenu === 'function') toggleFooterMenu(false);
+                    }
+                });
+            }, {
+                root: null,
+                rootMargin: '0px 0px 50px 0px',
+                threshold: 0.01
+            });
+
+            observer.observe(footerAnchor);
+        })();
+</script>
 </body>
 </html>
