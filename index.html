@@ -3404,6 +3404,8 @@
                 inset 1px 0 1.5px rgba(255, 255, 255, 0.35),
                 inset -1px -1px 2px rgba(255, 255, 255, 0.08),
                 0 0 1px 1px rgba(255, 255, 255, 0.12) !important;
+        }
+        body.liquid-glass-active :is(.glass-card, #header-section) {
             position: relative;
         }
 
@@ -6335,7 +6337,7 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
         /* --- NEW: COMMAND PALETTE (⌘K Spotlight) ------------------- */
         /* ========================================================= */
         #cp-trigger {
-            position: fixed; bottom: 16px; left: 16px; z-index: 300;
+            position: fixed !important; bottom: 16px; left: 16px; z-index: 300;
             display: flex; align-items: center; gap: 4px; padding: 8px 12px;
             background: rgba(15, 23, 42, 0.65); border: 1px solid rgba(255,255,255,0.12);
             backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
@@ -7024,7 +7026,7 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
     <div id="footer-expandable-menu" class="hidden fixed z-[95] p-3.5 rounded-2xl bg-slate-900/95 border border-slate-700/80 shadow-2xl backdrop-blur-xl w-[315px] xxs:w-[340px] sm:w-[370px] max-w-[calc(100vw-1.5rem)] text-xs space-y-2.5" onclick="event.stopPropagation()">
         <div class="flex items-center justify-between px-1 pb-1.5 border-b border-white/10 gap-2">
             <span id="footer-menu-title" data-i18n="footer_menu_title" class="font-bold text-slate-400 text-[10px] uppercase tracking-wider truncate">Navigation &amp; Rechtliches</span>
-            <span id="footer-menu-hint" class="text-[9px] text-pink-400 font-mono font-bold shrink-0 whitespace-nowrap">v24.156.0</span>
+            <span id="footer-menu-hint" class="text-[9px] text-pink-400 font-mono font-bold shrink-0 whitespace-nowrap">v24.182.0</span>
         </div>
         <div class="grid grid-cols-2 gap-2 text-left">
             <button onclick="openEpicWhatsNewTour(false); toggleFooterMenu(false)" id="footer-whats-new-btn" class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/90 text-slate-200 hover:text-white font-medium flex items-center gap-2 transition-all active:scale-[0.98]">
@@ -7058,7 +7060,7 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
     <div id="footer-bubble" class="fixed z-[91] left-1/2 -translate-x-1/2 inline-flex items-center justify-center gap-1.5 sm:gap-3 px-3 sm:px-6 rounded-full bg-slate-900/85 backdrop-blur-xl border border-white/15 shadow-xl text-[10px] xs:text-xs sm:text-sm text-slate-300 transition-all select-none opacity-0 pointer-events-none">
         <span id="footer-established" class="font-bold tracking-tight text-slate-300 whitespace-nowrap">© 2026 GAMINGPIG</span>
         <span class="text-white/20 select-none">•</span>
-        <span id="footer-version-label" class="font-mono font-bold text-pink-400 whitespace-nowrap">v24.156.0</span>
+        <span id="footer-version-label" class="font-mono font-bold text-pink-400 whitespace-nowrap">v24.182.0</span>
         <span class="text-white/20 select-none">•</span>
         <button id="footer-menu-toggle-btn" onclick="toggleFooterMenu()" class="text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1 sm:gap-1.5 transition-all px-1.5 sm:px-2 py-1 rounded-full hover:bg-white/10 active:scale-95 whitespace-nowrap" aria-expanded="false" aria-label="Mehr Menü öffnen">
             <span id="footer-more-label">Mehr</span>
@@ -21305,7 +21307,7 @@ window.setLyricsStyle = function(style) {
             ripple.style.top = (e.clientY - rect.top) + 'px';
 
             const computedPos = window.getComputedStyle(target).position;
-            if (computedPos === 'static') target.style.position = 'relative';
+            if (computedPos === 'static' && !target.matches('#cp-trigger, #footer-bubble, #footer-expandable-menu, #pwa-install-btn, #back-to-top')) target.style.position = 'relative';
             target.style.overflow = 'hidden';
 
             target.appendChild(ripple);
@@ -21327,6 +21329,7 @@ window.setLyricsStyle = function(style) {
             if (!footerBubble) return;
 
             function showFooter() {
+                if (typeof fitFooterBubble === 'function') fitFooterBubble();
                 footerBubble.classList.add('footer-bubble-visible');
             }
             function hideFooter() {

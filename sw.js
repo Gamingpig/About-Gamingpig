@@ -7,7 +7,7 @@
 // - Sofortige Übernahme: self.skipWaiting() & clients.claim()
 // ==============================================================================
 
-const SW_VERSION = "24.181.0";
+const SW_VERSION = "24.182.0";
 const CURRENT_CACHE_VERSION = `gamingpig-cache-v${SW_VERSION}`;
 const CACHE_NAME = CURRENT_CACHE_VERSION;
 
@@ -31,7 +31,9 @@ const PRECACHE_URLS = [
     "./manifest.json",
     "./icon-192.png",
     "./icon-512.png",
-    "./og-v2.jpg"
+    "./og-v2.jpg",
+    "./assets/community-glass.20260910.css",
+    "./js/community-glass.20260910.js"
 ];
 
 // Sofortige Installation ohne Warten
