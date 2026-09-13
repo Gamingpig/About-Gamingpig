@@ -4438,6 +4438,20 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
             backdrop-filter: blur(3px) !important;
         }
 
+        /* Responsive Mobile Fix for Dashboard & Lyrics Settings */
+        #lyrics-settings-menu {
+            max-width: min(calc(100vw - 1.25rem), 345px) !important;
+            box-sizing: border-box !important;
+        }
+        @media (max-width: 480px) {
+            #lyrics-settings-menu {
+                right: -4px !important;
+                max-width: calc(100vw - 1rem) !important;
+                width: min(295px, calc(100vw - 1.25rem)) !important;
+                max-height: min(72vh, 440px) !important;
+            }
+        }
+
 /* Focus Dimming */
 #lyrics-container.lyrics-dim-deep .lyric-line:not(.active) {
     opacity: 0.55 !important;
@@ -18711,12 +18725,18 @@ let shareCardLoading;
             const anchor = menu.offsetParent.getBoundingClientRect();
             const padding = getComputedStyle(overlay);
             const gap = parseFloat(getComputedStyle(menu).marginTop) || 8;
-            const rawWidth = anchor.right - bounds.left - (parseFloat(padding.paddingLeft) || 0);
-            const rawHeight = bounds.bottom - anchor.bottom - gap - (parseFloat(padding.paddingBottom) || 0);
-            const safeWidth = Math.max(260, Math.min(360, rawWidth || 340));
-            const safeHeight = Math.max(280, Math.min(520, rawHeight || 460));
+            const availableW = window.innerWidth <= 640 
+                ? (window.innerWidth - 24) 
+                : (anchor.right - bounds.left - (parseFloat(padding.paddingLeft) || 0));
+            const availableH = window.innerHeight <= 700 
+                ? (window.innerHeight - 100) 
+                : (bounds.bottom - anchor.bottom - gap - (parseFloat(padding.paddingBottom) || 0));
+            const safeWidth = Math.min(350, Math.max(240, availableW || 300));
+            const safeHeight = Math.min(520, Math.max(220, availableH || 380));
             menu.style.setProperty('--lyrics-settings-width', safeWidth + 'px');
             menu.style.setProperty('--lyrics-settings-height', safeHeight + 'px');
+            menu.style.maxWidth = 'min(calc(100vw - 1rem), ' + safeWidth + 'px)';
+            menu.style.maxHeight = safeHeight + 'px';
         }
 
         window.toggleLyricsSettings = function(event) {
