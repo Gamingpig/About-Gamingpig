@@ -3802,11 +3802,6 @@
                 left: auto !important;
                 max-width: calc(100vw - 1.5rem) !important;
             }
-            #lyrics-settings-menu {
-                right: 0 !important;
-                left: auto !important;
-                max-width: calc(100vw - 2rem) !important;
-            }
         }
         
         /* --- EXTREME PERFORMANCE MODUS --- */
@@ -4442,12 +4437,34 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
             max-width: min(calc(100vw - 1.25rem), 345px) !important;
             box-sizing: border-box !important;
         }
+        @media (max-width: 640px) {
+            #lyrics-settings-menu {
+                position: fixed !important;
+                top: 4.5rem !important;
+                left: 0.75rem !important;
+                right: 0.75rem !important;
+                width: auto !important;
+                max-width: calc(100vw - 1.5rem) !important;
+                margin: 0 auto !important;
+                max-height: min(74vh, 480px) !important;
+                transform-origin: top center !important;
+                box-sizing: border-box !important;
+            }
+            body.liquid-glass-active #lyrics-settings-menu.settings-opening,
+            #lyrics-settings-menu.settings-opening {
+                transform-origin: top center !important;
+            }
+            body.liquid-glass-active #lyrics-settings-menu.settings-closing,
+            #lyrics-settings-menu.settings-closing {
+                transform-origin: top center !important;
+            }
+        }
         @media (max-width: 480px) {
             #lyrics-settings-menu {
-                right: -4px !important;
+                left: 0.5rem !important;
+                right: 0.5rem !important;
                 max-width: calc(100vw - 1rem) !important;
-                width: min(295px, calc(100vw - 1.25rem)) !important;
-                max-height: min(72vh, 440px) !important;
+                max-height: min(72vh, 450px) !important;
             }
         }
 
@@ -4467,13 +4484,15 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
             transform: translate3d(0, 0, 0) !important;
             max-width: 100% !important;
             overflow: hidden !important;
+            box-sizing: border-box !important;
         }
         #lyrics-style-preview-text {
             font-size: 11px !important;
             line-height: 1.35 !important;
             max-width: 100% !important;
             letter-spacing: -0.01em !important;
-            white-space: nowrap !important;
+            white-space: normal !important;
+            word-break: break-word !important;
         }
         @media (min-width: 640px) {
             #lyrics-style-preview-text {
@@ -18725,8 +18744,12 @@ let shareCardLoading;
             let safeHeight = 440;
 
             if (isMobile) {
-                safeWidth = Math.min(320, window.innerWidth - 20);
-                safeHeight = Math.min(480, window.innerHeight - 120);
+                safeHeight = Math.min(480, Math.floor(window.innerHeight * 0.74));
+                menu.style.setProperty('--lyrics-settings-height', safeHeight + 'px');
+                menu.style.maxHeight = safeHeight + 'px';
+                menu.style.removeProperty('--lyrics-settings-width');
+                menu.style.maxWidth = '';
+                return;
             } else if (overlay && menu.offsetParent) {
                 const bounds = overlay.getBoundingClientRect();
                 const anchor = menu.offsetParent.getBoundingClientRect();
