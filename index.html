@@ -3397,25 +3397,13 @@
         
 
         /* Spekulare Kantenbrechung & Apple Glass Reflektions-Glanz */
-        body.liquid-glass-active :is(.glass-card, #header-section, #footer-bubble, #footer-expandable-menu, #cp-trigger) {
-            border: 1px solid rgba(255, 255, 255, 0.22) !important;
-            border-top: 1.5px solid rgba(255, 255, 255, 0.85) !important;
-            border-left: 1.5px solid rgba(255, 255, 255, 0.45) !important;
-            border-right: 1px solid rgba(255, 255, 255, 0.15) !important;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.10) !important;
-            box-shadow: 
-                0 20px 45px -15px rgba(0, 0, 0, 0.45),
-                inset 0 1.5px 2px rgba(255, 255, 255, 0.75),
-                inset 1px 0 1.5px rgba(255, 255, 255, 0.35),
-                inset -1px -1px 2px rgba(255, 255, 255, 0.08),
-                0 0 1px 1px rgba(255, 255, 255, 0.12) !important;
-        }
-        body.liquid-glass-active :is(.glass-card, #header-section) {
+        /* Spekulare Kantenbrechung & Apple Glass Reflektions-Glanz */
+        body.liquid-glass-active :is(.glass-card:not(#back-to-top), #header-section) {
             position: relative;
         }
 
         /* Dynamischer Licht-Glanzstreifen über die Glaskante */
-        body.liquid-glass-active :is(.glass-card, #header-section)::before {
+        body.liquid-glass-active :is(.glass-card:not(#back-to-top), #header-section)::before {
             content: '';
             position: absolute;
             top: 0; left: 0; right: 0; height: 35%;
@@ -3435,32 +3423,8 @@
             overflow: visible !important;
         }
 
-        /* Glass Click Spring & Morph */
-        body.liquid-glass-active .glass-card {
-            cursor: pointer;
-            transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1),
-                        box-shadow 0.45s cubic-bezier(0.34, 1.56, 0.64, 1),
-                        border-color 0.3s ease,
-                        backdrop-filter 0.3s ease !important;
-        }
-
-        body.liquid-glass-active .glass-card:hover {
-            transform: translateY(-4px) scale(1.012) translateZ(0) !important;
-            box-shadow: 0 24px 50px -10px rgba(0, 0, 0, 0.5),
-                        inset 0 1px 2px rgba(255, 255, 255, 0.8),
-                        0 0 25px rgba(59, 130, 246, 0.25) !important;
-            border-top-color: rgba(255, 255, 255, 0.85) !important;
-        }
-
-        body.liquid-glass-active .glass-card:active {
-            transform: translateY(1px) scale(0.975) translateZ(0) !important;
-            box-shadow: 0 8px 20px -5px rgba(0, 0, 0, 0.3),
-                        inset 0 2px 4px rgba(255, 255, 255, 0.4) !important;
-            transition-duration: 0.12s !important;
-        }
-
         /* Buttons & Pills Liquid Elastic Press */
-        body.liquid-glass-active button,
+        body.liquid-glass-active button:not(#back-to-top),
         body.liquid-glass-active a.p-2\.5,
         body.liquid-glass-active #footer-bubble,
         body.liquid-glass-active #cp-trigger {
@@ -3470,7 +3434,7 @@
                         background 0.25s ease !important;
         }
 
-        body.liquid-glass-active button:active,
+        body.liquid-glass-active button:not(#back-to-top):active,
         body.liquid-glass-active a.p-2\.5:active,
         body.liquid-glass-active #cp-trigger:active {
             transform: scale(0.91) !important;
@@ -3501,38 +3465,6 @@
                 transform: translate(-50%, -50%) scale(4.2);
                 opacity: 0;
             }
-        }
-
-        /* Apple Lens Refraction via SVG Displacement */
-        @supports (backdrop-filter: url("#apple-liquid-lens-refraction")) or (-webkit-backdrop-filter: url("#apple-liquid-lens-refraction")) {
-            body.liquid-glass-active :is(.glass-card, #header-section) {
-                -webkit-backdrop-filter: url("#apple-liquid-lens-refraction") blur(4.5px) saturate(145%) !important;
-                backdrop-filter: url("#apple-liquid-lens-refraction") blur(4.5px) saturate(145%) !important;
-            }
-        }
-
-
-        /* Apple Demo Bezel Glow & Refraction Ring */
-        body.liquid-glass-active :is(.glass-card, #header-section) {
-            border: 1px solid rgba(255, 255, 255, 0.20) !important;
-            border-top: 1.5px solid rgba(255, 255, 255, 0.65) !important;
-            border-left: 1.5px solid rgba(255, 255, 255, 0.40) !important;
-            box-shadow: 
-                0 20px 50px -15px rgba(0, 0, 0, 0.65),
-                inset 0 1.5px 2px rgba(255, 255, 255, 0.6),
-                inset 0 -1px 2px rgba(255, 255, 255, 0.15),
-                0 0 1px 1px rgba(255, 255, 255, 0.10) !important;
-            backdrop-filter: blur(20px) saturate(170%) !important;
-            -webkit-backdrop-filter: blur(20px) saturate(170%) !important;
-        }
-
-        body.liquid-glass-active :is(.glass-card, #header-section):hover {
-            box-shadow: 
-                0 28px 65px -12px rgba(0, 0, 0, 0.75),
-                inset 0 1.5px 3px rgba(255, 255, 255, 0.8),
-                inset 0 -1.5px 3px rgba(255, 255, 255, 0.2),
-                0 0 25px rgba(59, 130, 246, 0.25) !important;
-            border-top-color: rgba(255, 255, 255, 0.9) !important;
         }
 
 
@@ -4012,28 +3944,28 @@ body.liquid-glass-active .mesh-gradient {
 
 
 /* Liquid Glass Karten - Echtes kristallklares Apple Glas mit hoher Transparenz */
-body.liquid-glass-active .glass-card {
+body.liquid-glass-active .glass-card:not(#back-to-top) {
     position: relative;
     overflow: hidden;
 
-    -webkit-backdrop-filter: blur(5px) saturate(135%) brightness(1.04) !important;
-    backdrop-filter: blur(5px) saturate(135%) brightness(1.04) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(180%) brightness(1.05) !important;
+    backdrop-filter: blur(20px) saturate(180%) brightness(1.05) !important;
 
     background: linear-gradient(
-        120deg,
-        rgba(255, 255, 255, 0.035) 0%,
-        rgba(255, 255, 255, 0.005) 35%,
-        rgba(255, 255, 255, 0.05) 50%,
-        rgba(255, 255, 255, 0.005) 65%,
-        rgba(255, 255, 255, 0.02) 100%
+        135deg,
+        rgba(255, 255, 255, 0.28) 0%,
+        rgba(255, 255, 255, 0.10) 40%,
+        rgba(255, 255, 255, 0.18) 100%
     ) !important;
 
-    border: 1px solid rgba(255, 255, 255, 0.22) !important;
-    border-top: 1px solid rgba(255, 255, 255, 0.65) !important;
-    border-left: 1px solid rgba(255, 255, 255, 0.40) !important;
+    border: 1px solid rgba(255, 255, 255, 0.35) !important;
+    border-top: 1.5px solid rgba(255, 255, 255, 0.85) !important;
+    border-left: 1.5px solid rgba(255, 255, 255, 0.60) !important;
 
     border-radius: 24px !important;
-    box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.4) !important;
+    box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.12),
+                inset 0 1.5px 2px rgba(255, 255, 255, 0.7),
+                0 0 1px 1px rgba(255, 255, 255, 0.2) !important;
 
     transform: translate3d(0, 0, 0);
     backface-visibility: hidden;
@@ -4046,26 +3978,26 @@ body.liquid-glass-active .glass-card {
         backdrop-filter 0.4s ease !important;
 }
 
-.dark body.liquid-glass-active .glass-card {
-    -webkit-backdrop-filter: blur(24px) saturate(185%) brightness(1.08) !important;
-    backdrop-filter: blur(24px) saturate(185%) brightness(1.08) !important;
+.dark body.liquid-glass-active .glass-card:not(#back-to-top) {
+    -webkit-backdrop-filter: blur(24px) saturate(190%) brightness(1.08) !important;
+    backdrop-filter: blur(24px) saturate(190%) brightness(1.08) !important;
 
     background: linear-gradient(
         135deg,
-        rgba(255, 255, 255, 0.08) 0%,
-        rgba(255, 255, 255, 0.02) 40%,
-        rgba(15, 23, 42, 0.42) 100%
+        rgba(255, 255, 255, 0.10) 0%,
+        rgba(255, 255, 255, 0.03) 40%,
+        rgba(15, 23, 42, 0.45) 100%
     ) !important;
 
-    border: 1px solid rgba(255, 255, 255, 0.16) !important;
-    border-top: 1.5px solid rgba(255, 255, 255, 0.65) !important;
-    border-left: 1.5px solid rgba(255, 255, 255, 0.35) !important;
+    border: 1px solid rgba(255, 255, 255, 0.18) !important;
+    border-top: 1.5px solid rgba(255, 255, 255, 0.75) !important;
+    border-left: 1.5px solid rgba(255, 255, 255, 0.45) !important;
 
     box-shadow: 
         0 20px 48px -12px rgba(0, 0, 0, 0.55),
-        inset 0 1.5px 2px rgba(255, 255, 255, 0.5),
+        inset 0 1.5px 2px rgba(255, 255, 255, 0.55),
         inset 0 -1px 2px rgba(0, 0, 0, 0.3),
-        0 0 1px 1px rgba(255, 255, 255, 0.1) !important;
+        0 0 1px 1px rgba(255, 255, 255, 0.12) !important;
 }
 
 
@@ -4257,39 +4189,41 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
     }
 
     body.liquid-glass-active
-    .glass-card:not(#main-music-card):not(#mini-player-toggle):hover {
+    .glass-card:not(#main-music-card):not(#mini-player-toggle):not(#back-to-top):hover {
 
         transform:
             scale(1.04)
             translateY(-4px)
             translate3d(0, 0, 0) !important;
 
-        border: 1px solid rgba(255, 255, 255, 0.22) !important;
+        border: 1px solid rgba(255, 255, 255, 0.35) !important;
+        border-top: 1.5px solid rgba(255, 255, 255, 0.85) !important;
 
         background-color:
-            rgba(255, 255, 255, 0.07) !important;
+            rgba(255, 255, 255, 0.32) !important;
 
         -webkit-backdrop-filter:
-            blur(12px)
-            saturate(130%) !important;
+            blur(24px)
+            saturate(190%) !important;
 
         backdrop-filter:
-            blur(12px)
-            saturate(130%) !important;
+            blur(24px)
+            saturate(190%) !important;
 
         box-shadow:
-            0 20px 40px -15px rgba(0, 0, 0, 0.22) !important;
+            0 20px 45px -12px rgba(0, 0, 0, 0.2),
+            inset 0 1.5px 2px rgba(255, 255, 255, 0.7) !important;
 
         border-radius: 24px !important;
         z-index: 50;
     }
 
-    .dark body.liquid-glass-active .glass-card:not(#main-music-card):not(#mini-player-toggle):hover {
+    .dark body.liquid-glass-active .glass-card:not(#main-music-card):not(#mini-player-toggle):not(#back-to-top):hover {
                 background: linear-gradient(
                     135deg,
-                    rgba(255, 255, 255, 0.12) 0%,
+                    rgba(255, 255, 255, 0.14) 0%,
                     rgba(255, 255, 255, 0.04) 40%,
-                    rgba(15, 23, 42, 0.48) 100%
+                    rgba(15, 23, 42, 0.5) 100%
                 ) !important;
                 border: 1px solid rgba(255, 255, 255, 0.25) !important;
                 border-top: 1.5px solid rgba(255, 255, 255, 0.85) !important;
@@ -4302,7 +4236,7 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
             }
 
 
-            body:not(.liquid-glass-active) .glass-card:not(#main-music-card):not(#mini-player-toggle):hover {
+            body:not(.liquid-glass-active) .glass-card:not(#main-music-card):not(#mini-player-toggle):not(#back-to-top):hover {
                 transform: translateY(-4px) scale(1.02) translate3d(0,0,0);
                 border: 1px solid rgba(255, 255, 255, 0.15);
                 box-shadow: 0 15px 30px -10px rgba(0, 0, 0, 0.3);
@@ -4310,7 +4244,7 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
         }
 
         /* APPLE SQUISH */
-        body.liquid-glass-active .glass-card.is-squished:not(#main-music-card):not(#mini-player-toggle) {
+        body.liquid-glass-active .glass-card.is-squished:not(#main-music-card):not(#mini-player-toggle):not(#back-to-top) {
             transform: scale(0.92) translateY(4px) translate3d(0,0,0) !important;
             border-radius: 40px !important;
             transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-radius 0.2s !important;
@@ -5304,7 +5238,7 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
         /* --- NEUE FEATURES: Back-to-Top, Easter Eggs -------------- */
         /* ========================================================= */
 
-        /* Footer Bubble – fixed position, centered between #cp-trigger and #back-to-top */
+        /* Footer Bubble – fixed dock, centered, elegant liquid glass */
         #footer-bubble {
             position: fixed !important;
             height: 2.75rem;
@@ -5312,7 +5246,7 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
             box-sizing: border-box;
             bottom: 1.25rem;
             left: var(--footer-center, 50%);
-            max-width: var(--footer-space, calc(100vw - 6.5rem)); /* leave room for ⌘K left + ↑ right */
+            max-width: var(--footer-space, calc(100vw - 7.5rem));
             transform: translateX(-50%) translateY(20px);
             transition: opacity 0.35s var(--apple-ease), transform 0.35s var(--apple-spring);
             z-index: 9100 !important;
@@ -5327,7 +5261,7 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
                 height: 3.25rem;
                 min-height: 3.25rem;
                 bottom: 2rem;
-                max-width: var(--footer-space, calc(100vw - 9rem));
+                max-width: var(--footer-space, calc(100vw - 10rem));
             }
         }
         #footer-bubble.footer-bubble-visible ~ #pwa-install-btn { bottom: var(--footer-install-bottom, 5rem); }
@@ -5339,17 +5273,17 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
         body.liquid-glass-active #footer-bubble {
             background: linear-gradient(
                 135deg,
-                rgba(255, 255, 255, 0.12) 0%,
+                rgba(255, 255, 255, 0.14) 0%,
                 rgba(255, 255, 255, 0.04) 40%,
-                rgba(15, 23, 42, 0.45) 100%
+                rgba(15, 23, 42, 0.5) 100%
             ) !important;
             backdrop-filter: blur(28px) saturate(190%) brightness(1.1) !important;
             -webkit-backdrop-filter: blur(28px) saturate(190%) brightness(1.1) !important;
-            border: 1px solid rgba(255, 255, 255, 0.22) !important;
-            border-top: 1.5px solid rgba(255, 255, 255, 0.75) !important;
-            border-left: 1.5px solid rgba(255, 255, 255, 0.45) !important;
+            border: 1px solid rgba(255, 255, 255, 0.25) !important;
+            border-top: 1.5px solid rgba(255, 255, 255, 0.8) !important;
+            border-left: 1.5px solid rgba(255, 255, 255, 0.5) !important;
             box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.6),
-                        inset 0 1.5px 2px rgba(255, 255, 255, 0.55),
+                        inset 0 1.5px 2px rgba(255, 255, 255, 0.6),
                         inset 0 -1px 2px rgba(0, 0, 0, 0.3) !important;
             color: #f1f5f9 !important;
         }
@@ -5376,14 +5310,14 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
         body.liquid-glass-active #footer-expandable-menu {
             background: linear-gradient(
                 135deg,
-                rgba(255, 255, 255, 0.10) 0%,
+                rgba(255, 255, 255, 0.12) 0%,
                 rgba(255, 255, 255, 0.03) 35%,
-                rgba(15, 23, 42, 0.65) 100%
+                rgba(15, 23, 42, 0.7) 100%
             ) !important;
             backdrop-filter: blur(32px) saturate(190%) brightness(1.08) !important;
             -webkit-backdrop-filter: blur(32px) saturate(190%) brightness(1.08) !important;
-            border: 1px solid rgba(255, 255, 255, 0.2) !important;
-            border-top: 1.5px solid rgba(255, 255, 255, 0.7) !important;
+            border: 1px solid rgba(255, 255, 255, 0.22) !important;
+            border-top: 1.5px solid rgba(255, 255, 255, 0.75) !important;
             box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.8),
                         inset 0 1.5px 2px rgba(255, 255, 255, 0.45) !important;
             color: #f1f5f9 !important;
@@ -5494,15 +5428,51 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
 
         /* Back-to-Top Button */
         #back-to-top {
-            position: fixed; bottom: 1.25rem; right: 1.25rem; z-index: 90;
-            width: 2.75rem; height: 2.75rem;
-            display: flex; align-items: center; justify-content: center;
-            opacity: 0; visibility: hidden; transform: translateY(20px) scale(0.8);
-            transition: opacity 0.4s var(--apple-ease), transform 0.4s var(--apple-spring), visibility 0.4s;
+            position: fixed !important; bottom: 1.25rem; right: 1.25rem; z-index: 9150 !important;
+            width: 2.75rem !important; height: 2.75rem !important;
+            min-width: 2.75rem !important; min-height: 2.75rem !important;
+            max-width: 2.75rem !important; max-height: 2.75rem !important;
+            contain: none !important;
+            contain-intrinsic-size: none !important;
+            display: flex !important; align-items: center; justify-content: center;
+            opacity: 0; visibility: hidden; pointer-events: none;
+            transform: translateY(20px) scale(0.8);
+            transition: opacity 0.35s var(--apple-ease), transform 0.35s var(--apple-spring), visibility 0.35s;
         }
-        @media (min-width: 640px) { #back-to-top { bottom: 2rem; right: 2rem; width: 3.25rem; height: 3.25rem; } }
-        #back-to-top.visible { opacity: 1; visibility: visible; transform: translateY(0) scale(1); }
-        #back-to-top:active { transform: scale(0.9); }
+        @media (min-width: 640px) {
+            #back-to-top {
+                bottom: 2rem; right: 2rem;
+                width: 3.25rem !important; height: 3.25rem !important;
+                min-width: 3.25rem !important; min-height: 3.25rem !important;
+                max-width: 3.25rem !important; max-height: 3.25rem !important;
+            }
+        }
+        #back-to-top.visible {
+            opacity: 1 !important; visibility: visible !important; pointer-events: auto !important;
+            transform: translateY(0) scale(1) !important;
+        }
+        #back-to-top:active { transform: scale(0.9) !important; }
+
+        body.liquid-glass-active #back-to-top {
+            background: linear-gradient(
+                135deg,
+                rgba(255, 255, 255, 0.16) 0%,
+                rgba(255, 255, 255, 0.05) 40%,
+                rgba(15, 23, 42, 0.55) 100%
+            ) !important;
+            backdrop-filter: blur(28px) saturate(190%) brightness(1.1) !important;
+            -webkit-backdrop-filter: blur(28px) saturate(190%) brightness(1.1) !important;
+            border: 1px solid rgba(255, 255, 255, 0.25) !important;
+            border-top: 1.5px solid rgba(255, 255, 255, 0.85) !important;
+            border-left: 1.5px solid rgba(255, 255, 255, 0.5) !important;
+            box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.6),
+                        inset 0 1.5px 2px rgba(255, 255, 255, 0.6),
+                        inset 0 -1px 2px rgba(0, 0, 0, 0.3) !important;
+            color: #60a5fa !important;
+        }
+        .dark body.liquid-glass-active #back-to-top {
+            color: #93c5fd !important;
+        }
 
         /* Toast-Benachrichtigungen (z.B. für Easter Egg) */
         #toast-container {
@@ -17278,17 +17248,29 @@ let shareCardLoading;
 
         const footerBubbleEl = document.getElementById('footer-bubble');
         function fitFooterBubble() {
+            if (!footerBubbleEl || standByActive) return;
             const left = document.getElementById('cp-trigger');
-            if (!footerBubbleEl || !left || !backToTopBtn || standByActive) return;
-            // Layout offsets exclude hover/entrance transforms on the buttons.
-            const gapStart = left.offsetLeft + left.offsetWidth;
-            const gapEnd = backToTopBtn.offsetLeft;
-            footerBubbleEl.style.setProperty('--footer-center', ((gapStart + gapEnd) / 2) + 'px');
-            footerBubbleEl.style.setProperty('--footer-space', Math.max(0, gapEnd - gapStart - 16) + 'px');
-            const leftCenter = parseFloat(getComputedStyle(left).bottom) + left.offsetHeight / 2;
-            const rightCenter = parseFloat(getComputedStyle(backToTopBtn).bottom) + backToTopBtn.offsetHeight / 2;
-            footerBubbleEl.style.bottom = ((leftCenter + rightCenter - footerBubbleEl.offsetHeight) / 2) + 'px';
-            document.getElementById('pwa-install-btn')?.style.setProperty('--footer-install-bottom', ((leftCenter + rightCenter + footerBubbleEl.offsetHeight) / 2 + 12) + 'px');
+            if (left && backToTopBtn && backToTopBtn.offsetLeft > 0) {
+                const gapStart = left.offsetLeft + left.offsetWidth;
+                const gapEnd = backToTopBtn.offsetLeft;
+                if (gapEnd > gapStart + 100) {
+                    footerBubbleEl.style.setProperty('--footer-center', ((gapStart + gapEnd) / 2) + 'px');
+                    footerBubbleEl.style.setProperty('--footer-space', Math.max(0, gapEnd - gapStart - 16) + 'px');
+                } else {
+                    footerBubbleEl.style.setProperty('--footer-center', '50%');
+                    footerBubbleEl.style.removeProperty('--footer-space');
+                }
+            } else {
+                footerBubbleEl.style.setProperty('--footer-center', '50%');
+                footerBubbleEl.style.removeProperty('--footer-space');
+            }
+            if (left && backToTopBtn) {
+                const leftBottom = parseFloat(getComputedStyle(left).bottom) || 16;
+                const rightBottom = parseFloat(getComputedStyle(backToTopBtn).bottom) || 20;
+                const avgBottom = (leftBottom + rightBottom) / 2;
+                footerBubbleEl.style.bottom = avgBottom + 'px';
+                document.getElementById('pwa-install-btn')?.style.setProperty('--footer-install-bottom', (avgBottom + footerBubbleEl.offsetHeight + 12) + 'px');
+            }
         }
         const footerButtonObserver = new ResizeObserver(fitFooterBubble);
         for (const button of [document.getElementById('cp-trigger'), backToTopBtn]) if (button) footerButtonObserver.observe(button);
@@ -17296,9 +17278,8 @@ let shareCardLoading;
         function updateScrollUI() {
             if (standByActive) { scrollTicking = false; return; }
             const scrollTop = window.scrollY || document.documentElement.scrollTop;
-            const docHeight = document.documentElement.scrollHeight - window.innerHeight;
             if (backToTopBtn) {
-                if (scrollTop > 500) backToTopBtn.classList.add('visible');
+                if (scrollTop > 300) backToTopBtn.classList.add('visible');
                 else backToTopBtn.classList.remove('visible');
             }
             // Footer-Sichtbarkeit wird vom IntersectionObserver an #footer-scroll-anchor gesteuert
