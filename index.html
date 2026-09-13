@@ -4304,7 +4304,7 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
             transition: grid-template-rows 0.6s var(--apple-spring), padding 0.6s var(--apple-spring);
         }
         #music-card-layout-wrapper.hidden { display: none !important; }
-        body.liquid-glass-active #music-card-layout-wrapper { transition: grid-template-rows 1.2s var(--liquid-fluid), padding 1.2s var(--liquid-fluid); }
+        body.liquid-glass-active #music-card-layout-wrapper { transition: grid-template-rows 0.65s var(--apple-spring), padding 0.65s var(--apple-spring); }
         #music-card-layout-wrapper.is-open { grid-template-rows: 1fr; padding-top: 1.5rem; }
         #music-card-wrapper { min-height: 0; width: 100%; display: flex; justify-content: center; align-items: flex-start; overflow: visible; }
 
@@ -4498,11 +4498,11 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
 
         @keyframes ext-settings-pop-in {
             0% {
-                transform: translate3d(8px, -18px, 0) scale3d(0.82, 0.82, 1);
+                transform: translate3d(0, -14px, 0) scale3d(0.88, 0.88, 1);
                 opacity: 0;
             }
             65% {
-                transform: translate3d(-2px, 3px, 0) scale3d(1.025, 1.025, 1);
+                transform: translate3d(0, 2px, 0) scale3d(1.015, 1.015, 1);
                 opacity: 1;
             }
             100% {
@@ -4517,25 +4517,25 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
                 opacity: 1;
             }
             30% {
-                transform: translate3d(-1px, 2px, 0) scale3d(1.02, 1.02, 1);
+                transform: translate3d(0, 2px, 0) scale3d(1.01, 1.01, 1);
                 opacity: 1;
             }
             100% {
-                transform: translate3d(10px, -20px, 0) scale3d(0.8, 0.8, 1);
+                transform: translate3d(0, -14px, 0) scale3d(0.88, 0.88, 1);
                 opacity: 0;
             }
         }
 
         @keyframes ext-dashboard-in {
-            0% { transform: translate3d(0, -20px, 0) scale3d(0.94, 0.94, 1); opacity: 0; }
-            65% { transform: translate3d(0, 4px, 0) scale3d(1.012, 1.012, 1); opacity: 1; }
+            0% { transform: translate3d(0, -16px, 0) scale3d(0.96, 0.96, 1); opacity: 0; }
+            65% { transform: translate3d(0, 2px, 0) scale3d(1.008, 1.008, 1); opacity: 1; }
             100% { transform: translate3d(0, 0, 0) scale3d(1, 1, 1); opacity: 1; }
         }
 
         @keyframes ext-dashboard-out {
             0% { transform: translate3d(0, 0, 0) scale3d(1, 1, 1); opacity: 1; }
-            30% { transform: translate3d(0, 3px, 0) scale3d(1.01, 1.01, 1); opacity: 1; }
-            100% { transform: translate3d(0, -24px, 0) scale3d(0.95, 0.95, 1); opacity: 0; }
+            30% { transform: translate3d(0, 2px, 0) scale3d(1.005, 1.005, 1); opacity: 1; }
+            100% { transform: translate3d(0, -16px, 0) scale3d(0.96, 0.96, 1); opacity: 0; }
         }
 
         /* --- TUTORIAL MORPHING --- */
@@ -4547,8 +4547,8 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
         body.liquid-glass-active .tutorial-morphing { animation: tutorial-morph 0.5s var(--liquid-fluid) !important; }
 
         /* --- STANDARD FALLBACKS --- */
-        .modal-opening .modal-content, .picker-opening, .tutorial-opening { animation: std-pop-in 0.5s var(--apple-spring) forwards; }
-        .modal-closing .modal-content, .picker-closing, .tutorial-closing { animation: std-pop-out 0.4s var(--apple-ease) forwards; }
+        .modal-opening .modal-content, .picker-opening, .tutorial-opening, .settings-opening { animation: std-pop-in 0.5s var(--apple-spring) forwards; }
+        .modal-closing .modal-content, .picker-closing, .tutorial-closing, .settings-closing { animation: std-pop-out 0.4s var(--apple-ease) forwards; }
         :is(.dashboard-opening, #music-card-wrapper.dashboard-opening) #main-music-card { animation: std-pop-in 0.5s var(--apple-spring) forwards; transform-origin: top center; }
         :is(.dashboard-closing, #music-card-wrapper.dashboard-closing) #main-music-card { animation: std-pop-out 0.4s var(--apple-ease) forwards; transform-origin: top center; }
         /* NEW: Kart-Dashboard bekommt dieselben Pop-In/Pop-Out-Animationen wie das Musik-
@@ -18756,6 +18756,7 @@ let shareCardLoading;
             isLyricsSettingsOpen = !isLyricsSettingsOpen;
 
             if (isLyricsSettingsOpen) {
+                lastLyricsSettingsOpenedAt = Date.now();
                 if (isGlobalSettingsOpen) window.toggleStandaloneSettings();
                 lyricsMenu.classList.remove('hidden', 'settings-closing');
                 lyricsMenu.style.display = 'flex';
@@ -18797,6 +18798,7 @@ let shareCardLoading;
             isGlobalSettingsOpen = !isGlobalSettingsOpen;
 
             if (isGlobalSettingsOpen) {
+                lastGlobalSettingsOpenedAt = Date.now();
                 if (isLyricsSettingsOpen) window.toggleLyricsSettings();
                 window.updateAiNoticeCounter();
                 globalMenu.classList.remove('hidden', 'settings-closing');
@@ -18836,14 +18838,18 @@ let shareCardLoading;
             }, 100);
         };
 
+        let lastLyricsSettingsOpenedAt = 0;
+        let lastGlobalSettingsOpenedAt = 0;
+
         // Click outside listener for both menus
         document.addEventListener('click', (e) => {
-            if (isLyricsSettingsOpen && 
+            const now = Date.now();
+            if (isLyricsSettingsOpen && (now - lastLyricsSettingsOpenedAt > 280) &&
                 !e.target.closest('#lyrics-settings-menu') && 
                 !e.target.closest('#btn-lyrics-settings')) {
                 window.toggleLyricsSettings(e);
             }
-            if (isGlobalSettingsOpen && 
+            if (isGlobalSettingsOpen && (now - lastGlobalSettingsOpenedAt > 280) &&
                 !e.target.closest('#global-settings-menu') && 
                 !e.target.closest('#settings-global-toggle') && 
                 !e.target.closest('#footer-settings-btn')) {
