@@ -3222,6 +3222,9 @@
 -->
 <html lang="de" id="html-root">
 <head>
+    <script>/* Android Liquid Glass compatibility — must run before CSS applies */
+    (function(){try{var ua=navigator.userAgent||'';var isAndroid=/Android/i.test(ua);var isMobile=/Mobile|iP(hone|od|ad)|Android.*Mobile/i.test(ua);var lowMem=(navigator.deviceMemory&&navigator.deviceMemory<=4)||false;var lowCores=(navigator.hardwareConcurrency&&navigator.hardwareConcurrency<=4)||false;if(isAndroid||isMobile){document.documentElement.classList.add('gp-mobile');}if(isAndroid){document.documentElement.classList.add('gp-android');}if(isAndroid&&(lowMem||lowCores)){document.documentElement.classList.add('gp-android-lowend');}}catch(e){}})();
+    </script>
     <script src="./js/core/push-config.js"></script>
     <script src="./js/services/push-registration.dac93cbcb3758c9f.js"></script>
     <script src="./js/core/storage.e856be99df567fd2.js"></script>
@@ -3981,8 +3984,7 @@ body.liquid-glass-active :is(.glass-card:not(#back-to-top), #header-section, #fo
         transform 0.6s var(--apple-spring),
         box-shadow 0.6s var(--apple-spring),
         border-radius 0.4s var(--apple-ease),
-        background-color 0.4s ease,
-        backdrop-filter 0.4s ease !important;
+        background-color 0.4s ease !important;
 }
 
 .dark body.liquid-glass-active :is(.glass-card:not(#back-to-top), #header-section, #footer-bubble, #footer-expandable-menu) {
@@ -4152,8 +4154,7 @@ body.liquid-glass-active #main-music-card {
         transform 0.6s var(--apple-spring),
         box-shadow 0.6s var(--apple-spring),
         border-radius 0.4s var(--apple-ease),
-        background-color 0.4s ease,
-        backdrop-filter 0.4s ease !important;
+        background-color 0.4s ease !important;
 }
 
 
@@ -4176,8 +4177,10 @@ body.liquid-glass-active :is(.glass-card, #header-section, #footer-bubble, #foot
     opacity: var(--glare-opacity, 0);
     transition: opacity 0.4s var(--apple-ease);
     pointer-events: none;
-    mix-blend-mode: overlay;
 }
+
+html.gp-android body.liquid-glass-active :is(.glass-card, #header-section, #footer-bubble, #footer-expandable-menu)::before { display: none !important; }
+html.gp-android body.liquid-glass-active :is(.glass-card:not(#back-to-top), #header-section, #footer-bubble, #footer-expandable-menu)::after { display: none !important; }
 
 .dark body.liquid-glass-active :is(.glass-card, #header-section, #footer-bubble, #footer-expandable-menu)::before {
     background: radial-gradient(
@@ -6953,6 +6956,266 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
 <link rel="stylesheet" href="assets/living-design.4e423a2a90529272.css">
 
 <style>
+/* =========================================================
+   ANDROID LIQUID GLASS COMPATIBILITY LAYER
+   Loaded LAST so it overrides all inline glass rules.
+   Android Chrome has a fundamentally more expensive backdrop-filter
+   compositing path than iOS Safari. Multiple simultaneous backdrop-filter
+   layers cause: black/white boxes, flickering, GPU memory exhaustion,
+   and severe jank. This layer replaces live blur with painted glass
+   (translucent gradients + borders + inset shadows) on Android.
+   ========================================================= */
+
+/* --- 1. Disable ALL backdrop-filter on Android glass surfaces --- */
+/* Use highest specificity: html.gp-android + body.liquid-glass-active + :is() with IDs */
+html.gp-android body.liquid-glass-active :is(
+  .glass-card, .glass-card:not(#back-to-top), #header-section, #footer-bubble,
+  #footer-expandable-menu, #main-music-card, #mini-player-toggle,
+  #global-settings-menu, #lyrics-settings-menu, #tutorial-box,
+  #language-picker-box, #sharecard-picker-box, #command-palette,
+  #dynamic-island, .modal-content, #whats-new-epic-modal>div,
+  #privacy-update-modal>div, #interactive-quest-hud>div,
+  #spotify-wrapped-modal>div, #cp-trigger
+),
+html.gp-android body.liquid-glass-active #main-music-card#main-music-card,
+html.gp-android body.liquid-glass-active #mini-player-toggle#mini-player-toggle,
+html.gp-android body.liquid-glass-active #global-settings-menu#global-settings-menu,
+html.gp-android body.liquid-glass-active #lyrics-settings-menu#lyrics-settings-menu,
+html.gp-android body.liquid-glass-active #tutorial-box#tutorial-box,
+html.gp-android body.liquid-glass-active #command-palette#command-palette,
+html.gp-android body.liquid-glass-active #dynamic-island#dynamic-island,
+html.gp-android body.liquid-glass-active #footer-bubble#footer-bubble,
+html.gp-android body.liquid-glass-active #footer-expandable-menu#footer-expandable-menu {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* --- 2. Android painted-glass fallback backgrounds --- */
+/* Dark mode: semi-opaque dark surface that looks like frosted glass without live blur */
+html.gp-android body.liquid-glass-active :is(
+  .glass-card:not(#back-to-top), #header-section, #footer-bubble, #footer-expandable-menu
+) {
+  background: rgba(15, 23, 42, 0.88) !important;
+}
+html.gp-android:not(.dark) body.liquid-glass-active :is(
+  .glass-card:not(#back-to-top), #header-section, #footer-bubble, #footer-expandable-menu
+) {
+  background: rgba(255, 255, 255, 0.88) !important;
+}
+
+/* Large glass surfaces */
+html.gp-android body.liquid-glass-active :is(
+  #main-music-card, #mini-player-toggle, .modal-content, #global-settings-menu,
+  #tutorial-box, #language-picker-box, #sharecard-picker-box, #command-palette,
+  #whats-new-epic-modal>div, #privacy-update-modal>div, #interactive-quest-hud>div,
+  #spotify-wrapped-modal>div
+) {
+  background: rgba(15, 23, 42, 0.92) !important;
+}
+html.gp-android:not(.dark) body.liquid-glass-active :is(
+  #main-music-card, #mini-player-toggle, .modal-content, #global-settings-menu,
+  #tutorial-box, #language-picker-box, #sharecard-picker-box, #command-palette,
+  #whats-new-epic-modal>div, #privacy-update-modal>div, #interactive-quest-hud>div,
+  #spotify-wrapped-modal>div
+) {
+  background: rgba(255, 255, 255, 0.92) !important;
+}
+
+/* --- 3. Footer bubble & menu: painted glass on Android --- */
+html.gp-android #footer-bubble {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  background: rgba(15, 23, 42, 0.92) !important;
+}
+html.gp-android:not(.dark) #footer-bubble {
+  background: rgba(255, 255, 255, 0.92) !important;
+}
+html.gp-android #footer-expandable-menu {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  background: rgba(15, 23, 42, 0.95) !important;
+}
+html.gp-android:not(.dark) #footer-expandable-menu {
+  background: rgba(248, 250, 252, 0.95) !important;
+}
+
+/* --- 4. Settings menus & modals: disable blur on Android --- */
+html.gp-android #global-settings-menu,
+html.gp-android #lyrics-settings-menu {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  background-color: #0f172a !important;
+}
+html.gp-android:not(.dark) #global-settings-menu,
+html.gp-android:not(.dark) #lyrics-settings-menu {
+  background-color: #f1f5f9 !important;
+}
+
+/* --- 5. Header: disable blur, use painted background --- */
+html.gp-android body.liquid-glass-active #header-section {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  background: rgba(15, 23, 42, 0.88) !important;
+}
+html.gp-android:not(.dark) body.liquid-glass-active #header-section {
+  background: rgba(255, 255, 255, 0.88) !important;
+}
+
+/* --- 6. CP trigger: disable blur on Android --- */
+html.gp-android body.liquid-glass-active #cp-trigger {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  background: rgba(15, 23, 42, 0.85) !important;
+}
+html.gp-android:not(.dark) body.liquid-glass-active #cp-trigger {
+  background: rgba(255, 255, 255, 0.85) !important;
+}
+
+/* --- 7. Disable glass pseudo-element overlays on Android --- */
+html.gp-android body.liquid-glass-active :is(
+  .glass-card, .glass-card:not(#back-to-top), #header-section, #footer-bubble,
+  #footer-expandable-menu, #main-music-card, #mini-player-toggle, .modal-content
+)::before,
+html.gp-android body.liquid-glass-active :is(
+  .glass-card, .glass-card:not(#back-to-top), #header-section, #footer-bubble,
+  #footer-expandable-menu, #main-music-card, #mini-player-toggle, .modal-content
+)::after {
+  display: none !important;
+  content: none !important;
+}
+
+/* --- 8. Fix low-end mode specificity: ensure backdrop-filter is disabled --- */
+/* The base liquid-glass-active rules have higher specificity than body.low-end *,
+   so we need explicit overrides with matching or higher specificity. */
+body.low-end.liquid-glass-active :is(
+  .glass-card:not(#back-to-top), #header-section, #footer-bubble,
+  #footer-expandable-menu, #main-music-card, #mini-player-toggle,
+  .modal-content, #global-settings-menu, #lyrics-settings-menu, #tutorial-box,
+  #language-picker-box, #sharecard-picker-box, #command-palette, #dynamic-island,
+  #whats-new-epic-modal>div, #privacy-update-modal>div, #interactive-quest-hud>div,
+  #spotify-wrapped-modal>div, #cp-trigger
+) {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  background: rgba(15, 23, 42, 0.94) !important;
+  box-shadow: 0 16px 40px -12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.15) !important;
+}
+/* Fix: .dark is on <html>, not <body> — use html:not(.dark) for light mode check */
+html:not(.dark) body.low-end.liquid-glass-active :is(
+  .glass-card:not(#back-to-top), #header-section, #footer-bubble,
+  #footer-expandable-menu, #main-music-card, #mini-player-toggle,
+  .modal-content, #global-settings-menu, #lyrics-settings-menu, #tutorial-box,
+  #language-picker-box, #sharecard-picker-box, #command-palette, #dynamic-island,
+  #whats-new-epic-modal>div, #privacy-update-modal>div, #interactive-quest-hud>div,
+  #spotify-wrapped-modal>div, #cp-trigger
+) {
+  background: rgba(255, 255, 255, 0.94) !important;
+  box-shadow: 0 16px 40px -12px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.5) !important;
+}
+
+/* Also fix: low-end footer/settings with higher specificity */
+body.low-end #footer-bubble#footer-bubble,
+body.low-end #footer-expandable-menu#footer-expandable-menu,
+body.low-end #global-settings-menu#global-settings-menu,
+body.low-end #lyrics-settings-menu#lyrics-settings-menu {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* --- 9. Android low-end: even more aggressive — disable all glass effects --- */
+html.gp-android-lowend body.liquid-glass-active :is(
+  .glass-card, .glass-card:not(#back-to-top), #header-section, #footer-bubble,
+  #footer-expandable-menu, #main-music-card, #mini-player-toggle,
+  .modal-content, #global-settings-menu, #lyrics-settings-menu, #tutorial-box,
+  #language-picker-box, #sharecard-picker-box, #command-palette, #dynamic-island,
+  #whats-new-epic-modal>div, #privacy-update-modal>div, #interactive-quest-hud>div,
+  #spotify-wrapped-modal>div, #cp-trigger
+) {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  animation: none !important;
+  transition: none !important;
+  box-shadow: 0 8px 24px -8px rgba(0,0,0,0.4) !important;
+}
+html.gp-android-lowend body.liquid-glass-active .mesh-gradient { display: none !important; }
+html.gp-android-lowend body.liquid-glass-active :is(.glass-card, #header-section, #footer-bubble, #footer-expandable-menu)::before,
+html.gp-android-lowend body.liquid-glass-active :is(.glass-card, #header-section, #footer-bubble, #footer-expandable-menu)::after { display: none !important; content: none !important; }
+
+/* --- 10. Mobile (all platforms): reduce extreme blur values --- */
+@media (max-width: 640px) {
+  body.liquid-glass-active #footer-bubble {
+    -webkit-backdrop-filter: blur(12px) saturate(150%) !important;
+    backdrop-filter: blur(12px) saturate(150%) !important;
+  }
+  body.liquid-glass-active #footer-expandable-menu {
+    -webkit-backdrop-filter: blur(14px) saturate(150%) !important;
+    backdrop-filter: blur(14px) saturate(150%) !important;
+  }
+  body.liquid-glass-active #header-section {
+    -webkit-backdrop-filter: blur(10px) saturate(150%) !important;
+    backdrop-filter: blur(10px) saturate(150%) !important;
+  }
+  #global-settings-menu, #lyrics-settings-menu {
+    -webkit-backdrop-filter: blur(12px) !important;
+    backdrop-filter: blur(12px) !important;
+  }
+}
+
+/* --- 11. Remove brightness() from backdrop-filter globally (poor Android support) --- */
+/* Replace with simpler blur+saturate only */
+html.gp-android body.liquid-glass-active :is(
+  .glass-card:not(#back-to-top), #header-section, #footer-bubble, #footer-expandable-menu
+) {
+  /* backdrop-filter already set to none above; this is a safety net */
+}
+
+/* --- 12. Ensure will-change is cleaned up on Android glass elements --- */
+html.gp-android body.liquid-glass-active :is(
+  .glass-card, #header-section, #footer-bubble, #footer-expandable-menu,
+  #main-music-card, #mini-player-toggle, .modal-content, #global-settings-menu
+) {
+  will-change: auto !important;
+}
+
+/* --- 13. Disable content-visibility:auto on Android glass cards (causes render gaps) --- */
+html.gp-android body.liquid-glass-active .glass-card {
+  content-visibility: visible !important;
+}
+
+/* --- 14. Standby-mode safety: ensure backdrop-filter is off in standby on Android --- */
+html.gp-android body.standby-mode :is(#standby-bg, #standby-overlay, #standby-nowplaying) {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* --- 15. Disable ALL Tailwind backdrop-blur-* utility classes on Android --- */
+/* Tailwind CDN generates .backdrop-blur-xl { backdrop-filter: blur(24px) } etc. */
+/* These are very expensive on Android Chrome. Replace with painted backgrounds. */
+html.gp-android .backdrop-blur,
+html.gp-android .backdrop-blur-sm,
+html.gp-android .backdrop-blur-md,
+html.gp-android .backdrop-blur-lg,
+html.gp-android .backdrop-blur-xl,
+html.gp-android .backdrop-blur-2xl,
+html.gp-android .backdrop-blur-3xl {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+/* Ensure modal overlays have solid backgrounds when blur is disabled */
+html.gp-android #whats-new-epic-modal,
+html.gp-android #privacy-update-modal,
+html.gp-android #spotify-wrapped-modal {
+  background: rgba(0,0,0,.88) !important;
+}
+html.gp-android #modal-overlay {
+  background: rgba(0,0,0,.75) !important;
+}
+html.gp-android #ui-controls {
+  background: rgba(15,23,42,.85) !important;
+}
+html.gp-android:not(.dark) #ui-controls {
+  background: rgba(255,255,255,.85) !important;
+}
 </style>
 
 </head>
@@ -21532,5 +21795,333 @@ window.setLyricsStyle = function(style) {
             }, { passive: true });
         })();
 </script>
-</body>
+<script data-pplx-inline-edit>
+(function () {
+  if (window === window.top) return;
+
+  const allowedParentOrigins = ["https://www.perplexity.ai","https://perplexity.ai","https://testing.perplexity.ai","https://staging.perplexity.ai","https://*.preview.i.perplexity.ai","http://perplexity.localhost","http://localhost:1420","http://127.0.0.1:1420","http://localhost:3000","http://127.0.0.1:3000","http://localhost:5173","http://127.0.0.1:5173"];
+  const MAX_FONT_BYTES = 500 * 1024;
+  const MAX_TOTAL_FONT_BYTES = 2 * 1024 * 1024;
+  let scrollForwarding = false;
+  let scrollRaf = 0;
+  let trustedTopOrigin = null;
+
+  // Allow entries like "https://*.preview.i.perplexity.ai" — the wildcard
+  // matches a single DNS label (no dots), so "https://*.foo" cannot stretch
+  // across multiple labels.
+  function matchesAllowedOrigin(origin) {
+    if (!origin) return false;
+    for (const entry of allowedParentOrigins) {
+      if (!entry.includes("*")) {
+        if (entry === origin) return true;
+        continue;
+      }
+      const pattern = new RegExp(
+        "^" +
+          entry.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, "[^.]+") +
+          "$",
+      );
+      if (pattern.test(origin)) return true;
+    }
+    return false;
+  }
+
+  // Trust decision: when the sender is same-origin-visible (event.origin is a
+  // real origin like https://www.perplexity.ai) we trust event.origin directly.
+  // When event.origin is "null" (opaque broker srcdoc), we fall back to the
+  // broker's stamped `parentOrigin` to identify the top window. The fallback
+  // is claim-only — we rely on the browser's native `targetOrigin` enforcement
+  // on the response path (see postToTrustedTop) to ensure replies can't be
+  // delivered to anyone but the actual top window of that claimed origin.
+  function getTrustedParentOrigin(event) {
+    const forwardedParentOrigin =
+      typeof event.data.parentOrigin === "string" ? event.data.parentOrigin : null;
+    const parentOrigin = event.origin === "null" ? forwardedParentOrigin : event.origin;
+    return matchesAllowedOrigin(parentOrigin) ? parentOrigin : null;
+  }
+
+  // All responses go to window.top with targetOrigin = the allowlisted origin.
+  // An attacker that iframes us inside their own null-origin broker can claim
+  // any parentOrigin they like, but the browser will drop the reply whenever
+  // the real top's origin doesn't match — so the screenshot never leaves.
+  function postToTrustedTop(message) {
+    if (!trustedTopOrigin) return;
+    try {
+      window.top.postMessage(message, trustedTopOrigin);
+    } catch (_error) {}
+  }
+
+  function inlineAll(original, clone) {
+    if (original.nodeType !== 1 || clone.nodeType !== 1) return;
+
+    try {
+      const computedStyle = getComputedStyle(original);
+      // cssText on a computed style is the serialized declaration in modern
+      // Chromium/Safari — a single read beats enumerating ~400 longhand
+      // properties. Firefox returns "" here, so we fall back on empty.
+      const serialized = computedStyle.cssText;
+      if (serialized) {
+        clone.style.cssText = serialized;
+      } else {
+        const parts = new Array(computedStyle.length);
+        for (let index = 0; index < computedStyle.length; index += 1) {
+          const property = computedStyle[index];
+          parts[index] = `${property}:${computedStyle.getPropertyValue(property)};`;
+        }
+        clone.style.cssText = parts.join("");
+      }
+    } catch (_error) {}
+
+    const originalChildren = original.children;
+    const clonedChildren = clone.children;
+    for (
+      let index = 0;
+      index < originalChildren.length && index < clonedChildren.length;
+      index += 1
+    ) {
+      inlineAll(originalChildren[index], clonedChildren[index]);
+    }
+  }
+
+  function extractFontUrl(srcValue) {
+    const matches = [
+      ...srcValue.matchAll(
+        /url\(["']?([^"')]+)["']?\)(?:\s*format\(["']?([^"')]+)["']?\))?/gi,
+      ),
+    ];
+    if (matches.length === 0) return null;
+    const woff2 = matches.find((m) => m[2] && m[2].toLowerCase().includes("woff2"));
+    if (woff2) return woff2[1];
+    const woff = matches.find((m) => m[2] && m[2].toLowerCase().includes("woff"));
+    if (woff) return woff[1];
+    return matches[0][1];
+  }
+
+  // Cache resolved font URL -> data URI across captures. Fonts on a page
+  // essentially never change, and a batch run emits multiple captures back to
+  // back — without this we'd refetch + re-base64 every time.
+  const fontDataUriCache = new Map();
+  const SRC_DECLARATION_RE = /src\s*:\s*[^;}]+/i;
+
+  async function fetchAsDataUri(url) {
+    if (fontDataUriCache.has(url)) return fontDataUriCache.get(url);
+    let dataUri = null;
+    try {
+      const response = await fetch(url, { mode: "cors", credentials: "omit" });
+      if (response.ok) {
+        const blob = await response.blob();
+        if (blob.size <= MAX_FONT_BYTES) {
+          dataUri = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () =>
+              resolve(typeof reader.result === "string" ? reader.result : null);
+            reader.onerror = () => resolve(null);
+            reader.readAsDataURL(blob);
+          });
+        }
+      }
+    } catch (_error) {
+      dataUri = null;
+    }
+    fontDataUriCache.set(url, dataUri);
+    return dataUri;
+  }
+
+  function collectFontFaceRuleTexts() {
+    const rules = [];
+    for (const sheet of document.styleSheets) {
+      let cssRules;
+      try {
+        cssRules = sheet.cssRules;
+      } catch (_error) {
+        continue;
+      }
+      if (!cssRules) continue;
+      for (const rule of cssRules) {
+        const cssText = rule.cssText || "";
+        if (cssText.startsWith("@font-face")) rules.push(cssText);
+      }
+    }
+    return rules;
+  }
+
+  async function buildInlinedFontCss() {
+    const ruleTexts = collectFontFaceRuleTexts();
+    if (ruleTexts.length === 0) return null;
+
+    const resolved = ruleTexts.map((cssText) => {
+      if (!SRC_DECLARATION_RE.test(cssText)) return null;
+      const srcMatch = cssText.match(/src\s*:\s*([^;}]+)[;}]/i);
+      if (!srcMatch) return null;
+      const url = extractFontUrl(srcMatch[1]);
+      if (!url) return null;
+      try {
+        return { cssText, url: new URL(url, document.baseURI).href };
+      } catch (_error) {
+        return null;
+      }
+    });
+
+    const dataUris = await Promise.all(
+      resolved.map((entry) => (entry ? fetchAsDataUri(entry.url) : Promise.resolve(null))),
+    );
+
+    const inlined = [];
+    let totalBytes = 0;
+    for (let index = 0; index < resolved.length; index += 1) {
+      const entry = resolved[index];
+      const dataUri = dataUris[index];
+      if (!entry || !dataUri) continue;
+      const approxBytes = dataUri.length * 0.75;
+      if (totalBytes + approxBytes > MAX_TOTAL_FONT_BYTES) break;
+      totalBytes += approxBytes;
+      inlined.push(entry.cssText.replace(SRC_DECLARATION_RE, `src: url("${dataUri}")`));
+    }
+    return inlined.length > 0 ? inlined.join("\n") : null;
+  }
+
+  function stripExternal(clone) {
+    const images = clone.querySelectorAll("img");
+    for (let index = 0; index < images.length; index += 1) {
+      const src = images[index].getAttribute("src");
+      if (src && !src.startsWith("data:")) images[index].removeAttribute("src");
+    }
+
+    const elements = clone.querySelectorAll("*");
+    for (let index = 0; index < elements.length; index += 1) {
+      const style = elements[index].style.cssText;
+      if (style && style.includes("url(")) {
+        elements[index].style.cssText = style.replace(
+          /url\(["']?(?!data:)[^)"']*["']?\)/gi,
+          "none",
+        );
+      }
+    }
+  }
+
+  function emitScroll() {
+    scrollRaf = 0;
+    if (!scrollForwarding) return;
+    postToTrustedTop({
+      type: "INLINE_EDIT_SCROLL",
+      scrollX: window.scrollX,
+      scrollY: window.scrollY,
+    });
+  }
+
+  window.addEventListener(
+    "scroll",
+    function () {
+      if (!scrollForwarding || scrollRaf) return;
+      scrollRaf = requestAnimationFrame(emitScroll);
+    },
+    { passive: true, capture: true },
+  );
+
+  async function handleCaptureRequest(event) {
+    const requestId = event.data.requestId;
+    const scrollX = window.scrollX;
+    const scrollY = window.scrollY;
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+
+    function postResult(dataUrl) {
+      postToTrustedTop({
+        type: "INLINE_EDIT_SCREENSHOT_RESULT",
+        requestId,
+        dataUrl,
+        scrollX,
+        scrollY,
+      });
+    }
+
+    try {
+      // Wait for any pending web fonts to resolve so both inline metrics and
+      // the @font-face inlining below see the same loaded faces.
+      if (document.fonts && document.fonts.ready) {
+        try {
+          await document.fonts.ready;
+        } catch (_error) {}
+      }
+
+      const clone = document.documentElement.cloneNode(true);
+      inlineAll(document.documentElement, clone);
+
+      const removedNodes = clone.querySelectorAll("script,link[rel=\"stylesheet\"],style");
+      for (let index = 0; index < removedNodes.length; index += 1) {
+        removedNodes[index].remove();
+      }
+
+      stripExternal(clone);
+
+      // Re-embed web fonts as data-URI @font-face rules so the SVG rasterizer
+      // can resolve them — external font URLs aren't fetched during
+      // foreignObject rendering, which would otherwise force a fallback face
+      // and change text metrics.
+      const inlinedFontCss = await buildInlinedFontCss();
+      if (inlinedFontCss) {
+        const styleEl = document.createElement("style");
+        styleEl.textContent = inlinedFontCss;
+        const head = clone.querySelector("head");
+        if (head) head.appendChild(styleEl);
+        else clone.insertBefore(styleEl, clone.firstChild);
+      }
+
+      const html = new XMLSerializer().serializeToString(clone);
+      const svg =
+        `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">` +
+        '<foreignObject width="100%" height="100%">' +
+        `<div xmlns="http://www.w3.org/1999/xhtml" style="width:${width}px;height:${height}px;overflow:hidden">` +
+        `<div style="position:relative;left:-${scrollX}px;top:-${scrollY}px">` +
+        html +
+        "</div></div></foreignObject></svg>";
+      const svgUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+      const image = new Image();
+      image.onload = function () {
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext("2d").drawImage(image, 0, 0);
+        postResult(canvas.toDataURL("image/png"));
+      };
+      image.onerror = function () {
+        postResult(null);
+      };
+      image.src = svgUrl;
+    } catch (_error) {
+      postResult(null);
+    }
+  }
+
+  window.addEventListener("message", function (event) {
+    if (!event.data) return;
+    // Only accept messages from the direct parent frame. Blocks sibling /
+    // unrelated-window postMessage senders that could otherwise reach us.
+    if (event.source !== window.parent) return;
+
+    const trustedParentOrigin = getTrustedParentOrigin(event);
+    if (!trustedParentOrigin) return;
+    trustedTopOrigin = trustedParentOrigin;
+
+    if (event.data.type === "INLINE_EDIT_SCROLL_START") {
+      scrollForwarding = true;
+      emitScroll();
+      return;
+    }
+
+    if (event.data.type === "INLINE_EDIT_SCROLL_STOP") {
+      scrollForwarding = false;
+      if (scrollRaf) cancelAnimationFrame(scrollRaf);
+      scrollRaf = 0;
+      return;
+    }
+
+    if (event.data.type !== "INLINE_EDIT_CAPTURE_REQUEST") return;
+
+    handleCaptureRequest(event);
+  });
+})();
+
+
+</script></body>
 </html>
