@@ -4335,8 +4335,7 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
         }
 
         /* Settings Windows Liquid Animations */
-        body.liquid-glass-active #global-settings-menu.settings-opening,
-        body.liquid-glass-active #lyrics-settings-menu.settings-opening {
+        body.liquid-glass-active #global-settings-menu.settings-opening {
             display: flex !important;
             visibility: visible !important;
             opacity: 1 !important;
@@ -4347,8 +4346,7 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
             backface-visibility: hidden;
         }
         
-        body.liquid-glass-active #global-settings-menu.settings-closing,
-        body.liquid-glass-active #lyrics-settings-menu.settings-closing {
+        body.liquid-glass-active #global-settings-menu.settings-closing {
             display: flex !important;
             visibility: visible !important;
             pointer-events: none !important;
@@ -4357,6 +4355,47 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
             will-change: transform, opacity;
             backface-visibility: hidden;
         }
+
+        /* Lyrics Settings Dedicated Safe Animation: Pure 2D slide/fade (prevents mobile GPU tile drop) */
+        body.liquid-glass-active #lyrics-settings-menu.settings-opening {
+            display: flex !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            pointer-events: auto !important;
+            animation: lyrics-menu-pop-in 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+            transform-origin: top right !important;
+        }
+
+        body.liquid-glass-active #lyrics-settings-menu.settings-closing {
+            display: flex !important;
+            visibility: visible !important;
+            pointer-events: none !important;
+            animation: lyrics-menu-pop-out 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
+            transform-origin: top right !important;
+        }
+
+        @keyframes lyrics-menu-pop-in {
+            0% {
+                opacity: 0;
+                transform: translateY(-8px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes lyrics-menu-pop-out {
+            0% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-8px);
+            }
+        }
+
 
         /* Center Windows Liquid Pop-In */
         body.liquid-glass-active #language-picker-overlay.lp-active #language-picker-box,
@@ -4461,8 +4500,6 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
                         0 0 0 1px rgba(255, 255, 255, 0.15),
                         inset 0 1.5px 2px rgba(255, 255, 255, 0.45),
                         inset 0 -1.5px 2px rgba(0, 0, 0, 0.3) !important;
-            isolation: isolate !important;
-            transform: translateZ(0) !important;
         }
 
         /* Mobile GPU-Safe Rendering: Avoid Chromium backdrop-filter failure inside nested layered container */
@@ -7017,7 +7054,6 @@ html.gp-android:not(.dark) body.liquid-glass-active :is(
 html.gp-android body.liquid-glass-active #main-music-card#main-music-card,
 html.gp-android body.liquid-glass-active #mini-player-toggle#mini-player-toggle,
 html.gp-android body.liquid-glass-active #global-settings-menu#global-settings-menu,
-html.gp-android body.liquid-glass-active #lyrics-settings-menu#lyrics-settings-menu,
 html.gp-android body.liquid-glass-active #tutorial-box#tutorial-box,
 html.gp-android body.liquid-glass-active #command-palette#command-palette,
 html.gp-android body.liquid-glass-active #dynamic-island#dynamic-island,
@@ -7026,6 +7062,13 @@ html.gp-android body.liquid-glass-active #footer-expandable-menu#footer-expandab
 html.gp-android body.liquid-glass-active #header-section#header-section {
   -webkit-backdrop-filter: blur(4px) saturate(120%) !important;
   backdrop-filter: blur(4px) saturate(120%) !important;
+}
+
+/* Lyrics settings on Android: Completely solid surface to eliminate mobile GPU rasterization failure inside transformed lyrics overlay */
+html.gp-android body.liquid-glass-active #lyrics-settings-menu#lyrics-settings-menu {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  background: #0f172a !important;
 }
 
 /* --- 3. Footer: transparent glass + small blur --- */
@@ -7053,8 +7096,7 @@ html.gp-android:not(.dark) #footer-expandable-menu {
 }
 
 /* --- 4. Settings menus: transparent glass + small blur --- */
-html.gp-android #global-settings-menu,
-html.gp-android #lyrics-settings-menu {
+html.gp-android #global-settings-menu {
   -webkit-backdrop-filter: blur(4px) saturate(120%) !important;
   backdrop-filter: blur(4px) saturate(120%) !important;
   background: transparent !important;
@@ -7062,19 +7104,30 @@ html.gp-android #lyrics-settings-menu {
   border-top: 1.5px solid rgba(255, 255, 255, 0.4) !important;
   box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.15) !important;
 }
-html.gp-android:not(.dark) #global-settings-menu,
-html.gp-android:not(.dark) #lyrics-settings-menu {
+html.gp-android:not(.dark) #global-settings-menu {
   background: transparent !important;
   border-top: 1.5px solid rgba(255, 255, 255, 0.6) !important;
   box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.12), inset 0 1px 1px rgba(255, 255, 255, 0.4) !important;
 }
 
+/* Lyrics settings shell on Android: Solid, crisp, zero GPU composite drop */
+html.gp-android #lyrics-settings-menu,
+html.gp-android:not(.dark) #lyrics-settings-menu {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  background: #0f172a !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  border-top: 1.5px solid rgba(255, 255, 255, 0.5) !important;
+  box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.85), inset 0 1px 1px rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Ensure all elements inside lyrics-settings-menu on Android are visible and have legible backgrounds */
+html.gp-android #lyrics-settings-menu * {
+  visibility: visible !important;
+}
+
 /* --- 4b. Inner elements: NO backdrop-filter, transparent tinted bg --- */
 /* These must NOT have their own blur — only the shell blurs */
-html.gp-android body.liquid-glass-active #lyrics-settings-menu#lyrics-settings-menu :is(
-  select, button, .lyrics-dim-btn, #tts-speed-menu-lyrics,
-  #lyrics-style-preview-box, #label-animation-style, .sticky
-),
 html.gp-android body.liquid-glass-active #global-settings-menu#global-settings-menu :is(
   select, button, .bg-slate-800\/50, .bg-slate-800\/80, .bg-slate-800, .sticky
 ) {
@@ -7084,10 +7137,6 @@ html.gp-android body.liquid-glass-active #global-settings-menu#global-settings-m
   border: 1px solid rgba(255, 255, 255, 0.10) !important;
   border-top: 1px solid rgba(255, 255, 255, 0.18) !important;
 }
-html.gp-android:not(.dark) body.liquid-glass-active #lyrics-settings-menu#lyrics-settings-menu :is(
-  select, button, .lyrics-dim-btn, #tts-speed-menu-lyrics,
-  #lyrics-style-preview-box, #label-animation-style, .sticky
-),
 html.gp-android:not(.dark) body.liquid-glass-active #global-settings-menu#global-settings-menu :is(
   select, button, .bg-slate-800\/50, .bg-slate-800\/80, .bg-slate-800, .sticky
 ) {
@@ -7095,11 +7144,30 @@ html.gp-android:not(.dark) body.liquid-glass-active #global-settings-menu#global
   border-top: 1px solid rgba(255, 255, 255, 0.4) !important;
 }
 
+/* Lyrics settings inner elements on Android: Solid slate backgrounds with zero transparency/blur confusion */
+html.gp-android body.liquid-glass-active #lyrics-settings-menu#lyrics-settings-menu :is(
+  select, .grid button, .lyrics-dim-btn, #tts-speed-menu-lyrics,
+  #label-animation-style, .sticky
+) {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  background: #1e293b !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.3) !important;
+}
+
+html.gp-android body.liquid-glass-active #lyrics-settings-menu#lyrics-settings-menu #label-animation-style {
+  background: #0f172a !important;
+  color: #94a3b8 !important;
+}
+
 /* Active dim button — tinted blue, no blur */
 html.gp-android body.liquid-glass-active #lyrics-settings-menu#lyrics-settings-menu .lyrics-dim-btn.active {
-  background: rgba(37, 99, 235, 0.25) !important;
-  border: 1px solid rgba(147, 197, 253, 0.5) !important;
-  border-top: 1px solid rgba(255, 255, 255, 0.6) !important;
+  background: #2563eb !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(147, 197, 253, 0.8) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.9) !important;
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
 }
@@ -7111,12 +7179,13 @@ html.gp-android #global-settings-menu select option {
   color: #ffffff !important;
 }
 
-/* Preview box — dark tint, no blur */
+/* Preview box — dark solid, no blur */
 html.gp-android #lyrics-settings-menu #lyrics-style-preview-box {
-  background: transparent !important;
+  background: #020617 !important;
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
 }
+
 
 /* --- 5. Header: transparent glass + small blur --- */
 html.gp-android body.liquid-glass-active #header-section {
@@ -7454,7 +7523,7 @@ html.gp-android:not(.dark) #ui-controls {
     <div id="footer-expandable-menu" class="hidden fixed z-[95] p-3.5 rounded-2xl bg-slate-900/95 border border-slate-700/80 shadow-2xl backdrop-blur-xl w-[315px] xxs:w-[340px] sm:w-[370px] max-w-[calc(100vw-1.5rem)] text-xs space-y-2.5" onclick="event.stopPropagation()">
         <div class="flex items-center justify-between px-1 pb-1.5 border-b border-white/10 gap-2">
             <span id="footer-menu-title" data-i18n="footer_menu_title" class="font-bold text-slate-400 text-[10px] uppercase tracking-wider truncate">Navigation &amp; Rechtliches</span>
-            <span id="footer-menu-hint" class="text-[9px] text-pink-400 font-mono font-bold shrink-0 whitespace-nowrap">v24.187.0</span>
+            <span id="footer-menu-hint" class="text-[9px] text-pink-400 font-mono font-bold shrink-0 whitespace-nowrap">v24.188.0</span>
         </div>
         <div class="grid grid-cols-2 gap-2 text-left">
             <button onclick="openEpicWhatsNewTour(false); toggleFooterMenu(false)" id="footer-whats-new-btn" class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/90 text-slate-200 hover:text-white font-medium flex items-center gap-2 transition-all active:scale-[0.98]">
@@ -7488,7 +7557,7 @@ html.gp-android:not(.dark) #ui-controls {
     <div id="footer-bubble" class="fixed z-[91] inline-flex items-center justify-center gap-1.5 sm:gap-3 px-3 sm:px-6 rounded-full bg-slate-900/85 backdrop-blur-xl border border-white/15 shadow-xl text-[10px] xs:text-xs sm:text-sm text-slate-300 transition-all select-none opacity-0 pointer-events-none">
         <span id="footer-established" class="font-bold tracking-tight text-slate-300 whitespace-nowrap">© 2026 GAMINGPIG</span>
         <span class="text-white/20 select-none">•</span>
-        <span id="footer-version-label" class="font-mono font-bold text-pink-400 whitespace-nowrap">v24.187.0</span>
+        <span id="footer-version-label" class="font-mono font-bold text-pink-400 whitespace-nowrap">v24.188.0</span>
         <span class="text-white/20 select-none">•</span>
         <button id="footer-menu-toggle-btn" onclick="toggleFooterMenu()" class="text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1 sm:gap-1.5 transition-all px-1.5 sm:px-2 py-1 rounded-full hover:bg-white/10 active:scale-95 whitespace-nowrap" aria-expanded="false" aria-label="Mehr Menü öffnen">
             <span id="footer-more-label">Mehr</span>
@@ -19268,7 +19337,7 @@ let shareCardLoading;
                 lyricsMenu.classList.remove('settings-opening');
                 lyricsMenu.classList.add('settings-closing');
                 const isLiquid = document.body.classList.contains('liquid-glass-active');
-                const closeDelay = isLiquid ? 440 : 180;
+                const closeDelay = isLiquid ? 220 : 180;
                 lyricsSettingsTimeout = setTimeout(() => {
                     lyricsMenu.classList.add('hidden');
                     lyricsMenu.style.display = 'none';
