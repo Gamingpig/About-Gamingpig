@@ -14550,18 +14550,44 @@ html.gp-android:not(.dark) #ui-controls {
             }
 
             let refreshingSW = false;
-            navigator.serviceWorker.addEventListener('controllerchange', () => {
-                if (!refreshingSW) {
-                    refreshingSW = true;
+            function triggerAutoUpdate(msg) {
+                if (refreshingSW) return;
+                refreshingSW = true;
+                try {
+                    let toast = document.getElementById('gp-auto-update-toast');
+                    if (!toast) {
+                        toast = document.createElement('div');
+                        toast.id = 'gp-auto-update-toast';
+                        toast.className = 'fixed top-4 left-1/2 -translate-x-1/2 z-[100010] flex items-center gap-3 px-5 py-3 rounded-2xl bg-slate-900/90 text-white border border-blue-500/40 shadow-2xl backdrop-blur-xl transition-all duration-300 pointer-events-none';
+                        toast.innerHTML = '<span class="text-xl">✨</span><span class="text-xs sm:text-sm font-semibold tracking-wide">' + (msg || 'Neues Update geladen — Seite aktualisiert sich...') + '</span>';
+                        document.body.appendChild(toast);
+                    }
+                } catch(_) {}
+                setTimeout(() => {
                     window.location.reload();
+                }, 650);
+            }
+
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                triggerAutoUpdate('Update aktiviert — Seite wird geladen...');
+            });
+
+            navigator.serviceWorker.addEventListener('message', (event) => {
+                if (event.data && (event.data.type === 'SW_UPDATED' || event.data.type === 'SW_ACTIVATED')) {
+                    triggerAutoUpdate('Neue Version ' + (event.data.version || '') + ' bereit — Lade neu...');
                 }
             });
 
+            let swRegistration = null;
             const registerSW = () => {
                 const swUrl = new URL('sw.js', window.location.href).href;
                 navigator.serviceWorker.register(swUrl, { updateViaCache: 'none' })
                     .then((reg) => {
                         if (reg) {
+                            swRegistration = reg;
+                            if (reg.waiting) {
+                                reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+                            }
                             reg.update().catch(() => {});
                             reg.addEventListener('updatefound', () => {
                                 const newWorker = reg.installing;
@@ -14580,6 +14606,47 @@ html.gp-android:not(.dark) #ui-controls {
                         console.warn('Service Worker Registrierung fehlgeschlagen:', err);
                     });
             };
+
+            // Proaktive Update-Prüfung bei Tab-Fokus und Sichtbarkeit
+            function checkSWUpdates() {
+                if (swRegistration) {
+                    swRegistration.update().catch(() => {});
+                } else if ('serviceWorker' in navigator) {
+                    navigator.serviceWorker.getRegistration().then(r => {
+                        if (r) {
+                            swRegistration = r;
+                            r.update().catch(() => {});
+                        }
+                    }).catch(() => {});
+                }
+            }
+            window.addEventListener('focus', checkSWUpdates);
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') checkSWUpdates();
+            });
+            setInterval(checkSWUpdates, 20000);
+
+            // Version Watcher: Prüft version.json direkt ohne Cache
+            (function setupVersionWatcher() {
+                async function pollVersion() {
+                    try {
+                        const res = await fetch('./version.json?_t=' + Date.now(), { cache: 'no-store' });
+                        if (!res.ok) return;
+                        const data = await res.json();
+                        const liveVer = (data && data.version ? String(data.version) : '').replace(/^v/, '').trim();
+                        const currentVer = String(window.ONBOARDING_VERSION || '').split(' · ')[0].replace(/^v/, '').trim();
+                        if (liveVer && currentVer && liveVer !== currentVer) {
+                            console.log('[VersionWatcher] Update verfügbar:', currentVer, '->', liveVer);
+                            if (swRegistration && swRegistration.waiting) {
+                                swRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
+                            }
+                            triggerAutoUpdate('Version v' + liveVer + ' verfügbar — Aktualisiere...');
+                        }
+                    } catch(_) {}
+                }
+                setTimeout(pollVersion, 3000);
+                setInterval(pollVersion, 15000);
+            })();
 
             if (document.readyState === 'complete') {
                 registerSW();

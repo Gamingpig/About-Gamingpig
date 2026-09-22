@@ -33,7 +33,8 @@ const PRECACHE_URLS = [
     "./icon-512.png",
     "./og-v2.jpg",
     "./assets/community-glass.20260910.css",
-    "./js/community-glass.20260910.js"
+    "./js/community-glass.20260910.js",
+    "./version.json"
 ];
 
 // Sofortige Installation ohne Warten
@@ -45,11 +46,10 @@ self.addEventListener("install", (event) => {
     );
 });
 
-// Aktivierung: Nur eigene alte Releases entfernen; Vorversion und fremde Caches behalten.
+// Aktivierung: Veraltete Caches bereinigen, Clients sofort übernehmen und Tabs benachrichtigen
 self.addEventListener("activate", (event) => {
     event.waitUntil(
         caches.keys().then((keys) => {
-            const previous = keys.filter(key => key.startsWith('gamingpig-cache-v') && key !== CURRENT_CACHE_VERSION).pop();
             return Promise.all(
                 keys.map((key) => {
                     if (key.startsWith("gamingpig-cache-v") && key !== CURRENT_CACHE_VERSION) {
@@ -61,13 +61,23 @@ self.addEventListener("activate", (event) => {
             );
         }).then(() => {
             return self.clients.claim();
+        }).then(() => {
+            return self.clients.matchAll({ type: "window" });
+        }).then((windowClients) => {
+            if (windowClients && windowClients.length > 0) {
+                windowClients.forEach((client) => {
+                    try {
+                        client.postMessage({ type: "SW_UPDATED", version: SW_VERSION });
+                    } catch(e) {}
+                });
+            }
         })
     );
 });
 
-// Nachrichten-Listener (z. B. für manuelles skipWaiting)
+// Nachrichten-Listener (z. B. für automatisches skipWaiting)
 self.addEventListener("message", (event) => {
-    if (event.source && new URL(event.source.url).origin === self.location.origin && event.data && event.data.type === "SKIP_WAITING") {
+    if (event.data && event.data.type === "SKIP_WAITING") {
         self.skipWaiting();
     }
 });
@@ -197,7 +207,8 @@ self.addEventListener("fetch", (event) => {
         if (immutable && cached) return cached;
         const network = (async () => {
         try {
-            const response = await fetch(event.request, { cache: 'no-cache' });
+            const fetchOptions = isNavigation ? { cache: 'reload' } : { cache: 'no-cache' };
+            const response = await fetch(event.request, fetchOptions);
             if (response.ok) {
                 const copy = response.clone();
                 event.waitUntil((async () => {
