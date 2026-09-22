@@ -3238,7 +3238,17 @@
     <meta http-equiv="Expires" content="0">
     <script>
         try {
-            const savedAppLang = AppStorage.getItem('app_language') || AppStorage.getItem('selectedLanguage');
+            let savedAppLang = AppStorage.getItem('app_language') || AppStorage.getItem('selectedLanguage');
+            // Graceful auto-detection: detect language without aggressive blocking modals
+            const _urlP = new URLSearchParams(window.location.search);
+            const _forceStart = _urlP.has('first_visit') || _urlP.has('onboarding') || _urlP.has('tutorial');
+            
+            if (!savedAppLang) {
+                const navLang = (navigator.language || 'de').slice(0, 2).toLowerCase();
+                const supported = ['de', 'en', 'es', 'fr', 'pt', 'tr'];
+                savedAppLang = supported.includes(navLang) ? navLang : 'de';
+                AppStorage.setItem('app_lang', savedAppLang);
+            }
             if (savedAppLang) document.documentElement.setAttribute('lang', savedAppLang);
             
             // Animation Style Initialisierung
@@ -3253,39 +3263,21 @@
             AppStorage.setItem('app_visit_count', String(_visitCount));
 
             // 🛡️ INSTANT ONBOARDING SHIELD
-            const _currVer = window.ONBOARDING_VERSION = 'v24.159.0 · 2026-09-10';
+            const _currVer = window.ONBOARDING_VERSION = 'v24.193.0 · 2026-09-22';
             const _installedVer = AppStorage.getItem('site_version_installed');
             if (_installedVer !== _currVer) {
                 AppStorage.setItem('site_version_installed', _currVer);
             }
 
-            // Single source of truth: only show language selection if NO language has been selected yet or explicit force param
-            const _urlP = new URLSearchParams(window.location.search);
-            const _forceStart = _urlP.has('first_visit') || _urlP.has('onboarding') || _urlP.has('tutorial');
-            
-            const _onboardingDone = ['1','true'].includes(String(AppStorage.getItem('onboarding_completed') || '').toLowerCase());
-            if (!savedAppLang || !_onboardingDone || _forceStart) {
+            if (_forceStart) {
                 document.documentElement.classList.add('needs-onboarding');
             }
         } catch(e) {}
     </script>
     <style id="onboarding-shield-style">
-        /* 🛡️ Sofort-Blockade: Onboarding-Schritt 1 (Sprachauswahl) - Clean Native iOS/Android Style */
-        html.needs-onboarding #language-picker-overlay,
-        html.needs-onboarding #language-picker-overlay.hidden {
-            display: flex !important;
-            opacity: 1 !important;
-            visibility: visible !important;
-            z-index: 100005 !important;
-            pointer-events: auto !important;
-        }
-        html.needs-onboarding #language-picker-box {
-            opacity: 1 !important;
-            transform: translateY(0) scale(1) !important;
-            pointer-events: auto !important;
-        }
-        html.needs-onboarding #lang-picker-close-btn {
-            display: none !important;
+        /* Clean unobtrusive styling - modal displays only when triggered */
+        #language-picker-overlay:not(.hidden) {
+            z-index: 100005;
         }
 
         /* Popup menu: fixed, appears above the bubble */
@@ -6360,20 +6352,31 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
            machen?"). Gleiches risikoarmes Prinzip wie die ersten vier: reine CSS-Varianten
            über eine Klasse auf #standby-overlay, keine neue Logik/Animation, keine
            zusätzlichen Netzwerk-/Berechtigungs-Abhängigkeiten. */
-        /* Design "Vinyl": Cover kreisrund wie eine Schallplatte, mit dezentem Rillen-Ring -
-           bewusst OHNE Dreh-Animation, um nicht wieder eine Dauerschleife einzuführen, nachdem
-           gerade erst mehrere Runden GPU-Arbeit in genau sowas gesteckt wurden. */
+        /* Design "Vinyl": Echte rotierende Schallplatte mit Tonrillen & Center-Label */
+        @keyframes vinyl-spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        #standby-overlay.standby-design-vinyl #standby-nowplaying {
+            background: rgba(20, 16, 12, 0.9) !important;
+            border: 2px solid rgba(245, 158, 11, 0.45) !important;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8), 0 0 30px rgba(245, 158, 11, 0.2) !important;
+        }
         #standby-overlay.standby-design-vinyl #standby-track-art-wrap {
-            border-radius: 50%; width: clamp(150px, 42vw, 230px); height: clamp(150px, 42vw, 230px);
-            box-shadow: 0 14px 40px rgba(0,0,0,0.65), inset 0 0 0 10px rgba(0,0,0,0.4), inset 0 0 0 11px rgba(255,255,255,0.08);
+            border-radius: 50% !important;
+            width: clamp(160px, 42vw, 240px) !important;
+            height: clamp(160px, 42vw, 240px) !important;
+            box-shadow: 0 16px 45px rgba(0,0,0,0.8), inset 0 0 0 12px rgba(15,15,15,0.9), inset 0 0 0 14px rgba(255,255,255,0.15) !important;
+            animation: vinyl-spin 12s linear infinite !important;
         }
-        #standby-overlay.standby-design-vinyl #standby-track-art { border-radius: 50%; }
+        #standby-overlay.standby-design-vinyl #standby-track-art { border-radius: 50% !important; }
         #standby-overlay.standby-design-vinyl #standby-track-art-wrap::after {
-            content: ''; position: absolute; top: 50%; left: 50%; width: 14%; height: 14%;
+            content: ''; position: absolute; top: 50%; left: 50%; width: 16%; height: 16%;
             transform: translate(-50%, -50%); border-radius: 50%; background: #111;
-            box-shadow: 0 0 0 3px rgba(255,255,255,0.15); pointer-events: none;
+            box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.4); pointer-events: none; z-index: 5;
         }
-        #standby-overlay.standby-design-vinyl #standby-eq { display: none; } /* passt optisch nicht zur runden Karte */
+        #standby-overlay.standby-design-vinyl #standby-clock { color: #f59e0b !important; text-shadow: 0 0 25px rgba(245, 158, 11, 0.5) !important; }
+        #standby-overlay.standby-design-vinyl #standby-eq { display: none; }
         /* Design "Split": edge-to-edge geteilter Bildschirm, Uhr links/Now-Playing rechts (im
            Querformat automatisch übereinander dank der bereits bestehenden Landscape-Regel).
            Kein backdrop-filter hier - spart sogar zusätzlich GPU gegenüber "Classic". */
@@ -6570,27 +6573,41 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
         #standby-overlay.standby-design-grid #standby-nowplaying { position: fixed; bottom: 24px; right: 24px; left: auto; margin: 0; width: min(60vw, 340px); }
         /* "Transparent": Karte ganz ohne Hintergrundfläche - Cover/Text scheinen frei zu schweben. */
         #standby-overlay.standby-design-transparent #standby-nowplaying { background: transparent; border: none; backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: none; }
-        /* "Riesen-Uhr": Uhr dominiert komplett, Now-Playing nur als winzige Leiste ganz unten. */
-        #standby-overlay.standby-design-giant-clock #standby-clock { font-size: clamp(4rem, 22vw, 10rem); }
-        #standby-overlay.standby-design-giant-clock #standby-nowplaying { transform: scale(0.7); transform-origin: center; opacity: 0.8; }
-        /* "Zentriert-Klein": alles sehr kompakt und zentriert, viel leerer Raum drumherum -
-           ruhig und minimalistisch, aber anders als "Minimal" (Cover bleibt sichtbar). */
-        #standby-overlay.standby-design-zen #standby-nowplaying { width: min(60vw, 280px); padding: 16px; }
-        #standby-overlay.standby-design-zen #standby-track-art-wrap { width: clamp(80px, 22vw, 120px); height: clamp(80px, 22vw, 120px); }
-        #standby-overlay.standby-design-zen #standby-clock { font-size: clamp(2rem, 10vw, 4rem); }
-        /* "Gestapelt": Karte mit gestaffeltem Schatten-Effekt für optische Tiefe (Kartenstapel-Look). */
-        #standby-overlay.standby-design-stacked #standby-nowplaying { box-shadow: 0 4px 0 0 rgba(255,255,255,0.06), 0 8px 0 0 rgba(255,255,255,0.04), 0 20px 60px rgba(0,0,0,0.5); }
-        /* "Kontrast": sehr dunkle Karte mit hartem, hellem Akzent-Rahmen statt weichem Glas-Look. */
-        #standby-overlay.standby-design-contrast #standby-nowplaying { background: rgba(0,0,0,0.75); backdrop-filter: none; -webkit-backdrop-filter: none; border: 1px solid var(--standby-accent, #fff); }
-        #standby-overlay.standby-design-contrast #standby-progress-track { background: rgba(255,255,255,0.08); }
-        /* NEU v24.117: Fünf neue visuelle StandBy-Designs auf Nutzerwunsch */
-        /* "Cyberpunk": Neon-Kantenschnitt mit Glitch-Schatten und leuchtendem Akzent */
-        #standby-overlay.standby-design-cyberpunk #standby-nowplaying { background: rgba(10, 10, 20, 0.85); border: 2px solid var(--standby-accent, #00f2fe); clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px)); box-shadow: 0 0 25px var(--standby-accent, rgba(0,242,254,0.35)); }
-        #standby-overlay.standby-design-cyberpunk #standby-clock { font-family: 'JetBrains Mono', monospace; letter-spacing: -2px; color: var(--standby-accent, #00f2fe); text-shadow: 0 0 16px var(--standby-accent, #00f2fe); }
-        /* "Retro-Kassette": Warmes Kassettenband-Design */
-        #standby-overlay.standby-design-cassette #standby-nowplaying { background: #1c1917; border: 3px solid #44403c; border-radius: 12px; box-shadow: inset 0 2px 4px rgba(255,255,255,0.1), 0 20px 40px rgba(0,0,0,0.8); }
-        #standby-overlay.standby-design-cassette #standby-track-art-wrap { border: 2px solid #78716c; border-radius: 6px; }
-        #standby-overlay.standby-design-cassette #standby-clock { font-family: monospace; color: #f59e0b; text-shadow: 0 0 10px rgba(245, 158, 11, 0.5); }
+        /* "Riesen-Uhr": Gigantische Uhr dominiert 70% der Ansicht, Now-Playing als kompakte Pill-Bar */
+        #standby-overlay.standby-design-giant-clock #standby-shift-wrapper { flex-direction: column !important; justify-content: center !important; align-items: center !important; gap: 20px !important; }
+        #standby-overlay.standby-design-giant-clock #standby-clockzone { flex: none !important; margin-bottom: 10px !important; }
+        #standby-overlay.standby-design-giant-clock #standby-clock { font-size: clamp(5.5rem, 28vw, 13rem) !important; font-weight: 900 !important; line-height: 0.85 !important; letter-spacing: -4px !important; color: #ffffff !important; text-shadow: 0 10px 40px rgba(0,0,0,0.8) !important; }
+        #standby-overlay.standby-design-giant-clock #standby-date { font-size: clamp(14px, 3.5vw, 22px) !important; letter-spacing: 2px !important; text-transform: uppercase !important; opacity: 0.8 !important; }
+        #standby-overlay.standby-design-giant-clock #standby-nowplaying { max-width: 480px !important; width: 92% !important; padding: 12px 20px !important; border-radius: 9999px !important; background: rgba(15, 23, 42, 0.8) !important; border: 1px solid rgba(255,255,255,0.18) !important; box-shadow: 0 15px 35px rgba(0,0,0,0.6) !important; }
+        #standby-overlay.standby-design-giant-clock #standby-track-art-wrap { width: 44px !important; height: 44px !important; border-radius: 50% !important; }
+        #standby-overlay.standby-design-giant-clock #standby-track-art { border-radius: 50% !important; }
+
+        /* "Cyberpunk": Neon-HUD mit JetBrains Mono, Polygon-Kanten und Scanlines */
+        #standby-overlay.standby-design-cyberpunk { background: #030712 !important; }
+        #standby-overlay.standby-design-cyberpunk #standby-nowplaying {
+            background: rgba(8, 12, 24, 0.92) !important;
+            border: 2px solid var(--standby-accent, #00f2fe) !important;
+            clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 20px 100%, 0 calc(100% - 20px)) !important;
+            box-shadow: 0 0 30px var(--standby-accent, rgba(0,242,254,0.4)), inset 0 0 15px rgba(255,0,127,0.2) !important;
+            border-radius: 0 !important;
+        }
+        #standby-overlay.standby-design-cyberpunk #standby-clock { font-family: 'JetBrains Mono', monospace !important; letter-spacing: -2px !important; color: var(--standby-accent, #00f2fe) !important; text-shadow: 0 0 20px var(--standby-accent, #00f2fe), 0 0 40px #ff007f !important; }
+        #standby-overlay.standby-design-cyberpunk #standby-track-title { font-family: 'JetBrains Mono', monospace !important; color: #ff007f !important; }
+        #standby-overlay.standby-design-cyberpunk #standby-track-artist { font-family: 'JetBrains Mono', monospace !important; color: #00f2fe !important; }
+        #standby-overlay.standby-design-cyberpunk #standby-progress-bar { background: linear-gradient(90deg, #00f2fe, #ff007f) !important; box-shadow: 0 0 10px #ff007f !important; }
+
+        /* "Retro-Kassette": Warmes 80s Boombox-Kassettenband-Design mit Bernstein-Digitalzähler */
+        #standby-overlay.standby-design-cassette #standby-nowplaying {
+            background: #1c1917 !important;
+            border: 3px solid #44403c !important;
+            border-radius: 16px !important;
+            box-shadow: inset 0 2px 4px rgba(255,255,255,0.1), 0 25px 50px rgba(0,0,0,0.9) !important;
+            position: relative !important;
+        }
+        #standby-overlay.standby-design-cassette #standby-track-art-wrap { border: 2px solid #78716c !important; border-radius: 8px !important; }
+        #standby-overlay.standby-design-cassette #standby-clock { font-family: 'Courier New', monospace !important; color: #f59e0b !important; text-shadow: 0 0 15px rgba(245, 158, 11, 0.7) !important; letter-spacing: 2px !important; }
+        #standby-overlay.standby-design-cassette #standby-track-title { font-family: 'Courier New', monospace !important; font-weight: bold !important; color: #fafaf9 !important; }
+        #standby-overlay.standby-design-cassette #standby-progress-bar { background: #f59e0b !important; }
         /* "Ambient-Orb": Sphärischer sanfter Glow-Kreis */
         #standby-overlay.standby-design-ambient-orb #standby-nowplaying { background: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.12), rgba(0,0,0,0.6)); border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 0 50px rgba(255,255,255,0.15); }
         #standby-overlay.standby-design-ambient-orb #standby-track-art-wrap { border-radius: 9999px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
@@ -7741,7 +7758,7 @@ html.gp-android:not(.dark) #ui-controls {
 
     <!-- NEW: Dynamic Island 2.0 -->
     <!-- NEW: Sprachauswahl (Clean iOS/Android Native Setup Style) -->
-    <div id="language-picker-overlay" class="hidden" onclick="if(event.target===this && (!window.OnboardingCoordinator || !window.OnboardingCoordinator.isOnboarding))closeLanguagePicker()">
+    <div id="language-picker-overlay" class="hidden" onclick="if(event.target===this)closeLanguagePicker()">
         <div id="language-picker-box" class="relative">
             <button onclick="closeLanguagePicker()" id="lang-picker-close-btn" class="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-all text-xs font-semibold border border-white/10 active:scale-95 z-20" aria-label="Schließen / Close">✕</button>
             <div id="lang-picker-titles">
@@ -7893,7 +7910,7 @@ html.gp-android:not(.dark) #ui-controls {
 
     <!-- UI CONTROLS -->
     <div id="ui-controls" class="fixed top-2 right-2 xs:top-4 xs:right-4 sm:top-6 sm:right-6 z-[110] flex items-center gap-1.5 sm:gap-3 bg-white/10 dark:bg-black/10 backdrop-blur-sm p-1 rounded-2xl sm:rounded-3xl border border-white/20 dark:border-slate-800/50 shadow-sm">
-        <button id="liquid-glass-toggle" aria-label="Liquid Glass umschalten" class="group p-2 sm:p-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-lg rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-700 hover:ring-2 hover:ring-cyan-500 transition-all active:scale-90" title="Apple Liquid Glass Modus">
+        <button id="liquid-glass-toggle" style="display: none !important;" aria-label="Liquid Glass umschalten" class="hidden group p-2 sm:p-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-lg rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-700 hover:ring-2 hover:ring-cyan-500 transition-all active:scale-90" title="Apple Liquid Glass Modus">
             <svg id="liquid-glass-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-500 transition-colors group-hover:text-cyan-500 sm:w-6 sm:h-6"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
         </button>
 
@@ -7971,7 +7988,7 @@ html.gp-android:not(.dark) #ui-controls {
                 Über Gamingpig
             </h1>
             <p id="header-intro-p1" class="text-sm xxs:text-base xs:text-lg sm:text-xl md:text-2xl leading-relaxed text-slate-700 dark:text-slate-300 font-medium drop-shadow-sm">
-                Hallo! Ich bin Gamingpig, im Jugendalter und technikaffin. Ich habe ADHS - das ist eine echte Entwicklungsstörung, keine Superkraft. Mein <span class="text-blue-600 dark:text-blue-400 font-bold italic">Hyperfokus</span> hilft mir zwar, komplexe Probleme zu lösen, wo andere schon längst aufgegeben hätten, aber wenn er zu stark wird, bekomme ich auch nichts mehr um mich herum mit.
+                Hallo! Ich bin Gamingpig, technikaffin und leidenschaftlicher Entwickler. Ich habe ADHS - das ist eine echte Entwicklungsstörung, keine Superkraft. Mein <span class="text-blue-600 dark:text-blue-400 font-bold italic">Hyperfokus</span> hilft mir zwar, komplexe Probleme zu lösen, wo andere schon längst aufgegeben hätten, aber wenn er zu stark wird, bekomme ich auch nichts mehr um mich herum mit.
             </p>
             <p id="header-intro-p2" class="mt-3 xxs:mt-4 sm:mt-6 text-xs xxs:text-sm xs:text-base sm:text-lg text-slate-600 dark:text-slate-400 leading-relaxed drop-shadow-sm">
                 In meiner Freizeit beschäftige ich mich mit Gaming und Streaming. Ich bin zwar etwas schüchtern, jedoch an sich ein sehr freundlicher und gelassener Mensch. Ich repariere auch gerne IT Geräte (Laptops, Tablets, PCs, Smartphones usw.).
@@ -8013,6 +8030,49 @@ html.gp-android:not(.dark) #ui-controls {
             </div>
         </header>
 
+        <!-- ZIELGRUPPEN AUDIENCE HUB -->
+        <div id="audience-hub" class="mb-8 xxs:mb-10 sm:mb-14 reveal">
+            <div class="glass-card p-3.5 xxs:p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-white/20 dark:border-white/10 shadow-lg bg-gradient-to-r from-blue-500/5 via-purple-500/5 to-emerald-500/5">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-3.5">
+                    <div>
+                        <span class="text-[9px] xxs:text-[10px] font-black uppercase tracking-wider text-blue-500 dark:text-blue-400">Bereiche &amp; Zielgruppen</span>
+                        <h2 class="text-base xxs:text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white">Was interessiert dich?</h2>
+                    </div>
+                    <p class="text-xs text-slate-600 dark:text-slate-400 max-w-sm">Wähle deinen Bereich für einen schnellen Überblick und passgenaue Inhalte:</p>
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 xxs:gap-2.5 sm:gap-3">
+                    <button onclick="filterAudience('tech')" id="aud-btn-tech" class="aud-btn active flex items-center gap-2.5 p-2.5 rounded-xl border border-blue-500/40 bg-blue-500/15 text-blue-600 dark:text-blue-300 font-bold text-xs transition-all active:scale-95 shadow-sm text-left">
+                        <span class="text-xl">💻</span>
+                        <div class="min-w-0">
+                            <div class="truncate text-xs font-bold text-slate-900 dark:text-white">IT &amp; Tech</div>
+                            <div class="text-[9px] text-slate-500 dark:text-slate-400 font-medium truncate">Systemintegration &amp; Lab</div>
+                        </div>
+                    </button>
+                    <button onclick="filterAudience('music')" id="aud-btn-music" class="aud-btn flex items-center gap-2.5 p-2.5 rounded-xl border border-slate-700/60 bg-slate-800/40 hover:bg-slate-800/80 text-slate-700 dark:text-slate-300 font-bold text-xs transition-all active:scale-95 text-left">
+                        <span class="text-xl">🎵</span>
+                        <div class="min-w-0">
+                            <div class="truncate text-xs font-bold text-slate-900 dark:text-white">Musik &amp; Audio</div>
+                            <div class="text-[9px] text-slate-500 dark:text-slate-400 font-medium truncate">Spotify, Lyrics &amp; Gear</div>
+                        </div>
+                    </button>
+                    <button onclick="filterAudience('gaming')" id="aud-btn-gaming" class="aud-btn flex items-center gap-2.5 p-2.5 rounded-xl border border-slate-700/60 bg-slate-800/40 hover:bg-slate-800/80 text-slate-700 dark:text-slate-300 font-bold text-xs transition-all active:scale-95 text-left">
+                        <span class="text-xl">🎮</span>
+                        <div class="min-w-0">
+                            <div class="truncate text-xs font-bold text-slate-900 dark:text-white">Gaming &amp; Kart</div>
+                            <div class="text-[9px] text-slate-500 dark:text-slate-400 font-medium truncate">Motorsport &amp; Streaming</div>
+                        </div>
+                    </button>
+                    <button onclick="filterAudience('about')" id="aud-btn-about" class="aud-btn flex items-center gap-2.5 p-2.5 rounded-xl border border-slate-700/60 bg-slate-800/40 hover:bg-slate-800/80 text-slate-700 dark:text-slate-300 font-bold text-xs transition-all active:scale-95 text-left">
+                        <span class="text-xl">👤</span>
+                        <div class="min-w-0">
+                            <div class="truncate text-xs font-bold text-slate-900 dark:text-white">Über mich</div>
+                            <div class="text-[9px] text-slate-500 dark:text-slate-400 font-medium truncate">Story, Team &amp; Werte</div>
+                        </div>
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- AUSBILDUNG & ALLTAG: Gequetschtes Grid, 2 Spalten -->
         <section id="cards-section" class="mb-12 xxs:mb-16 xs:mb-20 sm:mb-24 reveal rounded-3xl relative z-10">
             <h2 id="cards-section-title" class="text-lg xxs:text-xl xs:text-2xl sm:text-3xl font-bold mb-3 xxs:mb-4 sm:mb-6 text-blue-600 dark:text-blue-500 border-b-2 sm:border-b-4 border-blue-600 dark:border-blue-500 pb-1.5 xxs:pb-2 sm:pb-3 inline-block break-words">
@@ -8020,7 +8080,7 @@ html.gp-android:not(.dark) #ui-controls {
             </h2>
             
             <div id="cards-grid" class="grid grid-cols-2 gap-2.5 xxs:gap-3 xs:gap-4 sm:gap-5">
-                <div onclick="openModal('status')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group relative">
+                <div id="card-item-status" data-audience="tech" onclick="openModal('status')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group relative transition-all duration-300">
                     <div class="p-1.5 xxs:p-2 sm:p-3 bg-blue-500/10 text-blue-600 dark:text-blue-500 rounded-lg xxs:rounded-xl group-hover:bg-blue-500 group-hover:text-white transition-all shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                     </div>
@@ -8030,17 +8090,17 @@ html.gp-android:not(.dark) #ui-controls {
                     </div>
                 </div>
 
-                <div onclick="openModal('background')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group relative">
+                <div id="card-item-background" data-audience="about" onclick="openModal('background')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group relative transition-all duration-300">
                     <div class="p-1.5 xxs:p-2 sm:p-3 bg-purple-500/10 text-purple-600 dark:text-purple-500 rounded-lg xxs:rounded-xl group-hover:bg-purple-500 group-hover:text-white transition-all shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                     </div>
                     <div>
                         <div class="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 mb-0.5 xxs:mb-1"><h3 id="card-title-background" class="font-bold text-sm xxs:text-base sm:text-lg">Hintergrund</h3><button onclick="event.stopPropagation(); speakCardFace('background', this)" aria-label="Diese Karte vorlesen" class="shrink-0 p-0.5 xxs:p-1 rounded-full text-slate-400 hover:text-blue-500 hover:bg-blue-500/10 transition-all"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button></div>
-                        <p id="card-teaser-background" class="text-slate-700 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">Im Jugendalter & in Ausbildung...</p>
+                        <p id="card-teaser-background" class="text-slate-700 dark:text-slate-400 text-[10px] xxs:text-xs sm:text-sm leading-snug">Mein Weg &amp; Ausbildung...</p>
                     </div>
                 </div>
 
-                <div onclick="openModal('freizeit')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group relative">
+                <div id="card-item-freizeit" data-audience="gaming" onclick="openModal('freizeit')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group relative transition-all duration-300">
                     <div class="p-1.5 xxs:p-2 sm:p-3 bg-orange-500/10 text-orange-600 dark:text-orange-500 rounded-lg xxs:rounded-xl group-hover:bg-orange-500 group-hover:text-white transition-all shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 12h.01M18 12h.01M15 10h.01M15 14h.01"/></svg>
                     </div>
@@ -8050,7 +8110,7 @@ html.gp-android:not(.dark) #ui-controls {
                     </div>
                 </div>
 
-                <div onclick="openModal('menschen')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group relative">
+                <div id="card-item-menschen" data-audience="about" onclick="openModal('menschen')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group relative transition-all duration-300">
                     <div class="p-1.5 xxs:p-2 sm:p-3 bg-red-500/10 text-red-600 dark:text-red-500 rounded-lg xxs:rounded-xl group-hover:bg-red-500 group-hover:text-white transition-all shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
                     </div>
@@ -8060,7 +8120,7 @@ html.gp-android:not(.dark) #ui-controls {
                     </div>
                 </div>
 
-                <div onclick="openModal('techstack')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group relative">
+                <div id="card-item-techstack" data-audience="tech" onclick="openModal('techstack')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group relative transition-all duration-300">
                     <div class="p-1.5 xxs:p-2 sm:p-3 bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 rounded-lg xxs:rounded-xl group-hover:bg-emerald-500 group-hover:text-white transition-all shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="M20 16V7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v9m16 0H4m16 0 1.28 2.55a1 1 0 0 1-.9 1.45H3.62a1 1 0 0 1-.9-1.45L4 16"/></svg>
                     </div>
@@ -8070,7 +8130,7 @@ html.gp-android:not(.dark) #ui-controls {
                     </div>
                 </div>
 
-                <div onclick="openModal('setup')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group relative">
+                <div id="card-item-setup" data-audience="music tech" onclick="openModal('setup')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group relative transition-all duration-300">
                     <div class="p-1.5 xxs:p-2 sm:p-3 bg-cyan-500/10 text-cyan-600 dark:text-cyan-500 rounded-lg xxs:rounded-xl group-hover:bg-cyan-500 group-hover:text-white transition-all shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
                     </div>
@@ -8080,7 +8140,7 @@ html.gp-android:not(.dark) #ui-controls {
                     </div>
                 </div>
 
-                <div onclick="openModal('labor')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group relative">
+                <div id="card-item-labor" data-audience="tech" onclick="openModal('labor')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group relative transition-all duration-300">
                     <div class="p-1.5 xxs:p-2 sm:p-3 bg-yellow-500/10 text-yellow-600 dark:text-yellow-500 rounded-lg xxs:rounded-xl group-hover:bg-yellow-500 group-hover:text-white transition-all shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="M10 2v7.31"/><path d="M14 9.3V1.99"/><path d="M8.5 2h7"/><path d="M14 9.3a6.5 6.5 0 1 1-4 0"/><path d="M5.52 16h12.96"/></svg>
                     </div>
@@ -8090,7 +8150,7 @@ html.gp-android:not(.dark) #ui-controls {
                     </div>
                 </div>
 
-                <div onclick="openModal('contact')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group relative">
+                <div id="card-item-contact" data-audience="about" onclick="openModal('contact')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group relative transition-all duration-300">
                     <div class="p-1.5 xxs:p-2 sm:p-3 bg-indigo-500/10 text-indigo-600 dark:text-indigo-500 rounded-lg xxs:rounded-xl group-hover:bg-indigo-500 group-hover:text-white transition-all shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
                     </div>
@@ -8648,7 +8708,7 @@ html.gp-android:not(.dark) #ui-controls {
                             <h2 id="social-tom-title" data-i18n="social_tom_title" class="text-base xxs:text-xl xs:text-2xl sm:text-3xl font-bold">Tom's TikTok</h2>
                             <span id="social-tom-badge" data-i18n="social_tom_badge" class="px-2 py-0.5 text-[9px] xxs:text-[10px] font-black uppercase tracking-wider bg-purple-500/10 text-purple-500 rounded-full border border-purple-500/20">Manager &amp; Co-Owner</span>
                         </div>
-                        <p id="social-tom-sub" data-i18n="social_tom_sub" class="text-[9px] xxs:text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 font-semibold mt-0.5">Manager, Co-Owner, bester Freund &amp; Bruder</p>
+                        <p id="social-tom-sub" data-i18n="social_tom_sub" class="text-[9px] xxs:text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 font-semibold mt-0.5">Manager, Co-Owner &amp; bester Freund</p>
                     </div>
                 </div>
                 <a href="https://www.tiktok.com/@squizey_tt?_r=1&_t=ZG-97oplSDT9Dl" target="_blank" rel="noopener noreferrer" class="group/link inline-flex items-center gap-1.5 xxs:gap-2 sm:gap-3 text-sm xxs:text-base sm:text-xl text-blue-500 hover:text-blue-600 font-bold transition-all">
@@ -8946,7 +9006,7 @@ html.gp-android:not(.dark) #ui-controls {
         <button onclick="toggleSitePerf()" id="btn-toggle-perf" class="text-center text-[9px] xxs:text-[10px] sm:text-xs text-green-400 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-green-500/25 transition-all font-bold truncate active:scale-95 flex items-center justify-center gap-1">
             <span>🚀</span> <span>60 FPS</span>
         </button>
-        <button onclick="toggleSiteLiquid()" id="btn-toggle-liquid" class="col-span-2 text-center text-[9px] xxs:text-[10px] sm:text-xs text-cyan-300 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold truncate active:scale-95 flex items-center justify-center gap-1">
+        <button onclick="toggleSiteLiquid()" id="btn-toggle-liquid" style="display: none !important;" class="hidden col-span-2 text-center text-[9px] xxs:text-[10px] sm:text-xs text-cyan-300 px-2 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/5 transition-all font-bold truncate active:scale-95 flex items-center justify-center gap-1">
             <span>💧</span> <span>Liquid Glass</span>
         </button>
     </div>
@@ -8978,39 +9038,14 @@ html.gp-android:not(.dark) #ui-controls {
     <div class="px-1">
         <label for="standby-design-select" id="label-standby-design" class="text-[9px] xxs:text-[10px] sm:text-xs font-bold text-slate-300 block mb-1">StandBy-Design</label>
         <select id="standby-design-select" onchange="changeStandbyDesign(this.value)" class="w-full text-[10px] xxs:text-xs bg-slate-800 text-teal-400 border border-slate-700 rounded-xl px-2.5 py-2 font-bold">
-            <option value="classic" id="opt-standby-design-classic">Classic</option>
-            <option value="minimal" id="opt-standby-design-minimal">Minimal</option>
-            <option value="cover-focus" id="opt-standby-design-cover-focus">Cover-Fokus</option>
-            <option value="clock-only" id="opt-standby-design-clock-only">Nur Uhr</option>
-            <option value="vinyl" id="opt-standby-design-vinyl">Vinyl</option>
-            <option value="split" id="opt-standby-design-split">Split</option>
-            <option value="typography" id="opt-standby-design-typography">Typografie</option>
-            <option value="edge-glow" id="opt-standby-design-edge-glow">Edge-Glow</option>
-            <option value="compact" id="opt-standby-design-compact">Kompakt</option>
-            <option value="poster" id="opt-standby-design-poster">Poster</option>
-            <option value="frame" id="opt-standby-design-frame">Rahmen</option>
-            <option value="neon" id="opt-standby-design-neon">Neon</option>
-            <option value="polaroid" id="opt-standby-design-polaroid">Polaroid</option>
-            <option value="bar" id="opt-standby-design-bar">Leiste</option>
-            <option value="grid" id="opt-standby-design-grid">Raster</option>
-            <option value="transparent" id="opt-standby-design-transparent">Transparent</option>
-            <option value="giant-clock" id="opt-standby-design-giant-clock">Riesen-Uhr</option>
-            <option value="zen" id="opt-standby-design-zen">Zen</option>
-            <option value="stacked" id="opt-standby-design-stacked">Gestapelt</option>
-            <option value="contrast" id="opt-standby-design-contrast">Kontrast</option>
-            <option value="cyberpunk" id="opt-standby-design-cyberpunk">Cyberpunk</option>
-            <option value="cassette" id="opt-standby-design-cassette">Retro-Kassette</option>
-            <option value="ambient-orb" id="opt-standby-design-ambient-orb">Ambient-Orb</option>
-            <option value="hologram" id="opt-standby-design-hologram">Hologram</option>
-            <option value="studio" id="opt-standby-design-studio">Studio</option>
-            <option value="retro80s">🕹️ Synthwave (80s Grid)</option>
-            <option value="glassmorphism">🧊 Frosted Glass</option>
-            <option value="oled">🖤 True OLED (Pitch Black)</option>
-            <option value="aurora">🌌 Northern Lights (Aurora)</option>
-            <option value="gold">👑 Luxury Gold</option>
-            <option value="brutalist">📐 Raw Brutalist (Tech)</option>
-            <option value="minimalist">✨ Clean Minimalist</option>
-            <option value="vaporwave">🌴 Pastel Sunset</option>
+            <option value="classic" id="opt-standby-design-classic">🍎 Apple Classic</option>
+            <option value="vinyl" id="opt-standby-design-vinyl">💿 Vinyl Plattenspieler</option>
+            <option value="giant-clock" id="opt-standby-design-giant-clock">⏰ Riesen-Uhr (Monolith)</option>
+            <option value="cyberpunk" id="opt-standby-design-cyberpunk">⚡ Cyberpunk HUD</option>
+            <option value="cover-focus" id="opt-standby-design-cover-focus">🖼️ Album Art Hero</option>
+            <option value="cassette" id="opt-standby-design-cassette">📼 Retro-Kassette</option>
+            <option value="oled" id="opt-standby-design-oled">🖤 True OLED (Pitch Black)</option>
+            <option value="aurora" id="opt-standby-design-aurora">🌌 Nordlicht Aurora</option>
         </select>
     </div>
 
@@ -9365,7 +9400,7 @@ html.gp-android:not(.dark) #ui-controls {
                 cta_noel_tiktok: "Hier geht's zu Noel's Kanal",
                 social_tom_title: "Tom's TikTok",
                 social_tom_badge: "Manager & Co-Owner",
-                social_tom_sub: "Manager, Co-Owner, bester Freund & Bruder",
+                social_tom_sub: "Manager, Co-Owner & bester Freund",
                 cta_tom: "Hier geht's zu Tom's Kanal",
                 social_jakob_title: "Jakob's TikTok",
                 social_jakob_sub: "© 2026 • Team- & Community-Mitglied",
@@ -9450,7 +9485,7 @@ html.gp-android:not(.dark) #ui-controls {
                 standby_idle_title: 'Aktuell ist es ruhig...', standby_idle_subtitle: 'Genieße die Stille', standby_hint: 'Zum Verlassen tippen',
                 install_btn: '📲 App installieren',
                 aria_dark: 'Dark Mode', aria_glass: 'Liquid Glass Modus', aria_perf: 'Performance Modus', aria_standby: 'StandBy Modus',
-                                                header_intro_html: 'Hallo! Ich bin Gamingpig, im Jugendalter und technikaffin. Ich habe ADHS - das ist eine echte Entwicklungsstörung, keine Superkraft. Mein <span class="text-blue-600 dark:text-blue-400 font-bold italic">Hyperfokus</span> hilft mir zwar, komplexe Probleme zu lösen, wo andere schon längst aufgegeben hätten, aber wenn er zu stark wird, bekomme ich auch nichts mehr um mich herum mit.',
+                                                header_intro_html: 'Hallo! Ich bin Gamingpig, technikaffin und leidenschaftlicher Entwickler. Ich habe ADHS - das ist eine echte Entwicklungsstörung, keine Superkraft. Mein <span class="text-blue-600 dark:text-blue-400 font-bold italic">Hyperfokus</span> hilft mir zwar, komplexe Probleme zu lösen, wo andere schon längst aufgegeben hätten, aber wenn er zu stark wird, bekomme ich auch nichts mehr um mich herum mit.',
                 header_freizeit: 'In meiner Freizeit beschäftige ich mich mit Gaming und Streaming. Ich bin zwar etwas schüchtern, jedoch an sich ein sehr freundlicher und gelassener Mensch. Ich repariere auch gerne IT Geräte (Laptops, Tablets, PCs, Smartphones usw.).',
                 cards_section_title: 'Real Talk: Ausbildung & Alltag',
                 cards_click_hint: 'Klicke auf die Karten für Details.',
@@ -9463,9 +9498,9 @@ html.gp-android:not(.dark) #ui-controls {
                 card_title_labor: 'Labor',
                 card_title_contact: 'Kontakt',
                 card_teaser_status: 'Ausbildung zum Fachinformatiker...',
-                card_teaser_background: 'Im Jugendalter & in Ausbildung...',
+                card_teaser_background: 'Mein Weg & Ausbildung...',
                 card_teaser_freizeit: 'Kartfahren & Forza Horizon 6...',
-                card_teaser_menschen: 'Tom (Manager), Noel (Co-Owner), Danilo, Jakob & Lukas...',
+                card_teaser_menschen: 'Tom, Noel, Danilo, Jakob & Lukas (Team & Freunde)...',
                 card_teaser_techstack: 'Hardware, Linux, Windows...',
                 card_teaser_setup: 'DT 770 Pro & Rockster Cross...',
                 card_teaser_labor: 'Server & Docker...',
@@ -9482,11 +9517,11 @@ html.gp-android:not(.dark) #ui-controls {
                 detail_status_title: 'Ausbildung & Fokus',
                 detail_status_content: 'Ich absolviere aktuell meine Ausbildung zum Fachinformatiker für Systemintegration. Technik und Systeme sind meine Welt. Ich liebe es, Server aufzusetzen, Netzwerke zu konfigurieren und alles am Laufen zu halten. Mein Hyperfokus hilft mir dabei, tief in komplexe IT-Strukturen einzutauchen und Fehler zu finden, bevor sie zum Problem werden.',
                 detail_background_title: 'Hintergrund & Weg',
-                detail_background_content: 'Ich bin im Jugendalter und absolviere aktuell eine Ausbildung zum Fachinformatiker für Systemintegration. Das hat mich früh gelehrt, unabhängig zu sein und meinen eigenen Weg zu gehen. Ich sehe Herausforderungen nicht als Hindernis, sondern als Chance, zu wachsen und meine eigene Zukunft zu gestalten.',
+                detail_background_content: 'Ich absolviere aktuell meine Ausbildung zum Fachinformatiker für Systemintegration. Schon früh habe ich gelernt, unabhängig zu sein und entschlossen meinen eigenen Weg zu gehen. Ich sehe Herausforderungen nicht als Hindernis, sondern als Chance, zu wachsen und meine Zukunft aktiv zu gestalten.',
                 detail_freizeit_title: 'Gaming & Content',
                 detail_freizeit_content: 'Seit dem 19.07.2026 hat mich eine neue Leidenschaft komplett gepackt: Kartfahren! Mein allererstes Mal auf der Kartbahn und ich war sofort Feuer und Flamme - das wird für mich immer mehr zum Hauptding. Forza Horizon 6 zocke ich zwischendurch zwar noch gelegentlich, aber Kartfahren übernimmt gerade eindeutig den ersten Platz. Ich streame live auf TikTok und teile meine Leidenschaft für Gaming, Technik und jetzt auch Motorsport mit der Community. Die Community kann sich also schon auf coole Livestreams direkt von der Kartbahn freuen! Es geht mir um den Vibe, den Austausch und das Meistern neuer Challenges.',
                 detail_menschen_title: 'Meine Wahlfamilie & Team',
-                detail_menschen_content: 'Da ich ohne Eltern aufgewachsen bin, sind Freunde meine gewählte Familie. Loyalität und Vertrauen stehen für mich an erster Stelle. Tom ist mein Manager, Co-Owner, engster Berater, bester Freund und Bruder in Christus – er hält mir den Rücken frei und leitet das Management. Noel steht als Co-Owner, Partner und starker Support fest an unserer Seite. Meine weiteren starken Anker sind Danilo, Jakob und Lukas. Gemeinsam gehen wir diesen Weg durch dick und dünn!',
+                detail_menschen_content: 'Da ich ohne Eltern aufgewachsen bin, sind Freunde meine gewählte Familie. Loyalität und Vertrauen stehen für mich an erster Stelle. Tom ist mein Manager, Co-Owner, engster Berater, bester Freund und wichtigster Rückhalt – er hält mir den Rücken frei und leitet das Management. Noel steht als Co-Owner, Partner und starker Support fest an unserer Seite. Meine weiteren starken Anker sind Danilo, Jakob und Lukas. Gemeinsam gehen wir diesen Weg durch dick und dünn!',
                 detail_techstack_title: 'Tech Stack & Skills',
                 detail_techstack_content: 'Als angehender Systemintegrator kenne ich mich mit dem Setup und Wartung von IT-Infrastrukturen aus. Dazu gehören Windows Server, Linux-Distributionen, generelle Netzwerkkonfigurationen und intensives Hardware-Troubleshooting. Egal ob Laptops, PCs oder Smartphones – wenn was defekt ist, finde ich den Fehler.',
                 detail_setup_title: 'Mein Audio Setup',
@@ -9589,7 +9624,7 @@ html.gp-android:not(.dark) #ui-controls {
                 cta_noel_tiktok: "Check out Noel's channel here",
                 social_tom_title: "Tom's TikTok",
                 social_tom_badge: "Manager & Co-Owner",
-                social_tom_sub: "Manager, Co-Owner, Best Friend & Brother",
+                social_tom_sub: "Manager, Co-Owner & Best Friend",
                 cta_tom: "Check out Tom's channel here",
                 social_jakob_title: "Jakob's TikTok",
                 social_jakob_sub: "© 2026 • Team & Community Member",
@@ -9672,7 +9707,7 @@ html.gp-android:not(.dark) #ui-controls {
                 standby_idle_title: "It's quiet right now...", standby_idle_subtitle: 'Enjoy the silence', standby_hint: 'Tap to exit',
                 install_btn: '📲 Install app',
                 aria_dark: 'Dark mode', aria_glass: 'Liquid Glass mode', aria_perf: 'Performance mode', aria_standby: 'StandBy mode',
-                                                header_intro_html: 'Hi! I\'m Gamingpig, a teenager who\'s into tech. I have ADHD - a real developmental disorder, not a superpower. My <span class="text-blue-600 dark:text-blue-400 font-bold italic">hyperfocus</span> does help me solve complex problems where others would have given up long ago, but when it gets too strong, I stop noticing anything around me too.',
+                                                header_intro_html: 'Hi! I\'m Gamingpig, a tech enthusiast and passionate developer. I have ADHD - a real developmental disorder, not a superpower. My <span class="text-blue-600 dark:text-blue-400 font-bold italic">hyperfocus</span> does help me solve complex problems where others would have given up long ago, but when it gets too strong, I stop noticing anything around me too.',
                 header_freizeit: 'In my free time I\'m into gaming and streaming. I\'m a bit shy, but overall a very friendly and easygoing person. I also love fixing IT devices (laptops, tablets, PCs, smartphones, etc.).',
                 cards_section_title: 'Real Talk: Training & Daily Life',
                 cards_click_hint: 'Click the cards for details.',
@@ -9685,7 +9720,7 @@ html.gp-android:not(.dark) #ui-controls {
                 card_title_labor: 'Lab',
                 card_title_contact: 'Contact',
                 card_teaser_status: 'Training as a systems integration IT specialist...',
-                card_teaser_background: 'A teenager & in training...',
+                card_teaser_background: 'My path & in training...',
                 card_teaser_freizeit: 'Karting & Forza Horizon 6...',
                 card_teaser_menschen: 'Tom (Manager), Noel (Co-Owner), Danilo, Jakob & Lukas...',
                 card_teaser_techstack: 'Hardware, Linux, Windows...',
@@ -9704,11 +9739,11 @@ html.gp-android:not(.dark) #ui-controls {
                 detail_status_title: 'Training & Focus',
                 detail_status_content: 'I\'m currently training as a systems integration IT specialist. Tech and systems are my world. I love setting up servers, configuring networks, and keeping everything running. My hyperfocus helps me dive deep into complex IT structures and catch errors before they become a problem.',
                 detail_background_title: 'Background & Path',
-                detail_background_content: 'I\'m a teenager and currently training as a systems integration IT specialist. That taught me early on to be independent and go my own way. I don\'t see challenges as obstacles, but as a chance to grow and shape my own future.',
+                detail_background_content: 'I\'m currently training as a systems integration IT specialist. That taught me early on to be independent and go my own way. I don\'t see challenges as obstacles, but as a chance to grow and shape my own future.',
                 detail_freizeit_title: 'Gaming & Content',
                 detail_freizeit_content: 'Since 07/19/2026, a brand new passion has completely taken over: go-karting! My very first time on a kart track and I was instantly hooked - it\'s quickly becoming the main thing for me. I still play Forza Horizon 6 here and there, but karting is clearly taking the top spot now. I stream live on TikTok and share my passion for gaming, tech, and now motorsport with the community. So get ready, community - cool livestreams straight from the kart track are coming! It\'s all about the vibe, connecting with others, and mastering new challenges.',
                 detail_menschen_title: 'My Chosen Family & Team',
-                detail_menschen_content: 'Since I grew up without parents, friends are my chosen family. Loyalty and trust come first for me. Tom is my manager, co-owner, closest advisor, best friend and brother in Christ – he always has my back and leads our management. Noel stands firmly by our side as co-owner, partner and key support. My other strong anchors are Danilo, Jakob, and Lukas. Together we are walking this path through thick and thin!',
+                detail_menschen_content: 'Since I grew up without parents, friends are my chosen family. Loyalty and trust come first for me. Tom is my manager, co-owner, closest advisor, best friend and strongest pillar of support – he always has my back and leads our management. Noel stands firmly by our side as co-owner, partner and key support. My other strong anchors are Danilo, Jakob, and Lukas. Together we are walking this path through thick and thin!',
                 detail_techstack_title: 'Tech Stack & Skills',
                 detail_techstack_content: 'As an aspiring systems integrator, I know my way around setting up and maintaining IT infrastructure. That includes Windows Server, Linux distributions, general network configuration, and intense hardware troubleshooting. Laptops, PCs, or smartphones - whatever\'s broken, I\'ll find the problem.',
                 detail_setup_title: 'My Audio Setup',
@@ -9842,7 +9877,7 @@ html.gp-android:not(.dark) #ui-controls {
                 cta_noel_tiktok: "Aquí va al canal de Noel",
                 social_tom_title: "TikTok de Tom",
                 social_tom_badge: "Gerente y Co-propietario",
-                social_tom_sub: "Gerente, co-propietario, mejor amigo y hermano",
+                social_tom_sub: "Gerente, co-propietario y mejor amigo",
                 cta_tom: "Aquí va al canal de Tom",
                 social_jakob_title: "TikTok de Jakob",
                 social_jakob_sub: "© 2026 • Miembro del equipo y la comunidad",
@@ -9924,7 +9959,7 @@ html.gp-android:not(.dark) #ui-controls {
                 standby_idle_title: 'Todo tranquilo por ahora...', standby_idle_subtitle: 'Disfruta del silencio', standby_hint: 'Toca para salir',
                 install_btn: '📲 Instalar app',
                 aria_dark: 'Modo oscuro', aria_glass: 'Modo Liquid Glass', aria_perf: 'Modo rendimiento', aria_standby: 'Modo StandBy',
-                                                header_intro_html: '¡Hola! Soy Gamingpig, adolescente y muy metido en la tecnología. Tengo TDAH - un trastorno del desarrollo real, no un superpoder. Mi <span class="text-blue-600 dark:text-blue-400 font-bold italic">hiperfoco</span> me ayuda a resolver problemas complejos donde otros ya se habrían rendido, pero cuando se vuelve demasiado intenso, dejo de notar todo lo que pasa a mi alrededor.',
+                                                header_intro_html: '¡Hola! Soy Gamingpig, apasionado por la tecnología y el desarrollo. Tengo TDAH - un trastorno del desarrollo real, no un superpoder. Mi <span class="text-blue-600 dark:text-blue-400 font-bold italic">hiperfoco</span> me ayuda a resolver problemas complejos donde otros ya se habrían rendido, pero cuando se vuelve demasiado intenso, dejo de notar todo lo que pasa a mi alrededor.',
                 header_freizeit: 'En mi tiempo libre me dedico a los videojuegos y al streaming. Soy algo tímido, pero en el fondo una persona muy amigable y tranquila. También me encanta reparar dispositivos (portátiles, tablets, PCs, móviles, etc.).',
                 cards_section_title: 'Real Talk: Formación y Día a Día',
                 cards_click_hint: 'Haz clic en las tarjetas para más detalles.',
@@ -9937,7 +9972,7 @@ html.gp-android:not(.dark) #ui-controls {
                 card_title_labor: 'Laboratorio',
                 card_title_contact: 'Contacto',
                 card_teaser_status: 'Formación como técnico en integración de sistemas...',
-                card_teaser_background: 'Adolescente y en formación...',
+                card_teaser_background: 'Mi camino y formación...',
                 card_teaser_freizeit: 'Karting y Forza Horizon 6...',
                 card_teaser_menschen: 'Tom (Mánager), Noel (Copropietario), Danilo, Jakob y Lukas...',
                 card_teaser_techstack: 'Hardware, Linux, Windows...',
@@ -9956,11 +9991,11 @@ html.gp-android:not(.dark) #ui-controls {
                 detail_status_title: 'Formación y Enfoque',
                 detail_status_content: 'Actualmente estoy formándome como técnico en integración de sistemas. La tecnología y los sistemas son mi mundo. Me encanta montar servidores, configurar redes y mantener todo funcionando. Mi hiperfoco me ayuda a sumergirme en estructuras de TI complejas y detectar errores antes de que se conviertan en un problema.',
                 detail_background_title: 'Trasfondo y Camino',
-                detail_background_content: 'Soy adolescente y actualmente me estoy formando como técnico en integración de sistemas. Eso me enseñó pronto a ser independiente y a seguir mi propio camino. No veo los desafíos como obstáculos, sino como una oportunidad para crecer y construir mi propio futuro.',
+                detail_background_content: 'Actualmente me estoy formando como técnico en integración de sistemas. Eso me enseñó pronto a ser independiente y a seguir mi propio camino. No veo los desafíos como obstáculos, sino como una oportunidad para crecer y construir mi propio futuro.',
                 detail_freizeit_title: 'Gaming y Contenido',
                 detail_freizeit_content: 'Desde el 19/07/2026 una nueva pasión me ha atrapado por completo: ¡el karting! Mi primera vez en un circuito de karts y quedé enganchado al instante - cada vez se está convirtiendo más en lo principal para mí. Todavía juego a Forza Horizon 6 de vez en quando, pero el karting claramente está tomando el primer lugar. Hago streaming en directo en TikTok y comparto mi pasión por los videojuegos, la tecnología y ahora también el motorsport con la comunidad. ¡Así que la comunidad ya puede esperar transmisiones geniales directamente desde el circuito de karts! Para mí se trata del ambiente, del intercambio y de superar nuevos retos.',
                 detail_menschen_title: 'Mi Familia Elegida y Equipo',
-                detail_menschen_content: 'Como crecí sin padres, mis amigos son mi familia elegida. La lealtad y la confianza son lo primero para mí. Tom es mi mánager, copropietario, asesor más cercano, mejor amigo y hermano en Cristo: él me cuida las espaldas y dirige nuestro equipo. Noel está firmemente a nuestro lado como copropietario, socio y gran soporte. Mis otros fuertes pilares son Danilo, Jakob y Lukas. ¡Juntos recorremos este camino contra viento y marea!',
+                detail_menschen_content: 'Como crecí sin padres, mis amigos son mi familia elegida. La lealtad y la confianza son lo primero para mí. Tom es mi mánager, copropietario, asesor más cercano, mejor amigo y pilar fundamental: él me cuida las espaldas y dirige nuestro equipo. Noel está firmemente a nuestro lado como copropietario, socio y gran soporte. Mis otros fuertes pilares son Danilo, Jakob y Lukas. ¡Juntos recorremos este camino contra viento y marea!',
                 detail_techstack_title: 'Tech Stack y Habilidades',
                 detail_techstack_content: 'Como futuro técnico en integración de sistemas, sé cómo configurar y mantener infraestructuras de TI. Eso incluye Windows Server, distribuciones Linux, configuración general de redes y una intensa resolución de problemas de hardware. Portátiles, PCs o móviles: si algo está roto, encuentro el fallo.',
                 detail_setup_title: 'Mi Setup de Audio',
@@ -10077,7 +10112,7 @@ html.gp-android:not(.dark) #ui-controls {
                 cta_noel_tiktok: "Accéder à la chaîne de Noel",
                 social_tom_title: "TikTok de Tom",
                 social_tom_badge: "Manager & Co-propriétaire",
-                social_tom_sub: "Manager, co-propriétaire, meilleur ami & frère",
+                social_tom_sub: "Manager, co-propriétaire & meilleur ami",
                 cta_tom: "Accéder à la chaîne de Tom",
                 social_jakob_title: "TikTok de Jakob",
                 social_jakob_sub: "© 2026 • Membre de l'équipe et de la communauté",
@@ -10166,7 +10201,7 @@ html.gp-android:not(.dark) #ui-controls {
                 card_title_status: 'Statut',
                 card_teaser_status: 'Formation en informatique...',
                 card_title_background: 'Parcours',
-                card_teaser_background: 'À l\'adolescence & en formation...',
+                card_teaser_background: 'Mon parcours & en formation...',
                 card_title_freizeit: 'Loisirs',
                 card_teaser_freizeit: 'Forza Horizon 6 & Stream...',
                 card_title_menschen: 'Entourage',
@@ -10275,7 +10310,7 @@ html.gp-android:not(.dark) #ui-controls {
                 cta_noel_tiktok: "Acessar canal do Noel",
                 social_tom_title: "TikTok do Tom",
                 social_tom_badge: "Gerente e Co-proprietário",
-                social_tom_sub: "Gerente, co-proprietário, melhor amigo e irmão",
+                social_tom_sub: "Gerente, co-proprietário e melhor amigo",
                 cta_tom: "Acessar canal do Tom",
                 social_jakob_title: "TikTok do Jakob",
                 social_jakob_sub: "© 2026 • Membro da equipe e da comunidade",
@@ -10364,7 +10399,7 @@ html.gp-android:not(.dark) #ui-controls {
                 card_title_status: 'Status',
                 card_teaser_status: 'Formação em TI...',
                 card_title_background: 'História',
-                card_teaser_background: 'Adolescência & formação...',
+                card_teaser_background: 'Minha jornada & formação...',
                 card_title_freizeit: 'Lazer',
                 card_teaser_freizeit: 'Forza Horizon 6 & Stream...',
                 card_title_menschen: 'Pessoas',
@@ -10473,7 +10508,7 @@ html.gp-android:not(.dark) #ui-controls {
                 cta_noel_tiktok: "Noel'in kanalına buradan ulaşabilirsin",
                 social_tom_title: "Tom'un TikTok'u",
                 social_tom_badge: "Yönetici ve Ortak Sahip",
-                social_tom_sub: "Yönetici, Ortak Sahip, En İyi Arkadaş ve Kardeş",
+                social_tom_sub: "Yönetici, Ortak Sahip ve En İyi Arkadaş",
                 cta_tom: "Tom'un kanalına buradan ulaşabilirsin",
                 social_jakob_title: "Jakob'un TikTok'u",
                 social_jakob_sub: "© 2026 • Takım ve Topluluk Üyesi",
@@ -10562,7 +10597,7 @@ html.gp-android:not(.dark) #ui-controls {
                 card_title_status: 'Durum',
                 card_teaser_status: 'Bilişim Sistemleri Eğitimi...',
                 card_title_background: 'Geçmiş',
-                card_teaser_background: 'Gençlik & eğitim...',
+                card_teaser_background: 'Yolculuğum & eğitim...',
                 card_title_freizeit: 'Boş Zaman',
                 card_teaser_freizeit: 'Forza Horizon 6 & Yayın...',
                 card_title_menschen: 'İnsanlar',
@@ -10947,7 +10982,7 @@ html.gp-android:not(.dark) #ui-controls {
                 standby_idle_title: "Aucune musique active",
                 standby_idle_subtitle: "Gamingpig est actuellement hors ligne",
                 standby_hint: "Touche n'importe où pour quitter le mode StandBy",
-                header_intro_html: "Bonjour ! Je suis Gamingpig, un adolescent passionné de technologie. J'ai un TDAH — un trouble neurodéveloppemental réel, pas un superpouvoir. Bien que mon <span class=\"text-blue-600 dark:text-blue-400 font-bold italic\">hyperfocus</span> m'aide à résoudre des problèmes complexes là où d'autres auraient abandonné, s'il devient trop fort, je me déconnecte totalement du monde qui m'entoure.",
+                header_intro_html: "Bonjour ! Je suis Gamingpig, passionné de technologie et développeur enthousiaste. J'ai un TDAH — un trouble neurodéveloppemental réel, pas un superpouvoir. Bien que mon <span class=\"text-blue-600 dark:text-blue-400 font-bold italic\">hyperfocus</span> m'aide à résoudre des problèmes complexes là où d'autres auraient abandonné, s'il devient trop fort, je me déconnecte totalement du monde qui m'entoure.",
                 header_freizeit: "Pendant mon temps libre, je me consacre au gaming et au streaming. Même si je suis un peu timide, je suis quelqu'un de très bienveillant et posé. J'aime aussi réparer des appareils informatiques (ordinateurs portables, tablettes, PC, smartphones, etc.).",
                 modal_deep_dive: "Immersion détaillée",
                 modal_understood: "Compris",
@@ -10955,11 +10990,11 @@ html.gp-android:not(.dark) #ui-controls {
                 detail_status_title: "Formation & Focus",
                 detail_status_content: "Je prépare actuellement mon diplôme d'informaticien spécialisé en intégration de systèmes. La technologie et les systèmes sont tout mon univers. J'adore configurer des serveurs, gérer des réseaux et veiller à ce que tout tourne à la perfection. Mon hyperfocus me permet de plonger au cœur d'infrastructures complexes et de résoudre les anomalies avant qu'elles ne deviennent un problème.",
                 detail_background_title: "Parcours & Histoire",
-                detail_background_content: "Je suis un adolescent en pleine formation d'informaticien en intégration de systèmes. Cela m'a appris très tôt à être autonome et à tracer ma propre route. Je ne vois pas les défis comme des freins, mais comme une opportunité de grandir et de façonner mon propre avenir.",
+                detail_background_content: "Je suis actuellement en formation d'informaticien en intégration de systèmes. Cela m'a appris très tôt à être autonome et à tracer ma propre route. Je ne vois pas les défis comme des freins, mais comme une opportunité de grandir et de façonner mon propre avenir.",
                 detail_freizeit_title: "Gaming & Contenu",
                 detail_freizeit_content: "Depuis le 19/07/2026, une nouvelle passion m'a totalement conquis : le karting ! Ma toute première fois sur circuit et j'ai eu un véritable coup de foudre — c'est en train de devenir ma priorité absolue. Je joue encore de temps à autre à Forza Horizon 6, mais le karting est clairement passé en tête. Je streame en direct sur TikTok et partage avec ma communauté mon amour pour le gaming, l'informatique et le sport automobile.",
                 detail_menschen_title: "Ma Famille de Cœur & Équipe",
-                detail_menschen_content: "Ayant grandi sans parents, mes amis sont ma famille choisie. La loyauté et la confiance sont primordiales pour moi. Tom est mon manager, co-propriétaire, conseiller le plus proche, meilleur ami et frère en Christ — il veille sur moi et gère notre équipe. Noel est fidèlement à nos côtés en tant que co-propriétaire, associé et précieux soutien. Mes autres solides piliers sont Danilo, Jakob et Lukas.",
+                detail_menschen_content: "Ayant grandi sans parents, mes amis sont ma famille choisie. La loyauté et la confiance sont primordiales pour moi. Tom est mon manager, co-propriétaire, conseiller le plus proche, meilleur ami et soutien indispensable — il veille sur moi et gère notre équipe. Noel est fidèlement à nos côtés en tant que co-propriétaire, associé et précieux soutien. Mes autres solides piliers sont Danilo, Jakob et Lukas.",
                 detail_techstack_title: "Tech Stack & Compétences",
                 detail_techstack_content: "En tant que futur intégrateur de systèmes, je maîtrise la mise en place et la maintenance d'infrastructures informatiques : Windows Server, distributions Linux, réseau et dépannage matériel avancé. Portables, PC ou smartphones : si quelque chose est en panne, je trouve l'erreur.",
                 detail_setup_title: "Mon Setup Audio",
@@ -11054,7 +11089,7 @@ html.gp-android:not(.dark) #ui-controls {
                 standby_idle_title: "Nenhuma música ativa",
                 standby_idle_subtitle: "Gamingpig está offline no momento",
                 standby_hint: "Toque em qualquer lugar para sair do StandBy",
-                header_intro_html: "Olá! Sou o Gamingpig, um adolescente fascinado por tecnologia. Tenho TDAH — um transtorno real do neurodesenvolvimento, não um superpoder. Embora meu <span class=\"text-blue-600 dark:text-blue-400 font-bold italic\">hiperfoco</span> me ajude a solucionar desafios complexos onde outros teriam desistido, quando fica muito forte, acabo me desligando de tudo ao meu redor.",
+                header_intro_html: "Olá! Sou o Gamingpig, apaixonado por tecnologia e desenvolvedor dedicado. Tenho TDAH — um transtorno real do neurodesenvolvimento, não um superpoder. Embora meu <span class=\"text-blue-600 dark:text-blue-400 font-bold italic\">hiperfoco</span> me ajude a solucionar desafios complexos onde outros teriam desistido, quando fica muito forte, acabo me desligando de tudo ao meu redor.",
                 header_freizeit: "No meu tempo livre, me dedico a jogos e transmissões ao vivo. Embora seja um pouco tímido, sou uma pessoa muito amigável e tranquila. Também adoro consertar dispositivos de informática (notebooks, tablets, PCs, celulares, etc.).",
                 modal_deep_dive: "Análise aprofundada",
                 modal_understood: "Entendido",
@@ -11062,11 +11097,11 @@ html.gp-android:not(.dark) #ui-controls {
                 detail_status_title: "Formação & Foco",
                 detail_status_content: "Atualmente estou fazendo minha formação como especialista em integração de sistemas de TI. Tecnologia e sistemas são meu mundo. Adoro configurar servidores, gerenciar redes e manter tudo funcionando perfeitamente. Meu hiperfoco me ajuda a mergulhar fundo em infraestruturas de TI complexas e encontrar falhas antes que se tornem problemas.",
                 detail_background_title: "História & Trajetória",
-                detail_background_content: "Sou um jovem em formação em integração de sistemas. Isso me ensinou desde cedo a ser independente e seguir meu próprio caminho. Não encaro desafios como barreiras, mas sim como uma oportunidade de crescer e construir meu próprio futuro.",
+                detail_background_content: "Atualmente estou em formação como técnico em integração de sistemas. Isso me ensinou desde cedo a ser independente e seguir meu próprio caminho. Não encaro desafios como barreiras, mas sim como uma oportunidade de crescer e construir meu próprio futuro.",
                 detail_freizeit_title: "Jogos & Conteúdo",
                 detail_freizeit_content: "Desde 19/07/2026, uma nova paixão tomou conta de mim: kart! Minha primeira vez na pista e fiquei apaixonado instantaneamente — isso está se tornando minha atividade favorita. Ainda jogo Forza Horizon 6 de vez em quando, mas o kart assumiu claramente o primeiro lugar. Faço lives no TikTok compartilhando minha paixão por jogos, tecnologia e agora automobilismo.",
                 detail_menschen_title: "Minha Família Escolhida & Equipe",
-                detail_menschen_content: "Como cresci sem pais, meus amigos são minha família escolhida. Lealdade e confiança estão em primeiro lugar para mim. O Tom é meu empresário, coproprietário, conselheiro mais próximo, melhor amigo e irmão em Cristo — ele sempre me apoia e comanda nossa gestão. O Noel está firmemente ao nosso lado como coproprietário, sócio e grande apoio. Meus outros pilares fundamentais são Danilo, Jakob e Lukas.",
+                detail_menschen_content: "Como cresci sem pais, meus amigos são minha família escolhida. Lealdade e confiança estão em primeiro lugar para mim. O Tom é meu empresário, coproprietário, conselheiro mais próximo, melhor amigo e maior ponto de apoio — ele sempre me apoia e comanda nossa gestão. O Noel está firmemente ao nosso lado como coproprietário, sócio e grande apoio. Meus outros pilares fundamentais são Danilo, Jakob e Lukas.",
                 detail_techstack_title: "Tech Stack & Habilidades",
                 detail_techstack_content: "Como futuro integrador de sistemas, domino a configuração e manutenção de infraestruturas de TI: Windows Server, distribuições Linux, redes e manutenção avançada de hardware. Notebooks, PCs ou celulares: se algo quebrar, eu descubro o problema.",
                 detail_setup_title: "Meu Setup de Áudio",
@@ -11161,7 +11196,7 @@ html.gp-android:not(.dark) #ui-controls {
                 standby_idle_title: "Müzik çalmıyor",
                 standby_idle_subtitle: "Gamingpig şu anda çevrimdışı",
                 standby_hint: "StandBy modundan çıkmak için herhangi bir yere dokun",
-                header_intro_html: "Merhaba! Ben Gamingpig, teknoloji tutkunu bir gencim. DEHB sahibiyim — bu gerçek bir nörogelişimsel durumdur, süper güç değil. <span class=\"text-blue-600 dark:text-blue-400 font-bold italic\">Hiper odaklanmam</span>, başkalarının çoktan pes edeceği karmaşık sorunları çözmeme yardımcı olsa da aşırılaştığında etrafımdaki her şeyi tamamen unuturum.",
+                header_intro_html: "Merhaba! Ben Gamingpig, teknoloji tutkunu ve kendini geliştiren bir geliştiriciyim. DEHB sahibiyim — bu gerçek bir nörogelişimsel durumdur, süper güç değil. <span class=\"text-blue-600 dark:text-blue-400 font-bold italic\">Hiper odaklanmam</span>, başkalarının çoktan pes edeceği karmaşık sorunları çözmeme yardımcı olsa da aşırılaştığında etrafımdaki her şeyi tamamen unuturum.",
                 header_freizeit: "Boş zamanlarımda oyun oynuyor ve yayın yapıyorum. Biraz çekingen olsam da genel olarak çok dost canlısı ve sakin biriyim. Ayrıca bilişim cihazlarını onarmayı çok severim (dizüstü bilgisayarlar, tabletler, PC'ler, akıllı telefonlar vb.).",
                 modal_deep_dive: "Ayrıntılı İnceleme",
                 modal_understood: "Anlaşıldı",
@@ -11169,11 +11204,11 @@ html.gp-android:not(.dark) #ui-controls {
                 detail_status_title: "Eğitim & Odak",
                 detail_status_content: "Şu anda sistem entegrasyonu bilişim uzmanlığı eğitimimi sürdürüyorum. Teknoloji ve sistemler benim dünyam. Sunucular kurmayı, ağları yapılandırmayı ve her şeyin sorunsuz çalışmasını sağlamayı çok seviyorum. Hiper odaklanmam, karmaşık BT yapılarına derinlemesine dalmama ve hataları sorun olmadan önce yakalamama yardımcı oluyor.",
                 detail_background_title: "Geçmiş & Yolculuk",
-                detail_background_content: "Genç yaştayım ve şu anda sistem entegrasyonu alanında eğitim alıyorum. Bu bana erkenden bağımsız olmayı ve kendi yolumu çizmeyi öğretti. Zorlukları birer engel olarak değil, büyümek ve kendi geleceğimi şekillendirmek için bir fırsat olarak görüyorum.",
+                detail_background_content: "Şu anda sistem entegrasyonu alanında eğitim alıyorum. Bu bana erkenden bağımsız olmayı ve kendi yolumu çizmeyi öğretti. Zorlukları birer engel olarak değil, büyümek ve kendi geleceğimi şekillendirmek için bir fırsat olarak görüyorum.",
                 detail_freizeit_title: "Oyun & İçerik",
                 detail_freizeit_content: "19.07.2026 tarihinden bu yana yepyeni bir tutku beni tamamen sardı: Karting! Piste ilk çıkışımdı ve anında bağlandım — bu artık benim için bir numaralı aktivite haline geliyor. Arada Forza Horizon 6 oynasam da karting artık açık ara önde. TikTok'ta canlı yayınlar yaparak oyun, teknoloji ve şimdi motor sporları tutkumu toplulukla paylaşıyorum.",
                 detail_menschen_title: "Seçtiğim Ailem & Ekip",
-                detail_menschen_content: "Ailemsiz büyüdüğüm için arkadaşlarım benim seçilmiş ailemdir. Sadakat ve güven benim için her şeyden önce gelir. Tom benim menajerim, ortak sahibim, en yakın danışmanım, en iyi dostum ve kardeşimdir — her zaman arkamdadır ve yönetimimizi yönetir. Noel, ortak sahibi, iş ortağı ve güçlü destek olarak yanımızdadır. Diğer sağlam dayanaklarım Danilo, Jakob ve Lukas'tır.",
+                detail_menschen_content: "Ailemsiz büyüdüğüm için arkadaşlarım benim seçilmiş ailemdir. Sadakat ve güven benim için her şeyden önce gelir. Tom benim menajerim, ortak sahibim, en yakın danışmanım, en iyi dostum ve en büyük destekçimdir — her zaman arkamdadır ve yönetimimizi yönetir. Noel, ortak sahibi, iş ortağı ve güçlü destek olarak yanımızdadır. Diğer sağlam dayanaklarım Danilo, Jakob ve Lukas'tır.",
                 detail_techstack_title: "Teknoloji Yığını & Beceriler",
                 detail_techstack_content: "Geleceğin sistem entegratörü olarak BT altyapılarının kurulumunu ve bakımını iyi biliyorum: Windows Server, Linux dağıtımları, genel ağ yapılandırmaları ve kapsamlı donanım sorun giderme. Dizüstü bilgisayarlar, PC'ler veya akıllı telefonlar — ne bozulursa bozulsun hatayı bulurum.",
                 detail_setup_title: "Ses Kurulumum",
@@ -11235,7 +11270,7 @@ html.gp-android:not(.dark) #ui-controls {
             if (!overlay) return;
             const closeBtn = document.getElementById('lang-picker-close-btn');
             if (closeBtn) {
-                closeBtn.style.display = (!isManual && (window.OnboardingCoordinator && window.OnboardingCoordinator.isOnboarding)) ? 'none' : 'flex';
+                closeBtn.style.display = 'flex';
             }
             overlay.classList.remove('hidden', 'lp-active');
             overlay.style.display = 'flex';
@@ -11273,10 +11308,6 @@ html.gp-android:not(.dark) #ui-controls {
                 if (typeof window.OnboardingCoordinator.step2_tutorial === 'function') {
                     window.OnboardingCoordinator.step2_tutorial();
                 }
-            } else if (!window._manualLangChange && window.getTutorialStatus() !== '1') {
-                setTimeout(() => {
-                    if (typeof startTutorial === 'function') startTutorial();
-                }, 400);
             }
             window._manualLangChange = false;
         };
@@ -12717,81 +12748,14 @@ html.gp-android:not(.dark) #ui-controls {
         // 🎨 STANDBY DESIGN REGISTRY
         // =========================================================
         const STANDBY_DESIGNS = [
-            { id: 'classic', label: 'Classic' },
-            { id: 'minimal', label: 'Minimal' },
-            { id: 'cover-focus', label: 'Cover-Fokus' },
-            { id: 'clock-only', label: 'Nur Uhr' },
-            { id: 'vinyl', label: 'Vinyl' },
-            { id: 'split', label: 'Split' },
-            { id: 'typography', label: 'Typografie' },
-            { id: 'edge-glow', label: 'Edge-Glow' },
-            { id: 'compact', label: 'Kompakt' },
-            { id: 'poster', label: 'Poster' },
-            { id: 'frame', label: 'Rahmen' },
-            { id: 'neon', label: 'Neon' },
-            { id: 'polaroid', label: 'Polaroid' },
-            { id: 'bar', label: 'Leiste' },
-            { id: 'grid', label: 'Raster' },
-            { id: 'transparent', label: 'Transparent' },
-            { id: 'giant-clock', label: 'Riesen-Uhr' },
-            { id: 'zen', label: 'Zen' },
-            { id: 'stacked', label: 'Gestapelt' },
-            { id: 'contrast', label: 'Kontrast' },
-            { id: 'cyberpunk', label: 'Cyberpunk' },
-            { id: 'cassette', label: 'Kassette' },
-            { id: 'ambient-orb', label: 'Ambient-Orb' },
-            { id: 'hologram', label: 'Hologram' },
-            { id: 'studio', label: 'Studio' },
-            { id: 'retro80s', label: '🕹️ 80s Synthwave' },
-            { id: 'glassmorphism', label: '🧊 Ultra Glass' },
-            { id: 'oled', label: '🖤 OLED Pitch Black' },
-            { id: 'aurora', label: '🌌 Nordlicht Aurora' },
-            { id: 'gold', label: '👑 Luxury Gold' },
-            { id: 'brutalist', label: '📐 Raw Brutalist' },
-            { id: 'vaporwave', label: '🌴 Pastel Sunset' },
-            { id: 'matrix-core', label: '🟢 Matrix Core' },
-            { id: 'blueprint', label: '📐 Tech Blueprint' },
-            { id: 'lava-lamp', label: '🔥 Lava Magma' },
-            { id: 'cyber-hud', label: '🎯 Sci-Fi HUD' },
-            { id: 'gameboy', label: '🎮 Retro Handheld (8-Bit)' },
-            { id: 'solar-flare', label: '☀️ Solar Flare' },
-            { id: 'deep-abyss', label: '🌊 Deep Ocean Trench' },
-            { id: 'cherry-blossom', label: '🌸 Cherry Blossom (Sakura)' },
-            { id: 'midnight-tokyo', label: '🏮 Midnight Tokyo' },
-            { id: 'carbon-fiber', label: '🏎️ Carbon Racing' },
-            { id: 'chalkboard', label: '📝 Kreidetafel (Chalk)' },
-            { id: 'newspaper', label: '📰 Vintage Gazette' },
-            { id: 'monochrome-red', label: '🚨 Crimson Alert' },
-            { id: 'steampunk', label: '⚙️ Steampunk Brass' },
-            { id: 'radar-scan', label: '📡 Sonar & Radar' },
-            { id: 'synth-sunset', label: '🌅 Outrun Highway' },
-            { id: 'emerald-luxury', label: '💎 Smaragd Royale' },
-            { id: 'lofi-cafe', label: '☕ Cozy Lo-Fi' },
-            { id: 'toxic-hazard', label: '☣️ Toxic Cyber' },
-            { id: 'space-odyssey', label: '🚀 Kosmos Orbit' },
-            { id: 'glitch-art', label: '⚡ Glitch Artifact' },
-            { id: 'nordic-frost', label: '❄️ Skandi Eis' },
-            { id: 'neon-city', label: '🏙️ Neo Shinjuku' },
-            { id: 'nature-1', label: 'Soft Meadow' },
-            { id: 'nature-2', label: 'Peach Dawn' },
-            { id: 'nature-3', label: 'Moonstone' },
-            { id: 'nature-4', label: 'Ocean Glass' },
-            { id: 'nature-5', label: 'Rose Quartz' },
-            { id: 'nature-6', label: 'Desert Dune' },
-            { id: 'nature-7', label: 'Forest Mist' },
-            { id: 'nature-8', label: 'Lavender Dream' },
-            { id: 'nature-9', label: 'Copper Studio' },
-            { id: 'nature-10', label: 'Arctic Light' },
-            { id: 'nature-11', label: 'Ink & Paper' },
-            { id: 'nature-12', label: 'Terracotta' },
-            { id: 'nature-13', label: 'Sage Linen' },
-            { id: 'nature-14', label: 'Berry Night' },
-            { id: 'nature-15', label: 'Golden Hour' },
-            { id: 'nature-16', label: 'Rainy Window' },
-            { id: 'nature-17', label: 'Cloud Nine' },
-            { id: 'nature-18', label: 'Moss Stone' },
-            { id: 'nature-19', label: 'Coral Reef' },
-            { id: 'nature-20', label: 'Indigo Silk' }
+            { id: 'classic', label: '🍎 Apple Classic' },
+            { id: 'vinyl', label: '💿 Vinyl Plattenspieler' },
+            { id: 'giant-clock', label: '⏰ Riesen-Uhr (Monolith)' },
+            { id: 'cyberpunk', label: '⚡ Cyberpunk HUD' },
+            { id: 'cover-focus', label: '🖼️ Album Art Hero' },
+            { id: 'cassette', label: '📼 Retro-Kassette' },
+            { id: 'oled', label: '🖤 True OLED (Pitch Black)' },
+            { id: 'aurora', label: '🌌 Nordlicht Aurora' }
         ];
 
         function populateStandbyDesignDropdown() {
@@ -15574,30 +15538,17 @@ let shareCardLoading;
             }
         });
 
-        // --- LIQUID GLASS LOGIC ---
+        // --- LIQUID GLASS LOGIC (Deactivated per user request) ---
         function applyLiquidGlassMode(isActive) {
-            if (isActive) {
-                document.body.classList.add('liquid-glass-active');
-                if (liquidGlassToggle) liquidGlassToggle.classList.add('ring-2', 'ring-cyan-500');
-                if (liquidGlassIcon) liquidGlassIcon.classList.add('text-cyan-500', 'fill-cyan-500/20');
-            } else {
-                document.body.classList.remove('liquid-glass-active');
-                if (liquidGlassToggle) liquidGlassToggle.classList.remove('ring-2', 'ring-cyan-500');
-                if (liquidGlassIcon) liquidGlassIcon.classList.remove('text-cyan-500', 'fill-cyan-500/20');
-            }
+            document.body.classList.remove('liquid-glass-active');
+            if (liquidGlassToggle) liquidGlassToggle.style.display = 'none';
         }
-
-        const savedLiquidGlass = AppStorage.getItem('liquidGlassMode');
-        if (savedLiquidGlass === 'true') {
-            applyLiquidGlassMode(true);
-        }
+        applyLiquidGlassMode(false);
+        try { AppStorage.removeItem('liquidGlassMode'); } catch(e){}
 
         if (liquidGlassToggle) {
             liquidGlassToggle.addEventListener('click', () => {
-                haptic(10);
-                const isActive = document.body.classList.toggle('liquid-glass-active');
-                AppStorage.setItem('liquidGlassMode', isActive);
-                applyLiquidGlassMode(isActive);
+                applyLiquidGlassMode(false);
             });
         }
 
@@ -16258,6 +16209,44 @@ let shareCardLoading;
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+    { version: "v24.193.0", date: "22. September 2026", type: "feature", items: {
+        de: [
+            "🎯 Neuer Zielgruppen-Hub: Schneller Fokus auf IT & Tech, Musik, Gaming & Sim-Racing oder Über mich",
+            "✨ 8 radikal unterschiedliche StandBy-Designs: Jedes Layout hat jetzt einen einzigartigen visuellen Charakter",
+            "🌐 Überarbeitete Texte & Übersetzungen: Bereinigte Beschreibungen in allen 6 Sprachen ohne Altersangaben",
+            "🚀 Schnelleres, barrierefreies Surfen ohne störende Popups beim ersten Besuch"
+        ],
+        en: [
+            "🎯 New Audience Hub: Fast focus on IT & Tech, Music, Gaming & Sim Racing, or About Me",
+            "✨ 8 radically distinct StandBy designs: Every layout now has a unique visual character",
+            "🌐 Refined text & translations: Polished descriptions across 6 languages with clean professional tone",
+            "🚀 Smoother browsing experience without intrusive onboarding popups"
+        ],
+        es: [
+            "🎯 Nuevo Hub de Audiencia: Enfoque rápido en TI y tecnología, música, gaming o sobre mí",
+            "✨ 8 diseños StandBy radicalmente distintos con identidades visuales únicas",
+            "🌐 Textos y traducciones refinadas en los 6 idiomas con tono profesional",
+            "🚀 Experiencia de navegación fluida sin ventanas emergentes intrusivas"
+        ],
+        fr: [
+            "🎯 Nouveau Hub pour publics cibles : Focus rapide sur l'informatique, la musique, le gaming ou À propos",
+            "✨ 8 styles StandBy radicalement distincts avec des identités visuelles uniques",
+            "🌐 Textes et traductions affinés dans les 6 langues avec un ton professionnel",
+            "🚀 Navigation fluide et instantanée sans popups intrusifs"
+        ],
+        pt: [
+            "🎯 Novo Hub de Público: Foco rápido em TI e tecnologia, música, jogos ou sobre mim",
+            "✨ 8 designs de StandBy radicalmente distintos com visuais únicos",
+            "🌐 Textos e traduções refinadas em 6 idiomas com tom profissional",
+            "🚀 Navegação suave e imediata sem popups intrusivos"
+        ],
+        tr: [
+            "🎯 Yeni Hedef Kitle Merkezi: Bilişim & Teknoloji, Müzik, Oyun veya Hakkımda bölümlerine hızlı odak",
+            "✨ 8 kökten farklı StandBy tasarımı: Her biri benzersiz bir görsel karaktere sahip",
+            "🌐 6 dilde profesyonel ve yenilenmiş metinler",
+            "🚀 Rahatsız edici pencereler olmadan akıcı gezinti deneyimi"
+        ]
+    }},
     { version: "v24.159.0", date: "10. September 2026", type: "feature", items: {
         de: [
             "🎵 Automatischer Musik-Fallback: Wenn die NPC-API oder der Raspberry Pi keine aktuellen Daten liefert, übernimmt die öffentliche stats.fm-Livequelle Titel, Künstler, Fortschritt, Dauer und Cover",
@@ -19402,12 +19391,68 @@ let shareCardLoading;
             updateSettingsStatusButtons();
         };
 
-        window.toggleSiteLiquid = function() {
-            if (typeof liquidGlassToggle !== 'undefined' && liquidGlassToggle) {
-                liquidGlassToggle.click();
-            } else {
-                document.body.classList.toggle('liquid-glass-active');
+        // --- AUDIENCE HUB TARGET GROUP FILTERING ---
+        window.activeAudienceCategory = null;
+        window.filterAudience = function(category) {
+            const isTogglingOff = window.activeAudienceCategory === category;
+            window.activeAudienceCategory = isTogglingOff ? null : category;
+
+            const buttons = document.querySelectorAll('.aud-btn');
+            buttons.forEach(btn => {
+                const isActive = !isTogglingOff && btn.id === `aud-btn-${category}`;
+                btn.classList.toggle('active', isActive);
+                if (isActive) {
+                    btn.classList.add('border-blue-500/60', 'bg-blue-500/20', 'text-blue-600', 'dark:text-blue-300', 'shadow-md');
+                    btn.classList.remove('border-slate-700/60', 'bg-slate-800/40', 'text-slate-700', 'dark:text-slate-300');
+                } else {
+                    btn.classList.remove('border-blue-500/60', 'bg-blue-500/20', 'text-blue-600', 'dark:text-blue-300', 'shadow-md');
+                    btn.classList.add('border-slate-700/60', 'bg-slate-800/40', 'text-slate-700', 'dark:text-slate-300');
+                }
+            });
+
+            const cards = document.querySelectorAll('#cards-grid > div[data-audience]');
+            cards.forEach(card => {
+                if (isTogglingOff) {
+                    card.style.opacity = '1';
+                    card.style.transform = '';
+                    card.style.boxShadow = '';
+                    card.style.borderColor = '';
+                } else {
+                    const aud = card.getAttribute('data-audience') || '';
+                    const matches = aud.split(' ').includes(category);
+                    if (matches) {
+                        card.style.opacity = '1';
+                        card.style.transform = 'scale(1.02)';
+                        card.style.boxShadow = '0 0 20px rgba(59, 130, 246, 0.35)';
+                        card.style.borderColor = 'rgba(59, 130, 246, 0.6)';
+                    } else {
+                        card.style.opacity = '0.45';
+                        card.style.transform = 'scale(0.98)';
+                        card.style.boxShadow = 'none';
+                        card.style.borderColor = '';
+                    }
+                }
+            });
+
+            if (!isTogglingOff) {
+                if (category === 'music') {
+                    const spotifySection = document.getElementById('spotify-section') || document.getElementById('spotify-live-card');
+                    if (spotifySection) spotifySection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                } else if (category === 'tech') {
+                    const cardsSection = document.getElementById('cards-section');
+                    if (cardsSection) cardsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                } else if (category === 'gaming') {
+                    const cardFreizeit = document.getElementById('card-item-freizeit');
+                    if (cardFreizeit) cardFreizeit.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                } else if (category === 'about') {
+                    const cardBackground = document.getElementById('card-item-background');
+                    if (cardBackground) cardBackground.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
             }
+        };
+
+        window.toggleSiteLiquid = function() {
+            document.body.classList.remove('liquid-glass-active');
             updateSettingsStatusButtons();
         };
 
@@ -21954,19 +21999,13 @@ window.setLyricsStyle = function(style) {
         const effectiveLang = _savedLang || currentLang || 'de';
         applyLanguage(effectiveLang);
 
-        // Nur beim allerersten Besuch (keine Sprache hinterlegt) oder explizitem Aufruf öffnen
-        const _needsLanguageSelection = (!_savedLang || !_isCompleted || _forceOnboarding);
+        // Nur bei explizitem Aufruf (z. B. ?onboarding=true oder ?first_visit=1) öffnen
+        const _needsLanguageSelection = Boolean(_forceOnboarding);
 
         if (_needsLanguageSelection) {
             document.documentElement.classList.add('needs-onboarding');
             if (window.OnboardingCoordinator && typeof window.OnboardingCoordinator.step1_language === 'function') {
                 window.OnboardingCoordinator.step1_language();
-            } else {
-                setTimeout(() => {
-                    if (window.OnboardingCoordinator && typeof window.OnboardingCoordinator.step1_language === 'function') {
-                        window.OnboardingCoordinator.step1_language();
-                    }
-                }, 50);
             }
         } else {
             document.documentElement.classList.remove('needs-onboarding');

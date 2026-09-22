@@ -85,9 +85,9 @@
                     privacy_modal_title: "Datenschutz aktualisiert",
                     privacy_modal_date: "Stand: 8. September 2026",
                     privacy_modal_intro: "Wir haben unsere <strong class=\"text-white\">Datenschutzerklärung</strong> transparent erweitert:",
-                    privacy_modal_item1: "Öffentliches Voting und Wünsche: ohne GitHub-Anmeldung, mit einer pseudonymen Browser-Kennung.",
-                    privacy_modal_item2: "Übertragung über ntfy: Einträge gehen zunächst in eine öffentliche Warteschlange und werden später auf GitHub gespeichert.",
-                    privacy_modal_item3: "Gerätecode, Lesecache und Löschung: Privater Schlüssel bleibt lokal; öffentliche Daten und Git-Historie werden getrennt gespeichert. Push-Gerätedaten werden jetzt vor der Übertragung und auf GitHub verschlüsselt gespeichert.",
+                    privacy_modal_item1: "Öffentliche GitHub-Speicherung: Wünsche und Stimmen sind mit deinem GitHub-Konto öffentlich verknüpft.",
+                    privacy_modal_item2: "Übertragung an GitHub: Bereits das Öffnen des vorausgefüllten Formulars sendet deine Texte; die Roadmap lädt öffentliche Daten über die GitHub-API.",
+                    privacy_modal_item3: "Lokaler Lesecache und Löschung: Browserdaten und GitHub-Beiträge werden getrennt gespeichert. Details und Kontakt stehen in der Erklärung.",
                     privacy_modal_read: "Erklärung lesen ↗",
                     privacy_modal_accept: "Verstanden ✓",
                     btn_close: "Schließen",
@@ -155,9 +155,9 @@
                     privacy_modal_title: "Privacy Policy Updated",
                     privacy_modal_date: "Last updated: September 8, 2026",
                     privacy_modal_intro: "We have updated our <strong class=\"text-white\">privacy policy</strong> transparently:",
-                    privacy_modal_item1: "Public votes and wishes: no GitHub login, using a pseudonymous browser identifier.",
-                    privacy_modal_item2: "Transfer through ntfy: entries first enter a public queue and are later stored on GitHub.",
-                    privacy_modal_item3: "Device code, cache and deletion: private key stays local; public data and Git history are stored separately. Push device records are now encrypted before transmission and on GitHub.",
+                    privacy_modal_item1: "Public GitHub storage: wishes and votes are publicly linked to your GitHub account.",
+                    privacy_modal_item2: "Transfer to GitHub: opening the prefilled form already sends your text; the roadmap reads public data through the GitHub API.",
+                    privacy_modal_item3: "Local read cache and deletion: browser data and GitHub contributions are stored separately. See the policy for details and contact.",
                     privacy_modal_read: "Read Policy ↗",
                     privacy_modal_accept: "Understood ✓",
                     btn_close: "Close",
@@ -225,9 +225,9 @@
                     privacy_modal_title: "Privacidad actualizada",
                     privacy_modal_date: "Actualizado: 8 de septiembre de 2026",
                     privacy_modal_intro: "Hemos ampliado nuestra <strong class=\"text-white\">política de privacidad</strong> con total transparencia:",
-                    privacy_modal_item1: "Votos e ideas públicos sin cuenta GitHub, con identificador seudónimo.",
-                    privacy_modal_item2: "Envío mediante ntfy: cola pública y almacenamiento posterior en GitHub.",
-                    privacy_modal_item3: "Código privado local; caché, datos públicos e historial Git se guardan por separado. Los datos push ahora se cifran antes del envío y en GitHub.",
+                    privacy_modal_item1: "Almacenamiento público en GitHub: ideas y votos están vinculados públicamente a tu cuenta.",
+                    privacy_modal_item2: "Transferencia a GitHub: abrir el formulario ya envía el texto; la hoja de ruta consulta la API pública.",
+                    privacy_modal_item3: "Caché local y eliminación: los datos del navegador y las aportaciones de GitHub se guardan por separado. Consulta la política.",
                     privacy_modal_read: "Leer política ↗",
                     privacy_modal_accept: "Entendido ✓",
                     btn_close: "Cerrar",
@@ -296,9 +296,9 @@
                     privacy_modal_title: "Confidentialité mise à jour",
                     privacy_modal_date: "Mise à jour : 8 septembre 2026",
                     privacy_modal_intro: "Nous avons élargi notre <strong class=\"text-white\">politique de confidentialité</strong> en toute transparence :",
-                    privacy_modal_item1: "Votes et idées publics sans compte GitHub, avec identifiant pseudonyme.",
-                    privacy_modal_item2: "Transmission via ntfy : file publique puis stockage sur GitHub.",
-                    privacy_modal_item3: "Code privé local ; cache, données publiques et historique Git sont conservés séparément. Les données push sont désormais chiffrées avant envoi et sur GitHub.",
+                    privacy_modal_item1: "Stockage public sur GitHub : idées et votes sont publiquement liés à ton compte.",
+                    privacy_modal_item2: "Transmission à GitHub : ouvrir le formulaire transmet déjà les textes ; la feuille de route consulte l’API publique.",
+                    privacy_modal_item3: "Cache local et suppression : données du navigateur et contributions GitHub sont conservées séparément. Voir la déclaration.",
                     privacy_modal_read: "Lire la déclaration ↗",
                     privacy_modal_accept: "Compris ✓",
                     btn_close: "Fermer",
@@ -319,7 +319,7 @@
                     standby_idle_title: "Aucune musique active",
                     standby_idle_subtitle: "Gamingpig est actuellement hors ligne",
                     standby_hint: "Touche n'importe où pour quitter le mode StandBy",
-                    header_intro_html: "Bonjour ! Je suis Gamingpig, un adolescent passionné de technologie. J'ai un TDAH — un trouble neurodéveloppemental réel, pas un superpouvoir. Bien que mon <span class=\"text-blue-600 dark:text-blue-400 font-bold italic\">hyperfocus</span> m'aide à résoudre des problèmes complexes là où d'autres auraient abandonné, s'il devient trop fort, je me déconnecte totalement du monde qui m'entoure.",
+                    header_intro_html: "Bonjour ! Je suis Gamingpig, passionné de technologie et de développement. J'ai un TDAH — un trouble neurodéveloppemental réel, pas un superpouvoir. Bien que mon <span class=\"text-blue-600 dark:text-blue-400 font-bold italic\">hyperfocus</span> m'aide à résoudre des problèmes complexes là où d'autres auraient abandonné, s'il devient trop fort, je me déconnecte totalement du monde qui m'entoure.",
                     header_freizeit: "Pendant mon temps libre, je me consacre au gaming et au streaming. Même si je suis un peu timide, je suis quelqu'un de très bienveillant et posé. J'aime aussi réparer des appareils informatiques (ordinateurs portables, tablettes, PC, smartphones, etc.).",
                     modal_deep_dive: "Immersion détaillée",
                     modal_understood: "Compris",
@@ -327,11 +327,11 @@
                     detail_status_title: "Formation & Focus",
                     detail_status_content: "Je prépare actuellement mon diplôme d'informaticien spécialisé en intégration de systèmes. La technologie et les systèmes sont tout mon univers. J'adore configurer des serveurs, gérer des réseaux et veiller à ce que tout tourne à la perfection. Mon hyperfocus me permet de plonger au cœur d'infrastructures complexes et de résoudre les anomalies avant qu'elles ne deviennent un problème.",
                     detail_background_title: "Parcours & Histoire",
-                    detail_background_content: "Je suis un adolescent en pleine formation d'informaticien en intégration de systèmes. Cela m'a appris très tôt à être autonome et à tracer ma propre route. Je ne vois pas les défis comme des freins, mais comme une opportunité de grandir et de façonner mon propre avenir.",
+                    detail_background_content: "Je prépare actuellement ma formation d'informaticien en intégration de systèmes. Cela m'a appris très tôt à être autonome et à tracer ma propre route. Je ne vois pas les défis comme des freins, mais comme une opportunité de grandir et de façonner mon propre avenir.",
                     detail_freizeit_title: "Gaming & Contenu",
                     detail_freizeit_content: "Depuis le 19/07/2026, une nouvelle passion m'a totalement conquis : le karting ! Ma toute première fois sur circuit et j'ai eu un véritable coup de foudre — c'est en train de devenir ma priorité absolue. Je joue encore de temps à autre à Forza Horizon 6, mais le karting est clairement passé en tête. Je streame en direct sur TikTok et partage avec ma communauté mon amour pour le gaming, l'informatique et le sport automobile.",
                     detail_menschen_title: "Ma Famille de Cœur & Équipe",
-                    detail_menschen_content: "Ayant grandi sans parents, mes amis sont ma famille choisie. La loyauté et la confiance sont primordiales pour moi. Tom est mon manager, co-propriétaire, conseiller le plus proche, meilleur ami et frère en Christ — il veille sur moi et gère notre équipe. Noel est fidèlement à nos côtés en tant que co-propriétaire, associé et précieux soutien. Mes autres solides piliers sont Danilo, Jakob et Lukas.",
+                    detail_menschen_content: "Ayant grandi sans parents, mes amis sont ma famille choisie. La loyauté et la confiance sont primordiales pour moi. Tom est mon manager, co-propriétaire, conseiller le plus proche, meilleur ami et soutien indispensable — il veille sur moi et gère notre équipe. Noel est fidèlement à nos côtés en tant que co-propriétaire, associé et précieux soutien. Mes autres solides piliers sont Danilo, Jakob et Lukas.",
                     detail_techstack_title: "Tech Stack & Compétences",
                     detail_techstack_content: "En tant que futur intégrateur de systèmes, je maîtrise la mise en place et la maintenance d'infrastructures informatiques : Windows Server, distributions Linux, réseau et dépannage matériel avancé. Portables, PC ou smartphones : si quelque chose est en panne, je trouve l'erreur.",
                     detail_setup_title: "Mon Setup Audio",
@@ -403,9 +403,9 @@
                     privacy_modal_title: "Privacidade atualizada",
                     privacy_modal_date: "Atualizado em: 8 de setembro de 2026",
                     privacy_modal_intro: "Atualizamos nossa <strong class=\"text-white\">política de privacidade</strong> de forma transparente:",
-                    privacy_modal_item1: "Votos e ideias públicos sem conta GitHub, com identificador pseudônimo.",
-                    privacy_modal_item2: "Transferência pelo ntfy: fila pública e armazenamento posterior no GitHub.",
-                    privacy_modal_item3: "Código privado local; cache, dados públicos e histórico Git são separados. Dados push agora são criptografados antes do envio e no GitHub.",
+                    privacy_modal_item1: "Armazenamento público no GitHub: ideias e votos ficam associados publicamente à sua conta.",
+                    privacy_modal_item2: "Transferência ao GitHub: abrir o formulário já envia os textos; a página consulta a API pública.",
+                    privacy_modal_item3: "Cache local e exclusão: dados do navegador e contribuições GitHub são guardados separadamente. Consulte a política.",
                     privacy_modal_read: "Ler política ↗",
                     privacy_modal_accept: "Entendido ✓",
                     btn_close: "Fechar",
@@ -426,7 +426,7 @@
                     standby_idle_title: "Nenhuma música ativa",
                     standby_idle_subtitle: "Gamingpig está offline no momento",
                     standby_hint: "Toque em qualquer lugar para sair do StandBy",
-                    header_intro_html: "Olá! Sou o Gamingpig, um adolescente fascinado por tecnologia. Tenho TDAH — um transtorno real do neurodesenvolvimento, não um superpoder. Embora meu <span class=\"text-blue-600 dark:text-blue-400 font-bold italic\">hiperfoco</span> me ajude a solucionar desafios complexos onde outros teriam desistido, quando fica muito forte, acabo me desligando de tudo ao meu redor.",
+                    header_intro_html: "Olá! Sou o Gamingpig, apaixonado por tecnologia e desenvolvimento. Tenho TDAH — um transtorno real do neurodesenvolvimento, não um superpoder. Embora meu <span class=\"text-blue-600 dark:text-blue-400 font-bold italic\">hiperfoco</span> me ajude a solucionar desafios complexos onde outros teriam desistido, quando fica muito forte, acabo me desligando de tudo ao meu redor.",
                     header_freizeit: "No meu tempo livre, me dedico a jogos e transmissões ao vivo. Embora seja um pouco tímido, sou uma pessoa muito amigável e tranquila. Também adoro consertar dispositivos de informática (notebooks, tablets, PCs, celulares, etc.).",
                     modal_deep_dive: "Análise aprofundada",
                     modal_understood: "Entendido",
@@ -434,11 +434,11 @@
                     detail_status_title: "Formação & Foco",
                     detail_status_content: "Atualmente estou fazendo minha formação como especialista em integração de sistemas de TI. Tecnologia e sistemas são meu mundo. Adoro configurar servidores, gerenciar redes e manter tudo funcionando perfeitamente. Meu hiperfoco me ajuda a mergulhar fundo em infraestruturas de TI complexas e encontrar falhas antes que se tornem problemas.",
                     detail_background_title: "História & Trajetória",
-                    detail_background_content: "Sou um jovem em formação em integração de sistemas. Isso me ensinou desde cedo a ser independente e seguir meu próprio caminho. Não encaro desafios como barreiras, mas sim como uma oportunidade de crescer e construir meu próprio futuro.",
+                    detail_background_content: "Atualmente estou em formação em integração de sistemas. Isso me ensinou desde cedo a ser independente e seguir meu próprio caminho. Não encaro desafios como barreiras, mais sim como uma oportunidade de crescer e construir meu próprio futuro.",
                     detail_freizeit_title: "Jogos & Conteúdo",
                     detail_freizeit_content: "Desde 19/07/2026, uma nova paixão tomou conta de mim: kart! Minha primeira vez na pista e fiquei apaixonado instantaneamente — isso está se tornando minha atividade favorita. Ainda jogo Forza Horizon 6 de vez em quando, mas o kart assumiu claramente o primeiro lugar. Faço lives no TikTok compartilhando minha paixão por jogos, tecnologia e agora automobilismo.",
                     detail_menschen_title: "Minha Família Escolhida & Equipe",
-                    detail_menschen_content: "Como cresci sem pais, meus amigos são minha família escolhida. Lealdade e confiança estão em primeiro lugar para mim. O Tom é meu empresário, coproprietário, conselheiro mais próximo, melhor amigo e irmão em Cristo — ele sempre me apoia e comanda nossa gestão. O Noel está firmemente ao nosso lado como coproprietário, sócio e grande apoio. Meus outros pilares fundamentais são Danilo, Jakob e Lukas.",
+                    detail_menschen_content: "Como cresci sem pais, meus amigos são minha família escolhida. Lealdade e confiança estão em primeiro lugar para mim. O Tom é meu empresário, coproprietário, conselheiro mais próximo, melhor amigo e porto seguro — ele sempre me apoia e comanda nossa gestão. O Noel está firmemente ao nosso lado como coproprietário, sócio e grande apoio. Meus outros pilares fundamentais são Danilo, Jakob e Lukas.",
                     detail_techstack_title: "Tech Stack & Habilidades",
                     detail_techstack_content: "Como futuro integrador de sistemas, domino a configuração e manutenção de infraestruturas de TI: Windows Server, distribuições Linux, redes e manutenção avançada de hardware. Notebooks, PCs ou celulares: se algo quebrar, eu descubro o problema.",
                     detail_setup_title: "Meu Setup de Áudio",
@@ -451,7 +451,7 @@
                     support_title: "Suporte",
                     support_desc: "Dúvidas, encontrou algum bug ou só quer bater um papo? Me envie um e-mail ou entre no meu servidor do Discord — geralmente respondo mais rápido por lá.",
                     tts_no_voice_found: "Nenhuma voz em português encontrada neste dispositivo — a reprodução usará a voz padrão.",
-                    secret_1: "🐷 Oinc oinc! Você achou um segredo!",
+                    secret_1: "🐷 Oink oink ! Você achou um segredo!",
                 },
                 tr: {
                     changelog_whats_new: "Neler yeni?",
@@ -510,9 +510,9 @@
                     privacy_modal_title: "Gizlilik Politikası Güncellendi",
                     privacy_modal_date: "Güncelleme: 8 Eylül 2026",
                     privacy_modal_intro: "Gizlilik politikamızı şeffaf bir şekilde güncelledik:",
-                    privacy_modal_item1: "GitHub hesabı olmadan, takma kimlikle herkese açık oy ve fikirler.",
-                    privacy_modal_item2: "ntfy aktarımı: önce herkese açık kuyruk, sonra GitHub kaydı.",
-                    privacy_modal_item3: "Özel kod yerelde; önbellek, açık veriler ve Git geçmişi ayrıdır. Push cihaz verileri artık iletimden önce ve GitHub üzerinde şifrelenir.",
+                    privacy_modal_item1: "GitHub’da herkese açık saklama: fikirler ve oylar hesabınla ilişkilidir.",
+                    privacy_modal_item2: "GitHub’a aktarım: formu açmak metinleri zaten gönderir; yol haritası herkese açık API verilerini alır.",
+                    privacy_modal_item3: "Yerel önbellek ve silme: tarayıcı verileri ve GitHub katkıları ayrı saklanır. Ayrıntılar bildirime eklenmiştir.",
                     privacy_modal_read: "Politikayı oku ↗",
                     privacy_modal_accept: "Anlaşıldı ✓",
                     btn_close: "Kapat",
@@ -533,7 +533,7 @@
                     standby_idle_title: "Müzik çalmıyor",
                     standby_idle_subtitle: "Gamingpig şu anda çevrimdışı",
                     standby_hint: "StandBy modundan çıkmak için herhangi bir yere dokun",
-                    header_intro_html: "Merhaba! Ben Gamingpig, teknoloji tutkunu bir gencim. DEHB sahibiyim — bu gerçek bir nörogelişimsel durumdur, süper güç değil. <span class=\"text-blue-600 dark:text-blue-400 font-bold italic\">Hiper odaklanmam</span>, başkalarının çoktan pes edeceği karmaşık sorunları çözmeme yardımcı olsa da aşırılaştığında etrafımdaki her şeyi tamamen unuturum.",
+                    header_intro_html: "Merhaba! Ben Gamingpig, teknoloji ve yazılım tutkunu biriyim. DEHB sahibiyim — bu gerçek bir nörogelişimsel durumdur, süper güç değil. <span class=\"text-blue-600 dark:text-blue-400 font-bold italic\">Hiper odaklanmam</span>, başkalarının çoktan pes edeceği karmaşık sorunları çözmeme yardımcı olsa da aşırılaştığında etrafımdaki her şeyi tamamen unuturum.",
                     header_freizeit: "Boş zamanlarımda oyun oynuyor ve yayın yapıyorum. Biraz çekingen olsam da genel olarak çok dost canlısı ve sakin biriyim. Ayrıca bilişim cihazlarını onarmayı çok severim (dizüstü bilgisayarlar, tabletler, PC'ler, akıllı telefonlar vb.).",
                     modal_deep_dive: "Ayrıntılı İnceleme",
                     modal_understood: "Anlaşıldı",
@@ -541,11 +541,11 @@
                     detail_status_title: "Eğitim & Odak",
                     detail_status_content: "Şu anda sistem entegrasyonu bilişim uzmanlığı eğitimimi sürdürüyorum. Teknoloji ve sistemler benim dünyam. Sunucular kurmayı, ağları yapılandırmayı ve her şeyin sorunsuz çalışmasını sağlamayı çok seviyorum. Hiper odaklanmam, karmaşık BT yapılarına derinlemesine dalmama ve hataları sorun olmadan önce yakalamama yardımcı oluyor.",
                     detail_background_title: "Geçmiş & Yolculuk",
-                    detail_background_content: "Genç yaştayım ve şu anda sistem entegrasyonu alanında eğitim alıyorum. Bu bana erkenden bağımsız olmayı ve kendi yolumu çizmeyi öğretti. Zorlukları birer engel olarak değil, büyümek ve kendi geleceğimi şekillendirmek için bir fırsat olarak görüyorum.",
+                    detail_background_content: "Şu anda sistem entegrasyonu alanında eğitim alıyorum. Bu bana erkenden bağımsız olmayı ve kendi yolumu çizmeyi öğretti. Zorlukları birer engel olarak değil, büyümek ve kendi geleceğimi şekillendirmek için bir fırsat olarak görüyorum.",
                     detail_freizeit_title: "Oyun & İçerik",
                     detail_freizeit_content: "19.07.2026 tarihinden bu yana yepyeni bir tutku beni tamamen sardı: Karting! Piste ilk çıkışımdı ve anında bağlandım — bu artık benim için bir numaralı aktivite haline geliyor. Arada Forza Horizon 6 oynasam da karting artık açık ara önde. TikTok'ta canlı yayınlar yaparak oyun, teknoloji ve şimdi motor sporları tutkumu toplulukla paylaşıyorum.",
                     detail_menschen_title: "Seçtiğim Ailem & Ekip",
-                    detail_menschen_content: "Ailemsiz büyüdüğüm için arkadaşlarım benim seçilmiş ailemdir. Sadakat ve güven benim için her şeyden önce gelir. Tom benim menajerim, ortak sahibim, en yakın danışmanım, en iyi dostum ve kardeşimdir — her zaman arkamdadır ve yönetimimizi yönetir. Noel, ortak sahibi, iş ortağı ve güçlü destek olarak yanımızdadır. Diğer sağlam dayanaklarım Danilo, Jakob ve Lukas'tır.",
+                    detail_menschen_content: "Ailemsiz büyüdüğüm için arkadaşlarım benim seçilmiş ailemdir. Sadakat ve güven benim için her şeyden önce gelir. Tom benim menajerim, ortak sahibim, en yakın danışmanım, en iyi dostum ve en büyük dayanağımdır — her zaman arkamdadır ve yönetimimizi yönetir. Noel, ortak sahibi, iş ortağı ve güçlü destek olarak yanımızdadır. Diğer sağlam dayanaklarım Danilo, Jakob ve Lukas'tır.",
                     detail_techstack_title: "Teknoloji Yığını & Beceriler",
                     detail_techstack_content: "Geleceğin sistem entegratörü olarak BT altyapılarının kurulumunu ve bakımını iyi biliyorum: Windows Server, Linux dağıtımları, genel ağ yapılandırmaları ve kapsamlı donanım sorun giderme. Dizüstü bilgisayarlar, PC'ler veya akıllı telefonlar — ne bozulursa bozulsun hatayı bulurum.",
                     detail_setup_title: "Ses Kurulumum",
@@ -569,7 +569,7 @@
         resolveInitialLanguage() {
             let lang = null;
             try {
-                const saved = AppStorage.getItem('app_language') || AppStorage.getItem('selectedLanguage');
+                const saved = localStorage.getItem('app_language') || localStorage.getItem('selectedLanguage');
                 if (saved && this.isSupported(saved)) {
                     lang = saved;
                 }
@@ -620,8 +620,8 @@
 
             if (options.syncStorage !== false) {
                 try {
-                    AppStorage.setItem('app_language', code);
-                    AppStorage.setItem('selectedLanguage', code);
+                    localStorage.setItem('app_language', code);
+                    localStorage.setItem('selectedLanguage', code);
                 } catch (e) {}
                 this.syncIndexedDB(code);
             }
@@ -665,7 +665,6 @@
                     try {
                         const db = e.target.result;
                         const tx = db.transaction('settings', 'readwrite');
-                        tx.oncomplete = tx.onabort = () => db.close();
                         tx.objectStore('settings').put(lang, 'app_lang');
                     } catch (err) {}
                 };
