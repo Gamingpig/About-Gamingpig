@@ -3263,7 +3263,7 @@
             AppStorage.setItem('app_visit_count', String(_visitCount));
 
             // 🛡️ INSTANT ONBOARDING SHIELD
-            const _currVer = window.ONBOARDING_VERSION = 'v24.193.0 · 2026-09-22';
+            const _currVer = window.ONBOARDING_VERSION = 'v24.194.0 · 2026-09-28';
             const _installedVer = AppStorage.getItem('site_version_installed');
             if (_installedVer !== _currVer) {
                 AppStorage.setItem('site_version_installed', _currVer);
@@ -3677,18 +3677,26 @@
             max-height: min(72vh, 480px, var(--lyrics-settings-height, 480px)) !important;
             width: min(340px, calc(100vw - 2rem), var(--lyrics-settings-width, 340px)) !important;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.18) !important;
-            backdrop-filter: blur(4px) saturate(120%) !important;
-            -webkit-backdrop-filter: blur(4px) saturate(120%) !important;
-            background-color: transparent !important;
+            backdrop-filter: blur(16px) saturate(180%) !important;
+            -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+            background-color: rgba(15, 23, 42, 0.94) !important;
             -webkit-overflow-scrolling: touch !important;
             overscroll-behavior-y: contain !important;
             transform-origin: top right !important;
             overflow-y: auto !important;
             overflow-x: hidden !important;
             border-radius: 1.25rem !important;
+            border: 1px solid rgba(255, 255, 255, 0.14) !important;
+            color: #f8fafc !important;
             will-change: auto;
         }
-        #lyrics-settings-menu:not(.settings-opening):not(.settings-closing) {
+        html:not(.dark) #lyrics-settings-menu {
+            background-color: rgba(255, 255, 255, 0.96) !important;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.08) !important;
+            border: 1px solid rgba(0, 0, 0, 0.1) !important;
+            color: #0f172a !important;
+        }
+        #lyrics-settings-menu:not(.settings-opening):not(.settings-closing):not(.is-open) {
             display: none !important;
         }
         #lyrics-settings-menu.settings-opening {
@@ -3698,6 +3706,14 @@
             pointer-events: auto !important;
             animation: settings-menu-in var(--anim-duration, 0.22s) var(--anim-easing, cubic-bezier(0.16, 1, 0.3, 1)) forwards !important;
             transform-origin: top right !important;
+        }
+        #lyrics-settings-menu.is-open {
+            display: flex !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            pointer-events: auto !important;
+            transform: none !important;
+            animation: none !important;
         }
         #lyrics-settings-menu.settings-closing {
             display: flex !important;
@@ -3767,15 +3783,24 @@
             z-index: 10000 !important;
             max-height: calc(85vh - env(safe-area-inset-top, 0px)) !important;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.15) !important;
-            backdrop-filter: none !important;
-            -webkit-backdrop-filter: none !important;
-            background-color: #0f172a !important;
+            backdrop-filter: blur(16px) saturate(180%) !important;
+            -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+            background-color: rgba(15, 23, 42, 0.94) !important;
             -webkit-overflow-scrolling: touch !important;
             overscroll-behavior-y: contain !important;
             transform-origin: top right !important;
+            border-radius: 1.25rem !important;
+            border: 1px solid rgba(255, 255, 255, 0.14) !important;
+            color: #f8fafc !important;
             will-change: auto;
         }
-        #global-settings-menu:not(.settings-opening):not(.settings-closing) {
+        html:not(.dark) #global-settings-menu {
+            background-color: rgba(255, 255, 255, 0.96) !important;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.08) !important;
+            border: 1px solid rgba(0, 0, 0, 0.1) !important;
+            color: #0f172a !important;
+        }
+        #global-settings-menu:not(.settings-opening):not(.settings-closing):not(.is-open) {
             display: none !important;
         }
         #global-settings-menu.settings-opening {
@@ -3784,6 +3809,14 @@
             opacity: 1 !important;
             pointer-events: auto !important;
             animation: settings-menu-in var(--anim-duration, 0.22s) var(--anim-easing, cubic-bezier(0.16, 1, 0.3, 1)) forwards !important;
+        }
+        #global-settings-menu.is-open {
+            display: flex !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            pointer-events: auto !important;
+            transform: none !important;
+            animation: none !important;
         }
         #global-settings-menu.settings-closing {
             display: flex !important;
@@ -3911,26 +3944,60 @@ body.liquid-glass-active .mesh-gradient {
 
 /* Basis-Karten */
 .glass-card {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(0, 0, 0, 0.05);
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-top: 1px solid rgba(255, 255, 255, 0.9);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    backdrop-filter: blur(16px) saturate(180%);
+    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
 
     transition:
         transform 0.4s var(--apple-spring),
         border-color 0.4s ease,
         box-shadow 0.4s ease,
         border-radius 0.4s ease,
-        background-color 0.6s var(--apple-ease);
+        background-color 0.4s var(--apple-ease);
 
-    transform: translate3d(0, 0, 0);
-    backface-visibility: hidden;
-
-    content-visibility: auto;
-    contain-intrinsic-size: auto 220px;
+    isolation: isolate;
 }
 
 .dark .glass-card {
-    background: rgba(15, 23, 42, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: rgba(15, 23, 42, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-top: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.35);
+}
+
+/* Audience Hub Buttons */
+.aud-btn {
+    background: rgba(241, 245, 249, 0.75);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    color: #334155;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.dark .aud-btn {
+    background: rgba(30, 41, 59, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #cbd5e1;
+}
+.aud-btn:hover {
+    background: rgba(226, 232, 240, 0.95);
+    border-color: rgba(59, 130, 246, 0.3);
+}
+.dark .aud-btn:hover {
+    background: rgba(51, 65, 85, 0.7);
+    border-color: rgba(96, 165, 250, 0.3);
+}
+.aud-btn.active {
+    background: rgba(59, 130, 246, 0.15) !important;
+    border-color: rgba(59, 130, 246, 0.6) !important;
+    box-shadow: 0 4px 14px -2px rgba(59, 130, 246, 0.25) !important;
+    color: #2563eb !important;
+}
+.dark .aud-btn.active {
+    background: rgba(59, 130, 246, 0.25) !important;
+    border-color: rgba(96, 165, 250, 0.6) !important;
+    color: #93c5fd !important;
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -4360,6 +4427,15 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
             transform-origin: top right !important;
         }
 
+        body.liquid-glass-active :is(#global-settings-menu, #lyrics-settings-menu).is-open {
+            display: flex !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            pointer-events: auto !important;
+            transform: none !important;
+            animation: none !important;
+        }
+
         @keyframes liquid-menu-pop-in {
             0% {
                 opacity: 0;
@@ -4455,18 +4531,17 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
         }
 
         /* ========================================================================= */
-        /* --- LIQUID GLASS 2.0: MASTER SETTINGS SUITE (#global-settings-menu & #lyrics-settings-menu) --- */
+        /* --- SETTINGS SUITE (#global-settings-menu & #lyrics-settings-menu) --- */
         /* ========================================================================= */
 
-        /* Liquid Glass Container Shells (Frosted glass with specular rim light & authentic translucency) */
-        body.liquid-glass-active #global-settings-menu,
-        body.liquid-glass-active #lyrics-settings-menu {
+        /* Settings Container Shells (Frosted glass with authentic translucency) */
+        :is(#global-settings-menu, #lyrics-settings-menu) {
             background-color: transparent !important;
             background: linear-gradient(
                 135deg,
                 rgba(255, 255, 255, 0.10) 0%,
-                rgba(30, 41, 59, 0.58) 40%,
-                rgba(15, 23, 42, 0.65) 100%
+                rgba(30, 41, 59, 0.85) 40%,
+                rgba(15, 23, 42, 0.94) 100%
             ) !important;
             color: #f8fafc !important;
             border: 1px solid rgba(255, 255, 255, 0.18) !important;
@@ -4486,82 +4561,79 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
             -webkit-overflow-scrolling: touch !important;
             overscroll-behavior-y: contain !important;
             isolation: isolate !important;
-            contain: paint !important;
         }
 
-        html:not(.dark) body.liquid-glass-active #global-settings-menu,
-        html:not(.dark) body.liquid-glass-active #lyrics-settings-menu {
+        html:not(.dark) :is(#global-settings-menu, #lyrics-settings-menu) {
             background-color: transparent !important;
             background: linear-gradient(
                 135deg,
-                rgba(255, 255, 255, 0.75) 0%,
-                rgba(241, 245, 249, 0.62) 100%
+                rgba(255, 255, 255, 0.96) 0%,
+                rgba(241, 245, 249, 0.92) 100%
             ) !important;
             color: #0f172a !important;
-            border: 1px solid rgba(255, 255, 255, 0.70) !important;
+            border: 1px solid rgba(0, 0, 0, 0.10) !important;
             border-top: 1.5px solid rgba(255, 255, 255, 0.95) !important;
             border-left: 1px solid rgba(255, 255, 255, 0.80) !important;
             border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
             border-right: 1px solid rgba(0, 0, 0, 0.06) !important;
             box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.12),
-                        0 0 0 1px rgba(255, 255, 255, 0.60),
+                        0 0 0 1px rgba(0, 0, 0, 0.06),
                         inset 0 1.5px 2px rgba(255, 255, 255, 0.90),
                         inset 0 -1.5px 2px rgba(0, 0, 0, 0.04) !important;
         }
 
         /* Mobile Fluid Glass Tuning */
         @media (max-width: 640px) {
-            body.liquid-glass-active #global-settings-menu,
-            body.liquid-glass-active #lyrics-settings-menu {
+            :is(#global-settings-menu, #lyrics-settings-menu) {
                 -webkit-backdrop-filter: blur(14px) saturate(160%) !important;
                 backdrop-filter: blur(14px) saturate(160%) !important;
             }
         }
 
-        /* Seamless Sticky Menu Header (No solid white/black block, no nested blur) */
-        body.liquid-glass-active :is(#global-settings-menu, #lyrics-settings-menu) .sticky {
-            background: transparent !important;
+        /* Seamless Sticky Menu Header (Solid enough so scrolled content doesn't bleed through) */
+        :is(#global-settings-menu, #lyrics-settings-menu) .sticky {
+            background: rgba(15, 23, 42, 0.96) !important;
             color: #f8fafc !important;
-            -webkit-backdrop-filter: none !important;
-            backdrop-filter: none !important;
+            -webkit-backdrop-filter: blur(12px) !important;
+            backdrop-filter: blur(12px) !important;
             border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
         }
-        html:not(.dark) body.liquid-glass-active :is(#global-settings-menu, #lyrics-settings-menu) .sticky {
-            background: transparent !important;
+        html:not(.dark) :is(#global-settings-menu, #lyrics-settings-menu) .sticky {
+            background: rgba(255, 255, 255, 0.96) !important;
             color: #0f172a !important;
-            -webkit-backdrop-filter: none !important;
-            backdrop-filter: none !important;
+            -webkit-backdrop-filter: blur(12px) !important;
+            backdrop-filter: blur(12px) !important;
             border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
         }
-        body.liquid-glass-active :is(#global-settings-menu, #lyrics-settings-menu) .sticky :is(span, button) {
+        :is(#global-settings-menu, #lyrics-settings-menu) .sticky :is(span, button) {
             -webkit-backdrop-filter: none !important;
             backdrop-filter: none !important;
         }
-        body.liquid-glass-active :is(#global-settings-menu, #lyrics-settings-menu) .sticky span {
+        :is(#global-settings-menu, #lyrics-settings-menu) .sticky span {
             color: #f8fafc !important;
         }
-        html:not(.dark) body.liquid-glass-active :is(#global-settings-menu, #lyrics-settings-menu) .sticky span {
+        html:not(.dark) :is(#global-settings-menu, #lyrics-settings-menu) .sticky span {
             color: #0f172a !important;
         }
-        body.liquid-glass-active :is(#global-settings-menu, #lyrics-settings-menu) .sticky button {
+        :is(#global-settings-menu, #lyrics-settings-menu) .sticky button {
             background: transparent !important;
             border: none !important;
             color: #94a3b8 !important;
         }
-        html:not(.dark) body.liquid-glass-active :is(#global-settings-menu, #lyrics-settings-menu) .sticky button {
+        html:not(.dark) :is(#global-settings-menu, #lyrics-settings-menu) .sticky button {
             background: transparent !important;
             border: none !important;
             color: #475569 !important;
         }
-        body.liquid-glass-active :is(#global-settings-menu, #lyrics-settings-menu) .sticky button:hover {
+        :is(#global-settings-menu, #lyrics-settings-menu) .sticky button:hover {
             color: #ffffff !important;
         }
-        html:not(.dark) body.liquid-glass-active :is(#global-settings-menu, #lyrics-settings-menu) .sticky button:hover {
+        html:not(.dark) :is(#global-settings-menu, #lyrics-settings-menu) .sticky button:hover {
             color: #0f172a !important;
         }
 
         /* Inner Cards, Fieldsets & Containers */
-        body.liquid-glass-active :is(#global-settings-menu, #lyrics-settings-menu) :is(
+        :is(#global-settings-menu, #lyrics-settings-menu) :is(
             .bg-slate-800\/40, .bg-slate-800\/50, .bg-slate-800\/80, .bg-slate-800, fieldset, #living-settings
         ) {
             -webkit-backdrop-filter: none !important;
@@ -4572,18 +4644,18 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
             border-radius: 0.85rem !important;
             color: #f1f5f9 !important;
         }
-        html:not(.dark) body.liquid-glass-active :is(#global-settings-menu, #lyrics-settings-menu) :is(
+        html:not(.dark) :is(#global-settings-menu, #lyrics-settings-menu) :is(
             .bg-slate-800\/40, .bg-slate-800\/50, .bg-slate-800\/80, .bg-slate-800, fieldset, #living-settings
         ) {
-            background: rgba(255, 255, 255, 0.60) !important;
+            background: rgba(241, 245, 249, 0.90) !important;
             color: #0f172a !important;
             border: 1px solid rgba(0, 0, 0, 0.08) !important;
             border-top: 1px solid rgba(255, 255, 255, 0.85) !important;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
         }
 
-        /* Inner Buttons & Toggles in Liquid Glass */
-        body.liquid-glass-active :is(#global-settings-menu, #lyrics-settings-menu) :is(
+        /* Inner Buttons & Toggles */
+        :is(#global-settings-menu, #lyrics-settings-menu) :is(
             .grid button, .lyrics-dim-btn:not(.active), #global-settings-menu button:not([aria-label="Schließen"]), #lyrics-settings-menu button:not([aria-label="Schließen"])
         ) {
             -webkit-backdrop-filter: none !important;
@@ -4593,9 +4665,9 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
             border: 1px solid rgba(255, 255, 255, 0.14) !important;
             border-top: 1px solid rgba(255, 255, 255, 0.28) !important;
             border-radius: 0.75rem !important;
-            transition: all 0.22s var(--liquid-spring) !important;
+            transition: all 0.22s var(--liquid-spring, ease) !important;
         }
-        body.liquid-glass-active :is(#global-settings-menu, #lyrics-settings-menu) :is(
+        :is(#global-settings-menu, #lyrics-settings-menu) :is(
             .grid button, .lyrics-dim-btn:not(.active), #global-settings-menu button:not([aria-label="Schließen"]), #lyrics-settings-menu button:not([aria-label="Schließen"])
         ):hover {
             background: rgba(59, 130, 246, 0.20) !important;
@@ -4603,21 +4675,21 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
             transform: translateY(-1px) !important;
             box-shadow: 0 4px 12px rgba(59, 130, 246, 0.20) !important;
         }
-        body.liquid-glass-active :is(#global-settings-menu, #lyrics-settings-menu) :is(
+        :is(#global-settings-menu, #lyrics-settings-menu) :is(
             .grid button, .lyrics-dim-btn, #global-settings-menu button, #lyrics-settings-menu button
         ):active {
             transform: scale(0.96) !important;
         }
-        html:not(.dark) body.liquid-glass-active :is(#global-settings-menu, #lyrics-settings-menu) :is(
+        html:not(.dark) :is(#global-settings-menu, #lyrics-settings-menu) :is(
             .grid button, .lyrics-dim-btn:not(.active), #global-settings-menu button:not([aria-label="Schließen"]), #lyrics-settings-menu button:not([aria-label="Schließen"])
         ) {
-            background: rgba(255, 255, 255, 0.65) !important;
+            background: rgba(255, 255, 255, 0.85) !important;
             color: #0f172a !important;
             border: 1px solid rgba(0, 0, 0, 0.10) !important;
             border-top: 1px solid rgba(255, 255, 255, 0.85) !important;
             box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04) !important;
         }
-        html:not(.dark) body.liquid-glass-active :is(#global-settings-menu, #lyrics-settings-menu) :is(
+        html:not(.dark) :is(#global-settings-menu, #lyrics-settings-menu) :is(
             .grid button, .lyrics-dim-btn:not(.active), #global-settings-menu button:not([aria-label="Schließen"]), #lyrics-settings-menu button:not([aria-label="Schließen"])
         ):hover {
             background: rgba(59, 130, 246, 0.15) !important;
@@ -4626,7 +4698,7 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
         }
 
         /* Active Dimming Button Highlight */
-        body.liquid-glass-active #lyrics-settings-menu .lyrics-dim-btn.active {
+        #lyrics-settings-menu .lyrics-dim-btn.active {
             background: rgba(37, 99, 235, 0.9) !important;
             color: #ffffff !important;
             border: 1px solid rgba(147, 197, 253, 0.8) !important;
@@ -4634,8 +4706,8 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
             box-shadow: 0 4px 14px rgba(37, 99, 235, 0.45) !important;
         }
 
-        /* Dropdowns & Selects in Liquid Glass */
-        body.liquid-glass-active :is(#global-settings-menu, #lyrics-settings-menu) select {
+        /* Dropdowns & Selects in Settings */
+        :is(#global-settings-menu, #lyrics-settings-menu) select {
             -webkit-backdrop-filter: none !important;
             backdrop-filter: none !important;
             background: rgba(15, 23, 42, 0.85) !important;
@@ -4645,102 +4717,102 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
             border-radius: 0.75rem !important;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35) !important;
         }
-        html:not(.dark) body.liquid-glass-active :is(#global-settings-menu, #lyrics-settings-menu) select {
-            background: rgba(255, 255, 255, 0.85) !important;
+        html:not(.dark) :is(#global-settings-menu, #lyrics-settings-menu) select {
+            background: rgba(255, 255, 255, 0.95) !important;
             color: #0f172a !important;
             border: 1px solid rgba(0, 0, 0, 0.12) !important;
             border-top: 1px solid rgba(255, 255, 255, 0.90) !important;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
         }
-        body.liquid-glass-active :is(#global-settings-menu, #lyrics-settings-menu) select option {
+        :is(#global-settings-menu, #lyrics-settings-menu) select option {
             background: #0f172a !important;
             color: #ffffff !important;
         }
-        html:not(.dark) body.liquid-glass-active :is(#global-settings-menu, #lyrics-settings-menu) select option {
+        html:not(.dark) :is(#global-settings-menu, #lyrics-settings-menu) select option {
             background: #ffffff !important;
             color: #0f172a !important;
         }
 
         /* Typography & Headings inside Settings */
-        body.liquid-glass-active :is(#global-settings-menu, #lyrics-settings-menu) :is(
+        :is(#global-settings-menu, #lyrics-settings-menu) :is(
             legend, p.uppercase, label.font-bold, span.font-bold, .text-slate-400
         ) {
             color: #94a3b8 !important;
         }
-        html:not(.dark) body.liquid-glass-active :is(#global-settings-menu, #lyrics-settings-menu) :is(
+        html:not(.dark) :is(#global-settings-menu, #lyrics-settings-menu) :is(
             legend, p.uppercase, label.font-bold, span.font-bold, .text-slate-400
         ) {
             color: #334155 !important;
         }
-        body.liquid-glass-active :is(#global-settings-menu, #lyrics-settings-menu) :is(
+        :is(#global-settings-menu, #lyrics-settings-menu) :is(
             span.text-slate-200, span.text-slate-300, label.text-slate-200, label.text-slate-300, label span
         ) {
             color: #f1f5f9 !important;
         }
-        html:not(.dark) body.liquid-glass-active :is(#global-settings-menu, #lyrics-settings-menu) :is(
+        html:not(.dark) :is(#global-settings-menu, #lyrics-settings-menu) :is(
             span.text-slate-200, span.text-slate-300, label.text-slate-200, label.text-slate-300, label span
         ) {
             color: #0f172a !important;
         }
-        body.liquid-glass-active :is(#global-settings-menu, #lyrics-settings-menu) p.text-slate-500 {
+        :is(#global-settings-menu, #lyrics-settings-menu) p.text-slate-500 {
             color: #64748b !important;
         }
-        html:not(.dark) body.liquid-glass-active :is(#global-settings-menu, #lyrics-settings-menu) p.text-slate-500 {
+        html:not(.dark) :is(#global-settings-menu, #lyrics-settings-menu) p.text-slate-500 {
             color: #64748b !important;
         }
 
         /* Dividers */
-        body.liquid-glass-active :is(#global-settings-menu, #lyrics-settings-menu) div.h-px {
+        :is(#global-settings-menu, #lyrics-settings-menu) div.h-px {
             background-color: rgba(255, 255, 255, 0.10) !important;
         }
-        html:not(.dark) body.liquid-glass-active :is(#global-settings-menu, #lyrics-settings-menu) div.h-px {
+        html:not(.dark) :is(#global-settings-menu, #lyrics-settings-menu) div.h-px {
             background-color: rgba(0, 0, 0, 0.08) !important;
         }
 
         /* Code Share & Color Inputs */
-        body.liquid-glass-active :is(#global-settings-menu, #lyrics-settings-menu) input[type="text"] {
+        :is(#global-settings-menu, #lyrics-settings-menu) input[type="text"] {
             -webkit-backdrop-filter: none !important;
             backdrop-filter: none !important;
             background: rgba(15, 23, 42, 0.80) !important;
             color: #f1f5f9 !important;
             border: 1px solid rgba(255, 255, 255, 0.14) !important;
         }
-        html:not(.dark) body.liquid-glass-active :is(#global-settings-menu, #lyrics-settings-menu) input[type="text"] {
+        html:not(.dark) :is(#global-settings-menu, #lyrics-settings-menu) input[type="text"] {
             background: rgba(255, 255, 255, 0.80) !important;
             color: #0f172a !important;
             border: 1px solid rgba(0, 0, 0, 0.12) !important;
         }
 
         /* Zoom Pill */
-        html:not(.dark) body.liquid-glass-active #global-settings-menu #app-zoom-val {
+        html:not(.dark) #global-settings-menu #app-zoom-val {
             color: #7e22ce !important;
             background: rgba(168, 85, 247, 0.12) !important;
             border-color: rgba(168, 85, 247, 0.30) !important;
         }
 
-        body.liquid-glass-active #lyrics-settings-menu #label-animation-style {
+        #lyrics-settings-menu #label-animation-style {
             background: rgba(15, 23, 42, 0.96) !important;
             color: #94a3b8 !important;
             border-radius: 0.5rem;
         }
-        html:not(.dark) body.liquid-glass-active #lyrics-settings-menu #label-animation-style {
+        html:not(.dark) #lyrics-settings-menu #label-animation-style {
             background: rgba(241, 245, 249, 0.96) !important;
             color: #475569 !important;
         }
 
         /* Style Preview Box */
-        html:not(.gp-android) body.liquid-glass-active #lyrics-settings-menu #lyrics-style-preview-box {
+        html:not(.gp-android) #lyrics-settings-menu #lyrics-style-preview-box {
             background: rgba(2, 6, 23, 0.90) !important;
             border: 1px solid rgba(255, 255, 255, 0.18) !important;
             border-radius: 0.75rem !important;
             box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.6) !important;
         }
-        body.liquid-glass-active #lyrics-settings-menu #lyrics-style-preview-text {
+        #lyrics-settings-menu #lyrics-style-preview-text {
             color: #ffffff !important;
         }
 
         /* Range Slider */
-        body.liquid-glass-active :is(#global-settings-menu, #lyrics-settings-menu) input[type="range"] {
+        :is(#global-settings-menu, #lyrics-settings-menu) input[type="range"] {
             accent-color: #3b82f6 !important;
         }
 
@@ -4880,8 +4952,8 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
         body.liquid-glass-active .tutorial-morphing { animation: tutorial-morph 0.5s var(--liquid-fluid) !important; }
 
         /* --- STANDARD FALLBACKS --- */
-        .modal-opening .modal-content, .picker-opening, .tutorial-opening, .settings-opening { animation: std-pop-in 0.5s var(--apple-spring) forwards; }
-        .modal-closing .modal-content, .picker-closing, .tutorial-closing, .settings-closing { animation: std-pop-out 0.4s var(--apple-ease) forwards; }
+        .modal-opening .modal-content, .picker-opening, .tutorial-opening { animation: std-pop-in 0.5s var(--apple-spring) forwards; }
+        .modal-closing .modal-content, .picker-closing, .tutorial-closing { animation: std-pop-out 0.4s var(--apple-ease) forwards; }
         :is(.dashboard-opening, #music-card-wrapper.dashboard-opening) #main-music-card { animation: std-pop-in 0.5s var(--apple-spring) forwards; transform-origin: top center; }
         :is(.dashboard-closing, #music-card-wrapper.dashboard-closing) #main-music-card { animation: std-pop-out 0.4s var(--apple-ease) forwards; transform-origin: top center; }
         /* NEW: Kart-Dashboard bekommt dieselben Pop-In/Pop-Out-Animationen wie das Musik-
@@ -7247,7 +7319,6 @@ html.gp-android body.liquid-glass-active #lyrics-settings-menu#lyrics-settings-m
   border-top: 1.5px solid rgba(255, 255, 255, 0.45) !important;
   box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.65), inset 0 1px 1px rgba(255, 255, 255, 0.25) !important;
   isolation: isolate !important;
-  contain: paint !important;
 }
 
 html.gp-android:not(.dark) body.liquid-glass-active #global-settings-menu#global-settings-menu,
@@ -7263,7 +7334,6 @@ html.gp-android:not(.dark) body.liquid-glass-active #lyrics-settings-menu#lyrics
   box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.12), inset 0 1px 1px rgba(255, 255, 255, 0.75) !important;
   color: #0f172a !important;
   isolation: isolate !important;
-  contain: paint !important;
 }
 
 /* --- 3. Footer: authentic translucent frosted glass + tuned blur --- */
@@ -7390,11 +7460,11 @@ html.gp-android .mesh-gradient {
 
 /* --- 7. Disable glass pseudo-element overlays on Android --- */
 /* mix-blend-mode, mask-composite, SVG filters cause rendering failures */
-html.gp-android body.liquid-glass-active :is(
+html.gp-android :is(
   .glass-card, #header-section, #footer-bubble,
   #footer-expandable-menu, #main-music-card, #mini-player-toggle, .modal-content
 )::before,
-html.gp-android body.liquid-glass-active :is(
+html.gp-android :is(
   .glass-card, #header-section, #footer-bubble,
   #footer-expandable-menu, #main-music-card, #mini-player-toggle, .modal-content
 )::after {
@@ -7403,7 +7473,7 @@ html.gp-android body.liquid-glass-active :is(
 }
 
 /* --- 8. Low-end mode: backdrop-filter off, painted transparent bg --- */
-body.low-end.liquid-glass-active :is(
+body.low-end :is(
   .glass-card:not(#back-to-top), #header-section, #footer-bubble,
   #footer-expandable-menu, #main-music-card, #mini-player-toggle,
   .modal-content, #global-settings-menu, #lyrics-settings-menu, #tutorial-box,
@@ -7416,7 +7486,7 @@ body.low-end.liquid-glass-active :is(
   background: rgba(15, 23, 42, 0.45) !important;
   box-shadow: 0 16px 40px -12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.12) !important;
 }
-html:not(.dark) body.low-end.liquid-glass-active :is(
+html:not(.dark) body.low-end :is(
   .glass-card:not(#back-to-top), #header-section, #footer-bubble,
   #footer-expandable-menu, #main-music-card, #mini-player-toggle,
   .modal-content, #global-settings-menu, #lyrics-settings-menu, #tutorial-box,
@@ -7436,7 +7506,7 @@ body.low-end #lyrics-settings-menu#lyrics-settings-menu {
 }
 
 /* --- 9. Android low-end: all glass off --- */
-html.gp-android-lowend body.liquid-glass-active :is(
+html.gp-android-lowend :is(
   .glass-card, #header-section, #footer-bubble,
   #footer-expandable-menu, #main-music-card, #mini-player-toggle,
   .modal-content, #global-settings-menu, #lyrics-settings-menu, #tutorial-box,
@@ -7450,7 +7520,7 @@ html.gp-android-lowend body.liquid-glass-active :is(
   background: rgba(15, 23, 42, 0.50) !important;
   box-shadow: 0 8px 24px -8px rgba(0,0,0,0.4) !important;
 }
-html.gp-android-lowend:not(.dark) body.liquid-glass-active :is(
+html.gp-android-lowend:not(.dark) :is(
   .glass-card, #header-section, #footer-bubble,
   #footer-expandable-menu, #main-music-card, #mini-player-toggle,
   .modal-content, #global-settings-menu, #lyrics-settings-menu, #tutorial-box,
@@ -7460,10 +7530,10 @@ html.gp-android-lowend:not(.dark) body.liquid-glass-active :is(
 ) {
   background: rgba(255, 255, 255, 0.55) !important;
 }
-html.gp-android-lowend body.liquid-glass-active .mesh-gradient { display: none !important; }
+html.gp-android-lowend .mesh-gradient { display: none !important; }
 
 /* --- 10. will-change cleanup --- */
-html.gp-android body.liquid-glass-active :is(
+html.gp-android :is(
   .glass-card, #header-section, #footer-bubble, #footer-expandable-menu,
   #main-music-card, #mini-player-toggle, .modal-content, #global-settings-menu
 ) {
@@ -7471,7 +7541,7 @@ html.gp-android body.liquid-glass-active :is(
 }
 
 /* --- 11. content-visibility fix --- */
-html.gp-android body.liquid-glass-active .glass-card {
+html.gp-android .glass-card {
   content-visibility: visible !important;
 }
 
@@ -7973,10 +8043,10 @@ html.gp-android:not(.dark) #ui-controls {
         </div>
     </div>
 
-    <main id="main-content" class="max-w-4xl mx-auto px-4 xs:px-6 sm:px-8 pt-28 xs:pt-36 sm:pt-40 pb-16 xxs:pb-20 sm:pb-32">
+    <main id="main-content" class="max-w-4xl mx-auto px-4 xs:px-6 sm:px-8 pt-24 xs:pt-28 sm:pt-32 pb-16 sm:pb-24">
         
-        <header id="header-section" class="mb-10 xxs:mb-12 xs:mb-16 sm:mb-20 reveal mt-4 xs:mt-0 rounded-2xl relative z-10 p-5 xxs:p-6 sm:p-8">
-            <div class="inline-flex items-center gap-2 px-2 py-1 sm:px-3 sm:py-1 mb-4 xxs:mb-6 xs:mb-10 sm:mb-16 text-[8px] xxs:text-[10px] xs:text-xs font-bold tracking-widest text-blue-600 uppercase bg-blue-100 dark:bg-blue-500/10 dark:text-blue-400 rounded-full shadow-sm">
+        <header id="header-section" class="mb-6 xxs:mb-8 sm:mb-12 reveal mt-2 sm:mt-0 rounded-2xl relative z-10 p-4 xxs:p-6 sm:p-8">
+            <div class="inline-flex items-center gap-2 px-2 py-1 sm:px-3 sm:py-1 mb-2 sm:mb-3 text-[8px] xxs:text-[10px] xs:text-xs font-bold tracking-widest text-blue-600 uppercase bg-blue-100 dark:bg-blue-500/10 dark:text-blue-400 rounded-full shadow-sm">
                 <span class="relative flex h-1.5 w-1.5 sm:h-2 sm:w-2">
                     <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
                     <span class="relative inline-flex rounded-full h-1.5 w-1.5 sm:h-2 sm:w-2 bg-blue-500"></span>
@@ -7984,13 +8054,13 @@ html.gp-android:not(.dark) #ui-controls {
                 <span id="systems-integration-badge">Systems Integration</span>
             </div>
             <p id="time-greeting" class="text-xs xxs:text-sm sm:text-base font-bold text-blue-600 dark:text-blue-400 mb-2 xxs:mb-3"></p>
-            <h1 id="header-main-title" class="text-2xl xxs:text-3xl xs:text-4xl sm:text-5xl md:text-7xl font-extrabold mb-3 xxs:mb-4 sm:mb-8 py-1 sm:py-2 tracking-tighter bg-gradient-to-br from-slate-900 via-slate-800 to-slate-600 dark:from-white dark:via-slate-200 dark:to-slate-400 bg-clip-text text-transparent leading-tight break-words drop-shadow-md">
+            <h1 id="header-main-title" class="text-3xl sm:text-5xl md:text-6xl font-extrabold mb-3 sm:mb-4 py-1 tracking-tighter bg-gradient-to-br from-slate-900 via-slate-800 to-slate-600 dark:from-white dark:via-slate-200 dark:to-slate-400 bg-clip-text text-transparent leading-tight break-words drop-shadow-md">
                 Über Gamingpig
             </h1>
-            <p id="header-intro-p1" class="text-sm xxs:text-base xs:text-lg sm:text-xl md:text-2xl leading-relaxed text-slate-700 dark:text-slate-300 font-medium drop-shadow-sm">
+            <p id="header-intro-p1" class="text-sm sm:text-base md:text-lg leading-relaxed text-slate-700 dark:text-slate-300 font-medium drop-shadow-sm">
                 Hallo! Ich bin Gamingpig, technikaffin und leidenschaftlicher Entwickler. Ich habe ADHS - das ist eine echte Entwicklungsstörung, keine Superkraft. Mein <span class="text-blue-600 dark:text-blue-400 font-bold italic">Hyperfokus</span> hilft mir zwar, komplexe Probleme zu lösen, wo andere schon längst aufgegeben hätten, aber wenn er zu stark wird, bekomme ich auch nichts mehr um mich herum mit.
             </p>
-            <p id="header-intro-p2" class="mt-3 xxs:mt-4 sm:mt-6 text-xs xxs:text-sm xs:text-base sm:text-lg text-slate-600 dark:text-slate-400 leading-relaxed drop-shadow-sm">
+            <p id="header-intro-p2" class="mt-2.5 sm:mt-4 text-xs sm:text-sm md:text-base text-slate-600 dark:text-slate-400 leading-relaxed drop-shadow-sm">
                 In meiner Freizeit beschäftige ich mich mit Gaming und Streaming. Ich bin zwar etwas schüchtern, jedoch an sich ein sehr freundlicher und gelassener Mensch. Ich repariere auch gerne IT Geräte (Laptops, Tablets, PCs, Smartphones usw.).
             </p>
             <!-- Audio Quick Actions: Bio Vorlesen & Ultra-Smart Live-Briefing with Speed Dropdown -->
@@ -8031,7 +8101,7 @@ html.gp-android:not(.dark) #ui-controls {
         </header>
 
         <!-- ZIELGRUPPEN AUDIENCE HUB -->
-        <div id="audience-hub" class="mb-8 xxs:mb-10 sm:mb-14 reveal">
+        <div id="audience-hub" class="mb-6 sm:mb-10 reveal">
             <div class="glass-card p-3.5 xxs:p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-white/20 dark:border-white/10 shadow-lg bg-gradient-to-r from-blue-500/5 via-purple-500/5 to-emerald-500/5">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-3.5">
                     <div>
@@ -8041,28 +8111,28 @@ html.gp-android:not(.dark) #ui-controls {
                     <p class="text-xs text-slate-600 dark:text-slate-400 max-w-sm">Wähle deinen Bereich für einen schnellen Überblick und passgenaue Inhalte:</p>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 xxs:gap-2.5 sm:gap-3">
-                    <button onclick="filterAudience('tech')" id="aud-btn-tech" class="aud-btn active flex items-center gap-2.5 p-2.5 rounded-xl border border-blue-500/40 bg-blue-500/15 text-blue-600 dark:text-blue-300 font-bold text-xs transition-all active:scale-95 shadow-sm text-left">
+                    <button onclick="filterAudience('tech')" id="aud-btn-tech" class="aud-btn flex items-center gap-2.5 p-2.5 rounded-xl font-bold text-xs active:scale-95 shadow-sm text-left">
                         <span class="text-xl">💻</span>
                         <div class="min-w-0">
                             <div class="truncate text-xs font-bold text-slate-900 dark:text-white">IT &amp; Tech</div>
                             <div class="text-[9px] text-slate-500 dark:text-slate-400 font-medium truncate">Systemintegration &amp; Lab</div>
                         </div>
                     </button>
-                    <button onclick="filterAudience('music')" id="aud-btn-music" class="aud-btn flex items-center gap-2.5 p-2.5 rounded-xl border border-slate-700/60 bg-slate-800/40 hover:bg-slate-800/80 text-slate-700 dark:text-slate-300 font-bold text-xs transition-all active:scale-95 text-left">
+                    <button onclick="filterAudience('music')" id="aud-btn-music" class="aud-btn flex items-center gap-2.5 p-2.5 rounded-xl font-bold text-xs active:scale-95 shadow-sm text-left">
                         <span class="text-xl">🎵</span>
                         <div class="min-w-0">
                             <div class="truncate text-xs font-bold text-slate-900 dark:text-white">Musik &amp; Audio</div>
                             <div class="text-[9px] text-slate-500 dark:text-slate-400 font-medium truncate">Spotify, Lyrics &amp; Gear</div>
                         </div>
                     </button>
-                    <button onclick="filterAudience('gaming')" id="aud-btn-gaming" class="aud-btn flex items-center gap-2.5 p-2.5 rounded-xl border border-slate-700/60 bg-slate-800/40 hover:bg-slate-800/80 text-slate-700 dark:text-slate-300 font-bold text-xs transition-all active:scale-95 text-left">
+                    <button onclick="filterAudience('gaming')" id="aud-btn-gaming" class="aud-btn flex items-center gap-2.5 p-2.5 rounded-xl font-bold text-xs active:scale-95 shadow-sm text-left">
                         <span class="text-xl">🎮</span>
                         <div class="min-w-0">
                             <div class="truncate text-xs font-bold text-slate-900 dark:text-white">Gaming &amp; Kart</div>
                             <div class="text-[9px] text-slate-500 dark:text-slate-400 font-medium truncate">Motorsport &amp; Streaming</div>
                         </div>
                     </button>
-                    <button onclick="filterAudience('about')" id="aud-btn-about" class="aud-btn flex items-center gap-2.5 p-2.5 rounded-xl border border-slate-700/60 bg-slate-800/40 hover:bg-slate-800/80 text-slate-700 dark:text-slate-300 font-bold text-xs transition-all active:scale-95 text-left">
+                    <button onclick="filterAudience('about')" id="aud-btn-about" class="aud-btn flex items-center gap-2.5 p-2.5 rounded-xl font-bold text-xs active:scale-95 shadow-sm text-left">
                         <span class="text-xl">👤</span>
                         <div class="min-w-0">
                             <div class="truncate text-xs font-bold text-slate-900 dark:text-white">Über mich</div>
@@ -8073,13 +8143,13 @@ html.gp-android:not(.dark) #ui-controls {
             </div>
         </div>
 
-        <!-- AUSBILDUNG & ALLTAG: Gequetschtes Grid, 2 Spalten -->
-        <section id="cards-section" class="mb-12 xxs:mb-16 xs:mb-20 sm:mb-24 reveal rounded-3xl relative z-10">
+        <!-- AUSBILDUNG & ALLTAG: Responsives Grid, 1 Spalte mobile, 2 Spalten ab sm: -->
+        <section id="cards-section" class="mb-10 sm:mb-16 reveal rounded-3xl relative z-10">
             <h2 id="cards-section-title" class="text-lg xxs:text-xl xs:text-2xl sm:text-3xl font-bold mb-3 xxs:mb-4 sm:mb-6 text-blue-600 dark:text-blue-500 border-b-2 sm:border-b-4 border-blue-600 dark:border-blue-500 pb-1.5 xxs:pb-2 sm:pb-3 inline-block break-words">
                 Real Talk: Ausbildung & Alltag
             </h2>
             
-            <div id="cards-grid" class="grid grid-cols-2 gap-2.5 xxs:gap-3 xs:gap-4 sm:gap-5">
+            <div id="cards-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
                 <div id="card-item-status" data-audience="tech" onclick="openModal('status')" role="button" tabindex="0" class="glass-card p-3 xxs:p-4 xs:p-5 sm:p-6 rounded-[1rem] xxs:rounded-2xl sm:rounded-[1.5rem] flex items-start gap-2.5 xxs:gap-3 sm:gap-5 cursor-pointer group relative transition-all duration-300">
                     <div class="p-1.5 xxs:p-2 sm:p-3 bg-blue-500/10 text-blue-600 dark:text-blue-500 rounded-lg xxs:rounded-xl group-hover:bg-blue-500 group-hover:text-white transition-all shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="xxs:w-5 xxs:h-5 sm:w-6 sm:h-6"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -8265,7 +8335,7 @@ html.gp-android:not(.dark) #ui-controls {
             <div id="music-card-layout-wrapper" class="hidden">
                 <div id="music-card-wrapper" class="relative origin-top flex justify-center w-full">
                     
-                    <div id="main-music-card" class="glass-card offline w-full max-w-[400px] mx-auto p-3 xxs:p-4 xs:p-6 md:p-10 rounded-[1.5rem] xxs:rounded-3xl md:rounded-[3rem] text-center relative z-10 flex flex-col justify-center items-center">
+                    <div id="main-music-card" class="glass-card offline w-full max-w-[420px] mx-auto p-4 sm:p-6 md:p-8 rounded-[1.5rem] xxs:rounded-3xl md:rounded-[2.5rem] text-center relative z-10 flex flex-col justify-center items-center">
                         
                         <div class="absolute inset-0 rounded-[inherit] overflow-hidden z-0 pointer-events-none">
                             <div id="ambient-bg"></div>
@@ -8490,7 +8560,7 @@ html.gp-android:not(.dark) #ui-controls {
                             Gamingpig is Offline
                         </div>
 
-                        <div id="media-container" onclick="toggleMusicPicker(true)" role="button" tabindex="0" class="relative z-10 w-full max-w-[100px] xxs:max-w-[140px] xs:max-w-[180px] sm:max-w-[240px] md:max-w-[280px] aspect-square shrink-0 rounded-xl xxs:rounded-2xl mx-auto mb-2 xxs:mb-3 sm:mb-4 md:mb-6 overflow-hidden flex items-center justify-center bg-[#121212] shadow-[0_10px_30px_rgba(0,0,0,0.8)] sm:shadow-[0_20px_40px_rgba(0,0,0,0.8)] cursor-pointer hover:ring-2 hover:ring-white/20 transition-all">
+                        <div id="media-container" onclick="toggleMusicPicker(true)" role="button" tabindex="0" class="relative z-10 w-[clamp(140px,36vw,240px)] aspect-square shrink-0 rounded-2xl mx-auto mb-3 sm:mb-5 overflow-hidden flex items-center justify-center bg-[#121212] shadow-[0_12px_32px_rgba(0,0,0,0.8)] cursor-pointer hover:ring-2 hover:ring-white/20 transition-all">
                             <!-- FIX v24.85: decoding="async" ergänzt + fetchpriority="high" -->
                             <img id="artwork" src="" alt="" aria-label="Album Artwork" class="w-full h-full object-cover" decoding="async" fetchpriority="high">
                             <div id="offline-icon" class="absolute text-2xl xxs:text-4xl sm:text-6xl" aria-hidden="true">🌙</div>
@@ -8620,7 +8690,7 @@ html.gp-android:not(.dark) #ui-controls {
             <h2 id="socials-section-title" data-i18n="socials_section_title" class="text-lg xxs:text-xl xs:text-2xl sm:text-3xl font-bold mb-4 xxs:mb-6 sm:mb-8 text-blue-600 dark:text-blue-500 border-b-2 sm:border-b-4 border-blue-600 dark:border-blue-500 pb-1.5 xxs:pb-2 sm:pb-3 inline-block break-words">
                 Socials & Kanäle
             </h2>
-            <div class="grid grid-cols-1 gap-3 xxs:gap-4 xs:gap-6 sm:gap-8">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 xxs:gap-4 xs:gap-5 sm:gap-6">
             <!-- Tic-Tac-Toe -->
             <div class="glass-card p-3 xxs:p-5 xs:p-6 sm:p-8 rounded-[1rem] xxs:rounded-[1.5rem] sm:rounded-[2.5rem] group overflow-hidden relative border border-slate-200 dark:border-slate-800">
                 <div class="flex items-center gap-2 xxs:gap-3 sm:gap-5 mb-2 xxs:mb-4 sm:mb-6">
@@ -16276,6 +16346,50 @@ let shareCardLoading;
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+    { version: "v24.194.0", date: "28. September 2026", type: "feature", items: {
+        de: [
+            "⚙️ Flackerfreies Einstellungsmenü: Komplett stabilisierter Animations-Lifecycle & ruckelfreies Scrollen ohne Compositor-Jitter",
+            "📐 Perfektionierte Größenverhältnisse: Ausgewogene Proportionen im Header, Zielgruppen-Hub, Musik-Dashboard und Socials",
+            "📱 Responsives 1-Spalten-Layout auf Smartphones für kristallklare Lesbarkeit aller Karten ohne gequetschte Inhalte",
+            "🎨 Vollständig optimierter Dark- & Light-Mode mit edlem Frosted Glass Kontrast auf allen Geräten",
+            "⚡ GPU- & Compositor-Optimierung: Beseitigung überflüssiger Texturlayers und globale Low-End-/Android-Hardware-Schutzschilde"
+        ],
+        en: [
+            "⚙️ Flicker-free Settings Menu: Fully stabilized animation lifecycle & jitter-free scrolling without compositor glitches",
+            "📐 Harmonized Proportions: Perfectly balanced typography and scale across Header, Audience Hub, Music Card, and Socials",
+            "📱 Responsive 1-Column Mobile Layout for cards, ensuring pristine readability without squeezed content",
+            "🎨 Pristine Dark & Light Mode styling with beautiful frosted glass contrast across all devices",
+            "⚡ GPU & Compositor Optimization: Streamlined texture layers and universal hardware safeguards for Android & low-end devices"
+        ],
+        es: [
+            "⚙️ Menú de configuración sin parpadeos: ciclo de vida de animación estabilizado y desplazamiento suave",
+            "📐 Proporciones armonizadas en cabecera, hub de audiencias, música y redes sociales",
+            "📱 Diseño móvil responsivo de 1 columna para máxima legibilidad de tarjetas",
+            "🎨 Modos claro y oscuro optimizados con elegante contraste de vidrio esmerilado",
+            "⚡ Rendimiento GPU mejorado y protecciones universales para dispositivos móviles"
+        ],
+        fr: [
+            "⚙️ Menu Paramètres sans scintillement : cycle d'animation stabilisé et défilement fluide sans saccades",
+            "📐 Proportions harmonisées dans l'en-tête, le hub de public, la musique et les réseaux sociaux",
+            "📱 Mise en page mobile 1 colonne réactive pour une lisibilité parfaite des cartes",
+            "🎨 Modes sombre et clair optimisés avec un verre dépoli élégant et contrasté",
+            "⚡ Optimisation GPU et protections matérielles universelles pour Android et appareils modestes"
+        ],
+        it: [
+            "⚙️ Menu Impostazioni senza sfarfallio: ciclo di animazione stabilizzato e scorrimento fluido",
+            "📐 Proporzioni armonizzate nell'intestazione, hub del pubblico, musica e social",
+            "📱 Layout mobile responsive a 1 colonna per una leggibilità ottimale delle schede",
+            "🎨 Modalità chiara e scura ottimizzate con elegante contrasto in vetro satinato",
+            "⚡ Ottimizzazione GPU e protezioni hardware universali per Android e dispositivi a basse prestazioni"
+        ],
+        ru: [
+            "⚙️ Меню настроек без мерцания: стабилизированный цикл анимации и плавный скроллинг",
+            "📐 Гармоничные пропорции в шапке, хабе аудитории, музыкальном дашборде и соцсетях",
+            "📱 Адаптивная 1-колоночная сетка на мобильных для превосходной читаемости карточек",
+            "🎨 Оптимизированные темная и светлая темы с элегантным матовым стеклом",
+            "⚡ Оптимизация GPU слоев и аппаратные защитные механизмы для Android и бюджетных устройств"
+        ]
+    }},
     { version: "v24.193.0", date: "22. September 2026", type: "feature", items: {
         de: [
             "🎯 Neuer Zielgruppen-Hub: Schneller Fokus auf IT & Tech, Musik, Gaming & Sim-Racing oder Über mich",
@@ -19468,13 +19582,6 @@ let shareCardLoading;
             buttons.forEach(btn => {
                 const isActive = !isTogglingOff && btn.id === `aud-btn-${category}`;
                 btn.classList.toggle('active', isActive);
-                if (isActive) {
-                    btn.classList.add('border-blue-500/60', 'bg-blue-500/20', 'text-blue-600', 'dark:text-blue-300', 'shadow-md');
-                    btn.classList.remove('border-slate-700/60', 'bg-slate-800/40', 'text-slate-700', 'dark:text-slate-300');
-                } else {
-                    btn.classList.remove('border-blue-500/60', 'bg-blue-500/20', 'text-blue-600', 'dark:text-blue-300', 'shadow-md');
-                    btn.classList.add('border-slate-700/60', 'bg-slate-800/40', 'text-slate-700', 'dark:text-slate-300');
-                }
             });
 
             const cards = document.querySelectorAll('#cards-grid > div[data-audience]');
@@ -19525,7 +19632,12 @@ let shareCardLoading;
 
         // Clean Separate Handlers for Lyrics Settings & Global Settings
         let globalSettingsTimeout = null;
+        let globalSettingsOpenTimer = null;
         let isGlobalSettingsOpen = false;
+
+        lyricsSettingsTimeout = null;
+        let lyricsSettingsOpenTimer = null;
+        isLyricsSettingsOpen = false;
 
         // The dropdown is clipped by the dashboard, not by the viewport.
         // Observe only while open; no polling or changes to the dashboard layout.
@@ -19581,12 +19693,13 @@ let shareCardLoading;
             if (!lyricsMenu) return;
             
             clearTimeout(lyricsSettingsTimeout);
+            clearTimeout(lyricsSettingsOpenTimer);
             isLyricsSettingsOpen = !isLyricsSettingsOpen;
 
             if (isLyricsSettingsOpen) {
                 lastLyricsSettingsOpenedAt = Date.now();
                 if (isGlobalSettingsOpen) window.toggleStandaloneSettings();
-                lyricsMenu.classList.remove('hidden', 'settings-closing');
+                lyricsMenu.classList.remove('hidden', 'settings-closing', 'is-open');
                 lyricsMenu.style.display = 'flex';
                 lyricsMenu.classList.add('settings-opening');
                 fitLyricsSettingsToDashboard();
@@ -19595,6 +19708,10 @@ let shareCardLoading;
                     const ov = document.getElementById('lyrics-overlay');
                     if (ov) lyricsSettingsResizeObserver.observe(ov);
                 }
+                lyricsSettingsOpenTimer = setTimeout(() => {
+                    lyricsMenu.classList.remove('settings-opening');
+                    lyricsMenu.classList.add('is-open');
+                }, 240);
                 setTimeout(() => {
                     fitLyricsSettingsToDashboard();
                     populateLyricsStyleDropdown();
@@ -19604,7 +19721,7 @@ let shareCardLoading;
             } else {
                 lyricsSettingsResizeObserver?.disconnect();
                 stopLyricsStylePreviewLoop();
-                lyricsMenu.classList.remove('settings-opening');
+                lyricsMenu.classList.remove('settings-opening', 'is-open');
                 lyricsMenu.classList.add('settings-closing');
                 const isLiquid = document.body.classList.contains('liquid-glass-active');
                 const closeDelay = isLiquid ? 220 : 180;
@@ -19623,18 +19740,23 @@ let shareCardLoading;
             if (!globalMenu) return;
 
             clearTimeout(globalSettingsTimeout);
+            clearTimeout(globalSettingsOpenTimer);
             isGlobalSettingsOpen = !isGlobalSettingsOpen;
 
             if (isGlobalSettingsOpen) {
                 lastGlobalSettingsOpenedAt = Date.now();
                 if (isLyricsSettingsOpen) window.toggleLyricsSettings();
                 window.updateAiNoticeCounter();
-                globalMenu.classList.remove('hidden', 'settings-closing');
+                globalMenu.classList.remove('hidden', 'settings-closing', 'is-open');
                 globalMenu.classList.add('settings-opening');
                 updateSettingsStatusButtons();
                 if (window.OnboardingTracker) window.OnboardingTracker.updateUI();
+                globalSettingsOpenTimer = setTimeout(() => {
+                    globalMenu.classList.remove('settings-opening');
+                    globalMenu.classList.add('is-open');
+                }, 240);
             } else {
-                globalMenu.classList.remove('settings-opening');
+                globalMenu.classList.remove('settings-opening', 'is-open');
                 globalMenu.classList.add('settings-closing');
                 const isLiquid = document.body.classList.contains('liquid-glass-active');
                 const closeDelay = isLiquid ? 220 : 180;
