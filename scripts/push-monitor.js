@@ -391,15 +391,13 @@ async function checkEndpoints() {
     }
 
     // Raspberry Pi Live Feed Discrepancy Check:
+    // HINWEIS: Wenn stats.fm live Musik liefert, ist das Nutzer-Erlebnis nahtlos gesichert.
+    // Daher wird kein störender Ausfall-Alarm mehr per Web-Push an alle Abonnenten geschickt.
     const isSpotifyPlaying = !!(statsData && statsData.item && statsData.item.isPlaying);
     const trackName = (statsData && statsData.item && statsData.item.track) ? statsData.item.track.name : '';
 
     if (isSpotifyPlaying && !npcData) {
-        failed.push({
-            id: 'pi_offline',
-            name: 'Raspberry Pi Telemetrie',
-            track: trackName
-        });
+        console.log(`[HealthCheck] Info: Musik läuft ('${trackName}'), stats.fm übernimmt Fallback nahtlos (Pi-Telemetrie pausiert).`);
     }
 
     return failed;
