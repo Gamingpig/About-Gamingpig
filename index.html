@@ -9,6 +9,16 @@
     [BUGFIX] oder [PERFORMANCE] oder [FEATURE] als Tag, dann kurz
     Symptom/Ziel, Ursache, Fix, und der beobachtbare Effekt.
     Neueste Einträge oben.
+    [PERFORMANCE / BUGFIX] Release v24.197.0: Pixel-Hitze-Fix, Scroll-Bugs behoben, 1-spaltiges Social-Grid & Sharecard-Sofort-Export repariert
+      - Scroll-Bugs behoben: dynamische content-visibility Sprünge auf Sektionen mit 500px Schätzhöhe entfernt (kein Höhen-Kollaps & Ruckeln mehr beim Scrollen).
+      - Touch-Gesten bereinigt: is-squished und synchrones getBoundingClientRect() in touchmove deaktiviert (Touch-Scrolling läuft ohne Frame-Drops bei 120Hz).
+      - Haptik-Fix: pointerdown vibriert nur noch bei echten Buttons/Links, nicht mehr beim Scroll-Touch auf ganze Karten.
+      - Footer-Reflow behoben: fitFooterBubble() nur noch beim echten Einblenden aufrufen statt in jedem Scroll-Frame.
+      - Social Grid: von 2-spaltiger Ansicht (sm:grid-cols-2) auf elegantes 1-spaltiges Grid (max-w-3xl) umgestellt.
+      - Umfassende Pixel-Hitze-Optimierung: Auf Android endlose Hintergrund-Blob- und Mesh-Animationen pausiert (GPU-Dauerlast eliminiert).
+      - Frosted Glass statt Multi-Pass Live-Blur auf Karten: 12px Backdrop-Filter auf In-Flow-Karten auf Android durch GPU-schonende Frosted-Gradients ersetzt; leichter Blur nur noch auf schwebenden Overlays (Dynamic Island, Header, Footer, Modals).
+      - Hintergrund-Timer gedrosselt: pollVersion & checkSWUpdates pausieren bei document.hidden und laufen akkuschonend alle 60s.
+      - Sharecard Sofort-Export repariert: Integration der Web Share API mit File-Support für direktes Speichern in Google Fotos / auf dem Gerät sowie robuster Blob-URL-Download und CORS-Schutz.
     [ANIMATION FIX] Release v24.138.19: Footer + Mehr-Menü + App-installieren sauber animiert
       - Footer-Bubble nutzt jetzt einen einzigen Web-Animations-Controller mit weichem Slide/Fade/Scale
         beim Ein- und Ausblenden; keine verlorenen CSS-Transitions durch display:none mehr.
@@ -3661,10 +3671,10 @@ html:not(.dark) #global-settings-menu input[type="range"] {
             /* Ermöglicht saubere Skalierung ohne Layout-Kollaps */
         }
         
-        /* --- VIEWPORT RENDERING / SECTION OPTIMIZATION --- */
+        /* --- VIEWPORT RENDERING / SECTION OPTIMIZATION (Scroll-Bug Fix: Kein Höhen-Kollaps) --- */
         .section-optimized {
-            content-visibility: auto;
-            contain-intrinsic-size: 1px 500px;
+            content-visibility: visible !important;
+            contain-intrinsic-size: auto !important;
         }
 
         /* Action button in toast */
@@ -7571,38 +7581,50 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
    - Double-ID specificity to override legacy rules cleanly
    ========================================================= */
 
-/* --- 1. Android safe glass: authentic translucent frosted glass + hardware-tuned blur --- */
-html.gp-android body.liquid-glass-active :is(
-  .glass-card:not(#back-to-top), #header-section, #footer-bubble,
-  #footer-expandable-menu
-) {
-  -webkit-backdrop-filter: blur(12px) saturate(140%) !important;
-  backdrop-filter: blur(12px) saturate(140%) !important;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.10) 0%, rgba(30, 41, 59, 0.58) 40%, rgba(15, 23, 42, 0.68) 100%) !important;
+/* --- 1. Android safe glass: authentic translucent frosted glass (kein teurer GPU-Liveblur auf Karten) --- */
+html.gp-android body.liquid-glass-active .glass-card:not(#back-to-top) {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(30, 41, 59, 0.72) 40%, rgba(15, 23, 42, 0.82) 100%) !important;
   border: 1px solid rgba(255, 255, 255, 0.16) !important;
-  border-top: 1.5px solid rgba(255, 255, 255, 0.45) !important;
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.20) !important;
+  border-top: 1.5px solid rgba(255, 255, 255, 0.40) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45) !important;
 }
-html.gp-android:not(.dark) body.liquid-glass-active :is(
-  .glass-card:not(#back-to-top), #header-section, #footer-bubble,
-  #footer-expandable-menu
-) {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.75) 0%, rgba(241, 245, 249, 0.64) 100%) !important;
+html.gp-android:not(.dark) body.liquid-glass-active .glass-card:not(#back-to-top) {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.88) 0%, rgba(241, 245, 249, 0.80) 100%) !important;
   border: 1px solid rgba(0, 0, 0, 0.08) !important;
   border-top: 1.5px solid rgba(255, 255, 255, 0.90) !important;
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.08), inset 0 1px 1px rgba(255, 255, 255, 0.60) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08) !important;
 }
 
-/* Large glass surfaces */
+/* Floating Overlays: dezenter, hardware-schonender 8px Blur nur für schwebende Leisten */
+html.gp-android body.liquid-glass-active :is(#header-section, #footer-bubble, #footer-expandable-menu, #dynamic-island) {
+  -webkit-backdrop-filter: blur(8px) saturate(130%) !important;
+  backdrop-filter: blur(8px) saturate(130%) !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.10) 0%, rgba(30, 41, 59, 0.78) 40%, rgba(15, 23, 42, 0.88) 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  border-top: 1.5px solid rgba(255, 255, 255, 0.45) !important;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5) !important;
+}
+html.gp-android:not(.dark) body.liquid-glass-active :is(#header-section, #footer-bubble, #footer-expandable-menu, #dynamic-island) {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.85) 0%, rgba(241, 245, 249, 0.80) 100%) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  border-top: 1.5px solid rgba(255, 255, 255, 0.90) !important;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Large glass surfaces (Modals & Panels): GPU-schonender 8px Blur */
 html.gp-android body.liquid-glass-active :is(
   #main-music-card, #mini-player-toggle, .modal-content,
   #tutorial-box, #language-picker-box, #sharecard-picker-box, #command-palette,
   #whats-new-epic-modal>div, #privacy-update-modal>div, #interactive-quest-hud>div,
   #spotify-wrapped-modal>div
 ) {
-  -webkit-backdrop-filter: blur(12px) saturate(140%) !important;
-  backdrop-filter: blur(12px) saturate(140%) !important;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.10) 0%, rgba(30, 41, 59, 0.58) 40%, rgba(15, 23, 42, 0.68) 100%) !important;
+  -webkit-backdrop-filter: blur(8px) saturate(130%) !important;
+  backdrop-filter: blur(8px) saturate(130%) !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.10) 0%, rgba(30, 41, 59, 0.78) 40%, rgba(15, 23, 42, 0.88) 100%) !important;
   border: 1px solid rgba(255, 255, 255, 0.16) !important;
   border-top: 1.5px solid rgba(255, 255, 255, 0.45) !important;
   box-shadow: 0 16px 44px rgba(0, 0, 0, 0.55), inset 0 1px 1px rgba(255, 255, 255, 0.20) !important;
@@ -7613,7 +7635,7 @@ html.gp-android:not(.dark) body.liquid-glass-active :is(
   #whats-new-epic-modal>div, #privacy-update-modal>div, #interactive-quest-hud>div,
   #spotify-wrapped-modal>div
 ) {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.75) 0%, rgba(241, 245, 249, 0.64) 100%) !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.88) 0%, rgba(241, 245, 249, 0.80) 100%) !important;
   border: 1px solid rgba(0, 0, 0, 0.08) !important;
   border-top: 1.5px solid rgba(255, 255, 255, 0.90) !important;
   box-shadow: 0 16px 44px rgba(0, 0, 0, 0.08), inset 0 1px 1px rgba(255, 255, 255, 0.60) !important;
@@ -7628,8 +7650,8 @@ html.gp-android body.liquid-glass-active #dynamic-island#dynamic-island,
 html.gp-android body.liquid-glass-active #footer-bubble#footer-bubble,
 html.gp-android body.liquid-glass-active #footer-expandable-menu#footer-expandable-menu,
 html.gp-android body.liquid-glass-active #header-section#header-section {
-  -webkit-backdrop-filter: blur(12px) saturate(140%) !important;
-  backdrop-filter: blur(12px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(8px) saturate(130%) !important;
+  backdrop-filter: blur(8px) saturate(130%) !important;
 }
 
 /* Settings menus on Android in Liquid Glass: Authentic translucent mobile frosted glass */
@@ -7773,18 +7795,16 @@ html.gp-android:not(.dark) body.liquid-glass-active #cp-trigger {
   border-top: 1.5px solid rgba(255, 255, 255, 0.85) !important;
 }
 
-/* --- Android GPU Background Isolation: eliminates layer thrashing & compositor flickering --- */
-html.gp-android .blob-container {
+/* --- Android GPU Background Isolation: eliminates layer thrashing, GPU heat & compositor flickering --- */
+html.gp-android .blob-container,
+html.gp-android .blob,
+html.gp-android .mesh-gradient,
+html.gp-android .mesh-gradient::before,
+html.gp-android .mesh-gradient::after {
   contain: strict;
   will-change: auto !important;
-  opacity: 0.20 !important;
-}
-html.gp-android .blob {
-  will-change: auto !important;
-}
-html.gp-android .mesh-gradient {
-  contain: strict;
-  will-change: auto !important;
+  animation-play-state: paused !important;
+  opacity: 0.25 !important;
 }
 
 /* --- 7. Disable glass pseudo-element overlays on Android --- */
@@ -9019,7 +9039,7 @@ html.gp-android:not(.dark) #ui-controls {
             <h2 id="socials-section-title" data-i18n="socials_section_title" class="text-lg xxs:text-xl xs:text-2xl sm:text-3xl font-bold mb-4 xxs:mb-6 sm:mb-8 text-blue-600 dark:text-blue-500 border-b-2 sm:border-b-4 border-blue-600 dark:border-blue-500 pb-1.5 xxs:pb-2 sm:pb-3 inline-block break-words">
                 Socials & Kanäle
             </h2>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 xxs:gap-4 xs:gap-5 sm:gap-6">
+            <div class="grid grid-cols-1 gap-3 xxs:gap-4 xs:gap-5 sm:gap-6 max-w-3xl mx-auto">
             <!-- Tic-Tac-Toe -->
             <div class="glass-card p-3 xxs:p-5 xs:p-6 sm:p-8 rounded-[1rem] xxs:rounded-[1.5rem] sm:rounded-[2.5rem] group overflow-hidden relative border border-slate-200 dark:border-slate-800">
                 <div class="flex items-center gap-2 xxs:gap-3 sm:gap-5 mb-2 xxs:mb-4 sm:mb-6">
@@ -15008,6 +15028,7 @@ html.gp-android:not(.dark) #ui-controls {
 
             // Proaktive Update-Prüfung bei Tab-Fokus und Sichtbarkeit
             function checkSWUpdates() {
+                if (document.hidden) return;
                 if (swRegistration) {
                     swRegistration.update().catch(() => {});
                 } else if ('serviceWorker' in navigator) {
@@ -15023,11 +15044,12 @@ html.gp-android:not(.dark) #ui-controls {
             document.addEventListener('visibilitychange', () => {
                 if (document.visibilityState === 'visible') checkSWUpdates();
             });
-            setInterval(checkSWUpdates, 20000);
+            setInterval(checkSWUpdates, 60000);
 
-            // Version Watcher: Prüft version.json direkt ohne Cache
+            // Version Watcher: Prüft version.json direkt ohne Cache (nur wenn Tab aktiv)
             (function setupVersionWatcher() {
                 async function pollVersion() {
+                    if (document.hidden) return;
                     try {
                         const res = await fetch('./version.json?_t=' + Date.now(), { cache: 'no-store' });
                         if (!res.ok) return;
@@ -15044,7 +15066,7 @@ html.gp-android:not(.dark) #ui-controls {
                     } catch(_) {}
                 }
                 setTimeout(pollVersion, 3000);
-                setInterval(pollVersion, 15000);
+                setInterval(pollVersion, 60000);
             })();
 
             if (document.readyState === 'complete') {
@@ -18467,7 +18489,6 @@ let shareCardLoading;
                         el.style.contentVisibility = 'visible';
                         el.removeAttribute('data-offscreen');
                     } else {
-                        el.style.contentVisibility = 'auto';
                         el.setAttribute('data-offscreen', 'true');
                     }
                 });
@@ -22035,36 +22056,14 @@ window.setLyricsStyle = function(style) {
                 }, 400); 
             };
 
-            // Mouse Events
-            card.addEventListener('mousemove', (e) => updateSpotlight(e.clientX, e.clientY), {passive: true});
-            card.addEventListener('mouseleave', resetSpotlight, {passive: true});
-            
-            // Touch Events
-            card.addEventListener('touchstart', (e) => {
-                if(window.matchMedia("(hover: none)").matches) {
-                    card.style.setProperty('--glare-opacity', '1');
-                }
-                card.classList.add('is-squished');
-                updateSpotlight(e.touches[0].clientX, e.touches[0].clientY);
-            }, {passive: true});
-            
-            card.addEventListener('touchmove', (e) => {
-                card.classList.remove('is-squished'); 
-                updateSpotlight(e.touches[0].clientX, e.touches[0].clientY);
-            }, {passive: true});
-            
-            card.addEventListener('touchend', (e) => {
-                card.classList.remove('is-squished');
-                resetSpotlight();
-            }, {passive: true});
-            card.addEventListener('touchcancel', (e) => {
-                card.classList.remove('is-squished');
-                resetSpotlight();
-            }, {passive: true});
-
-            // Desktop active state
-            card.addEventListener('mousedown', () => card.classList.add('is-squished'), {passive: true});
-            card.addEventListener('mouseup', () => card.classList.remove('is-squished'), {passive: true});
+            // Mouse Events nur für echte Pointer/Maus aktivieren (verhindert Scroll-Ruckeln & Layout-Thrashing auf Touchscreens)
+            const hasFinePointer = window.matchMedia && window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+            if (hasFinePointer) {
+                card.addEventListener('mousemove', (e) => updateSpotlight(e.clientX, e.clientY), {passive: true});
+                card.addEventListener('mouseleave', resetSpotlight, {passive: true});
+                card.addEventListener('mousedown', () => card.classList.add('is-squished'), {passive: true});
+                card.addEventListener('mouseup', () => card.classList.remove('is-squished'), {passive: true});
+            }
         });
 
         (async () => {
@@ -22580,20 +22579,24 @@ window.setLyricsStyle = function(style) {
         }
     </script>
 <script>
-        // PIXEL THERMAL WATCHDOG: Pausiere schwere CSS-Blob-Animationen nach 8s Inaktivität
+        // PIXEL THERMAL WATCHDOG: Schont Tensor-GPU und Akku auf Google Pixel & Mobilgeräten
         (function setupThermalGuard() {
+            const isMobileOrAndroid = document.documentElement.classList.contains('gp-android') || document.documentElement.classList.contains('gp-mobile');
+            if (isMobileOrAndroid) {
+                document.body.classList.add('battery-chill');
+                return;
+            }
             let idleTimer = null;
             function wakeBlobs() {
                 document.body.classList.remove('battery-chill');
                 clearTimeout(idleTimer);
                 idleTimer = setTimeout(() => {
-                    // Wenn kein Dialog/Audio aktiv interagiert wird, schone CPU & Akku
                     if (!document.hidden) {
                         document.body.classList.add('battery-chill');
                     }
-                }, 8000);
+                }, 4000);
             }
-            ['scroll', 'touchstart', 'mousemove', 'click', 'keydown'].forEach(evt => {
+            ['mousemove', 'click', 'keydown'].forEach(evt => {
                 window.addEventListener(evt, wakeBlobs, { passive: true });
             });
             wakeBlobs();
@@ -22607,7 +22610,7 @@ window.setLyricsStyle = function(style) {
     (function initLiquidGlassEngine() {
         document.addEventListener('pointerdown', (e) => {
             if (!document.body.classList.contains('liquid-glass-active')) return;
-            const target = e.target.closest('.glass-card, button, #footer-bubble, #cp-trigger, a.p-2\\.5');
+            const target = e.target.closest('button, #cp-trigger, a.p-2\\.5, a[href], [role="button"], input[type="range"]');
             if (!target) return;
 
             // Haptik Feedback
@@ -22631,12 +22634,16 @@ window.setLyricsStyle = function(style) {
             if (!footerBubble) return;
 
             function showFooter() {
-                if (typeof fitFooterBubble === 'function') fitFooterBubble();
-                footerBubble.classList.add('footer-bubble-visible');
+                if (!footerBubble.classList.contains('footer-bubble-visible')) {
+                    if (typeof fitFooterBubble === 'function') fitFooterBubble();
+                    footerBubble.classList.add('footer-bubble-visible');
+                }
             }
             function hideFooter() {
-                footerBubble.classList.remove('footer-bubble-visible');
-                if (typeof toggleFooterMenu === 'function') toggleFooterMenu(false);
+                if (footerBubble.classList.contains('footer-bubble-visible')) {
+                    footerBubble.classList.remove('footer-bubble-visible');
+                    if (typeof toggleFooterMenu === 'function') toggleFooterMenu(false);
+                }
             }
 
             if (footerAnchor && 'IntersectionObserver' in window) {

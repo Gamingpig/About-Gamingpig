@@ -37,20 +37,27 @@ window.generateShareCard = function() {
 
             if (typeof showToast === 'function') showToast(t('toast_sharecard_creating'));
 
-            const proceed = (artImg) => downloadSharecardDesign(SHARECARD_DESIGNS[0], artImg, title, artist);
+            let proceeded = false;
+            const proceed = (artImg) => {
+                if (proceeded) return;
+                proceeded = true;
+                downloadSharecardDesign(SHARECARD_DESIGNS[0], artImg, title, artist);
+            };
 
             if (artSrc && !artSrc.startsWith('data:')) {
                 const img = new Image();
                 img.crossOrigin = 'anonymous';
-                img.onload = () => proceed(img);
-                img.onerror = () => proceed(null);
+                // Timeout-Sicherung: Sollte das Covernetzwerk hängen, exportiere nach 1200ms zuverlässig
+                const timer = setTimeout(() => proceed(null), 1200);
+                img.onload = () => { clearTimeout(timer); proceed(img); };
+                img.onerror = () => { clearTimeout(timer); proceed(null); };
                 img.src = artSrc;
             } else {
                 proceed(null);
             }
         };
 
-        // NEW: Vier Share-Card-Designs zur Auswahl, statt nur einem festen Layout.
+        // NEW: Vierzehn Share-Card-Designs zur Auswahl.
         const SHARECARD_DESIGNS = [
             { id: 'classic', label: 'Classic', draw: drawShareCardClassic },
             { id: 'minimal', label: 'Minimal', draw: drawShareCardMinimal },
@@ -101,22 +108,89 @@ window.generateShareCard = function() {
 
         function downloadSharecardDesign(design, artImg, title, artist) {
             try {
-                haptic(10);
+                if (typeof haptic === 'function') haptic(10);
                 const W = 720, H = 960;
                 const canvas = document.createElement('canvas');
                 canvas.width = W; canvas.height = H;
                 const ctx = canvas.getContext('2d');
-                design.draw(ctx, W, H, artImg, title, artist);
+                
+                try {
+                    design.draw(ctx, W, H, artImg, title, artist);
+                    // CORS-Test: Verhindert stillschweigende SecurityErrors beim Export
+                    canvas.toDataURL('image/png');
+                } catch (taintErr) {
+                    ctx.clearRect(0, 0, W, H);
+                    design.draw(ctx, W, H, null, title, artist);
+                    if (typeof showToast === 'function') showToast(t('toast_sharecard_cors'));
+                }
 
-                const dataUrl = canvas.toDataURL('image/png');
-                const a = document.createElement('a');
-                a.href = dataUrl;
-                a.download = 'now-playing-gamingpig-' + design.id + '.png';
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
-                closeSharecardPicker();
-                if (typeof showToast === 'function') showToast(t('toast_sharecard_saved'));
+                const filename = 'now-playing-gamingpig-' + design.id + '.png';
+
+                const finishExport = (saved = true) => {
+                    closeSharecardPicker();
+                    if (saved && typeof showToast === 'function') {
+                        showToast(t('toast_sharecard_saved') || 'Share Card gespeichert! 🎴');
+                    }
+                };
+
+                const fallbackDownload = (blob) => {
+                    if (blob && typeof URL !== 'undefined' && URL.createObjectURL) {
+                        const blobUrl = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = blobUrl;
+                        a.download = filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        setTimeout(() => {
+                            a.remove();
+                            URL.revokeObjectURL(blobUrl);
+                        }, 3000);
+                        finishExport(true);
+                    } else {
+                        const dataUrl = canvas.toDataURL('image/png');
+                        const a = document.createElement('a');
+                        a.href = dataUrl;
+                        a.download = filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        finishExport(true);
+                    }
+                };
+
+                // Web Share API mit File-Support: Auf Android/Pixel direkt in Google Fotos oder Speicher ablegen
+                if (canvas.toBlob) {
+                    canvas.toBlob(async (blob) => {
+                        if (!blob) {
+                            fallbackDownload(null);
+                            return;
+                        }
+
+                        if (typeof navigator !== 'undefined' && navigator.canShare && typeof File !== 'undefined') {
+                            try {
+                                const file = new File([blob], filename, { type: 'image/png' });
+                                if (navigator.canShare({ files: [file] })) {
+                                    await navigator.share({
+                                        files: [file],
+                                        title: 'Gamingpig Now Playing',
+                                        text: `${title} - ${artist}`
+                                    });
+                                    finishExport(true);
+                                    return;
+                                }
+                            } catch (shareErr) {
+                                if (shareErr && shareErr.name === 'AbortError') {
+                                    closeSharecardPicker();
+                                    return;
+                                }
+                            }
+                        }
+
+                        fallbackDownload(blob);
+                    }, 'image/png');
+                } else {
+                    fallbackDownload(null);
+                }
             } catch (err) {
                 if (typeof showToast === 'function') showToast(t('toast_sharecard_cors'));
             }
