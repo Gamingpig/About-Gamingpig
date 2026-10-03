@@ -9,6 +9,10 @@
     [BUGFIX] oder [PERFORMANCE] oder [FEATURE] als Tag, dann kurz
     Symptom/Ziel, Ursache, Fix, und der beobachtbare Effekt.
     Neueste Einträge oben.
+    [PERFORMANCE - KRITISCH] Release v24.198.0: Google Pixel & Android GPU-Thermal-Fix (Entkopplung von Liquid Glass, Beseitigung aller 28 Backdrop-Filter auf mobilen Karten, Partikel-Pausierung)
+      - Ursache: Die Android-Schutzregeln (backdrop-filter: none auf allen .glass-card) waren an body.liquid-glass-active gekoppelt. Da Liquid Glass in v24.193.0 deaktiviert wurde, griffen diese Regeln nie: Alle 28 Karten fielen auf den 16px Blur zurück, was Tensor-GPUs permanent überhitzte.
+      - Fix: Android/Mobile-Regeln universalisiert (:is(html.gp-android, html.gp-mobile)). Karten erhalten nun performante Translucent-Gradients ohne GPU-Overdraw.
+      - Batterie & Partikel: .particle und #particles-container im battery-chill-Modus pausiert.
     [BUGFIX - KRITISCH] Release v24.197.1: Reload-Bug behoben (Endlosschleife & ungefragte Auto-Reloads durch interaktiven Update-Prompt ersetzt, Versionsmismatch beseitigt)
       - Root-Cause: Versionsmismatch zwischen index.html (v24.196.0) und version.json (v24.197.0) triggerte 3 Sekunden nach dem Laden pollVersion() -> triggerAutoUpdate() -> window.location.reload() in Dauerschleife.
       - Zusätzliche Ursache: Ungefilterter doppelter controllerchange-Listener & unkonditionierter SW_UPDATED Message-Handler riefen bei jeder Service-Worker-Übernahme (auch Erstbesuch) window.location.reload() auf.
@@ -3278,7 +3282,7 @@
             AppStorage.setItem('app_visit_count', String(_visitCount));
 
             // 🛡️ INSTANT ONBOARDING SHIELD
-            const _currVer = window.ONBOARDING_VERSION = 'v24.197.1 · 2026-10-02';
+            const _currVer = window.ONBOARDING_VERSION = 'v24.198.0 · 2026-10-03';
             const _installedVer = AppStorage.getItem('site_version_installed');
             if (_installedVer !== _currVer) {
                 AppStorage.setItem('site_version_installed', _currVer);
@@ -3784,7 +3788,9 @@ html:not(.dark) #global-settings-menu input[type="range"] {
         body.battery-chill .blob-container,
         body.battery-chill .blob,
         body.battery-chill .mesh-gradient::before,
-        body.battery-chill .mesh-gradient::after {
+        body.battery-chill .mesh-gradient::after,
+        body.battery-chill #particles-container,
+        body.battery-chill .particle {
             animation-play-state: paused !important;
         }
 
@@ -4306,8 +4312,8 @@ body.liquid-glass-active :is(.glass-card, #header-section, #footer-bubble, #foot
     pointer-events: none;
 }
 
-html.gp-android body.liquid-glass-active :is(.glass-card, #header-section, #footer-bubble, #footer-expandable-menu)::before { display: none !important; }
-html.gp-android body.liquid-glass-active :is(.glass-card:not(#back-to-top), #header-section, #footer-bubble, #footer-expandable-menu)::after { display: none !important; }
+:is(html.gp-android, html.gp-mobile) :is(.glass-card, #header-section, #footer-bubble, #footer-expandable-menu)::before { display: none !important; }
+:is(html.gp-android, html.gp-mobile) :is(.glass-card:not(#back-to-top), #header-section, #footer-bubble, #footer-expandable-menu)::after { display: none !important; }
 
 .dark body.liquid-glass-active :is(.glass-card, #header-section, #footer-bubble, #footer-expandable-menu)::before {
     background: radial-gradient(
@@ -7587,7 +7593,7 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
    ========================================================= */
 
 /* --- 1. Android safe glass: authentic translucent frosted glass (kein teurer GPU-Liveblur auf Karten) --- */
-html.gp-android body.liquid-glass-active .glass-card:not(#back-to-top) {
+:is(html.gp-android, html.gp-mobile) .glass-card:not(#back-to-top) {
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(30, 41, 59, 0.72) 40%, rgba(15, 23, 42, 0.82) 100%) !important;
@@ -7595,7 +7601,7 @@ html.gp-android body.liquid-glass-active .glass-card:not(#back-to-top) {
   border-top: 1.5px solid rgba(255, 255, 255, 0.40) !important;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45) !important;
 }
-html.gp-android:not(.dark) body.liquid-glass-active .glass-card:not(#back-to-top) {
+:is(html.gp-android, html.gp-mobile):not(.dark) .glass-card:not(#back-to-top) {
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.88) 0%, rgba(241, 245, 249, 0.80) 100%) !important;
@@ -7605,7 +7611,7 @@ html.gp-android:not(.dark) body.liquid-glass-active .glass-card:not(#back-to-top
 }
 
 /* Floating Overlays: dezenter, hardware-schonender 8px Blur nur für schwebende Leisten */
-html.gp-android body.liquid-glass-active :is(#header-section, #footer-bubble, #footer-expandable-menu, #dynamic-island) {
+:is(html.gp-android, html.gp-mobile) :is(#header-section, #footer-bubble, #footer-expandable-menu, #dynamic-island) {
   -webkit-backdrop-filter: blur(8px) saturate(130%) !important;
   backdrop-filter: blur(8px) saturate(130%) !important;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.10) 0%, rgba(30, 41, 59, 0.78) 40%, rgba(15, 23, 42, 0.88) 100%) !important;
@@ -7613,7 +7619,7 @@ html.gp-android body.liquid-glass-active :is(#header-section, #footer-bubble, #f
   border-top: 1.5px solid rgba(255, 255, 255, 0.45) !important;
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5) !important;
 }
-html.gp-android:not(.dark) body.liquid-glass-active :is(#header-section, #footer-bubble, #footer-expandable-menu, #dynamic-island) {
+:is(html.gp-android, html.gp-mobile):not(.dark) :is(#header-section, #footer-bubble, #footer-expandable-menu, #dynamic-island) {
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.85) 0%, rgba(241, 245, 249, 0.80) 100%) !important;
   border: 1px solid rgba(0, 0, 0, 0.08) !important;
   border-top: 1.5px solid rgba(255, 255, 255, 0.90) !important;
@@ -7621,7 +7627,7 @@ html.gp-android:not(.dark) body.liquid-glass-active :is(#header-section, #footer
 }
 
 /* Large glass surfaces (Modals & Panels): GPU-schonender 8px Blur */
-html.gp-android body.liquid-glass-active :is(
+:is(html.gp-android, html.gp-mobile) :is(
   #main-music-card, #mini-player-toggle, .modal-content,
   #tutorial-box, #language-picker-box, #sharecard-picker-box, #command-palette,
   #whats-new-epic-modal>div, #privacy-update-modal>div, #interactive-quest-hud>div,
@@ -7634,7 +7640,7 @@ html.gp-android body.liquid-glass-active :is(
   border-top: 1.5px solid rgba(255, 255, 255, 0.45) !important;
   box-shadow: 0 16px 44px rgba(0, 0, 0, 0.55), inset 0 1px 1px rgba(255, 255, 255, 0.20) !important;
 }
-html.gp-android:not(.dark) body.liquid-glass-active :is(
+:is(html.gp-android, html.gp-mobile):not(.dark) :is(
   #main-music-card, #mini-player-toggle, .modal-content,
   #tutorial-box, #language-picker-box, #sharecard-picker-box, #command-palette,
   #whats-new-epic-modal>div, #privacy-update-modal>div, #interactive-quest-hud>div,
@@ -7647,21 +7653,21 @@ html.gp-android:not(.dark) body.liquid-glass-active :is(
 }
 
 /* --- 2. Double-ID overrides for glass shells --- */
-html.gp-android body.liquid-glass-active #main-music-card#main-music-card,
-html.gp-android body.liquid-glass-active #mini-player-toggle#mini-player-toggle,
-html.gp-android body.liquid-glass-active #tutorial-box#tutorial-box,
-html.gp-android body.liquid-glass-active #command-palette#command-palette,
-html.gp-android body.liquid-glass-active #dynamic-island#dynamic-island,
-html.gp-android body.liquid-glass-active #footer-bubble#footer-bubble,
-html.gp-android body.liquid-glass-active #footer-expandable-menu#footer-expandable-menu,
-html.gp-android body.liquid-glass-active #header-section#header-section {
+:is(html.gp-android, html.gp-mobile) #main-music-card#main-music-card,
+:is(html.gp-android, html.gp-mobile) #mini-player-toggle#mini-player-toggle,
+:is(html.gp-android, html.gp-mobile) #tutorial-box#tutorial-box,
+:is(html.gp-android, html.gp-mobile) #command-palette#command-palette,
+:is(html.gp-android, html.gp-mobile) #dynamic-island#dynamic-island,
+:is(html.gp-android, html.gp-mobile) #footer-bubble#footer-bubble,
+:is(html.gp-android, html.gp-mobile) #footer-expandable-menu#footer-expandable-menu,
+:is(html.gp-android, html.gp-mobile) #header-section#header-section {
   -webkit-backdrop-filter: blur(8px) saturate(130%) !important;
   backdrop-filter: blur(8px) saturate(130%) !important;
 }
 
 /* Settings menus on Android in Liquid Glass: Authentic translucent mobile frosted glass */
-html.gp-android body.liquid-glass-active #global-settings-menu#global-settings-menu,
-html.gp-android body.liquid-glass-active #lyrics-settings-menu#lyrics-settings-menu {
+:is(html.gp-android, html.gp-mobile) #global-settings-menu#global-settings-menu,
+:is(html.gp-android, html.gp-mobile) #lyrics-settings-menu#lyrics-settings-menu {
   background-color: transparent !important;
   background: linear-gradient(
     135deg,
@@ -7677,8 +7683,8 @@ html.gp-android body.liquid-glass-active #lyrics-settings-menu#lyrics-settings-m
   isolation: isolate !important;
 }
 
-html.gp-android:not(.dark) body.liquid-glass-active #global-settings-menu#global-settings-menu,
-html.gp-android:not(.dark) body.liquid-glass-active #lyrics-settings-menu#lyrics-settings-menu {
+:is(html.gp-android, html.gp-mobile):not(.dark) #global-settings-menu#global-settings-menu,
+:is(html.gp-android, html.gp-mobile):not(.dark) #lyrics-settings-menu#lyrics-settings-menu {
   background-color: transparent !important;
   background: linear-gradient(
     135deg,
@@ -7693,7 +7699,7 @@ html.gp-android:not(.dark) body.liquid-glass-active #lyrics-settings-menu#lyrics
 }
 
 /* --- 3. Footer: authentic translucent frosted glass + tuned blur --- */
-html.gp-android #footer-bubble {
+:is(html.gp-android, html.gp-mobile) #footer-bubble {
   -webkit-backdrop-filter: blur(12px) saturate(140%) !important;
   backdrop-filter: blur(12px) saturate(140%) !important;
   background: linear-gradient(135deg, rgba(30, 41, 59, 0.75) 0%, rgba(15, 23, 42, 0.82) 100%) !important;
@@ -7701,11 +7707,11 @@ html.gp-android #footer-bubble {
   border-top: 1.5px solid rgba(255, 255, 255, 0.40) !important;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6) !important;
 }
-html.gp-android:not(.dark) #footer-bubble {
+:is(html.gp-android, html.gp-mobile):not(.dark) #footer-bubble {
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.78) 0%, rgba(241, 245, 249, 0.72) 100%) !important;
   border-top: 1.5px solid rgba(255, 255, 255, 0.90) !important;
 }
-html.gp-android #footer-expandable-menu {
+:is(html.gp-android, html.gp-mobile) #footer-expandable-menu {
   -webkit-backdrop-filter: blur(12px) saturate(140%) !important;
   backdrop-filter: blur(12px) saturate(140%) !important;
   background: linear-gradient(135deg, rgba(30, 41, 59, 0.75) 0%, rgba(15, 23, 42, 0.82) 100%) !important;
@@ -7713,19 +7719,19 @@ html.gp-android #footer-expandable-menu {
   border-top: 1.5px solid rgba(255, 255, 255, 0.45) !important;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.75) !important;
 }
-html.gp-android:not(.dark) #footer-expandable-menu {
+:is(html.gp-android, html.gp-mobile):not(.dark) #footer-expandable-menu {
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.78) 0%, rgba(241, 245, 249, 0.72) 100%) !important;
   border-top: 1.5px solid rgba(255, 255, 255, 0.90) !important;
 }
 
 /* Ensure all elements inside settings menus on Android are visible */
-html.gp-android #global-settings-menu *,
-html.gp-android #lyrics-settings-menu * {
+:is(html.gp-android, html.gp-mobile) #global-settings-menu *,
+:is(html.gp-android, html.gp-mobile) #lyrics-settings-menu * {
   visibility: visible !important;
 }
 
 /* --- 4b. Inner elements: NO backdrop-filter, translucent glass styling without nested blur --- */
-html.gp-android body.liquid-glass-active :is(#global-settings-menu#global-settings-menu, #lyrics-settings-menu#lyrics-settings-menu) :is(
+:is(html.gp-android, html.gp-mobile) :is(#global-settings-menu#global-settings-menu, #lyrics-settings-menu#lyrics-settings-menu) :is(
   select, button, .grid button, .lyrics-dim-btn:not(.active), #tts-speed-menu-lyrics, .bg-slate-800\/50, .bg-slate-800\/80, .bg-slate-800, fieldset
 ) {
   -webkit-backdrop-filter: none !important;
@@ -7735,7 +7741,7 @@ html.gp-android body.liquid-glass-active :is(#global-settings-menu#global-settin
   border: 1px solid rgba(255, 255, 255, 0.14) !important;
   border-top: 1px solid rgba(255, 255, 255, 0.28) !important;
 }
-html.gp-android:not(.dark) body.liquid-glass-active :is(#global-settings-menu#global-settings-menu, #lyrics-settings-menu#lyrics-settings-menu) :is(
+:is(html.gp-android, html.gp-mobile):not(.dark) :is(#global-settings-menu#global-settings-menu, #lyrics-settings-menu#lyrics-settings-menu) :is(
   select, button, .grid button, .lyrics-dim-btn:not(.active), #tts-speed-menu-lyrics, .bg-slate-800\/50, .bg-slate-800\/80, .bg-slate-800, fieldset
 ) {
   background: rgba(255, 255, 255, 0.65) !important;
@@ -7744,13 +7750,13 @@ html.gp-android:not(.dark) body.liquid-glass-active :is(#global-settings-menu#gl
   border-top: 1px solid rgba(255, 255, 255, 0.85) !important;
 }
 
-html.gp-android body.liquid-glass-active #lyrics-settings-menu#lyrics-settings-menu #label-animation-style {
+:is(html.gp-android, html.gp-mobile) #lyrics-settings-menu#lyrics-settings-menu #label-animation-style {
   background: rgba(15, 23, 42, 0.95) !important;
   color: #94a3b8 !important;
 }
 
 /* Active dim button — tinted blue, no blur */
-html.gp-android body.liquid-glass-active #lyrics-settings-menu#lyrics-settings-menu .lyrics-dim-btn.active {
+:is(html.gp-android, html.gp-mobile) #lyrics-settings-menu#lyrics-settings-menu .lyrics-dim-btn.active {
   background: #2563eb !important;
   color: #ffffff !important;
   border: 1px solid rgba(147, 197, 253, 0.8) !important;
@@ -7760,52 +7766,52 @@ html.gp-android body.liquid-glass-active #lyrics-settings-menu#lyrics-settings-m
 }
 
 /* Select options stay solid for readability */
-html.gp-android #lyrics-settings-menu select option,
-html.gp-android #global-settings-menu select option {
+:is(html.gp-android, html.gp-mobile) #lyrics-settings-menu select option,
+:is(html.gp-android, html.gp-mobile) #global-settings-menu select option {
   background: #0f172a !important;
   color: #ffffff !important;
 }
 
 /* Preview box — dark solid, no blur */
-html.gp-android #lyrics-settings-menu #lyrics-style-preview-box {
+:is(html.gp-android, html.gp-mobile) #lyrics-settings-menu #lyrics-style-preview-box {
   background: #020617 !important;
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
 }
 
 /* --- 5. Header: authentic translucent frosted glass + tuned blur --- */
-html.gp-android body.liquid-glass-active #header-section {
+:is(html.gp-android, html.gp-mobile) #header-section {
   -webkit-backdrop-filter: blur(12px) saturate(140%) !important;
   backdrop-filter: blur(12px) saturate(140%) !important;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.10) 0%, rgba(30, 41, 59, 0.58) 40%, rgba(15, 23, 42, 0.68) 100%) !important;
   border: 1px solid rgba(255, 255, 255, 0.14) !important;
   border-top: 1.5px solid rgba(255, 255, 255, 0.40) !important;
 }
-html.gp-android:not(.dark) body.liquid-glass-active #header-section {
+:is(html.gp-android, html.gp-mobile):not(.dark) #header-section {
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.75) 0%, rgba(241, 245, 249, 0.64) 100%) !important;
   border-top: 1.5px solid rgba(255, 255, 255, 0.90) !important;
 }
 
 /* --- 6. CP trigger: solid frosted glass + tuned blur --- */
-html.gp-android body.liquid-glass-active #cp-trigger {
+:is(html.gp-android, html.gp-mobile) #cp-trigger {
   -webkit-backdrop-filter: blur(8px) saturate(130%) !important;
   backdrop-filter: blur(8px) saturate(130%) !important;
   background: rgba(30, 41, 59, 0.88) !important;
   border: 1px solid rgba(255, 255, 255, 0.14) !important;
   border-top: 1.5px solid rgba(255, 255, 255, 0.35) !important;
 }
-html.gp-android:not(.dark) body.liquid-glass-active #cp-trigger {
+:is(html.gp-android, html.gp-mobile):not(.dark) #cp-trigger {
   background: rgba(255, 255, 255, 0.92) !important;
   border: 1px solid rgba(0, 0, 0, 0.08) !important;
   border-top: 1.5px solid rgba(255, 255, 255, 0.85) !important;
 }
 
 /* --- Android GPU Background Isolation: eliminates layer thrashing, GPU heat & compositor flickering --- */
-html.gp-android .blob-container,
-html.gp-android .blob,
-html.gp-android .mesh-gradient,
-html.gp-android .mesh-gradient::before,
-html.gp-android .mesh-gradient::after {
+:is(html.gp-android, html.gp-mobile) .blob-container,
+:is(html.gp-android, html.gp-mobile) .blob,
+:is(html.gp-android, html.gp-mobile) .mesh-gradient,
+:is(html.gp-android, html.gp-mobile) .mesh-gradient::before,
+:is(html.gp-android, html.gp-mobile) .mesh-gradient::after {
   contain: strict;
   will-change: auto !important;
   animation-play-state: paused !important;
@@ -7814,11 +7820,11 @@ html.gp-android .mesh-gradient::after {
 
 /* --- 7. Disable glass pseudo-element overlays on Android --- */
 /* mix-blend-mode, mask-composite, SVG filters cause rendering failures */
-html.gp-android :is(
+:is(html.gp-android, html.gp-mobile) :is(
   .glass-card, #header-section, #footer-bubble,
   #footer-expandable-menu, #main-music-card, #mini-player-toggle, .modal-content
 )::before,
-html.gp-android :is(
+:is(html.gp-android, html.gp-mobile) :is(
   .glass-card, #header-section, #footer-bubble,
   #footer-expandable-menu, #main-music-card, #mini-player-toggle, .modal-content
 )::after {
@@ -7887,7 +7893,7 @@ html.gp-android-lowend:not(.dark) :is(
 html.gp-android-lowend .mesh-gradient { display: none !important; }
 
 /* --- 10. will-change cleanup --- */
-html.gp-android :is(
+:is(html.gp-android, html.gp-mobile) :is(
   .glass-card, #header-section, #footer-bubble, #footer-expandable-menu,
   #main-music-card, #mini-player-toggle, .modal-content, #global-settings-menu
 ) {
@@ -7895,24 +7901,24 @@ html.gp-android :is(
 }
 
 /* --- 11. content-visibility fix --- */
-html.gp-android .glass-card {
+:is(html.gp-android, html.gp-mobile) .glass-card {
   content-visibility: visible !important;
 }
 
 /* --- 12. Standby-mode safety --- */
-html.gp-android body.standby-mode :is(#standby-bg, #standby-overlay, #standby-nowplaying) {
+:is(html.gp-android, html.gp-mobile) body.standby-mode :is(#standby-bg, #standby-overlay, #standby-nowplaying) {
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
 }
 
-/* --- 13. Tailwind backdrop-blur-* disabled on Android (replaced by shell blur) --- */
-html.gp-android .backdrop-blur,
-html.gp-android .backdrop-blur-sm,
-html.gp-android .backdrop-blur-md,
-html.gp-android .backdrop-blur-lg,
-html.gp-android .backdrop-blur-xl,
-html.gp-android .backdrop-blur-2xl,
-html.gp-android .backdrop-blur-3xl {
+/* --- 13. Tailwind backdrop-blur-* disabled on Android & mobile (replaced by shell blur) --- */
+:is(html.gp-android, html.gp-mobile) .backdrop-blur,
+:is(html.gp-android, html.gp-mobile) .backdrop-blur-sm,
+:is(html.gp-android, html.gp-mobile) .backdrop-blur-md,
+:is(html.gp-android, html.gp-mobile) .backdrop-blur-lg,
+:is(html.gp-android, html.gp-mobile) .backdrop-blur-xl,
+:is(html.gp-android, html.gp-mobile) .backdrop-blur-2xl,
+:is(html.gp-android, html.gp-mobile) .backdrop-blur-3xl {
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
 }
@@ -8122,7 +8128,7 @@ html.gp-android:not(.dark) #ui-controls {
     <div id="footer-expandable-menu" class="hidden fixed z-[95] p-3.5 rounded-2xl bg-slate-900/95 border border-slate-700/80 shadow-2xl backdrop-blur-xl w-[315px] xxs:w-[340px] sm:w-[370px] max-w-[calc(100vw-1.5rem)] text-xs space-y-2.5" onclick="event.stopPropagation()">
         <div class="flex items-center justify-between px-1 pb-1.5 border-b border-white/10 gap-2">
             <span id="footer-menu-title" data-i18n="footer_menu_title" class="font-bold text-slate-400 text-[10px] uppercase tracking-wider truncate">Navigation &amp; Rechtliches</span>
-            <span id="footer-menu-hint" class="text-[9px] text-pink-400 font-mono font-bold shrink-0 whitespace-nowrap">v24.197.1</span>
+            <span id="footer-menu-hint" class="text-[9px] text-pink-400 font-mono font-bold shrink-0 whitespace-nowrap">v24.198.0</span>
         </div>
         <div class="grid grid-cols-2 gap-2 text-left">
             <button onclick="openEpicWhatsNewTour(false); toggleFooterMenu(false)" id="footer-whats-new-btn" class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/90 text-slate-200 hover:text-white font-medium flex items-center gap-2 transition-all active:scale-[0.98]">
@@ -8156,7 +8162,7 @@ html.gp-android:not(.dark) #ui-controls {
     <div id="footer-bubble" class="fixed z-[91] inline-flex items-center justify-center gap-1.5 sm:gap-3 px-3 sm:px-6 rounded-full bg-slate-900/85 backdrop-blur-xl border border-white/15 shadow-xl text-[10px] xs:text-xs sm:text-sm text-slate-300 transition-all select-none opacity-0 pointer-events-none">
         <span id="footer-established" class="font-bold tracking-tight text-slate-300 whitespace-nowrap">© 2026 GAMINGPIG</span>
         <span class="text-white/20 select-none">•</span>
-        <span id="footer-version-label" class="font-mono font-bold text-pink-400 whitespace-nowrap">v24.197.1</span>
+        <span id="footer-version-label" class="font-mono font-bold text-pink-400 whitespace-nowrap">v24.198.0</span>
         <span class="text-white/20 select-none">•</span>
         <button id="footer-menu-toggle-btn" onclick="toggleFooterMenu()" class="text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1 sm:gap-1.5 transition-all px-1.5 sm:px-2 py-1 rounded-full hover:bg-white/10 active:scale-95 whitespace-nowrap" aria-expanded="false" aria-label="Mehr Menü öffnen">
             <span id="footer-more-label">Mehr</span>
@@ -16717,6 +16723,33 @@ let shareCardLoading;
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+    { version: "v24.198.0", date: "3. Oktober 2026", type: "performance", items: {
+        de: [
+            "❄️ Pixel & Android Thermal-Fix: Überhitzung und Akkuverbrauch auf Google Pixel und Android-Geräten dauerhaft behoben",
+            "⚡ GPU-Entlastung: Backdrop-Filter auf allen Karten durch ressourcenschonende Glasverläufe ersetzt",
+            "🔋 Battery Chill 2.0: Partikel- und Hintergrundberechnungen auf Mobilgeräten vollständig beruhigt"
+        ],
+        en: [
+            "❄️ Pixel & Android Thermal Fix: Eliminated excessive GPU heating and battery drain on Google Pixel & Android devices",
+            "⚡ GPU Relief: Replaced heavy live backdrop-filters on all mobile cards with lightweight hardware-accelerated gradients",
+            "🔋 Battery Chill 2.0: Background particles and animations fully calmed on mobile devices"
+        ],
+        es: [
+            "❄️ Corrección térmica Pixel y Android: Solucionado el sobrecalentamiento y consumo de batería",
+            "⚡ Alivio de GPU: Filtros pesados reemplazados por degradados optimizados en móviles",
+            "🔋 Ahorro de batería 2.0: Partículas y animaciones pausadas de forma eficiente"
+        ],
+        fr: [
+            "❄️ Correctif thermique Pixel et Android : Fin de la surchauffe et réduction de la consommation de batterie",
+            "⚡ Soulagement GPU : Remplacement des flous lourds par des dégradés légers et fluides",
+            "🔋 Battery Chill 2.0 : Particules et arrière-plans en pause sur mobile"
+        ],
+        it: [
+            "❄️ Correzione termica Pixel e Android: Eliminato il surriscaldamento e consumo batteria",
+            "⚡ Sollievo GPU: Sostituiti i filtri pesanti con gradienti leggeri",
+            "🔋 Battery Chill 2.0: Particelle e animazioni in background ottimizzate"
+        ]
+    }},
     { version: "v24.197.1", date: "2. Oktober 2026", type: "fix", items: {
         de: [
             "🔄 Reload-Bug behoben: Endlosschleife und ungefragte automatische Seiten-Reloads vollständig eliminiert",
