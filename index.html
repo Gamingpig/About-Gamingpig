@@ -8,8 +8,7 @@
     Änderung bitte hier oben einen neuen Eintrag ergänzen:
     [BUGFIX] oder [PERFORMANCE] oder [FEATURE] als Tag, dann kurz
     Symptom/Ziel, Ursache, Fix, und der beobachtbare Effekt.
-    Neueste Einträge oben.
-    [BUGFIX / PERFORMANCE / UI] Release v24.201.0: KI-Hinweis Entfernung, Suchbutton Textfarbe (Light Mode), Liquid Glass Transluzenz & Mobile Playback Entlastung
+    [FEATURE / CLEANUP / I18N] Release v24.202.0: Vorlese-Funktion in 'Was ist neu', Entfernung von 'Lebendiges Design', Mehrsprachige Einstellungen & Dialoge
       - Veralteter KI-Hinweis entfernt:
         Der blockierende 2-Minuten-Dialog (#ai-version-notice, Version 24.159.0) und dessen Settings-Schalter wurden restlos entfernt. Altspeicher-Keys werden beim Laden neutralisiert.
       - Spotlight-Suchbutton (#cp-trigger) im Light Mode korrigiert:
@@ -3335,7 +3334,7 @@
             AppStorage.setItem('app_visit_count', String(_visitCount));
 
             // 🛡️ INSTANT ONBOARDING SHIELD
-            const _currVer = window.ONBOARDING_VERSION = 'v24.201.0 · 2026-10-05';
+            const _currVer = window.ONBOARDING_VERSION = 'v24.202.0 · 2026-10-05';
             const _installedVer = AppStorage.getItem('site_version_installed');
             if (_installedVer !== _currVer) {
                 AppStorage.setItem('site_version_installed', _currVer);
@@ -4755,7 +4754,7 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
 
         /* Inner Cards, Fieldsets & Containers */
         :is(#global-settings-menu, #lyrics-settings-menu) :is(
-            .bg-slate-800\/40, .bg-slate-800\/50, .bg-slate-800\/80, .bg-slate-800, fieldset, #living-settings
+            .bg-slate-800\/40, .bg-slate-800\/50, .bg-slate-800\/80, .bg-slate-800, fieldset
         ) {
             -webkit-backdrop-filter: none !important;
             backdrop-filter: none !important;
@@ -4766,7 +4765,7 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
             color: #f1f5f9 !important;
         }
         html:not(.dark) :is(#global-settings-menu, #lyrics-settings-menu) :is(
-            .bg-slate-800\/40, .bg-slate-800\/50, .bg-slate-800\/80, .bg-slate-800, fieldset, #living-settings
+            .bg-slate-800\/40, .bg-slate-800\/50, .bg-slate-800\/80, .bg-slate-800, fieldset
         ) {
             background: rgba(241, 245, 249, 0.90) !important;
             color: #0f172a !important;
@@ -7649,7 +7648,6 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
             } catch (e) {}
         })();
 </script>
-<link rel="stylesheet" href="assets/living-design.4e423a2a90529272.css">
 
 <style>
 /* =========================================================
@@ -8101,8 +8099,11 @@ html.gp-android:not(.dark) #ui-controls {
     </svg>
 
     <script>
-    // Clean up obsolete legacy AI notice storage key if present
-    try { AppStorage.removeItem('gp_ai_notice_v1'); localStorage.removeItem('gp_ai_notice_v1'); } catch (_) {}
+    // Clean up obsolete legacy storage keys if present
+    try {
+        AppStorage.removeItem('gp_ai_notice_v1'); localStorage.removeItem('gp_ai_notice_v1');
+        AppStorage.removeItem('gp_living_design_v1'); localStorage.removeItem('gp_living_design_v1');
+    } catch (_) {}
     </script>
 
     <!-- TRANSPARENTER & UNUMGÄNGLICHER DATENSCHUTZ-AKTUALISIERUNGS-HINWEIS -->
@@ -8125,7 +8126,13 @@ html.gp-android:not(.dark) #ui-controls {
                     <h2 id="whats-new-modal-title" class="text-base sm:text-lg font-bold text-white tracking-tight">Was ist neu?</h2>
                 </div>
             </div>
-            <button onclick="closeEpicWhatsNewTour()" class="w-8 h-8 flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors text-xs font-semibold" aria-label="Schließen">✕</button>
+            <div class="flex items-center gap-2">
+                <button onclick="speakEpicWhatsNew(this)" id="btn-speak-whatsnew" aria-label="Vorlesen" title="Vorlesen" class="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition-all text-xs font-semibold flex items-center gap-1.5 border border-white/10 active:scale-95">
+                    <span id="btn-speak-whatsnew-icon">🔊</span>
+                    <span id="btn-speak-whatsnew-text">Vorlesen</span>
+                </button>
+                <button onclick="closeEpicWhatsNewTour()" class="w-8 h-8 flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors text-xs font-semibold" aria-label="Schließen">✕</button>
+            </div>
         </div>
 
         <!-- Slide Stage / Changelog View -->
@@ -8197,7 +8204,7 @@ html.gp-android:not(.dark) #ui-controls {
     <div id="footer-expandable-menu" class="hidden fixed z-[95] p-3.5 rounded-2xl bg-slate-900/95 border border-slate-700/80 shadow-2xl backdrop-blur-xl w-[315px] xxs:w-[340px] sm:w-[370px] max-w-[calc(100vw-1.5rem)] text-xs space-y-2.5" onclick="event.stopPropagation()">
         <div class="flex items-center justify-between px-1 pb-1.5 border-b border-white/10 gap-2">
             <span id="footer-menu-title" data-i18n="footer_menu_title" class="font-bold text-slate-400 text-[10px] uppercase tracking-wider truncate">Navigation &amp; Rechtliches</span>
-            <span id="footer-menu-hint" class="text-[9px] text-pink-400 font-mono font-bold shrink-0 whitespace-nowrap">v24.201.0</span>
+            <span id="footer-menu-hint" class="text-[9px] text-pink-400 font-mono font-bold shrink-0 whitespace-nowrap">v24.202.0</span>
         </div>
         <div class="grid grid-cols-2 gap-2 text-left">
             <button onclick="openEpicWhatsNewTour(false); toggleFooterMenu(false)" id="footer-whats-new-btn" class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/90 text-slate-200 hover:text-white font-medium flex items-center gap-2 transition-all active:scale-[0.98]">
@@ -8231,7 +8238,7 @@ html.gp-android:not(.dark) #ui-controls {
     <div id="footer-bubble" class="fixed z-[91] inline-flex items-center justify-center gap-1.5 sm:gap-3 px-3 sm:px-6 rounded-full bg-slate-900/85 backdrop-blur-xl border border-white/15 shadow-xl text-[10px] xs:text-xs sm:text-sm text-slate-300 transition-all select-none opacity-0 pointer-events-none">
         <span id="footer-established" class="font-bold tracking-tight text-slate-300 whitespace-nowrap">© 2026 GAMINGPIG</span>
         <span class="text-white/20 select-none">•</span>
-        <span id="footer-version-label" class="font-mono font-bold text-pink-400 whitespace-nowrap">v24.201.0</span>
+        <span id="footer-version-label" class="font-mono font-bold text-pink-400 whitespace-nowrap">v24.202.0</span>
         <span class="text-white/20 select-none">•</span>
         <button id="footer-menu-toggle-btn" onclick="toggleFooterMenu()" class="text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1 sm:gap-1.5 transition-all px-1.5 sm:px-2 py-1 rounded-full hover:bg-white/10 active:scale-95 whitespace-nowrap" aria-expanded="false" aria-label="Mehr Menü öffnen">
             <span id="footer-more-label">Mehr</span>
@@ -9464,18 +9471,11 @@ html.gp-android:not(.dark) #ui-controls {
 <div id="global-settings-menu" class="fixed top-[calc(env(safe-area-inset-top,0px)+4.5rem)] right-3 sm:right-5 bg-[#0f172a] border border-slate-700/80 rounded-2xl p-2.5 xxs:p-3 sm:p-3.5 shadow-2xl hidden flex flex-col gap-2 w-[295px] xxs:w-[325px] sm:w-[355px] max-w-[calc(100vw-1.5rem)] z-[10000] origin-top-right max-h-[85vh] overflow-y-auto" style="-webkit-overflow-scrolling: touch; overscroll-behavior-y: contain;" onclick="event.stopPropagation()">
     <!-- Header -->
     <div class="flex items-center justify-between pb-1.5 mb-0.5 border-b border-white/10 shrink-0 sticky top-0 bg-transparent z-10 -mx-1 px-1">
-        <span class="text-xs font-black uppercase tracking-wider text-slate-200 flex items-center gap-1.5">
+        <span id="global-settings-title" class="text-xs font-black uppercase tracking-wider text-slate-200 flex items-center gap-1.5" data-i18n="settings_title">
             <span>⚙️</span> <span>Website-Einstellungen</span>
         </span>
         <button onclick="toggleStandaloneSettings(event)" class="p-1 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-colors text-xs font-bold" aria-label="Schließen">✕</button>
     </div>
-
-    <!-- Living Design Settings -->
-    <fieldset id="living-settings" class="p-2.5 rounded-xl border border-white/10 bg-slate-800/40 text-xs text-slate-200">
-      <legend data-living="title" class="px-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Natürlich &amp; lebendig</legend>
-      <label class="flex items-center gap-2 py-1 cursor-pointer"><input id="living-style" type="checkbox" class="accent-blue-500 rounded"><span data-living="style" class="text-[10px] sm:text-xs text-slate-300">Sanftes Seitendesign</span></label>
-      <label class="flex items-center gap-2 py-1 cursor-pointer"><input id="living-motion" type="checkbox" class="accent-blue-500 rounded"><span data-living="motion" class="text-[10px] sm:text-xs text-slate-300">Lebendige Animationen</span></label>
-    </fieldset>
 
     <!-- Darstellungs-Größe (Zoom / Skalierung) -->
     <div class="p-2.5 rounded-xl bg-slate-800/50 border border-white/5">
@@ -9936,6 +9936,9 @@ html.gp-android:not(.dark) #ui-controls {
                 footer_admin: "Admin",
                 footer_menu_title: "Navigation & Rechtliches",
                 footer_more: "Mehr",
+                settings_title: "Einstellungen",
+                btn_speak: "Vorlesen",
+                btn_stop_speech: "Stopp",
                 onboard_title: 'Wähle deine Sprache',
                 onboard_subtitle: 'Du kannst das jederzeit später wieder ändern',
                 tutorial_next: 'Weiter', tutorial_back: 'Zurück', tutorial_finish: 'Fertig', tutorial_skip: 'Überspringen',
@@ -10160,6 +10163,9 @@ html.gp-android:not(.dark) #ui-controls {
                 footer_admin: "Admin",
                 footer_menu_title: "Navigation & Legal",
                 footer_more: "More",
+                settings_title: "Settings",
+                btn_speak: "Read aloud",
+                btn_stop_speech: "Stop",
                 onboard_title: 'Choose your language',
                 onboard_subtitle: 'You can change this anytime later',
                 tutorial_next: 'Next', tutorial_back: 'Back', tutorial_finish: 'Done', tutorial_skip: 'Skip',
@@ -10413,6 +10419,9 @@ html.gp-android:not(.dark) #ui-controls {
                 footer_admin: "Admin",
                 footer_menu_title: "Navegación y legal",
                 footer_more: "Más",
+                settings_title: "Ajustes",
+                btn_speak: "Leer en voz alta",
+                btn_stop_speech: "Detener",
                 onboard_title: 'Elige tu idioma',
                 onboard_subtitle: 'Puedes cambiarlo cuando quieras',
                 tutorial_next: 'Siguiente', tutorial_back: 'Atrás', tutorial_finish: 'Listo', tutorial_skip: 'Omitir',
@@ -10648,6 +10657,9 @@ html.gp-android:not(.dark) #ui-controls {
                 footer_admin: "Admin",
                 footer_menu_title: "Navigation & Légal",
                 footer_more: "Plus",
+                settings_title: "Paramètres",
+                btn_speak: "Lecture vocale",
+                btn_stop_speech: "Arrêter",
                 onboard_title: 'Choisis ta langue',
                 onboard_subtitle: 'Tu peux changer ça à tout moment',
                 tutorial_next: 'Suivant', tutorial_back: 'Retour', tutorial_finish: 'Terminé', tutorial_skip: 'Passer',
@@ -10846,6 +10858,9 @@ html.gp-android:not(.dark) #ui-controls {
                 footer_admin: "Admin",
                 footer_menu_title: "Navegação e Legal",
                 footer_more: "Mais",
+                settings_title: "Configurações",
+                btn_speak: "Ler em voz alta",
+                btn_stop_speech: "Parar",
                 onboard_title: 'Escolha seu idioma',
                 onboard_subtitle: 'Você pode mudar isso quando quiser',
                 tutorial_next: 'Próximo', tutorial_back: 'Voltar', tutorial_finish: 'Concluir', tutorial_skip: 'Pular',
@@ -11044,6 +11059,9 @@ html.gp-android:not(.dark) #ui-controls {
                 footer_admin: "Yönetici",
                 footer_menu_title: "Gezinme ve Yasal",
                 footer_more: "Daha Fazla",
+                settings_title: "Ayarlar",
+                btn_speak: "Sesli oku",
+                btn_stop_speech: "Durdur",
                 onboard_title: 'Dilini seç',
                 onboard_subtitle: 'Bunu istediğin zaman değiştirebilirsin',
                 tutorial_next: 'İleri', tutorial_back: 'Geri', tutorial_finish: 'Bitir', tutorial_skip: 'Atla',
@@ -16829,6 +16847,44 @@ let shareCardLoading;
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+    { version: "v24.202.0", date: "5. Oktober 2026", type: "feature", items: {
+        de: [
+            "🔊 Vorlese-Funktion in 'Was ist neu': Interaktiver Audio-Button liest Meilensteine und Changelog dynamisch vor",
+            "🧹 'Lebendiges Design' rückstandslos bereinigt: Veralteter Schalter und zugehörige Code-Pfade vollständig entfernt",
+            "🌐 Mehrsprachige Einstellungen & Dialoge: Titel und Buttons sprechen konsistent Deutsch, Englisch, Spanisch, Französisch, Portugiesisch und Türkisch",
+            "📜 Meilensteine erweitert: Alle Meilensteine bis v24.201 direkt in der Was-ist-neu-Tour abrufbar"
+        ],
+        en: [
+            "🔊 Read-Aloud in 'What's New': Interactive speech synthesis button reads milestones and changelog aloud",
+            "🧹 'Living Design' Deprecated: Completely removed legacy toggle switch and unused design code paths",
+            "🌐 Multilingual Settings & Dialogs: Titles and buttons consistently support DE, EN, ES, FR, PT, and TR",
+            "📜 Milestones Extended: All milestones up to v24.201 directly accessible in the What's New tour"
+        ],
+        es: [
+            "🔊 Lectura en voz alta en 'Novedades': Botón de síntesis de voz interactivo que lee los hitos y novedades",
+            "🧹 'Diseño dinámico' depurado: Eliminado el interruptor obsoleto y sus rutas de código no utilizadas",
+            "🌐 Ajustes multilingües: Títulos y botones completamente traducidos a español y otros 5 idiomas",
+            "📜 Hitos actualizados: Todos los hitos hasta v24.201 accesibles en el tour de novedades"
+        ],
+        fr: [
+            "🔊 Lecture vocale dans 'Quoi de neuf' : Bouton audio interactif lisant les jalons et nouveautés à voix haute",
+            "🧹 'Design vivant' déprécié : Bouton obsolète et code résiduel complètement supprimés",
+            "🌐 Paramètres multilingues : Titres et boutons traduits harmonieusement en français et 5 autres langues",
+            "📜 Jalons enrichis : Tous les jalons jusqu'à v24.201 disponibles dans la visite des nouveautés"
+        ],
+        pt: [
+            "🔊 Leitura em voz alta em 'Novidades': Botão de fala interativo que lê marcos e novidades em voz alta",
+            "🧹 'Design dinâmico' depurado: Interruptor legado e código não utilizado completamente removidos",
+            "🌐 Configurações multilíngues: Títulos e botões traduzidos em português e outros 5 idiomas",
+            "📜 Marcos atualizados: Todos os marcos até v24.201 diretamente acessíveis no tour"
+        ],
+        tr: [
+            "🔊 'Neler Yeni' İçin Sesli Okuma: Kilometre taşlarını ve yenilikleri sesli okuyan etkileşimli ses butonu",
+            "🧹 'Canlı Tasarım' Kaldırıldı: Eski anahtar ve kullanılmayan kodlar tamamen temizlendi",
+            "🌐 Çok Dilli Ayarlar: Başlıklar ve butonlar Türkçe dahil 6 dilde eksiksiz çalışır",
+            "📜 Güncel Kilometre Taşları: v24.201'e kadar tüm önemli sürümler turda yer alır"
+        ]
+    }},
     { version: "v24.201.0", date: "5. Oktober 2026", type: "fix", items: {
         de: [
             "✨ Spotlight-Suchbutton gefixt: Schriftfarbe im Light Mode auf kräftiges Königsblau gesetzt — analog zum Pfeil-Button rechts kristallklar lesbar",
@@ -19731,6 +19787,178 @@ let shareCardLoading;
         // ========================================================= //
         const EPIC_MILESTONES = [
             {
+                tag: 'v24.201',
+                title: {
+                    de: 'Präzisions-Update & Design-Veredelung',
+                    en: 'Precision Update & Design Refinement',
+                    es: 'Actualización de precisión y refinamiento',
+                    fr: 'Mise à jour de précision et finitions',
+                    pt: 'Atualização de precisão e refinamento',
+                    tr: 'Hassasiyet Güncellemesi ve Tasarım İyileştirmesi'
+                },
+                highlights: {
+                    de: [
+                        'Königsblauer Spotlight-Suchbutton (⌘K) für optimale Lesbarkeit im Light Mode',
+                        'Transluzentes Milchglas im Liquid Glass Modus mit brillantem Kantenlicht',
+                        'Schonende GPU-Wiedergabe und Partikel-Pause für kühle Mobilgeräte'
+                    ],
+                    en: [
+                        'Royal blue Spotlight search button (⌘K) for crystal-clear Light Mode contrast',
+                        'Authentic frosted translucent glass in Liquid Glass mode with edge reflections',
+                        'GPU playback optimization keeping mobile SOCs cool and battery-efficient'
+                    ],
+                    es: [
+                        'Botón de búsqueda Spotlight (⌘K) en azul real para máxima legibilidad',
+                        'Cristal esmerilado auténtico en modo claro con reflejos en los bordes',
+                        'Optimización de GPU en reproducción musical para dispositivos móviles frescos'
+                    ],
+                    fr: [
+                        'Bouton de recherche Spotlight (⌘K) en bleu royal pour une lisibilité parfaite',
+                        'Verre dépoli authentique et translucide en mode Liquid Glass avec reflets',
+                        'Optimisation GPU pendant la lecture musicale pour préserver la batterie'
+                    ],
+                    pt: [
+                        'Botão de busca Spotlight (⌘K) em azul real para contraste ideal no modo claro',
+                        'Vidro translúcido autêntico no modo Liquid Glass com reflexos de borda',
+                        'Otimização de GPU na reprodução para manter dispositivos móveis frios'
+                    ],
+                    tr: [
+                        'Açık modda üstün okunabilirlik için kraliyet mavisi Spotlight arama butonu (⌘K)',
+                        'Kenar yansımalı gerçek yarı saydam Liquid Glass cam görünümü',
+                        'Müzik çalarken mobil cihazların serin kalmasını sağlayan GPU optimizasyonu'
+                    ]
+                }
+            },
+            {
+                tag: 'v24.200',
+                title: {
+                    de: 'Multi-Strategie-Compositor & Pixel-Schutz',
+                    en: 'Multi-Strategy Compositor & Pixel Protection',
+                    es: 'Compositor multi-estrategia y protección Pixel',
+                    fr: 'Compositeur multi-stratégie et protection Pixel',
+                    pt: 'Compositor multi-estratégia e proteção Pixel',
+                    tr: 'Çoklu Strateji Kompozitörü ve Pixel Koruması'
+                },
+                highlights: {
+                    de: [
+                        '3-Stufen Hardware-Compositor (Auto, Shield, Fluid) gegen jegliches Menü-Flackern',
+                        'Echtzeit Pixel-Flacker-Schutz mit Millisekunden-Jitter-Erkennung',
+                        'Liquid Glass Aura 2.0 ohne störende Backdrop-Filter-Kollisionen'
+                    ],
+                    en: [
+                        '3-tier hardware compositor (Auto, Shield, Fluid) eliminating menu flicker',
+                        'Real-time Pixel Flicker Guard benchmarking jitter in milliseconds',
+                        'Liquid Glass Aura 2.0 preventing backdrop filter collision artifacts'
+                    ],
+                    es: [
+                        'Compositor de hardware de 3 niveles para menús 100% libres de parpadeos',
+                        'Protección de parpadeo para Pixel con medición de jitter en tiempo real',
+                        'Liquid Glass Aura 2.0 sin colisiones en filtros de desenfoque'
+                    ],
+                    fr: [
+                        'Compositeur matériel à 3 niveaux éliminant tout scintillement de menu',
+                        'Protection Pixel en temps réel mesurant le jitter en millisecondes',
+                        'Liquid Glass Aura 2.0 sans interférences de filtres de flou'
+                    ],
+                    pt: [
+                        'Compositor de hardware em 3 níveis eliminando tremulações nos menus',
+                        'Proteção contra tremulação no Pixel com medição de jitter em tempo real',
+                        'Liquid Glass Aura 2.0 sem colisões de filtros de desfoque'
+                    ],
+                    tr: [
+                        'Menü titremesini tamamen ortadan kaldıran 3 seviyeli donanım kompozitörü',
+                        'Milisaniye cinsinden gecikme ölçen gerçek zamanlı Pixel titreme koruması',
+                        'Bulanıklık çakışmalarını önleyen Liquid Glass Aura 2.0'
+                    ]
+                }
+            },
+            {
+                tag: 'v24.198',
+                title: {
+                    de: 'Hintergrund-Aura & Performanz',
+                    en: 'Background Aura & Performance',
+                    es: 'Aura de fondo y rendimiento',
+                    fr: 'Aura d\'arrière-plan et performances',
+                    pt: 'Aura de fundo e desempenho',
+                    tr: 'Arka Plan Aurası ve Performans'
+                },
+                highlights: {
+                    de: [
+                        'Statische, akkuschonende Hintergrund-Aura für mobile Browser',
+                        'Sofortige Deaktivierung rotierender Blobs bei geöffneten Modals',
+                        'Stabiler 60-FPS-Fluss auf Android und Chromium-Geräten'
+                    ],
+                    en: [
+                        'Static, battery-friendly ambient aura for mobile browsers',
+                        'Immediate pause of heavy animated background blobs when modals open',
+                        'Rock-solid 60 FPS performance on Android and Chromium devices'
+                    ],
+                    es: [
+                        'Aura ambiental estática y eficiente para navegadores móviles',
+                        'Pausa inmediata de animaciones de fondo al abrir cualquier menú',
+                        'Rendimiento fluido y constante a 60 FPS en Android y Chromium'
+                    ],
+                    fr: [
+                        'Aura d\'ambiance statique et économe en batterie sur mobile',
+                        'Mise en pause immédiate des animations d\'arrière-plan dans les menus',
+                        'Fluidité garantie à 60 FPS sur Android et navigateurs Chromium'
+                    ],
+                    pt: [
+                        'Aura ambiente estática que economiza bateria em navegadores móveis',
+                        'Pausa imediata de animações pesadas ao abrir qualquer menu',
+                        'Desempenho estável a 60 FPS em dispositivos Android e Chromium'
+                    ],
+                    tr: [
+                        'Mobil tarayıcılar için statik ve pil dostu ortam aurası',
+                        'Menüler açıldığında ağır arka plan animasyonlarını anında durdurma',
+                        'Android ve Chromium cihazlarda akıcı ve kesintisiz 60 FPS deneyimi'
+                    ]
+                }
+            },
+            {
+                tag: 'v24.194',
+                title: {
+                    de: 'Liquid Glass Engine & Kantenoptik',
+                    en: 'Liquid Glass Engine & Edge Optics',
+                    es: 'Motor Liquid Glass y óptica de bordes',
+                    fr: 'Moteur Liquid Glass et optique prismatique',
+                    pt: 'Motor Liquid Glass e ótica de bordas',
+                    tr: 'Liquid Glass Motoru ve Kenar Optiği'
+                },
+                highlights: {
+                    de: [
+                        'Prismatische Kantenbrechung und Apple-Glas-Reflexionen',
+                        'Harmonische Integration mit dem Performance- und Low-End-Modus',
+                        'Flüssige Haptik-Reaktionen bei jeder Benutzerinteraktion'
+                    ],
+                    en: [
+                        'Prismatic edge refraction and authentic Apple glass styling',
+                        'Seamless compatibility with Performance and Low-End modes',
+                        'Responsive haptic feedback on all interactive touch elements'
+                    ],
+                    es: [
+                        'Refracción prismática en bordes y estética Apple de cristal puro',
+                        'Compatibilidad total con el modo de rendimiento y dispositivos lentos',
+                        'Respuesta háptica suave en cada toque e interacción'
+                    ],
+                    fr: [
+                        'Réfraction prismatique sur les bords et design en verre pur façon Apple',
+                        'Compatibilité parfaite avec le mode performance et appareils modestes',
+                        'Retour haptique soigné à chaque interaction tactile'
+                    ],
+                    pt: [
+                        'Refração prismática nas bordas e estética autêntica de vidro estilo Apple',
+                        'Compatibilidade perfeita com o modo de desempenho e aparelhos modestos',
+                        'Feedback tátil suave a cada interação e toque'
+                    ],
+                    tr: [
+                        'Kenar prizma kırılması ve şık Apple cam estetiği',
+                        'Performans ve düşük donanım modlarıyla tam uyumluluk',
+                        'Tüm etkileşimli dokunuşlarda pürüzsüz titreşimli (haptik) geri bildirim'
+                    ]
+                }
+            },
+            {
                 tag: 'v24.153',
                 title: {
                     de: '100% Dynamische Mehrsprachigkeit',
@@ -20025,6 +20253,7 @@ let shareCardLoading;
 
         window.prevEpicSlide = function() {
             if (isAllVersionsOpen) { isAllVersionsOpen = false; }
+            if (typeof window.stopEpicWhatsNewSpeech === 'function') window.stopEpicWhatsNewSpeech();
             if (currentEpicSlideIndex > 0) {
                 currentEpicSlideIndex--;
                 renderEpicSlide(currentEpicSlideIndex);
@@ -20034,6 +20263,7 @@ let shareCardLoading;
 
         window.nextEpicSlide = function() {
             if (isAllVersionsOpen) { isAllVersionsOpen = false; }
+            if (typeof window.stopEpicWhatsNewSpeech === 'function') window.stopEpicWhatsNewSpeech();
             if (currentEpicSlideIndex < EPIC_MILESTONES.length - 1) {
                 currentEpicSlideIndex++;
                 renderEpicSlide(currentEpicSlideIndex);
@@ -20042,6 +20272,7 @@ let shareCardLoading;
         };
 
         window.goToEpicSlide = function(i) {
+            if (typeof window.stopEpicWhatsNewSpeech === 'function') window.stopEpicWhatsNewSpeech();
             isAllVersionsOpen = false;
             currentEpicSlideIndex = i;
             renderEpicSlide(currentEpicSlideIndex);
@@ -20049,6 +20280,7 @@ let shareCardLoading;
         };
 
         window.toggleAllVersionsChangelog = function() {
+            if (typeof window.stopEpicWhatsNewSpeech === 'function') window.stopEpicWhatsNewSpeech();
             isAllVersionsOpen = !isAllVersionsOpen;
             const btn = document.getElementById('btn-toggle-all-versions');
             if (btn) btn.innerText = isAllVersionsOpen ? t('whatsnew_compact_milestones', 'Meilenstein-Übersicht ➔') : t('whatsnew_full_log', '📜 Alle Versionen im Detail anzeigen');
@@ -20056,7 +20288,70 @@ let shareCardLoading;
             haptic(15);
         };
 
+        window.stopEpicWhatsNewSpeech = function() {
+            if (typeof speechSynthesis !== 'undefined' && (speechSynthesis.speaking || ttsQueueActive)) {
+                speechSynthesis.cancel();
+                ttsQueueActive = false;
+            }
+            const btnEl = document.getElementById('btn-speak-whatsnew');
+            const iconEl = document.getElementById('btn-speak-whatsnew-icon');
+            const textEl = document.getElementById('btn-speak-whatsnew-text');
+            if (btnEl) btnEl.classList.remove('bg-red-500/80', 'text-white');
+            if (iconEl) iconEl.textContent = '🔊';
+            if (textEl) textEl.textContent = t('btn_speak', 'Vorlesen');
+        };
+
+        window.speakEpicWhatsNew = function(btnEl) {
+            btnEl = btnEl || document.getElementById('btn-speak-whatsnew');
+            const lang = (window.I18nManager && window.I18nManager.currentLang) || currentLang || 'de';
+            const iconEl = document.getElementById('btn-speak-whatsnew-icon');
+            const textEl = document.getElementById('btn-speak-whatsnew-text');
+
+            if (typeof speechSynthesis !== 'undefined' && (speechSynthesis.speaking || ttsQueueActive)) {
+                window.stopEpicWhatsNewSpeech();
+                return;
+            }
+
+            let textToRead = '';
+            if (isAllVersionsOpen) {
+                const entries = PUBLIC_CHANGELOG.slice(0, 5);
+                const chunks = [t('changelog_full_title', 'Vollständiges Changelog')];
+                entries.forEach(entry => {
+                    const items = (entry.items && entry.items[lang]) || (entry.items && entry.items.en) || (entry.items && entry.items.de) || [];
+                    chunks.push(entry.version + (entry.date ? (', ' + entry.date) : ''));
+                    items.forEach(it => chunks.push(it));
+                });
+                textToRead = chunks.join('. ');
+            } else {
+                const item = EPIC_MILESTONES[currentEpicSlideIndex] || EPIC_MILESTONES[0];
+                const itemTitle = (item.title && typeof item.title === 'object')
+                    ? (item.title[lang] || item.title.en || item.title.de || '')
+                    : (item.title || '');
+                const itemHighlights = (item.highlights && typeof item.highlights === 'object' && !Array.isArray(item.highlights))
+                    ? (item.highlights[lang] || item.highlights.en || item.highlights.de || [])
+                    : (Array.isArray(item.highlights) ? item.highlights : []);
+                textToRead = item.tag + '. ' + itemTitle + '. ' + itemHighlights.join('. ');
+            }
+
+            if (!textToRead) return;
+            if (btnEl) btnEl.classList.add('bg-red-500/80', 'text-white');
+            if (iconEl) iconEl.textContent = '⏹️';
+            if (textEl) textEl.textContent = t('btn_stop_speech', 'Stopp');
+
+            ttsSpeak(textToRead, btnEl, lang);
+
+            const checkDone = setInterval(() => {
+                if (typeof speechSynthesis === 'undefined' || (!speechSynthesis.speaking && !ttsQueueActive)) {
+                    clearInterval(checkDone);
+                    if (btnEl) btnEl.classList.remove('bg-red-500/80', 'text-white');
+                    if (iconEl) iconEl.textContent = '🔊';
+                    if (textEl) textEl.textContent = t('btn_speak', 'Vorlesen');
+                }
+            }, 400);
+        };
+
         window.openEpicWhatsNewTour = function(isOnboarding = false) {
+            window.stopEpicWhatsNewSpeech();
             const modal = document.getElementById('whats-new-epic-modal');
             if (!modal) return;
             isAllVersionsOpen = false;
@@ -20100,6 +20395,7 @@ let shareCardLoading;
         };
 
         window.closeEpicWhatsNewTour = function() {
+            window.stopEpicWhatsNewSpeech();
             const modal = document.getElementById('whats-new-epic-modal');
             if (!modal) return;
             modal.classList.remove('opacity-100');
@@ -20591,7 +20887,10 @@ let shareCardLoading;
             if (isGlobalSettingsOpen) {
                 lastGlobalSettingsOpenedAt = Date.now();
                 if (isLyricsSettingsOpen) window.toggleLyricsSettings();
-                window.updateAiNoticeCounter();
+                const titleSpan = document.getElementById('global-settings-title');
+                if (titleSpan) {
+                    titleSpan.innerHTML = '<span>⚙️</span> <span>' + (typeof t === 'function' ? t('settings_title', 'Website-Einstellungen') : 'Website-Einstellungen') + '</span>';
+                }
                 globalMenu.classList.remove('hidden', 'settings-closing', 'is-open');
                 globalMenu.classList.add('settings-opening');
                 if (window.PixelFlickerGuard) window.PixelFlickerGuard.watchTransition(globalMenu);
@@ -23066,7 +23365,6 @@ window.setLyricsStyle = function(style) {
             wakeBlobs();
         })();
 </script>
-<script src="js/living-design.ef4e0c79a1bced34.js"></script>
 
 
     <script>
