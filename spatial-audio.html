@@ -1,16 +1,15 @@
 <!DOCTYPE html>
 <html lang="de" class="dark">
 <head>
-    <script>/* Android Liquid Glass compatibility */(function(){try{var ua=navigator.userAgent||"";if(/Android/i.test(ua)){document.documentElement.classList.add("gp-android");if((navigator.deviceMemory&&navigator.deviceMemory<=4)||(navigator.hardwareConcurrency&&navigator.hardwareConcurrency<=4))document.documentElement.classList.add("gp-android-lowend");}if(/Mobile|iP(hone|od|ad)|Android.*Mobile/i.test(ua))document.documentElement.classList.add("gp-mobile");}catch(e){}})();</script>
-    <script src="./js/core/storage.e856be99df567fd2.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GAMINGPIG // STUDIO EXPERIENCE</title>
+    <title>GAMINGPIG // STUDIO &amp; SPATIAL</title>
     <link rel="icon" href="icon-192.png" type="image/png">
+    <meta name="theme-color" content="#030712">
     
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
         * {
             margin: 0;
@@ -21,9 +20,9 @@
         }
 
         body {
-            background-color: #030712;
+            background-color: #020617;
             color: #ffffff;
-            font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
             overflow: hidden;
             width: 100vw;
             height: 100vh;
@@ -32,76 +31,127 @@
             justify-content: center;
         }
 
+        /* Ambient Cover Glow Backdrop */
+        #ambient-cover-glow {
+            position: fixed;
+            inset: -40px;
+            z-index: 1;
+            background-size: cover;
+            background-position: center;
+            filter: blur(75px) saturate(1.8) brightness(0.4);
+            opacity: 0.55;
+            transition: opacity 1.2s ease, background-image 0.8s ease;
+            transform: scale(1.15) translateZ(0);
+            pointer-events: none;
+        }
+
         /* Fluid Aurora Mesh Background */
         .aurora-container {
             position: fixed;
             inset: 0;
-            z-index: 1;
+            z-index: 2;
             overflow: hidden;
-            background: #020617;
+            pointer-events: none;
+            mix-blend-mode: screen;
+            opacity: 0.7;
         }
 
         .aurora-orb {
             position: absolute;
             border-radius: 50%;
-            filter: blur(80px);
-            opacity: 0.6;
-            animation: floatOrb 20s infinite alternate ease-in-out;
+            filter: blur(90px);
+            opacity: 0.5;
+            animation: floatOrb 22s infinite alternate ease-in-out;
             transition: background-color 1.5s ease;
         }
 
         .orb-1 {
-            width: 600px;
-            height: 600px;
+            width: 550px;
+            height: 550px;
             background: #3b82f6;
-            top: -100px;
-            left: -100px;
-            animation-duration: 18s;
+            top: -120px;
+            left: -120px;
+            animation-duration: 20s;
         }
 
         .orb-2 {
-            width: 700px;
-            height: 700px;
+            width: 650px;
+            height: 650px;
             background: #8b5cf6;
-            bottom: -200px;
-            right: -100px;
-            animation-duration: 24s;
-            animation-delay: -5s;
+            bottom: -220px;
+            right: -120px;
+            animation-duration: 26s;
+            animation-delay: -6s;
         }
 
         .orb-3 {
-            width: 500px;
-            height: 500px;
+            width: 480px;
+            height: 480px;
             background: #ec4899;
-            top: 40%;
-            left: 30%;
-            animation-duration: 22s;
-            animation-delay: -10s;
+            top: 45%;
+            left: 35%;
+            animation-duration: 24s;
+            animation-delay: -12s;
         }
 
         @keyframes floatOrb {
             0% { transform: translate(0, 0) scale(1); }
-            50% { transform: translate(120px, 80px) scale(1.15); }
-            100% { transform: translate(-80px, 140px) scale(0.9); }
+            50% { transform: translate(100px, 70px) scale(1.12); }
+            100% { transform: translate(-70px, 120px) scale(0.92); }
         }
 
-        /* Glass Stage Card */
+        /* Minimalist Frosted Glass Stage */
         .glass-stage {
-            background: rgba(15, 23, 42, 0.45);
-            backdrop-filter: blur(40px) saturate(190%);
-            -webkit-backdrop-filter: blur(40px) saturate(190%);
+            background: rgba(15, 23, 42, 0.55);
+            backdrop-filter: blur(40px) saturate(180%);
+            -webkit-backdrop-filter: blur(40px) saturate(180%);
             border: 1px solid rgba(255, 255, 255, 0.12);
-            box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            box-shadow: 0 35px 80px -20px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.15);
             border-radius: 36px;
             position: relative;
             z-index: 10;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease;
         }
 
-        /* Vinyl Spin & Glow */
+        /* Cover Artwork Container */
         .cover-art-box {
-            box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.9);
-            border: 1px solid rgba(255, 255, 255, 0.18);
+            box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.6s ease;
+        }
+
+        .playing .cover-art-box {
+            animation: album-breathe 6s ease-in-out infinite alternate;
+        }
+
+        @keyframes album-breathe {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.025); box-shadow: 0 30px 70px -10px rgba(0, 0, 0, 0.95); }
+        }
+
+        /* Animated Live EQ Bars */
+        .eq-bars {
+            display: inline-flex;
+            align-items: flex-end;
+            gap: 2.5px;
+            height: 12px;
+        }
+
+        .eq-bar {
+            width: 2.5px;
+            background: #10b981;
+            border-radius: 1px;
+            transform-origin: bottom;
+            animation: eqBounce 0.8s ease-in-out infinite alternate;
+        }
+
+        .eq-bar:nth-child(1) { height: 6px; animation-duration: 0.6s; }
+        .eq-bar:nth-child(2) { height: 12px; animation-duration: 0.9s; animation-delay: -0.2s; }
+        .eq-bar:nth-child(3) { height: 8px; animation-duration: 0.75s; animation-delay: -0.4s; }
+
+        @keyframes eqBounce {
+            0% { transform: scaleY(0.25); }
+            100% { transform: scaleY(1); }
         }
 
         .mono {
@@ -109,9 +159,11 @@
             font-feature-settings: "tnum" on, "zero" on;
         }
     </style>
-<link rel="stylesheet" href="assets/community-glass.20260910.css?v=v24.192.0" data-gp-glass-engine="true">
 </head>
 <body class="p-4 sm:p-8">
+
+    <!-- Ambient Cover Glow -->
+    <div id="ambient-cover-glow"></div>
 
     <!-- Atmospheric Liquid Aurora Background -->
     <div class="aurora-container">
@@ -121,38 +173,50 @@
     </div>
 
     <!-- Main Stage Center Piece -->
-    <main class="w-full max-w-xl glass-stage p-6 sm:p-10 flex flex-col items-center text-center">
+    <main id="stage-card" class="w-full max-w-lg glass-stage p-6 sm:p-9 flex flex-col items-center text-center">
         
-        <!-- Top Status Telemetry -->
-        <div class="w-full flex items-center justify-between mb-8">
-            <div class="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/5 border border-white/10 text-[10px] mono font-bold uppercase tracking-widest text-emerald-400">
-                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span id="live-badge">LIVE PLAYBACK</span>
+        <!-- Top Status Telemetry Bar -->
+        <div class="w-full flex items-center justify-between mb-7">
+            <div class="flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-[10px] mono font-bold uppercase tracking-wider text-emerald-400">
+                <div class="eq-bars">
+                    <span class="eq-bar"></span>
+                    <span class="eq-bar"></span>
+                    <span class="eq-bar"></span>
+                </div>
+                <span id="live-badge">LIVE // SPOTIFY</span>
             </div>
 
-            <a href="index.html" class="text-xs font-bold text-white/60 hover:text-white px-3 py-1.5 rounded-xl hover:bg-white/10 transition-colors">
-                ← Portfolio
+            <a href="index.html" class="inline-flex items-center gap-1.5 text-xs font-bold text-white/70 hover:text-white px-3 py-1.5 rounded-xl hover:bg-white/10 transition-all active:scale-95">
+                <span>←</span>
+                <span>Portfolio</span>
+                <span class="hidden sm:inline-block text-[10px] font-mono text-white/30 ml-1 px-1.5 py-0.5 rounded bg-white/5 border border-white/10">ESC</span>
             </a>
         </div>
 
-        <!-- Center Artwork -->
-        <div class="relative w-48 h-48 sm:w-60 sm:h-60 rounded-3xl overflow-hidden mb-8 cover-art-box bg-slate-900 flex items-center justify-center">
-            <img id="track-artwork" src="icon-192.png" alt="Artwork" class="w-full h-full object-cover">
+        <!-- Center Artwork with Clean Rounded Corners -->
+        <div class="relative w-52 h-52 sm:w-64 sm:h-64 rounded-3xl overflow-hidden mb-7 cover-art-box bg-slate-900/80 flex items-center justify-center shrink-0">
+            <img id="track-artwork" src="icon-192.png" alt="Album Cover" class="w-full h-full object-cover transition-opacity duration-500 opacity-100" />
+            <div id="artwork-placeholder" class="hidden absolute inset-0 flex items-center justify-center text-3xl text-white/20">
+                🎵
+            </div>
         </div>
 
         <!-- Track Metadata -->
-        <div class="w-full mb-8">
-            <h1 id="track-title" class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight mb-2 truncate">
+        <div class="w-full mb-6">
+            <h1 id="track-title" class="text-xl sm:text-2xl font-black text-white tracking-tight leading-tight mb-1.5 truncate px-2">
                 Wird geladen...
             </h1>
-            <p id="track-artist" class="text-white/60 text-sm sm:text-base font-semibold truncate">
+            <p id="track-artist" class="text-white/75 text-sm sm:text-base font-semibold truncate px-2">
                 Gamingpig Studio
+            </p>
+            <p id="track-album" class="text-white/40 text-xs font-medium truncate mt-1 px-2">
+                Spatial Experience
             </p>
         </div>
 
-        <!-- Clean Progress Bar & Timers -->
-        <div class="w-full bg-slate-950/50 rounded-2xl p-4 border border-white/5 mb-6">
-            <div class="flex justify-between text-xs mono font-bold mb-2">
+        <!-- Minimalist Progress Bar & Timers -->
+        <div class="w-full bg-slate-950/60 rounded-2xl p-4 border border-white/5 mb-6">
+            <div class="flex justify-between text-xs mono font-bold mb-2.5">
                 <span id="time-current" class="text-white">0:00</span>
                 <span id="time-total" class="text-white/40">0:00</span>
             </div>
@@ -161,26 +225,35 @@
             </div>
         </div>
 
-        <!-- Bottom Ambient Switcher -->
+        <!-- Bottom Ambient Switcher & Controls -->
         <div class="w-full flex items-center justify-between text-[11px] mono text-white/40 pt-2 border-t border-white/10">
-            <span>GAMINGPIG STUDIO ENGINE</span>
-            <button onclick="cycleAurora()" class="text-white/70 hover:text-white font-bold transition-colors">
-                🎨 Aura wechseln
-            </button>
+            <span class="truncate pr-2">STUDIO ENGINE // v24.204.0</span>
+            <div class="flex items-center gap-3 shrink-0">
+                <button onclick="cycleAurora()" class="text-white/75 hover:text-white font-bold transition-colors flex items-center gap-1 active:scale-95" title="Hintergrundfarben wechseln (Leertaste)">
+                    <span>🎨</span> <span class="hidden xs:inline">Aura</span>
+                </button>
+                <button onclick="toggleFullscreen()" class="text-white/75 hover:text-white font-bold transition-colors flex items-center gap-1 active:scale-95" title="Vollbild umschalten (F)">
+                    <span>⛶</span> <span class="hidden xs:inline">Vollbild</span>
+                </button>
+            </div>
         </div>
     </main>
 
     <script>
-        const API_URL = 'https://npc-api.aikins.xyz/v1/users/gamingpig/now';
+        const NPC_API_URL = 'https://npc-api.aikins.xyz/v1/users/gamingpig/now';
+        const STATSFM_API_URL = 'https://api.stats.fm/api/v1/users/gamingpig/streams/current';
         const FALLBACK_ART = 'https://gamingpig.github.io/About-Gamingpig/og-v2.jpg';
 
+        const stageCard = document.getElementById('stage-card');
         const titleEl = document.getElementById('track-title');
         const artistEl = document.getElementById('track-artist');
+        const albumEl = document.getElementById('track-album');
         const artworkEl = document.getElementById('track-artwork');
         const fillEl = document.getElementById('progress-fill');
         const timeCurEl = document.getElementById('time-current');
         const timeTotEl = document.getElementById('time-total');
         const liveBadge = document.getElementById('live-badge');
+        const ambientGlow = document.getElementById('ambient-cover-glow');
 
         const orb1 = document.getElementById('orb1');
         const orb2 = document.getElementById('orb2');
@@ -194,128 +267,223 @@
         let timeOffset = 0;
         const coverCache = new Map();
 
-        async function syncWorldClock() {
+        // Zeit-Synchronisation via Date-Response-Header
+        function syncClockFromHeader(dateHeader) {
+            if (!dateHeader) return;
             try {
-                const t0 = performance.now();
-                const res = await fetch('https://worldtimeapi.org/api/timezone/Etc/UTC', { cache: 'no-store' });
-                const data = await res.json();
-                const latency = (performance.now() - t0) / 2;
-                const serverTime = new Date(data.utc_datetime).getTime();
-                timeOffset = (serverTime + latency) - Date.now();
-            } catch(e) {}
+                const serverTime = new Date(dateHeader).getTime();
+                if (!isNaN(serverTime)) {
+                    timeOffset = serverTime - Date.now();
+                }
+            } catch (e) {}
         }
-        syncWorldClock();
-        setInterval(syncWorldClock, 600000);
 
         function formatTime(ms) {
-            if (!ms || ms < 0) return '0:00';
+            if (!ms || ms < 0 || isNaN(ms)) return '0:00';
             const s = Math.floor(ms / 1000);
             return `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
         }
 
-        async function resolveCover(title, artist) {
+        // Zuverlässige Cover-Auflösung via iTunes Search API als Fallback
+        async function resolveCoverFallback(title, artist) {
             const key = `${title}-${artist}`.toLowerCase();
             if (coverCache.has(key)) return coverCache.get(key);
 
             try {
                 const q = encodeURIComponent(`${artist} ${title}`);
-                const r = await fetch(`https://api.deezer.com/search?q=${q}&limit=1`);
-                const d = await r.json();
-                const cover = d?.data?.[0]?.album?.cover_xl || d?.data?.[0]?.album?.cover_big;
-                if (cover) { coverCache.set(key, cover); return cover; }
-            } catch(e) {}
-
-            try {
-                const q = encodeURIComponent(`${artist} ${title}`);
-                const r = await fetch(`https://itunes.apple.com/search?term=${q}&media=music&entity=song&limit=1`);
-                const d = await r.json();
-                let art = d?.results?.[0]?.artworkUrl100;
-                if (art) { art = art.replace('100x100bb', '600x600bb'); coverCache.set(key, art); return art; }
-            } catch(e) {}
+                const r = await fetch(`https://itunes.apple.com/search?term=${q}&media=music&entity=song&limit=1`, {
+                    signal: AbortSignal.timeout(4000)
+                });
+                if (r.ok) {
+                    const d = await r.json();
+                    let art = d?.results?.[0]?.artworkUrl100;
+                    if (art) {
+                        art = art.replace('100x100bb', '600x600bb');
+                        coverCache.set(key, art);
+                        return art;
+                    }
+                }
+            } catch (e) {}
 
             return FALLBACK_ART;
         }
 
-        async function pollTelemetry() {
-            try {
-                const res = await fetch(API_URL, { cache: 'no-store' });
-                if (!res.ok) throw new Error();
-                const d = await res.json();
-
-                const st = d.status;
-                const tr = d.track || {};
-                const title = tr.title || tr.name;
-                const artist = tr.artist || '';
-                const dur = tr.duration_ms || 0;
-                let prog = tr.progress_ms || d.progress_ms || 0;
-
-                if (st === 'playing' && title && title !== 'Aktuell ist es ruhig...') {
-                    isPlaying = true;
-                    totalDuration = dur;
-                    timeTotEl.innerText = formatTime(dur);
-                    liveBadge.innerText = 'LIVE PLAYBACK';
-
-                    let serverTimestamp = d.timestamp || d.updated_at || (tr && tr.timestamp);
-                    if (serverTimestamp) {
-                        let stTime = typeof serverTimestamp === 'number'
-                            ? (serverTimestamp < 20000000000 ? serverTimestamp * 1000 : serverTimestamp)
-                            : new Date(serverTimestamp).getTime();
-                        let rawAge = (Date.now() + timeOffset) - stTime;
-                        if (rawAge >= 0 && rawAge <= (dur || 600000)) {
-                            prog += rawAge;
-                        }
-                    }
-
-                    const key = `${title}-${artist}`;
-                    if (key !== lastTrackKey) {
-                        lastTrackKey = key;
-                        titleEl.innerText = title;
-                        artistEl.innerText = artist;
-
-                        serverBaseMs = prog;
-                        localStart = performance.now();
-
-                        resolveCover(title, artist).then(src => {
-                            if (artworkEl.getAttribute('src') !== src) artworkEl.src = src;
-                        });
-                    } else {
-                        const expected = serverBaseMs + (performance.now() - localStart);
-                        const drift = prog - expected;
-                        if (Math.abs(drift) > 2500) {
-                            serverBaseMs = prog;
-                            localStart = performance.now();
-                        } else if (Math.abs(drift) > 150) {
-                            serverBaseMs = expected + drift * 0.35;
-                            localStart = performance.now();
-                        }
-                    }
-                } else {
-                    isPlaying = false;
-                    liveBadge.innerText = 'STANDBY';
-                    titleEl.innerText = 'Aktuell ist es ruhig...';
-                    artistEl.innerText = 'Gamingpig genießt die Stille';
-                    artworkEl.src = FALLBACK_ART;
-                    fillEl.style.width = '0%';
-                    timeCurEl.innerText = '0:00';
-                    timeTotEl.innerText = '0:00';
+        function setCoverImage(src) {
+            if (!src) src = FALLBACK_ART;
+            const img = new Image();
+            img.onload = () => {
+                artworkEl.src = src;
+                artworkEl.style.opacity = '1';
+                if (ambientGlow) {
+                    ambientGlow.style.backgroundImage = `url("${src}")`;
                 }
-            } catch(e) {}
+            };
+            img.onerror = () => {
+                artworkEl.src = FALLBACK_ART;
+                artworkEl.style.opacity = '1';
+                if (ambientGlow) {
+                    ambientGlow.style.backgroundImage = `url("${FALLBACK_ART}")`;
+                }
+            };
+            img.src = src;
         }
 
-        function renderProgress() {
-            if (isPlaying && totalDuration > 0) {
-                const currentMs = Math.min(totalDuration, serverBaseMs + (performance.now() - localStart));
-                timeCurEl.innerText = formatTime(currentMs);
-                const pct = Math.max(0, Math.min(100, (currentMs / totalDuration) * 100));
-                fillEl.style.width = `${pct}%`;
+        // Normalisiert Stats.fm-Daten auf ein einheitliches Schema
+        function normalizeStatsFmPayload(payload) {
+            const item = payload && payload.item;
+            const track = item && item.track;
+            if (!item || !track || !item.isPlaying) return null;
+
+            const artists = Array.isArray(track.artists) ? track.artists.map(a => a && a.name).filter(Boolean) : [];
+            const album = Array.isArray(track.albums) ? track.albums[0] : null;
+            const artUrl = album && album.image ? album.image : '';
+
+            return {
+                status: 'playing',
+                source: 'STATS.FM',
+                title: track.name || '',
+                artist: artists.join(', ') || 'Unknown Artist',
+                album: album && album.name ? album.name : '',
+                duration_ms: Number(track.durationMs) || 0,
+                progress_ms: Number(item.progressMs) || 0,
+                artwork_url: artUrl,
+                timestamp: item.date || Date.now()
+            };
+        }
+
+        async function pollTelemetry() {
+            if (document.hidden) return; // Im Hintergrund pausieren
+
+            let normalizedData = null;
+
+            // 1. Primärquelle: NPC API (Raspberry Pi / Desktop Spotify Sync)
+            try {
+                const res = await fetch(NPC_API_URL, { 
+                    cache: 'no-store', 
+                    signal: AbortSignal.timeout(3500) 
+                });
+                syncClockFromHeader(res.headers.get('date'));
+                if (res.ok) {
+                    const d = await res.json();
+                    const tr = d.track || {};
+                    const title = tr.title || tr.name;
+                    if (d.status === 'playing' && title && title !== 'Aktuell ist es ruhig...') {
+                        normalizedData = {
+                            status: 'playing',
+                            source: 'SPOTIFY',
+                            title: title,
+                            artist: tr.artist || '',
+                            album: tr.album || '',
+                            duration_ms: tr.duration_ms || 0,
+                            progress_ms: tr.progress_ms || d.progress_ms || 0,
+                            artwork_url: tr.artwork_url || d.artwork_url || '',
+                            timestamp: d.timestamp || d.updated_at || (tr && tr.timestamp)
+                        };
+                    }
+                }
+            } catch (e) {}
+
+            // 2. Fallback-Quelle: Stats.fm Live Streams API
+            if (!normalizedData) {
+                try {
+                    const res = await fetch(STATSFM_API_URL, { 
+                        cache: 'no-store', 
+                        signal: AbortSignal.timeout(3500) 
+                    });
+                    syncClockFromHeader(res.headers.get('date'));
+                    if (res.ok && res.status !== 204) {
+                        const d = await res.json();
+                        normalizedData = normalizeStatsFmPayload(d);
+                    }
+                } catch (e) {}
+            }
+
+            // UI Aktualisierung
+            if (normalizedData && normalizedData.status === 'playing') {
+                isPlaying = true;
+                stageCard.classList.add('playing');
+                totalDuration = normalizedData.duration_ms;
+                timeTotEl.innerText = formatTime(normalizedData.duration_ms);
+                liveBadge.innerText = `LIVE // ${normalizedData.source}`;
+                liveBadge.className = 'text-[10px] mono font-bold uppercase tracking-wider text-emerald-400';
+
+                let prog = normalizedData.progress_ms;
+                if (normalizedData.timestamp) {
+                    let stTime = typeof normalizedData.timestamp === 'number'
+                        ? (normalizedData.timestamp < 20000000000 ? normalizedData.timestamp * 1000 : normalizedData.timestamp)
+                        : new Date(normalizedData.timestamp).getTime();
+                    let rawAge = (Date.now() + timeOffset) - stTime;
+                    if (rawAge >= 0 && rawAge <= (normalizedData.duration_ms || 600000)) {
+                        prog += rawAge;
+                    }
+                }
+
+                const key = `${normalizedData.title}-${normalizedData.artist}`;
+                if (key !== lastTrackKey) {
+                    lastTrackKey = key;
+                    titleEl.innerText = normalizedData.title;
+                    artistEl.innerText = normalizedData.artist;
+                    albumEl.innerText = normalizedData.album || 'Spatial Experience';
+
+                    serverBaseMs = prog;
+                    localStart = performance.now();
+
+                    // Cover-Auflösung
+                    if (normalizedData.artwork_url && !normalizedData.artwork_url.includes('placeholder')) {
+                        setCoverImage(normalizedData.artwork_url);
+                    } else {
+                        resolveCoverFallback(normalizedData.title, normalizedData.artist).then(src => {
+                            setCoverImage(src);
+                        });
+                    }
+                } else {
+                    const expected = serverBaseMs + (performance.now() - localStart);
+                    const drift = prog - expected;
+                    if (Math.abs(drift) > 2500) {
+                        serverBaseMs = prog;
+                        localStart = performance.now();
+                    } else if (Math.abs(drift) > 150) {
+                        serverBaseMs = expected + drift * 0.35;
+                        localStart = performance.now();
+                    }
+                }
+            } else {
+                isPlaying = false;
+                stageCard.classList.remove('playing');
+                liveBadge.innerText = 'STANDBY';
+                liveBadge.className = 'text-[10px] mono font-bold uppercase tracking-wider text-slate-400';
+                titleEl.innerText = 'Aktuell ist es ruhig...';
+                artistEl.innerText = 'Gamingpig genießt die Stille';
+                albumEl.innerText = 'Keine Wiedergabe aktiv';
+                setCoverImage(FALLBACK_ART);
+                fillEl.style.width = '0%';
+                timeCurEl.innerText = '0:00';
+                timeTotEl.innerText = '0:00';
+                lastTrackKey = '';
+            }
+        }
+
+        // Flüssiger 60 FPS rAF Fortschritts-Loop
+        let lastFrameTime = 0;
+        function renderProgress(now) {
+            if (!document.hidden && isPlaying && totalDuration > 0) {
+                if (now - lastFrameTime >= 15.5) {
+                    lastFrameTime = now;
+                    const currentMs = Math.min(totalDuration, serverBaseMs + (performance.now() - localStart));
+                    timeCurEl.innerText = formatTime(currentMs);
+                    const pct = Math.max(0, Math.min(100, (currentMs / totalDuration) * 100));
+                    fillEl.style.width = `${pct}%`;
+                }
             }
             requestAnimationFrame(renderProgress);
         }
 
+        // Aurora Theme Switcher
         const auroraThemes = [
             ['#3b82f6', '#8b5cf6', '#ec4899'],
             ['#06b6d4', '#3b82f6', '#10b981'],
-            ['#f43f5e', '#a855f7', '#fb923c']
+            ['#f43f5e', '#a855f7', '#fb923c'],
+            ['#8b5cf6', '#d946ef', '#6366f1']
         ];
         let auroraIdx = 0;
 
@@ -327,339 +495,48 @@
             orb3.style.backgroundColor = theme[2];
         };
 
-        setInterval(pollTelemetry, 3000);
-        pollTelemetry();
-        requestAnimationFrame(renderProgress);
+        window.toggleFullscreen = function() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            } else {
+                if (document.exitFullscreen) document.exitFullscreen();
+            }
+        };
+
+        // Tastaturkürzel: ESC für Zurück, Leertaste für Aura, F für Vollbild
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                window.location.href = 'index.html';
+            } else if (e.key === ' ' || e.code === 'Space') {
+                e.preventDefault();
+                cycleAurora();
+            } else if (e.key === 'f' || e.key === 'F') {
+                toggleFullscreen();
+            }
+        });
+
+        // Polling Timer (4s aktiv, 12s standby)
+        let pollTimer = null;
+        function scheduleNextPoll() {
+            if (pollTimer) clearTimeout(pollTimer);
+            const delay = isPlaying ? 4000 : 12000;
+            pollTimer = setTimeout(async () => {
+                await pollTelemetry();
+                scheduleNextPoll();
+            }, delay);
+        }
+
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                pollTelemetry().then(() => scheduleNextPoll());
+            }
+        });
+
+        // Initialer Start
+        pollTelemetry().then(() => {
+            scheduleNextPoll();
+            requestAnimationFrame(renderProgress);
+        });
     </script>
-<script src="js/community-glass.20260910.js?v=v24.192.0"></script>
-<script data-pplx-inline-edit>
-(function () {
-  if (window === window.top) return;
-
-  const allowedParentOrigins = ["https://www.perplexity.ai","https://perplexity.ai","https://testing.perplexity.ai","https://staging.perplexity.ai","https://*.preview.i.perplexity.ai","http://perplexity.localhost","http://localhost:1420","http://127.0.0.1:1420","http://localhost:3000","http://127.0.0.1:3000","http://localhost:5173","http://127.0.0.1:5173"];
-  const MAX_FONT_BYTES = 500 * 1024;
-  const MAX_TOTAL_FONT_BYTES = 2 * 1024 * 1024;
-  let scrollForwarding = false;
-  let scrollRaf = 0;
-  let trustedTopOrigin = null;
-
-  // Allow entries like "https://*.preview.i.perplexity.ai" — the wildcard
-  // matches a single DNS label (no dots), so "https://*.foo" cannot stretch
-  // across multiple labels.
-  function matchesAllowedOrigin(origin) {
-    if (!origin) return false;
-    for (const entry of allowedParentOrigins) {
-      if (!entry.includes("*")) {
-        if (entry === origin) return true;
-        continue;
-      }
-      const pattern = new RegExp(
-        "^" +
-          entry.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, "[^.]+") +
-          "$",
-      );
-      if (pattern.test(origin)) return true;
-    }
-    return false;
-  }
-
-  // Trust decision: when the sender is same-origin-visible (event.origin is a
-  // real origin like https://www.perplexity.ai) we trust event.origin directly.
-  // When event.origin is "null" (opaque broker srcdoc), we fall back to the
-  // broker's stamped `parentOrigin` to identify the top window. The fallback
-  // is claim-only — we rely on the browser's native `targetOrigin` enforcement
-  // on the response path (see postToTrustedTop) to ensure replies can't be
-  // delivered to anyone but the actual top window of that claimed origin.
-  function getTrustedParentOrigin(event) {
-    const forwardedParentOrigin =
-      typeof event.data.parentOrigin === "string" ? event.data.parentOrigin : null;
-    const parentOrigin = event.origin === "null" ? forwardedParentOrigin : event.origin;
-    return matchesAllowedOrigin(parentOrigin) ? parentOrigin : null;
-  }
-
-  // All responses go to window.top with targetOrigin = the allowlisted origin.
-  // An attacker that iframes us inside their own null-origin broker can claim
-  // any parentOrigin they like, but the browser will drop the reply whenever
-  // the real top's origin doesn't match — so the screenshot never leaves.
-  function postToTrustedTop(message) {
-    if (!trustedTopOrigin) return;
-    try {
-      window.top.postMessage(message, trustedTopOrigin);
-    } catch (_error) {}
-  }
-
-  function inlineAll(original, clone) {
-    if (original.nodeType !== 1 || clone.nodeType !== 1) return;
-
-    try {
-      const computedStyle = getComputedStyle(original);
-      // cssText on a computed style is the serialized declaration in modern
-      // Chromium/Safari — a single read beats enumerating ~400 longhand
-      // properties. Firefox returns "" here, so we fall back on empty.
-      const serialized = computedStyle.cssText;
-      if (serialized) {
-        clone.style.cssText = serialized;
-      } else {
-        const parts = new Array(computedStyle.length);
-        for (let index = 0; index < computedStyle.length; index += 1) {
-          const property = computedStyle[index];
-          parts[index] = `${property}:${computedStyle.getPropertyValue(property)};`;
-        }
-        clone.style.cssText = parts.join("");
-      }
-    } catch (_error) {}
-
-    const originalChildren = original.children;
-    const clonedChildren = clone.children;
-    for (
-      let index = 0;
-      index < originalChildren.length && index < clonedChildren.length;
-      index += 1
-    ) {
-      inlineAll(originalChildren[index], clonedChildren[index]);
-    }
-  }
-
-  function extractFontUrl(srcValue) {
-    const matches = [
-      ...srcValue.matchAll(
-        /url\(["']?([^"')]+)["']?\)(?:\s*format\(["']?([^"')]+)["']?\))?/gi,
-      ),
-    ];
-    if (matches.length === 0) return null;
-    const woff2 = matches.find((m) => m[2] && m[2].toLowerCase().includes("woff2"));
-    if (woff2) return woff2[1];
-    const woff = matches.find((m) => m[2] && m[2].toLowerCase().includes("woff"));
-    if (woff) return woff[1];
-    return matches[0][1];
-  }
-
-  // Cache resolved font URL -> data URI across captures. Fonts on a page
-  // essentially never change, and a batch run emits multiple captures back to
-  // back — without this we'd refetch + re-base64 every time.
-  const fontDataUriCache = new Map();
-  const SRC_DECLARATION_RE = /src\s*:\s*[^;}]+/i;
-
-  async function fetchAsDataUri(url) {
-    if (fontDataUriCache.has(url)) return fontDataUriCache.get(url);
-    let dataUri = null;
-    try {
-      const response = await fetch(url, { mode: "cors", credentials: "omit" });
-      if (response.ok) {
-        const blob = await response.blob();
-        if (blob.size <= MAX_FONT_BYTES) {
-          dataUri = await new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () =>
-              resolve(typeof reader.result === "string" ? reader.result : null);
-            reader.onerror = () => resolve(null);
-            reader.readAsDataURL(blob);
-          });
-        }
-      }
-    } catch (_error) {
-      dataUri = null;
-    }
-    fontDataUriCache.set(url, dataUri);
-    return dataUri;
-  }
-
-  function collectFontFaceRuleTexts() {
-    const rules = [];
-    for (const sheet of document.styleSheets) {
-      let cssRules;
-      try {
-        cssRules = sheet.cssRules;
-      } catch (_error) {
-        continue;
-      }
-      if (!cssRules) continue;
-      for (const rule of cssRules) {
-        const cssText = rule.cssText || "";
-        if (cssText.startsWith("@font-face")) rules.push(cssText);
-      }
-    }
-    return rules;
-  }
-
-  async function buildInlinedFontCss() {
-    const ruleTexts = collectFontFaceRuleTexts();
-    if (ruleTexts.length === 0) return null;
-
-    const resolved = ruleTexts.map((cssText) => {
-      if (!SRC_DECLARATION_RE.test(cssText)) return null;
-      const srcMatch = cssText.match(/src\s*:\s*([^;}]+)[;}]/i);
-      if (!srcMatch) return null;
-      const url = extractFontUrl(srcMatch[1]);
-      if (!url) return null;
-      try {
-        return { cssText, url: new URL(url, document.baseURI).href };
-      } catch (_error) {
-        return null;
-      }
-    });
-
-    const dataUris = await Promise.all(
-      resolved.map((entry) => (entry ? fetchAsDataUri(entry.url) : Promise.resolve(null))),
-    );
-
-    const inlined = [];
-    let totalBytes = 0;
-    for (let index = 0; index < resolved.length; index += 1) {
-      const entry = resolved[index];
-      const dataUri = dataUris[index];
-      if (!entry || !dataUri) continue;
-      const approxBytes = dataUri.length * 0.75;
-      if (totalBytes + approxBytes > MAX_TOTAL_FONT_BYTES) break;
-      totalBytes += approxBytes;
-      inlined.push(entry.cssText.replace(SRC_DECLARATION_RE, `src: url("${dataUri}")`));
-    }
-    return inlined.length > 0 ? inlined.join("\n") : null;
-  }
-
-  function stripExternal(clone) {
-    const images = clone.querySelectorAll("img");
-    for (let index = 0; index < images.length; index += 1) {
-      const src = images[index].getAttribute("src");
-      if (src && !src.startsWith("data:")) images[index].removeAttribute("src");
-    }
-
-    const elements = clone.querySelectorAll("*");
-    for (let index = 0; index < elements.length; index += 1) {
-      const style = elements[index].style.cssText;
-      if (style && style.includes("url(")) {
-        elements[index].style.cssText = style.replace(
-          /url\(["']?(?!data:)[^)"']*["']?\)/gi,
-          "none",
-        );
-      }
-    }
-  }
-
-  function emitScroll() {
-    scrollRaf = 0;
-    if (!scrollForwarding) return;
-    postToTrustedTop({
-      type: "INLINE_EDIT_SCROLL",
-      scrollX: window.scrollX,
-      scrollY: window.scrollY,
-    });
-  }
-
-  window.addEventListener(
-    "scroll",
-    function () {
-      if (!scrollForwarding || scrollRaf) return;
-      scrollRaf = requestAnimationFrame(emitScroll);
-    },
-    { passive: true, capture: true },
-  );
-
-  async function handleCaptureRequest(event) {
-    const requestId = event.data.requestId;
-    const scrollX = window.scrollX;
-    const scrollY = window.scrollY;
-    const width = window.innerWidth;
-    const height = window.innerHeight;
-
-    function postResult(dataUrl) {
-      postToTrustedTop({
-        type: "INLINE_EDIT_SCREENSHOT_RESULT",
-        requestId,
-        dataUrl,
-        scrollX,
-        scrollY,
-      });
-    }
-
-    try {
-      // Wait for any pending web fonts to resolve so both inline metrics and
-      // the @font-face inlining below see the same loaded faces.
-      if (document.fonts && document.fonts.ready) {
-        try {
-          await document.fonts.ready;
-        } catch (_error) {}
-      }
-
-      const clone = document.documentElement.cloneNode(true);
-      inlineAll(document.documentElement, clone);
-
-      const removedNodes = clone.querySelectorAll("script,link[rel=\"stylesheet\"],style");
-      for (let index = 0; index < removedNodes.length; index += 1) {
-        removedNodes[index].remove();
-      }
-
-      stripExternal(clone);
-
-      // Re-embed web fonts as data-URI @font-face rules so the SVG rasterizer
-      // can resolve them — external font URLs aren't fetched during
-      // foreignObject rendering, which would otherwise force a fallback face
-      // and change text metrics.
-      const inlinedFontCss = await buildInlinedFontCss();
-      if (inlinedFontCss) {
-        const styleEl = document.createElement("style");
-        styleEl.textContent = inlinedFontCss;
-        const head = clone.querySelector("head");
-        if (head) head.appendChild(styleEl);
-        else clone.insertBefore(styleEl, clone.firstChild);
-      }
-
-      const html = new XMLSerializer().serializeToString(clone);
-      const svg =
-        `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">` +
-        '<foreignObject width="100%" height="100%">' +
-        `<div xmlns="http://www.w3.org/1999/xhtml" style="width:${width}px;height:${height}px;overflow:hidden">` +
-        `<div style="position:relative;left:-${scrollX}px;top:-${scrollY}px">` +
-        html +
-        "</div></div></foreignObject></svg>";
-      const svgUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
-      const image = new Image();
-      image.onload = function () {
-        const canvas = document.createElement("canvas");
-        canvas.width = width;
-        canvas.height = height;
-        canvas.getContext("2d").drawImage(image, 0, 0);
-        postResult(canvas.toDataURL("image/png"));
-      };
-      image.onerror = function () {
-        postResult(null);
-      };
-      image.src = svgUrl;
-    } catch (_error) {
-      postResult(null);
-    }
-  }
-
-  window.addEventListener("message", function (event) {
-    if (!event.data) return;
-    // Only accept messages from the direct parent frame. Blocks sibling /
-    // unrelated-window postMessage senders that could otherwise reach us.
-    if (event.source !== window.parent) return;
-
-    const trustedParentOrigin = getTrustedParentOrigin(event);
-    if (!trustedParentOrigin) return;
-    trustedTopOrigin = trustedParentOrigin;
-
-    if (event.data.type === "INLINE_EDIT_SCROLL_START") {
-      scrollForwarding = true;
-      emitScroll();
-      return;
-    }
-
-    if (event.data.type === "INLINE_EDIT_SCROLL_STOP") {
-      scrollForwarding = false;
-      if (scrollRaf) cancelAnimationFrame(scrollRaf);
-      scrollRaf = 0;
-      return;
-    }
-
-    if (event.data.type !== "INLINE_EDIT_CAPTURE_REQUEST") return;
-
-    handleCaptureRequest(event);
-  });
-})();
-
-
-</script></body>
-<link rel="stylesheet" href="assets/liquid-glass-skin.0a54a0f62eb1d974.css?v=android-fix-20260914d" data-gp-glass-skin="true">
+</body>
 </html>

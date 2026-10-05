@@ -8,6 +8,13 @@
     Änderung bitte hier oben einen neuen Eintrag ergänzen:
     [BUGFIX] oder [PERFORMANCE] oder [FEATURE] als Tag, dann kurz
     Symptom/Ziel, Ursache, Fix, und der beobachtbare Effekt.
+    [FEATURE / EASTER-EGG / CLEANUP] Release v24.204.0: Dynamic Island 5-Tap Secret Trigger & Redesign der Studio/Spatial Experience
+      - 5-fach Tap/Klick auf die Dynamic Island:
+        Touch-Gesten und Klick-Events auf #dynamic-island wurden synchronisiert und mit Debounce abgesichert. Exakt 5 Taps schalten die Secret Page (spatial-audio.html) zuverlässig frei, sowohl auf Mobilgeräten (Android/iOS) als auch auf Desktop.
+      - Überholung der Secret Seite (spatial-audio.html):
+        Die Seite wurde komplett aufgeräumt: 330 Zeilen Perplexity-Inlineskripte und tote APIs (worldtimeapi.org) entfernt. Neues, ultra-minimalistisches OLED-Design mit ambientem Cover-Art-Glow, Breathing-Effekt, animierten Live-EQ-Balken und Vollbild-Modus.
+      - Cover-Laden & Stats.fm-Fallback auf der Secret Seite garantiert:
+        Artwork-URLs werden direkt aus der primären NPC-API oder dem Stats.fm-Live-Stream bezogen. Sollte kein Bild hinterlegt sein, greift die automatische iTunes-Search-API als Fallback. Vorladen via Image() verhindert Flimmern und weiße Blitze.
     [PERFORMANCE / THERMAL / SCROLL] Release v24.203.0: 95% GPU-Fix bei Songtext-Platzhalter, Pixel 8 Pro Hitze- & Ruckel-Beseitigung (Apple Music Pro) & 60 FPS Cap
       - GPU-Dauerlast bei Songtext-Platzhaltern beseitigt (Laptop & Desktop):
         Hinter dem blickdichten Lyrics-Overlay liefen bisher die 8 Hintergrund-Partikel (#particles-container), der 85px Gaussian-Blur des Cover-Glows (#ambilight-glow) und der 22px Backdrop-Filter der Hauptkarte ununterbrochen weiter. Zudem lief der rAF-Loop animateLoop() selbst ohne Songtext (parsedLyrics.length === 0) bei 60-144 FPS durch. Beide Ursachen behoben: Hintergrundelemente werden bei geöffneten Lyrics vollständig ausgeblendet (display: none !important), der Backdrop-Filter deaktiviert und animateLoop() beendet sich sofort bei leerem Text zu Gunsten eines 250ms-Intervalls. GPU-Last sinkt von 95% auf unter 2%.
@@ -8246,7 +8253,7 @@ html.gp-android:not(.dark) #ui-controls {
     <div id="footer-expandable-menu" class="hidden fixed z-[95] p-3.5 rounded-2xl bg-slate-900/95 border border-slate-700/80 shadow-2xl backdrop-blur-xl w-[315px] xxs:w-[340px] sm:w-[370px] max-w-[calc(100vw-1.5rem)] text-xs space-y-2.5" onclick="event.stopPropagation()">
         <div class="flex items-center justify-between px-1 pb-1.5 border-b border-white/10 gap-2">
             <span id="footer-menu-title" data-i18n="footer_menu_title" class="font-bold text-slate-400 text-[10px] uppercase tracking-wider truncate">Navigation &amp; Rechtliches</span>
-            <span id="footer-menu-hint" class="text-[9px] text-pink-400 font-mono font-bold shrink-0 whitespace-nowrap">v24.203.0</span>
+            <span id="footer-menu-hint" class="text-[9px] text-pink-400 font-mono font-bold shrink-0 whitespace-nowrap">v24.204.0</span>
         </div>
         <div class="grid grid-cols-2 gap-2 text-left">
             <button onclick="openEpicWhatsNewTour(false); toggleFooterMenu(false)" id="footer-whats-new-btn" class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/90 text-slate-200 hover:text-white font-medium flex items-center gap-2 transition-all active:scale-[0.98]">
@@ -8280,7 +8287,7 @@ html.gp-android:not(.dark) #ui-controls {
     <div id="footer-bubble" class="fixed z-[91] inline-flex items-center justify-center gap-1.5 sm:gap-3 px-3 sm:px-6 rounded-full bg-slate-900/85 backdrop-blur-xl border border-white/15 shadow-xl text-[10px] xs:text-xs sm:text-sm text-slate-300 transition-all select-none opacity-0 pointer-events-none">
         <span id="footer-established" class="font-bold tracking-tight text-slate-300 whitespace-nowrap">© 2026 GAMINGPIG</span>
         <span class="text-white/20 select-none">•</span>
-        <span id="footer-version-label" class="font-mono font-bold text-pink-400 whitespace-nowrap">v24.203.0</span>
+        <span id="footer-version-label" class="font-mono font-bold text-pink-400 whitespace-nowrap">v24.204.0</span>
         <span class="text-white/20 select-none">•</span>
         <button id="footer-menu-toggle-btn" onclick="toggleFooterMenu()" class="text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1 sm:gap-1.5 transition-all px-1.5 sm:px-2 py-1 rounded-full hover:bg-white/10 active:scale-95 whitespace-nowrap" aria-expanded="false" aria-label="Mehr Menü öffnen">
             <span id="footer-more-label">Mehr</span>
@@ -15451,6 +15458,9 @@ html.gp-android:not(.dark) #ui-controls {
             clearTimeout(diHideTimeout);
             island.classList.toggle('di-expanded');
             updateIslandRing();
+            if (typeof registerDynamicIslandEasterClick === 'function') {
+                registerDynamicIslandEasterClick();
+            }
         }
 
         // Nutzer wischt die Insel nach oben weg - dauerhaft ausgeblendet, bis er sie über
@@ -16889,6 +16899,38 @@ let shareCardLoading;
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+    { version: "v24.204.0", date: "6. Oktober 2026", type: "feature", items: {
+        de: [
+            "🚀 Secret Easter Egg optimiert: 5-fach Tap auf die Dynamic Island öffnet zuverlässig die geheime Spatial Experience",
+            "🖼️ Cover-Laden auf der Secret Seite garantiert: Artwork wird direkt aus Spotify und Stats.fm bezogen – mit automatischem iTunes-Suchfallback",
+            "✨ Ultra-minimalistisches Design: Aufgeräumte OLED-Ästhetik mit ambientem Album-Glow, Breathing-Effekt und Vollbild-Modus",
+            "⚡ 330 Zeilen Ballast entfernt: Veraltete Scripts und inaktive APIs restlos bereinigt für blitzschnelle Ladezeiten"
+        ],
+        en: [
+            "🚀 Secret Easter Egg Refined: Tapping 5 times on the Dynamic Island seamlessly opens the 3D Spatial Experience",
+            "🖼️ Guaranteed Cover Art: Artwork loads directly from Spotify and Stats.fm with automated iTunes search fallback",
+            "✨ Ultra-Minimalist Design: Clean OLED aesthetic with ambient cover glow, breathing vinyl animation, and fullscreen mode",
+            "⚡ Streamlined & Polished: Purged legacy scripts and dead endpoints for instant loading"
+        ],
+        es: [
+            "🚀 Huevo de pascua secreto perfeccionado: 5 toques en la Dynamic Island abren la experiencia Spatial",
+            "🖼️ Portadas 100% garantizadas: Carga directa desde Spotify y Stats.fm con respaldo automático de iTunes",
+            "✨ Diseño ultra-minimalista: Estética OLED limpia con halo ambiental y modo a pantalla completa",
+            "⚡ Código optimizado: Eliminados scripts obsoletos para máxima velocidad"
+        ],
+        fr: [
+            "🚀 Easter Egg Secret perfectionné : 5 tapes sur la Dynamic Island ouvrent l'expérience Spatial",
+            "🖼️ Pochettes garanties : Chargement direct depuis Spotify et Stats.fm avec secours iTunes",
+            "✨ Design ultra-minimaliste : Esthétique OLED avec halo ambiant et mode plein écran",
+            "⚡ Performance épurée : Suppression des anciens scripts pour un affichage instantané"
+        ],
+        pt: [
+            "🚀 Easter Egg Secreto aprimorado: 5 toques na Dynamic Island abrem a experiência Spatial",
+            "🖼️ Capas garantidas: Carregamento direto do Spotify e Stats.fm com fallback do iTunes",
+            "✨ Design ultra-minimalista: Estética OLED com brilho ambiente e tela cheia",
+            "⚡ Código limpo: Remoção de scripts obsoletos para velocidade máxima"
+        ]
+    }},
     { version: "v24.203.0", date: "6. Oktober 2026", type: "performance", items: {
         de: [
             "⚡ GPU-Last bei Songtext-Platzhalter auf 0% gesenkt: Unnötige rAF-Loops, Hintergrundpartikel und Cover-Glows hinter dem Lyrics-Overlay werden vollständig deaktiviert",
@@ -22984,21 +23026,28 @@ window.setLyricsStyle = function(style) {
             });
         }
 
-        // Auch auf die Dynamic Island (Doppelklick) als Bonus-Trigger
+        // 5-fach Klick / Tap auf die Dynamic Island als Secret-Trigger zur Spatial Experience
+        let diClickCount = 0;
+        let diTimer = null;
+        let lastDiEasterTapTime = 0;
+        function registerDynamicIslandEasterClick() {
+            const now = Date.now();
+            if (now - lastDiEasterTapTime < 100) return; // Doppel-Trigger bei Touch/Click verhindern
+            lastDiEasterTapTime = now;
+            diClickCount++;
+            clearTimeout(diTimer);
+            if (diClickCount >= 5) {
+                diClickCount = 0;
+                triggerEasterWarp();
+            } else {
+                diTimer = setTimeout(() => { diClickCount = 0; }, 2000);
+            }
+        }
+        window.registerDynamicIslandEasterClick = registerDynamicIslandEasterClick;
+
         const diIsland = document.getElementById('dynamic-island');
         if (diIsland) {
-            let diClickCount = 0;
-            let diTimer = null;
-            diIsland.addEventListener('click', () => {
-                diClickCount++;
-                clearTimeout(diTimer);
-                if (diClickCount >= 4) {
-                    diClickCount = 0;
-                    triggerEasterWarp();
-                } else {
-                    diTimer = setTimeout(() => { diClickCount = 0; }, 1200);
-                }
-            });
+            diIsland.addEventListener('click', registerDynamicIslandEasterClick);
         }
 
         const konamiSequence = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
