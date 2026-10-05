@@ -9,6 +9,15 @@
     [BUGFIX] oder [PERFORMANCE] oder [FEATURE] als Tag, dann kurz
     Symptom/Ziel, Ursache, Fix, und der beobachtbare Effekt.
     Neueste Einträge oben.
+    [BUGFIX / PERFORMANCE / UI] Release v24.201.0: KI-Hinweis Entfernung, Suchbutton Textfarbe (Light Mode), Liquid Glass Transluzenz & Mobile Playback Entlastung
+      - Veralteter KI-Hinweis entfernt:
+        Der blockierende 2-Minuten-Dialog (#ai-version-notice, Version 24.159.0) und dessen Settings-Schalter wurden restlos entfernt. Altspeicher-Keys werden beim Laden neutralisiert.
+      - Spotlight-Suchbutton (#cp-trigger) im Light Mode korrigiert:
+        Auf Mobilgeräten und Desktop im Light Mode war der Buttontext (⌘K) weiß auf weißem Grund. Die Textfarbe wurde analog zum Pfeil-Button rechts (#back-to-top) auf kräftiges Königsblau (#2563eb im Light Mode, #60a5fa im Dark Mode) gesetzt.
+      - Liquid Glass im Light Mode transluzent gemacht:
+        Der Hintergrund wurde von opaken 90-94% Deckkraft auf elegantes, transluzentes Milchglas (65%/52%/62%) mit Kantenreflektionen veredelt, sodass Hintergrundakzente sanft durchscheinen.
+      - Mobile GPU & Hitzeentlastung bei Musikwiedergabe:
+        Der 85px Live-Gaussian-Blur von #ambilight-glow wurde auf Mobilgeräten auf schonende 20px skaliert und die 8 rechenintensiven Endlos-Partikel (#particles-container) werden auf Mobilgeräten ausgeblendet, wodurch der Akku und Tensor-Chip kühl bleiben.
     [PERFORMANCE / ARCHITEKTUR] Release v24.200.0: Multi-Strategie-Compositor, Pixel-Flacker-Schutz & Liquid Glass Aura-Optimierung
       - Ursache Flackern im Liquid Glass Modus:
         1. Im Liquid Glass Modus besaß #main-music-card einen 24px Live-Backdrop-Filter. Wurde das Einstellungsmenü geöffnet, lag es direkt darüber -> Nested Backdrop-Filter Kollision in Chromium Skia, die auf Mali/Tensor GPU drastische Textur-Verwerfungen und schwarze/helle Blitze auslöste.
@@ -3326,7 +3335,7 @@
             AppStorage.setItem('app_visit_count', String(_visitCount));
 
             // 🛡️ INSTANT ONBOARDING SHIELD
-            const _currVer = window.ONBOARDING_VERSION = 'v24.200.0 · 2026-10-04';
+            const _currVer = window.ONBOARDING_VERSION = 'v24.201.0 · 2026-10-05';
             const _installedVer = AppStorage.getItem('site_version_installed');
             if (_installedVer !== _currVer) {
                 AppStorage.setItem('site_version_installed', _currVer);
@@ -3752,24 +3761,16 @@ html:not(.dark) #global-settings-menu input[type="range"] {
 
         /* StandBy owns the visible UI. Preserve page layout/state while suspending paint/animation. */
         body.standby-mode #dynamic-island { display: none !important; }
-        body.standby-mode > :not(#standby-overlay):not(#ai-version-notice),
-        body.standby-mode > :not(#standby-overlay):not(#ai-version-notice) *,
-        body.standby-mode > :not(#standby-overlay):not(#ai-version-notice)::before,
-        body.standby-mode > :not(#standby-overlay):not(#ai-version-notice)::after,
-        body.standby-mode > :not(#standby-overlay):not(#ai-version-notice) *::before,
-        body.standby-mode > :not(#standby-overlay):not(#ai-version-notice) *::after {
+        body.standby-mode > :not(#standby-overlay),
+        body.standby-mode > :not(#standby-overlay) *,
+        body.standby-mode > :not(#standby-overlay)::before,
+        body.standby-mode > :not(#standby-overlay)::after,
+        body.standby-mode > :not(#standby-overlay) *::before,
+        body.standby-mode > :not(#standby-overlay) *::after {
             visibility: hidden !important;
             pointer-events: none !important;
             animation-play-state: paused !important;
         }
-        #ai-version-notice { position: fixed; inset: 0; margin: 0; width: 100%; max-width: none; height: 100dvh; max-height: none; box-sizing: border-box; padding: max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom)); border: 0; background: #111827; color: #fff; overflow-y: auto; font: 16px/1.6 system-ui; }
-        #ai-version-notice::backdrop { background: #111827; }
-        #ai-version-notice .ai-copy { max-width: 1000px; margin: 24px auto; display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); }
-        #ai-version-notice article { padding: 18px; border: 2px solid #facc15; border-radius: 12px; }
-        #ai-version-notice h2 { color: #facc15; font-size: clamp(22px, 4vw, 36px); font-weight: 900; text-align: center; }
-        #ai-version-notice button { display: block; margin: 20px auto; padding: 14px; border: 2px solid #facc15; border-radius: 10px; color: #111827; background: #facc15; font-weight: 800; }
-        #ai-version-notice button:disabled { opacity: .65; cursor: wait; }
-        #ai-notice-time { display: block; text-align: center; font-size: 24px; font-weight: 800; }
 
 
         /* Lyrics Settings Menu (Dropdown anchored directly in lyrics center header) */
@@ -4151,16 +4152,16 @@ body.liquid-glass-active :is(.glass-card:not(#back-to-top), #header-section, #fo
 
     background: linear-gradient(
         135deg,
-        rgba(255, 255, 255, 0.90) 0%,
-        rgba(255, 255, 255, 0.82) 40%,
-        rgba(241, 245, 249, 0.88) 100%
+        rgba(255, 255, 255, 0.65) 0%,
+        rgba(248, 250, 252, 0.52) 40%,
+        rgba(241, 245, 249, 0.62) 100%
     ) !important;
 
-    border: 1.5px solid rgba(226, 232, 240, 0.85) !important;
-    border-top: 2px solid rgba(255, 255, 255, 0.98) !important;
-    border-left: 1.5px solid rgba(255, 255, 255, 0.90) !important;
-    border-bottom: 1.5px solid rgba(203, 213, 225, 0.50) !important;
-    border-right: 1.5px solid rgba(203, 213, 225, 0.60) !important;
+    border: 1.5px solid rgba(255, 255, 255, 0.85) !important;
+    border-top: 2px solid rgba(255, 255, 255, 1) !important;
+    border-left: 1.5px solid rgba(255, 255, 255, 0.95) !important;
+    border-bottom: 1.5px solid rgba(203, 213, 225, 0.40) !important;
+    border-right: 1.5px solid rgba(203, 213, 225, 0.45) !important;
 
     border-radius: 24px !important;
     box-shadow:
@@ -7026,15 +7027,22 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
         #cp-trigger {
             position: fixed !important; bottom: 16px; left: 16px; z-index: 300;
             display: flex; align-items: center; gap: 4px; padding: 8px 12px;
-            background: rgba(15, 23, 42, 0.65); border: 1px solid rgba(255,255,255,0.12);
-            backdrop-filter: blur(4px) saturate(120%); -webkit-backdrop-filter: blur(4px) saturate(120%);
-            border-radius: 10px; color: rgba(255,255,255,0.7); font-family: 'JetBrains Mono', monospace;
-            font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.25s var(--apple-ease);
+            background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(255,255,255,0.16);
+            border-top: 1.5px solid rgba(255,255,255,0.35);
+            backdrop-filter: blur(8px) saturate(130%); -webkit-backdrop-filter: blur(8px) saturate(130%);
+            border-radius: 10px; color: #60a5fa !important; font-family: 'JetBrains Mono', monospace;
+            font-size: 12px; font-weight: 800; cursor: pointer; transition: all 0.25s var(--apple-ease);
             box-shadow: 0 8px 24px rgba(0,0,0,0.3);
         }
-        #cp-trigger:hover { color: #fff; border-color: rgba(59,130,246,0.5); transform: translateY(-2px); }
-        html:not(.gp-android):not(.dark) #cp-trigger { background: rgba(255,255,255,0.7); color: rgba(15,23,42,0.7); border-color: rgba(0,0,0,0.08); }
-        html:not(.dark) #cp-trigger:hover { color: #0f172a; }
+        #cp-trigger:hover { color: #93c5fd !important; border-color: rgba(96,165,250,0.6); transform: translateY(-2px); }
+        html:not(.dark) #cp-trigger {
+            background: rgba(255, 255, 255, 0.88) !important;
+            color: #2563eb !important;
+            border: 1.5px solid rgba(37, 99, 235, 0.28) !important;
+            border-top: 1.5px solid rgba(255, 255, 255, 0.95) !important;
+            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.12), 0 2px 6px rgba(0,0,0,0.06);
+        }
+        html:not(.dark) #cp-trigger:hover { color: #1d4ed8 !important; border-color: rgba(37, 99, 235, 0.55) !important; }
         @media (max-width: 640px) {
             #cp-trigger { padding: 7px 10px; font-size: 11px; bottom: 12px; left: 12px; }
         }
@@ -7697,10 +7705,10 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
   box-shadow: 0 16px 44px rgba(0, 0, 0, 0.55), inset 0 1.5px 2px rgba(255, 255, 255, 0.25) !important;
 }
 :is(html.gp-android, html.gp-mobile, html.gp-pixel):not(.dark) body.liquid-glass-active :is(.glass-card:not(#back-to-top), #header-section, #footer-bubble, #footer-expandable-menu) {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.94) 0%, rgba(241, 245, 249, 0.88) 100%) !important;
-  border: 1px solid rgba(0, 0, 0, 0.10) !important;
-  border-top: 1.8px solid rgba(255, 255, 255, 0.98) !important;
-  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.08), inset 0 1.5px 2px rgba(255, 255, 255, 0.80) !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.72) 0%, rgba(248, 250, 252, 0.58) 40%, rgba(241, 245, 249, 0.65) 100%) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.85) !important;
+  border-top: 2px solid rgba(255, 255, 255, 1) !important;
+  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.06), inset 0 1.5px 2px rgba(255, 255, 255, 0.95) !important;
   color: #0f172a !important;
 }
 
@@ -7910,18 +7918,30 @@ html.glass-strat-fluid:not(.gp-android) :is(#global-settings-menu, #lyrics-setti
   border-top: 1.5px solid rgba(255, 255, 255, 0.90) !important;
 }
 
-/* --- 6. CP trigger: solid frosted glass + tuned blur --- */
-:is(html.gp-android, html.gp-mobile) #cp-trigger {
+/* --- 6. CP trigger: solid frosted glass + tuned blur & royal blue text in light mode --- */
+:is(html.gp-android, html.gp-mobile, html.gp-pixel) #cp-trigger {
   -webkit-backdrop-filter: blur(8px) saturate(130%) !important;
   backdrop-filter: blur(8px) saturate(130%) !important;
   background: rgba(30, 41, 59, 0.88) !important;
   border: 1px solid rgba(255, 255, 255, 0.14) !important;
   border-top: 1.5px solid rgba(255, 255, 255, 0.35) !important;
+  color: #60a5fa !important;
 }
-:is(html.gp-android, html.gp-mobile):not(.dark) #cp-trigger {
-  background: rgba(255, 255, 255, 0.92) !important;
-  border: 1px solid rgba(0, 0, 0, 0.08) !important;
-  border-top: 1.5px solid rgba(255, 255, 255, 0.85) !important;
+:is(html.gp-android, html.gp-mobile, html.gp-pixel):not(.dark) #cp-trigger {
+  background: rgba(255, 255, 255, 0.90) !important;
+  border: 1.5px solid rgba(37, 99, 235, 0.28) !important;
+  border-top: 1.5px solid rgba(255, 255, 255, 0.95) !important;
+  color: #2563eb !important;
+  font-weight: 800 !important;
+}
+
+/* --- Mobile Thermal Relief: Reduced shader passes & particle overhead during music playback --- */
+:is(html.gp-android, html.gp-mobile, html.gp-pixel) #ambilight-glow {
+  filter: blur(20px) saturate(2.0) brightness(1.2) !important;
+  inset: -15px !important;
+}
+:is(html.gp-android, html.gp-mobile, html.gp-pixel) #particles-container {
+  display: none !important;
 }
 
 /* --- Android GPU Background Isolation: eliminates layer thrashing, GPU heat & compositor flickering --- */
@@ -8080,78 +8100,9 @@ html.gp-android:not(.dark) #ui-controls {
         </defs>
     </svg>
 
-    <dialog id="ai-version-notice" aria-labelledby="ai-notice-title" aria-modal="true">
-      <h2 id="ai-notice-title">100 % KI / AI · VERSION 24.159.0</h2>
-      <div class="ai-copy">
-        <article lang="de"><strong>Deutsch</strong><p>Die Änderungen in dieser Version sind zu 100 % KI-generiert. Bitte lies diesen Hinweis. Die Seite wird nach zwei Minuten freigegeben.</p></article>
-        <article lang="en"><strong>English</strong><p>The changes in this version are 100% AI-generated. Please read this notice. The page becomes available after two minutes.</p></article>
-        <article lang="es"><strong>Español</strong><p>Los cambios de esta versión están generados al 100 % por inteligencia artificial. Lee este aviso. La página estará disponible después de dos minutos.</p></article>
-        <article lang="fr"><strong>Français</strong><p>Les modifications de cette version sont générées à 100 % par une intelligence artificielle. Veuillez lire cet avis. La page sera accessible après deux minutes.</p></article>
-        <article lang="pt"><strong>Português</strong><p>As alterações desta versão foram geradas 100 % por inteligência artificial. Leia este aviso. A página estará disponível após dois minutos.</p></article>
-        <article lang="tr"><strong>Türkçe</strong><p>Bu sürümdeki değişiklikler %100 yapay zekâ tarafından oluşturulmuştur. Lütfen bu bildirimi okuyun. Sayfa iki dakika sonra kullanılabilir olacaktır.</p></article>
-      </div>
-      <output id="ai-notice-time" aria-label="Countdown">2:00</output>
-      <button id="ai-notice-continue" type="button" disabled>Weiter / Continue / Continuar / Continuer / Devam</button>
-    </dialog>
     <script>
-    (() => {
-        const noticeVersion = '24.159.0';
-        const noticeKey = 'gp_ai_notice_v1';
-        const readNotice = () => {
-            try { return JSON.parse(AppStorage.getItem(noticeKey) || '{}') || {}; }
-            catch (_) { return {}; }
-        };
-        window.updateAiNoticeCounter = () => {
-            const lang = (AppStorage.getItem('app_language') || document.documentElement.lang || 'de').slice(0, 2);
-            const copy = { de: ['KI-Hinweis bestätigt', 'Zurücksetzen (Hinweis beim nächsten Besuch)'], en: ['AI notice completed', 'Reset (show on next visit)'], es: ['Aviso de IA completado', 'Restablecer (próxima visita)'], fr: ['Avis IA terminé', 'Réinitialiser (prochaine visite)'], pt: ['Aviso de IA concluído', 'Redefinir (próxima visita)'], tr: ['Yapay zekâ bildirimi tamamlandı', 'Sıfırla (sonraki ziyarette göster)'] };
-            const text = copy[lang] || copy.de;
-            const count = Number(readNotice().count) || 0;
-            const label = document.getElementById('ai-notice-counter');
-            const reset = document.getElementById('ai-notice-reset');
-            if (label) label.textContent = text[0] + ': ' + count;
-            if (reset) reset.textContent = text[1];
-        };
-        window.resetAiNotice = () => { AppStorage.removeItem(noticeKey); window.updateAiNoticeCounter(); };
-        document.addEventListener('DOMContentLoaded', window.updateAiNoticeCounter, { once: true });
-        const saved = readNotice();
-        const dialog = document.getElementById('ai-version-notice');
-        if (saved.version === noticeVersion && saved.completed) { dialog.remove(); return; }
-        const startedAt = saved.version === noticeVersion && Number.isFinite(saved.startedAt) ? saved.startedAt : Date.now();
-        AppStorage.setItem(noticeKey, JSON.stringify({ version: noticeVersion, startedAt, count: Number(saved.count) || 0, completed: false }));
-        const button = document.getElementById('ai-notice-continue');
-        const clock = document.getElementById('ai-notice-time');
-        const deadline = startedAt + 120000;
-        let locked = true;
-        const originalState = history.state;
-        history.pushState(originalState, '', location.href);
-        const blockBack = event => {
-            if (!locked) return;
-            event.stopImmediatePropagation();
-            history.pushState(originalState, '', location.href);
-        };
-        const blockEscape = event => {
-            if (locked && event.key === 'Escape') { event.preventDefault(); event.stopImmediatePropagation(); }
-        };
-        window.addEventListener('popstate', blockBack, true);
-        window.addEventListener('keydown', blockEscape, true);
-        dialog.addEventListener('cancel', event => { if (locked) event.preventDefault(); });
-        dialog.addEventListener('close', () => { if (locked) dialog.showModal(); });
-        dialog.showModal();
-        const timer = setInterval(() => {
-            const seconds = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
-            clock.textContent = Math.floor(seconds / 60) + ':' + String(seconds % 60).padStart(2, '0');
-            if (!seconds) {
-                clearInterval(timer);
-                locked = false;
-                AppStorage.setItem(noticeKey, JSON.stringify({ version: noticeVersion, completed: true, count: (Number(saved.count) || 0) + 1 }));
-                window.updateAiNoticeCounter();
-                button.disabled = false;
-                window.removeEventListener('popstate', blockBack, true);
-                window.removeEventListener('keydown', blockEscape, true);
-            }
-        }, 1000);
-        button.addEventListener('click', () => { if (!locked) { dialog.close(); dialog.remove(); } });
-    })();
+    // Clean up obsolete legacy AI notice storage key if present
+    try { AppStorage.removeItem('gp_ai_notice_v1'); localStorage.removeItem('gp_ai_notice_v1'); } catch (_) {}
     </script>
 
     <!-- TRANSPARENTER & UNUMGÄNGLICHER DATENSCHUTZ-AKTUALISIERUNGS-HINWEIS -->
@@ -8246,7 +8197,7 @@ html.gp-android:not(.dark) #ui-controls {
     <div id="footer-expandable-menu" class="hidden fixed z-[95] p-3.5 rounded-2xl bg-slate-900/95 border border-slate-700/80 shadow-2xl backdrop-blur-xl w-[315px] xxs:w-[340px] sm:w-[370px] max-w-[calc(100vw-1.5rem)] text-xs space-y-2.5" onclick="event.stopPropagation()">
         <div class="flex items-center justify-between px-1 pb-1.5 border-b border-white/10 gap-2">
             <span id="footer-menu-title" data-i18n="footer_menu_title" class="font-bold text-slate-400 text-[10px] uppercase tracking-wider truncate">Navigation &amp; Rechtliches</span>
-            <span id="footer-menu-hint" class="text-[9px] text-pink-400 font-mono font-bold shrink-0 whitespace-nowrap">v24.200.0</span>
+            <span id="footer-menu-hint" class="text-[9px] text-pink-400 font-mono font-bold shrink-0 whitespace-nowrap">v24.201.0</span>
         </div>
         <div class="grid grid-cols-2 gap-2 text-left">
             <button onclick="openEpicWhatsNewTour(false); toggleFooterMenu(false)" id="footer-whats-new-btn" class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/90 text-slate-200 hover:text-white font-medium flex items-center gap-2 transition-all active:scale-[0.98]">
@@ -8280,7 +8231,7 @@ html.gp-android:not(.dark) #ui-controls {
     <div id="footer-bubble" class="fixed z-[91] inline-flex items-center justify-center gap-1.5 sm:gap-3 px-3 sm:px-6 rounded-full bg-slate-900/85 backdrop-blur-xl border border-white/15 shadow-xl text-[10px] xs:text-xs sm:text-sm text-slate-300 transition-all select-none opacity-0 pointer-events-none">
         <span id="footer-established" class="font-bold tracking-tight text-slate-300 whitespace-nowrap">© 2026 GAMINGPIG</span>
         <span class="text-white/20 select-none">•</span>
-        <span id="footer-version-label" class="font-mono font-bold text-pink-400 whitespace-nowrap">v24.200.0</span>
+        <span id="footer-version-label" class="font-mono font-bold text-pink-400 whitespace-nowrap">v24.201.0</span>
         <span class="text-white/20 select-none">•</span>
         <button id="footer-menu-toggle-btn" onclick="toggleFooterMenu()" class="text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1 sm:gap-1.5 transition-all px-1.5 sm:px-2 py-1 rounded-full hover:bg-white/10 active:scale-95 whitespace-nowrap" aria-expanded="false" aria-label="Mehr Menü öffnen">
             <span id="footer-more-label">Mehr</span>
@@ -9722,10 +9673,6 @@ html.gp-android:not(.dark) #ui-controls {
         <button onclick="resetEverythingToFirstVisit()" class="w-full py-2 px-3 rounded-xl bg-red-950/40 hover:bg-red-900/50 text-red-200 font-bold text-[10px] sm:text-xs transition-all active:scale-95 flex items-center justify-center gap-1.5 border border-red-500/30">
             <span>🔄</span> <span>Auf Erstbesuch zurücksetzen</span>
         </button>
-        <div class="pt-1.5 border-t border-white/5 flex items-center justify-between text-[9px] text-slate-400">
-            <span id="ai-notice-counter" aria-live="polite">KI-Hinweis bestätigt: 0</span>
-            <button id="ai-notice-reset" type="button" onclick="resetAiNotice()" class="text-blue-300 hover:text-blue-200 underline">Hinweis zurücksetzen</button>
-        </div>
     </div>
 
     <p id="settings-version-label" class="text-left text-[9px] xxs:text-[10px] text-slate-500 px-2 py-1 font-mono select-all">Version —</p>
@@ -15865,7 +15812,7 @@ let shareCardLoading;
                 currentFetchId++; // Ignore lyrics responses started before entering StandBy.
                 if (isLyricsSettingsOpen) window.toggleLyricsSettings();
                 for (const element of document.body.children) {
-                    if (element === overlay || element.id === 'ai-version-notice' || ['SCRIPT', 'STYLE', 'LINK'].includes(element.tagName)) continue;
+                    if (element === overlay || ['SCRIPT', 'STYLE', 'LINK'].includes(element.tagName)) continue;
                     if (!standbyInertElements.has(element)) standbyInertElements.set(element, { inert: element.inert, opacity: element.style.getPropertyValue('opacity'), priority: element.style.getPropertyPriority('opacity'), transition: element.style.getPropertyValue('transition'), transitionPriority: element.style.getPropertyPriority('transition') });
                     element.inert = true;
                     element.style.setProperty('transition', 'none', 'important');
@@ -16882,6 +16829,38 @@ let shareCardLoading;
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+    { version: "v24.201.0", date: "5. Oktober 2026", type: "fix", items: {
+        de: [
+            "✨ Spotlight-Suchbutton gefixt: Schriftfarbe im Light Mode auf kräftiges Königsblau gesetzt — analog zum Pfeil-Button rechts kristallklar lesbar",
+            "🛡️ Veralteter KI-Hinweis entfernt: 2-Minuten-Blockadedialog (v24.159.0) und veraltete Zähler vollständig aus App & Einstellungen entfernt",
+            "💧 Liquid Glass Transluzenz veredelt: Im Light Mode echtes transluzentes Milchglas mit Kantenlicht statt opaker weißer Wand",
+            "❄️ Mobile Wiedergabe-Entlastung: Blur-Filterung optimiert und Partikel auf Mobilgeräten pausiert für kühle Hardware bei Musikwiedergabe"
+        ],
+        en: [
+            "✨ Spotlight Search Button Fixed: Font color in Light Mode updated to royal blue — perfectly readable matching the arrow button",
+            "🛡️ Obsolete AI Notice Removed: Completely eradicated the legacy 2-minute modal notice (v24.159.0) and settings reset controls",
+            "💧 Liquid Glass Translucency: Refined Light Mode cards to authentic frosted glass with edge refraction instead of opaque white",
+            "❄️ Mobile Playback Thermal Relief: Tuned blur filters and paused particles on mobile devices to keep SOCs cool during music playback"
+        ],
+        es: [
+            "✨ Botón de búsqueda corregido: Texto en azul real en modo claro, perfectamente legible como el botón de flecha",
+            "🛡️ Aviso de IA obsoleto eliminado: Eliminado el diálogo de bloqueo de 2 minutos (v24.159.0) y sus controles",
+            "💧 Liquid Glass translúcido: Cristal esmerilado auténtico en modo claro en lugar de fondo blanco opaco",
+            "❄️ Alivio térmico en móviles: Filtros de desenfoque optimizados durante la reproducción para evitar calentamiento"
+        ],
+        fr: [
+            "✨ Bouton de recherche corrigé : Texte en bleu royal en mode clair, parfaitement lisible comme le bouton flèche",
+            "🛡️ Avis IA obsolète supprimé : Boîte de dialogue bloquante de 2 minutes (v24.159.0) entièrement supprimée",
+            "💧 Liquid Glass translucide : Verre dépoli authentique en mode clair avec reflets prismatiques",
+            "❄️ Soulagement thermique mobile : Optimisation des filtres et particules pendant la lecture musicale"
+        ],
+        it: [
+            "✨ Pulsante di ricerca corretto: Colore testo in blu reale in modalità chiara, perfettamente leggibile come la freccia",
+            "🛡️ Avviso IA obsoleto rimosso: Finestra di blocco di 2 minuti (v24.159.0) e comandi rimossi del tutto",
+            "💧 Liquid Glass translucido: Vetro smerigliato autentico in modalità chiara al posto di pannelli opachi",
+            "❄️ Rilievo termico mobile: Ottimizzazione filtri blur e particelle in background per mantenere fresco il dispositivo"
+        ]
+    }},
     { version: "v24.200.0", date: "4. Oktober 2026", type: "feature", items: {
         de: [
             "🛡️ Multi-Strategie-Compositor: Neues 3-Stufen-Modell (Auto, Shield, Fluid) für absolut flackerfreie Menüs auf jedem Gerät",
