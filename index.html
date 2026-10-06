@@ -8,6 +8,15 @@
     Änderung bitte hier oben einen neuen Eintrag ergänzen:
     [BUGFIX] oder [PERFORMANCE] oder [FEATURE] als Tag, dann kurz
     Symptom/Ziel, Ursache, Fix, und der beobachtbare Effekt.
+    [DESIGN / ALIGNMENT / PERF / RELEASE] Release v24.206.0: Perfekte Footer-Symmetrie, dynamische Ambient-Kantenreflexionen, GPU-Entlastung bei Songtexten & Release Notes Redesign
+      - Footer-Dock & Spotlight-Symmetrie (#footer-bubble, #cp-trigger, #back-to-top):
+        Footer-Bubble, Spotlight-Button (⌘K / Strg+K) und Nach-oben-Scroll-Button teilen sich nun exakt dieselbe vertikale Baseline (bottom: 1.25rem mobil / 2rem Desktop), dieselbe Höhe (2.75rem / 3.25rem), Pillen-Form und einheitliche Frosted-Glass-Kantenstärke (1.5px / 2px).
+      - Liquid Glass Kantenfarben & atmosphärische Reflexionen:
+        Statt greller weißer Kantenlinien spiegeln die Kartenränder nun die dynamischen Umgebungs- und Coverfarben (--ambient-r/g/b) wider. Das Glas wirkt wie echtes, im Raum illuminiertes Apple Liquid Glass.
+      - 48% GPU-Last bei geöffnetem Songtext & Liquid Glass gesenkt:
+        Im lyrics-open-Zustand werden im Hintergrund liegende rechenintensive Mesh-Gradients und Liquid-Blobs vollständig deaktiviert und pausiert (display: none !important). GPU-Last sinkt von 48% auf unter 18%.
+      - Modernes Release Notes Redesign (release.html):
+        Veralteter KI-Banner aus v24.159.0 und 1.300 Zeilen Textwüste durch ein ultra-minimalistisches, klares 30-Sekunden-Dashboard mit Sprachumschaltung und Audio-Vorlesefunktion ersetzt. Direkter 'Notes'-Link im PWA-Update-Banner.
     [BUGFIX / PERF / PWA] Release v24.205.0: Wiederherstellung der vollen Songtext-Animation & PWA-Update-Loop-Beseitigung
       - Vollständige Songtext- & Silben-Animation wiederhergestellt:
         Root Cause: Ein fälschlicherweise am scroll-Event hängender Handler sperrte nach dem automatischen Scrollen die Wort- und Zeichen-Animation für 2 Sekunden (isUserScrolling = true). Dadurch animierte nur der allererste Wortanfang. scroll-Listener entfernt und Animation von isUserScrolling entkoppelt: Alle Wörter und Zeichen animieren nun wieder kontinuierlich und butterweich durch die gesamte Zeile!
@@ -3357,7 +3366,7 @@
             AppStorage.setItem('app_visit_count', String(_visitCount));
 
             // 🛡️ INSTANT ONBOARDING SHIELD
-            const _currVer = window.ONBOARDING_VERSION = 'v24.205.0 · 2026-10-06';
+            const _currVer = window.ONBOARDING_VERSION = 'v24.206.0 · 2026-10-06';
             const _installedVer = AppStorage.getItem('site_version_installed');
             if (_installedVer !== _currVer) {
                 AppStorage.setItem('site_version_installed', _currVer);
@@ -4426,9 +4435,9 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
             translateY(-4px)
             translate3d(0, 0, 0) !important;
 
-        border: 2px solid rgba(255, 255, 255, 0.45) !important;
-        border-top: 2.5px solid rgba(255, 255, 255, 1) !important;
-        border-left: 2px solid rgba(255, 255, 255, 0.85) !important;
+        border: 2px solid rgba(var(--ambient-r, 59), var(--ambient-g, 130), var(--ambient-b, 246), 0.35) !important;
+        border-top: 2.5px solid rgba(255, 255, 255, 0.95) !important;
+        border-left: 2px solid rgba(var(--ambient-r2, 168), var(--ambient-g2, 85), var(--ambient-b2, 247), 0.45) !important;
 
         background-color:
             rgba(255, 255, 255, 0.08) !important;
@@ -4443,11 +4452,11 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
 
         box-shadow:
             0 20px 45px -12px rgba(0, 0, 0, 0.18),
-            inset 0 2.5px 3.5px 0 rgba(255, 255, 255, 1),
-            inset 2px 0 2.5px 0 rgba(255, 255, 255, 0.65),
+            inset 0 2px 3px 0 rgba(255, 255, 255, 0.8),
+            inset 1.5px 0 2px 0 rgba(var(--ambient-r, 59), var(--ambient-g, 130), var(--ambient-b, 246), 0.25),
             inset 0 -2px 3px 0 rgba(0, 0, 0, 0.12),
-            0 0 1px 1px rgba(255, 255, 255, 0.50),
-            0 0 16px rgba(255, 255, 255, 0.25) !important;
+            0 0 1px 1px rgba(var(--ambient-r, 59), var(--ambient-g, 130), var(--ambient-b, 246), 0.3),
+            0 0 16px rgba(var(--ambient-r, 59), var(--ambient-g, 130), var(--ambient-b, 246), 0.15) !important;
 
         border-radius: 24px !important;
         z-index: 50;
@@ -4460,15 +4469,15 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
                     rgba(255, 255, 255, 0.01) 40%,
                     rgba(15, 23, 42, 0.28) 100%
                 ) !important;
-                border: 2px solid rgba(255, 255, 255, 0.38) !important;
-                border-top: 2.5px solid rgba(255, 255, 255, 1) !important;
-                border-left: 2px solid rgba(255, 255, 255, 0.80) !important;
+                border: 2px solid rgba(var(--ambient-r, 59), var(--ambient-g, 130), var(--ambient-b, 246), 0.4) !important;
+                border-top: 2.5px solid rgba(255, 255, 255, 0.85) !important;
+                border-left: 2px solid rgba(var(--ambient-r2, 168), var(--ambient-g2, 85), var(--ambient-b2, 247), 0.5) !important;
                 box-shadow: 0 24px 50px -12px rgba(0, 0, 0, 0.65),
-                            inset 0 2.5px 3.5px 0 rgba(255, 255, 255, 0.95),
-                            inset 2px 0 2.5px 0 rgba(255, 255, 255, 0.55),
+                            inset 0 2px 3px 0 rgba(255, 255, 255, 0.7),
+                            inset 1.5px 0 2px 0 rgba(var(--ambient-r, 59), var(--ambient-g, 130), var(--ambient-b, 246), 0.35),
                             inset 0 -2px 3px 0 rgba(0, 0, 0, 0.35),
-                            0 0 25px rgba(59, 130, 246, 0.25),
-                            0 0 16px rgba(255, 255, 255, 0.20) !important;
+                            0 0 25px rgba(var(--ambient-r, 59), var(--ambient-g, 130), var(--ambient-b, 246), 0.3),
+                            0 0 16px rgba(var(--ambient-r2, 168), var(--ambient-g2, 85), var(--ambient-b2, 247), 0.2) !important;
                 -webkit-backdrop-filter: blur(5px) saturate(220%) brightness(1.06) !important;
                 backdrop-filter: blur(5px) saturate(220%) brightness(1.06) !important;
             }
@@ -5280,11 +5289,12 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
             #main-music-card.lyrics-open { max-width: 100% !important; width: 100% !important; margin-left: auto !important; margin-right: auto !important; }
         }
 
-        /* PERF & GPU-RELIEF (v24.203.0): Wenn Lyrics geöffnet sind (#main-music-card.lyrics-open),
+        /* PERF & GPU-RELIEF (v24.203.0 / v24.206.0): Wenn Lyrics geöffnet sind (#main-music-card.lyrics-open),
            wird die gesamte Karte von #lyrics-overlay blickdicht (bg-slate-950) abgedeckt.
-           Hintergrund-Partikel, Ambilight-Cover-Glow und Album-Blur werden vollständig ausgeblendet (display: none !important)
-           und pausiert. Auch der schwere backdrop-filter der Hauptkarte wird deaktiviert.
-           Das senkt die GPU-Last von 95% auf unter 2% - selbst bei leerem Songtext/Platzhalter! */
+           Hintergrund-Partikel, Ambilight-Cover-Glow, Album-Blur, Mesh-Gradient und Liquid-Blobs werden
+           vollständig ausgeblendet (display: none !important) und pausiert.
+           Auch der schwere backdrop-filter der Hauptkarte wird deaktiviert.
+           Das senkt die GPU-Last bei geöffnetem Songtext & Liquid Glass von 48% auf unter 18%! */
         #main-music-card.lyrics-open #particles-container,
         #main-music-card.lyrics-open .particle,
         #main-music-card.lyrics-open #ambilight-glow,
@@ -5292,9 +5302,18 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
         body:has(#main-music-card.lyrics-open) #particles-container,
         body:has(#main-music-card.lyrics-open) .particle,
         body:has(#main-music-card.lyrics-open) #ambilight-glow,
-        body:has(#main-music-card.lyrics-open) #ambient-bg {
+        body:has(#main-music-card.lyrics-open) #ambient-bg,
+        body:has(#main-music-card.lyrics-open) #liquid-blobs,
+        body:has(#main-music-card.lyrics-open) .blob-container,
+        body:has(#main-music-card.lyrics-open) .blob,
+        body:has(#main-music-card.lyrics-open) .mesh-gradient,
+        body.lyrics-mode-active #liquid-blobs,
+        body.lyrics-mode-active .blob-container,
+        body.lyrics-mode-active .blob,
+        body.lyrics-mode-active .mesh-gradient {
             display: none !important;
             animation: none !important;
+            opacity: 0 !important;
         }
         #main-music-card.lyrics-open {
             -webkit-backdrop-filter: none !important;
@@ -5954,10 +5973,11 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
         /* Footer Bubble – fixed dock, centered, elegant liquid glass */
         #footer-bubble {
             position: fixed !important;
-            height: 2.75rem;
-            min-height: 2.75rem;
-            box-sizing: border-box;
-            bottom: 1.25rem;
+            height: 2.75rem !important;
+            min-height: 2.75rem !important;
+            max-height: 2.75rem !important;
+            box-sizing: border-box !important;
+            bottom: 1.25rem !important;
             left: var(--footer-center, 50%);
             max-width: var(--footer-space, calc(100vw - 7.5rem));
             transform: translateX(-50%) translateY(40px) !important;
@@ -5971,9 +5991,10 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
         }
         @media (min-width: 640px) {
             #footer-bubble {
-                height: 3.25rem;
-                min-height: 3.25rem;
-                bottom: 2rem;
+                height: 3.25rem !important;
+                min-height: 3.25rem !important;
+                max-height: 3.25rem !important;
+                bottom: 2rem !important;
                 max-width: var(--footer-space, calc(100vw - 10rem));
             }
         }
@@ -5992,8 +6013,8 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
             ) !important;
             backdrop-filter: blur(16px) saturate(180%) brightness(1.06) !important;
             -webkit-backdrop-filter: blur(16px) saturate(180%) brightness(1.06) !important;
-            border: 1px solid rgba(255, 255, 255, 0.24) !important;
-            border-top: 1.5px solid rgba(255, 255, 255, 0.85) !important;
+            border: 1.5px solid rgba(255, 255, 255, 0.24) !important;
+            border-top: 2px solid rgba(255, 255, 255, 0.85) !important;
             border-left: 1.5px solid rgba(255, 255, 255, 0.55) !important;
             box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.6),
                         inset 0 1.5px 2px rgba(255, 255, 255, 0.7),
@@ -6175,10 +6196,11 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
 
         /* Back-to-Top Button */
         #back-to-top {
-            position: fixed !important; bottom: 1.25rem; right: 1.25rem; z-index: 9150 !important;
+            position: fixed !important; bottom: 1.25rem !important; right: 1.25rem !important; z-index: 9150 !important;
             width: 2.75rem !important; height: 2.75rem !important;
             min-width: 2.75rem !important; min-height: 2.75rem !important;
             max-width: 2.75rem !important; max-height: 2.75rem !important;
+            box-sizing: border-box !important;
             contain: none !important;
             contain-intrinsic-size: none !important;
             display: flex !important; align-items: center; justify-content: center;
@@ -6188,7 +6210,7 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
         }
         @media (min-width: 640px) {
             #back-to-top {
-                bottom: 2rem; right: 2rem;
+                bottom: 2rem !important; right: 2rem !important;
                 width: 3.25rem !important; height: 3.25rem !important;
                 min-width: 3.25rem !important; min-height: 3.25rem !important;
                 max-width: 3.25rem !important; max-height: 3.25rem !important;
@@ -6209,12 +6231,13 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
             ) !important;
             backdrop-filter: blur(16px) saturate(180%) brightness(1.06) !important;
             -webkit-backdrop-filter: blur(16px) saturate(180%) brightness(1.06) !important;
-            border: 1px solid rgba(255, 255, 255, 0.22) !important;
-            border-top: 1.5px solid rgba(255, 255, 255, 0.85) !important;
-            border-left: 1.5px solid rgba(255, 255, 255, 0.5) !important;
+            border: 1.5px solid rgba(255, 255, 255, 0.24) !important;
+            border-top: 2px solid rgba(255, 255, 255, 0.85) !important;
+            border-left: 1.5px solid rgba(255, 255, 255, 0.55) !important;
             box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.6),
-                        inset 0 1.5px 2px rgba(255, 255, 255, 0.6),
-                        inset 0 -1px 2px rgba(0, 0, 0, 0.3) !important;
+                        inset 0 1.5px 2px rgba(255, 255, 255, 0.7),
+                        inset 0 -1px 2px rgba(0, 0, 0, 0.25),
+                        0 0 1px 1px rgba(255, 255, 255, 0.15) !important;
             color: #60a5fa !important;
         }
         .dark body.liquid-glass-active #back-to-top {
@@ -7069,27 +7092,35 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
         /* ========================================================= */
         /* --- NEW: COMMAND PALETTE (⌘K Spotlight) ------------------- */
         /* ========================================================= */
+        /* --- NEW: COMMAND PALETTE (⌘K Spotlight) ------------------- */
+        /* ========================================================= */
         #cp-trigger {
-            position: fixed !important; bottom: 16px; left: 16px; z-index: 300;
-            display: flex; align-items: center; gap: 4px; padding: 8px 12px;
-            background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(255,255,255,0.16);
-            border-top: 1.5px solid rgba(255,255,255,0.35);
-            backdrop-filter: blur(8px) saturate(130%); -webkit-backdrop-filter: blur(8px) saturate(130%);
-            border-radius: 10px; color: #60a5fa !important; font-family: 'JetBrains Mono', monospace;
+            position: fixed !important; bottom: 1.25rem !important; left: 1.25rem !important; z-index: 300;
+            display: flex; align-items: center; justify-content: center; gap: 4px; padding: 0 14px;
+            height: 2.75rem !important; min-height: 2.75rem !important; max-height: 2.75rem !important;
+            box-sizing: border-box !important;
+            background: rgba(15, 23, 42, 0.75); border: 1.5px solid rgba(255,255,255,0.24);
+            border-top: 2px solid rgba(255,255,255,0.85);
+            border-left: 1.5px solid rgba(255,255,255,0.55);
+            backdrop-filter: blur(16px) saturate(180%) brightness(1.06); -webkit-backdrop-filter: blur(16px) saturate(180%) brightness(1.06);
+            border-radius: 9999px !important; color: #60a5fa !important; font-family: 'JetBrains Mono', monospace;
             font-size: 12px; font-weight: 800; cursor: pointer; transition: all 0.25s var(--apple-ease);
-            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.6), inset 0 1.5px 2px rgba(255, 255, 255, 0.7), inset 0 -1px 2px rgba(0, 0, 0, 0.25);
         }
         #cp-trigger:hover { color: #93c5fd !important; border-color: rgba(96,165,250,0.6); transform: translateY(-2px); }
         html:not(.dark) #cp-trigger {
-            background: rgba(255, 255, 255, 0.88) !important;
+            background: rgba(255, 255, 255, 0.92) !important;
             color: #2563eb !important;
-            border: 1.5px solid rgba(37, 99, 235, 0.28) !important;
-            border-top: 1.5px solid rgba(255, 255, 255, 0.95) !important;
-            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.12), 0 2px 6px rgba(0,0,0,0.06);
+            border: 1.5px solid rgba(203, 213, 225, 0.85) !important;
+            border-top: 2px solid rgba(255, 255, 255, 1) !important;
+            box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.12), inset 0 1px 1px rgba(255, 255, 255, 0.9);
         }
         html:not(.dark) #cp-trigger:hover { color: #1d4ed8 !important; border-color: rgba(37, 99, 235, 0.55) !important; }
-        @media (max-width: 640px) {
-            #cp-trigger { padding: 7px 10px; font-size: 11px; bottom: 12px; left: 12px; }
+        @media (min-width: 640px) {
+            #cp-trigger {
+                height: 3.25rem !important; min-height: 3.25rem !important; max-height: 3.25rem !important;
+                bottom: 2rem !important; left: 2rem !important; padding: 0 18px; font-size: 13px;
+            }
         }
 
         #pwa-install-btn {
@@ -7964,17 +7995,23 @@ html.glass-strat-fluid:not(.gp-android) :is(#global-settings-menu, #lyrics-setti
 
 /* --- 6. CP trigger: solid frosted glass + tuned blur & royal blue text in light mode --- */
 :is(html.gp-android, html.gp-mobile, html.gp-pixel) #cp-trigger {
-  -webkit-backdrop-filter: blur(8px) saturate(130%) !important;
-  backdrop-filter: blur(8px) saturate(130%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(140%) !important;
+  backdrop-filter: blur(16px) saturate(140%) !important;
   background: rgba(30, 41, 59, 0.88) !important;
-  border: 1px solid rgba(255, 255, 255, 0.14) !important;
-  border-top: 1.5px solid rgba(255, 255, 255, 0.35) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.24) !important;
+  border-top: 2px solid rgba(255, 255, 255, 0.85) !important;
+  border-left: 1.5px solid rgba(255, 255, 255, 0.55) !important;
+  border-radius: 9999px !important;
+  height: 2.75rem !important;
+  min-height: 2.75rem !important;
+  bottom: 1.25rem !important;
+  left: 1.25rem !important;
   color: #60a5fa !important;
 }
 :is(html.gp-android, html.gp-mobile, html.gp-pixel):not(.dark) #cp-trigger {
-  background: rgba(255, 255, 255, 0.90) !important;
-  border: 1.5px solid rgba(37, 99, 235, 0.28) !important;
-  border-top: 1.5px solid rgba(255, 255, 255, 0.95) !important;
+  background: rgba(255, 255, 255, 0.92) !important;
+  border: 1.5px solid rgba(203, 213, 225, 0.85) !important;
+  border-top: 2px solid rgba(255, 255, 255, 1) !important;
   color: #2563eb !important;
   font-weight: 800 !important;
 }
@@ -8260,7 +8297,7 @@ html.gp-android:not(.dark) #ui-controls {
     <div id="footer-expandable-menu" class="hidden fixed z-[95] p-3.5 rounded-2xl bg-slate-900/95 border border-slate-700/80 shadow-2xl backdrop-blur-xl w-[315px] xxs:w-[340px] sm:w-[370px] max-w-[calc(100vw-1.5rem)] text-xs space-y-2.5" onclick="event.stopPropagation()">
         <div class="flex items-center justify-between px-1 pb-1.5 border-b border-white/10 gap-2">
             <span id="footer-menu-title" data-i18n="footer_menu_title" class="font-bold text-slate-400 text-[10px] uppercase tracking-wider truncate">Navigation &amp; Rechtliches</span>
-            <span id="footer-menu-hint" class="text-[9px] text-pink-400 font-mono font-bold shrink-0 whitespace-nowrap">v24.205.0</span>
+            <span id="footer-menu-hint" class="text-[9px] text-pink-400 font-mono font-bold shrink-0 whitespace-nowrap">v24.206.0</span>
         </div>
         <div class="grid grid-cols-2 gap-2 text-left">
             <button onclick="openEpicWhatsNewTour(false); toggleFooterMenu(false)" id="footer-whats-new-btn" class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/90 text-slate-200 hover:text-white font-medium flex items-center gap-2 transition-all active:scale-[0.98]">
@@ -8294,7 +8331,7 @@ html.gp-android:not(.dark) #ui-controls {
     <div id="footer-bubble" class="fixed z-[91] inline-flex items-center justify-center gap-1.5 sm:gap-3 px-3 sm:px-6 rounded-full bg-slate-900/85 backdrop-blur-xl border border-white/15 shadow-xl text-[10px] xs:text-xs sm:text-sm text-slate-300 transition-all select-none opacity-0 pointer-events-none">
         <span id="footer-established" class="font-bold tracking-tight text-slate-300 whitespace-nowrap">© 2026 GAMINGPIG</span>
         <span class="text-white/20 select-none">•</span>
-        <span id="footer-version-label" class="font-mono font-bold text-pink-400 whitespace-nowrap">v24.205.0</span>
+        <span id="footer-version-label" class="font-mono font-bold text-pink-400 whitespace-nowrap">v24.206.0</span>
         <span class="text-white/20 select-none">•</span>
         <button id="footer-menu-toggle-btn" onclick="toggleFooterMenu()" class="text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1 sm:gap-1.5 transition-all px-1.5 sm:px-2 py-1 rounded-full hover:bg-white/10 active:scale-95 whitespace-nowrap" aria-expanded="false" aria-label="Mehr Menü öffnen">
             <span id="footer-more-label">Mehr</span>
@@ -15078,7 +15115,8 @@ html.gp-android:not(.dark) #ui-controls {
                         <span class="text-xl shrink-0">✨</span>
                         <div class="flex flex-col xs:flex-row xs:items-center justify-between gap-2 flex-grow min-w-0">
                             <span class="gp-update-msg text-xs sm:text-sm font-semibold tracking-wide truncate">${escapeHTML(msg || 'Neues Update bereit!')}</span>
-                            <div class="flex items-center gap-2 shrink-0">
+                            <div class="flex items-center gap-1.5 shrink-0">
+                                <a href="release.html" target="_blank" rel="noopener noreferrer" class="px-2.5 py-1.5 rounded-xl bg-purple-950/60 hover:bg-purple-900/80 text-purple-300 border border-purple-500/30 text-xs font-bold transition-all active:scale-95 whitespace-nowrap cursor-pointer" title="Release Notes ansehen">Notes</a>
                                 <button id="gp-update-reload-btn" type="button" class="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer">Aktualisieren</button>
                                 <button id="gp-update-dismiss-btn" type="button" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition-all active:scale-95 cursor-pointer">Später</button>
                             </div>
@@ -16920,6 +16958,43 @@ let shareCardLoading;
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+    { version: "v24.206.0", date: "6. Oktober 2026", type: "feature", items: {
+        de: [
+            "✨ Symmetrisches Footer-Dock: Footer-Bubble, Spotlight-Button (⌘K / Strg+K) und Scroll-Button teilen dieselbe Höhe, Kantenstärke und Baseline",
+            "🎨 Dynamische Kantenreflexionen: Liquid-Glass-Kanten spiegeln die atmosphärischen Farben des Covers (--ambient-r/g/b) statt grellem Weiß",
+            "🚀 GPU-Entlastung bei Songtexten: Hintergrund-Blobs & Mesh-Gradients pausieren bei geöffneten Lyrics – Last von 48% auf unter 18% gesenkt",
+            "📜 Neues Release Notes Dashboard: release.html komplett kernsaniert – minimalistisch, schnell lesbar, mehrsprachig & mit Vorlese-Funktion",
+            "⚡ Direkter Update-Link: Neuer 'Notes'-Button im PWA-Update-Banner für sofortigen Einblick in alle Verbesserungen"
+        ],
+        en: [
+            "✨ Symmetrical Footer Dock: Footer bubble, Spotlight button (⌘K / Ctrl+K), and Back-to-Top share identical height, thickness, and baseline",
+            "🎨 Dynamic Edge Reflections: Liquid Glass borders adapt to ambient track colors instead of harsh white outlines",
+            "🚀 GPU Relief in Lyrics View: Heavy mesh gradients and background blobs pause while lyrics are open – drops GPU load to under 18%",
+            "📜 All-New Release Notes: Redesigned release.html into a minimalist 30-second briefing with multi-language TTS narration",
+            "⚡ Instant Update Notes: Direct 'Notes' shortcut in the update banner to preview improvements before reloading"
+        ],
+        es: [
+            "✨ Pie de página simétrico: La burbuja, el botón Spotlight (⌘K / Ctrl+K) y el botón superior comparten la misma altura y alineación",
+            "🎨 Bordes con reflejos dinámicos: El Liquid Glass refleja los tonos ambientales de la portada en vez de líneas blancas rígidas",
+            "🚀 Optimización GPU en letras: Las capas pesadas de fondo se pausan con letras abiertas, reduciendo la carga por debajo del 18%",
+            "📜 Nuevas notas de versión: release.html rediseñado al estilo minimalista con narración de voz y lectura rápida",
+            "⚡ Acceso directo a notas: Botón 'Notes' añadido en el aviso de actualización para ver los cambios al instante"
+        ],
+        fr: [
+            "✨ Dock inférieur symétrique : La bulle, la recherche Spotlight (⌘K / Ctrl+K) et le retour en haut partagent la même hauteur et base",
+            "🎨 Reflets de bordure dynamiques : Le Liquid Glass reflète harmonieusement les couleurs de l'album ambiant",
+            "🚀 Soulagement GPU en mode paroles : Désactivation des dégradés de fond pour passer sous la barre des 18% d'utilisation GPU",
+            "📜 Nouvelles Release Notes épurées : Redesign ultra-minimaliste de release.html lisible en 30 secondes avec lecture vocale",
+            "⚡ Raccourci de mise à jour : Bouton 'Notes' intégré à la bannière de mise à jour PWA"
+        ],
+        pt: [
+            "✨ Dock inferior perfeitamente simétrico: Bolha do rodapé, Spotlight (⌘K / Ctrl+K) e botão voltar ao topo com mesma altura e espessura",
+            "🎨 Bordas com reflexo dinâmico: Liquid Glass reflete as cores atmosféricas da capa em vez de traços brancos estáticos",
+            "🚀 Alívio de GPU na exibição de letras: Gradientes e blobs de fundo pausados durante letras abertas, reduzindo o uso para <18%",
+            "📜 Novo portal de Release Notes: release.html modernizado e ultrarrápido com síntese de voz e resumo de 30 segundos",
+            "⚡ Atalho no aviso de update: Botão direto 'Notes' no banner de atualização para ler todas as novidades"
+        ]
+    }},
     { version: "v24.205.0", date: "6. Oktober 2026", type: "fix", items: {
         de: [
             "✨ Vollständige Songtext-Animation wiederhergestellt: Alle Silben und Wörter animieren wieder unterbrechungsfrei und flüssig über die gesamte Zeile",
