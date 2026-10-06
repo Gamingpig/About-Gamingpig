@@ -8,6 +8,11 @@
     Änderung bitte hier oben einen neuen Eintrag ergänzen:
     [BUGFIX] oder [PERFORMANCE] oder [FEATURE] als Tag, dann kurz
     Symptom/Ziel, Ursache, Fix, und der beobachtbare Effekt.
+    [BUGFIX / UI / ANIMATION] Release v24.206.1: Sanfte Fadeout- und Exit-Animation für die Footer-Bubble (#footer-bubble)
+      - Sanfte Fadeout- & Slide-Down-Animation beim Ausblenden der Footer-Bubble:
+        Symptom: Beim Scrollen nach oben verschwand die Footer-Bubble von jetzt auf gleich ohne jede Animation ("hartes Clipping / Poppen").
+        Ursache: Der Basis-Zustand von #footer-bubble besaß keine explizite Opacity/Visibility-Transition, während generische Liquid-Glass-Kartenregeln mit hoher Spezifität die Transition überschrieben und Opacity ausschlossen.
+        Fix: Asymmetrische Enter- und Exit-Transitions mit hoher Spezifität definiert. Beim Hochscrollen gleitet die Bubble mit einer geschmeidigen 350ms-Fadeout- und Absenk-Animation (opacity: 0, translateY(32px) scale(0.96)) sanft aus dem Sichtfeld.
     [DESIGN / ALIGNMENT / PERF / RELEASE] Release v24.206.0: Perfekte Footer-Symmetrie, dynamische Ambient-Kantenreflexionen, GPU-Entlastung bei Songtexten & Release Notes Redesign
       - Footer-Dock & Spotlight-Symmetrie (#footer-bubble, #cp-trigger, #back-to-top):
         Footer-Bubble, Spotlight-Button (⌘K / Strg+K) und Nach-oben-Scroll-Button teilen sich nun exakt dieselbe vertikale Baseline (bottom: 1.25rem mobil / 2rem Desktop), dieselbe Höhe (2.75rem / 3.25rem), Pillen-Form und einheitliche Frosted-Glass-Kantenstärke (1.5px / 2px).
@@ -3480,7 +3485,6 @@
 
         /* Fluid Footer Animation Optimization */
         #footer-bubble {
-            transition: opacity 0.45s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.3s ease !important;
             backdrop-filter: blur(24px) saturate(180%) !important;
             -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
         }
@@ -4174,7 +4178,7 @@ body.liquid-glass-active .mesh-gradient {
 
 
 /* Liquid Glass Karten - Echtes kristallklares Apple Glas mit edlem Frosted-Blur & prismatischer Kantenbrechung */
-body.liquid-glass-active :is(.glass-card:not(#back-to-top), #header-section, #footer-bubble, #footer-expandable-menu) {
+body.liquid-glass-active :is(.glass-card:not(#back-to-top), #header-section, #footer-expandable-menu) {
     position: relative;
     overflow: hidden;
 
@@ -4211,7 +4215,7 @@ body.liquid-glass-active :is(.glass-card:not(#back-to-top), #header-section, #fo
         background-color 0.35s ease !important;
 }
 
-.dark body.liquid-glass-active :is(.glass-card:not(#back-to-top), #header-section, #footer-bubble, #footer-expandable-menu) {
+.dark body.liquid-glass-active :is(.glass-card:not(#back-to-top), #header-section, #footer-expandable-menu) {
     -webkit-backdrop-filter: blur(20px) saturate(190%) brightness(1.05) !important;
     backdrop-filter: blur(20px) saturate(190%) brightness(1.05) !important;
 
@@ -5900,8 +5904,7 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
         body.liquid-glass-active #whats-new-epic-modal,
         body.liquid-glass-active #privacy-update-modal,
         body.liquid-glass-active #sharecard-picker-overlay,
-        body.liquid-glass-active #command-palette-overlay,
-        body.liquid-glass-active #footer-bubble {
+        body.liquid-glass-active #command-palette-overlay {
             transition: opacity 0.9s var(--liquid-fluid);
         }
 
@@ -5971,7 +5974,9 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
         /* ========================================================= */
 
         /* Footer Bubble – fixed dock, centered, elegant liquid glass */
-        #footer-bubble {
+        #footer-bubble,
+        body #footer-bubble,
+        body.liquid-glass-active #footer-bubble {
             position: fixed !important;
             height: 2.75rem !important;
             min-height: 2.75rem !important;
@@ -5980,14 +5985,25 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
             bottom: 1.25rem !important;
             left: var(--footer-center, 50%);
             max-width: var(--footer-space, calc(100vw - 7.5rem));
-            transform: translateX(-50%) translateY(40px) !important;
-            transition: opacity 0.4s var(--apple-ease), transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
+            transform: translateX(-50%) translateY(32px) scale(0.96) !important;
+            transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+                        transform 0.38s cubic-bezier(0.4, 0, 0.2, 1),
+                        visibility 0.35s cubic-bezier(0.4, 0, 0.2, 1) !important;
             z-index: 9100 !important;
         }
-        #footer-bubble.footer-bubble-visible {
+        #footer-bubble.footer-bubble-visible,
+        body #footer-bubble.footer-bubble-visible,
+        body.liquid-glass-active #footer-bubble.footer-bubble-visible {
             opacity: 1 !important;
+            visibility: visible !important;
             pointer-events: auto !important;
-            transform: translateX(-50%) translateY(0) !important;
+            transform: translateX(-50%) translateY(0) scale(1) !important;
+            transition: opacity 0.45s var(--apple-ease),
+                        transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1),
+                        visibility 0.45s !important;
         }
         @media (min-width: 640px) {
             #footer-bubble {
@@ -8328,7 +8344,7 @@ html.gp-android:not(.dark) #ui-controls {
     </div>
 
     <!-- Footer Bubble (fixed, centered between #cp-trigger and #back-to-top) -->
-    <div id="footer-bubble" class="fixed z-[91] inline-flex items-center justify-center gap-1.5 sm:gap-3 px-3 sm:px-6 rounded-full bg-slate-900/85 backdrop-blur-xl border border-white/15 shadow-xl text-[10px] xs:text-xs sm:text-sm text-slate-300 transition-all select-none opacity-0 pointer-events-none">
+    <div id="footer-bubble" class="fixed z-[91] inline-flex items-center justify-center gap-1.5 sm:gap-3 px-3 sm:px-6 rounded-full bg-slate-900/85 backdrop-blur-xl border border-white/15 shadow-xl text-[10px] xs:text-xs sm:text-sm text-slate-300 select-none opacity-0 pointer-events-none">
         <span id="footer-established" class="font-bold tracking-tight text-slate-300 whitespace-nowrap">© 2026 GAMINGPIG</span>
         <span class="text-white/20 select-none">•</span>
         <span id="footer-version-label" class="font-mono font-bold text-pink-400 whitespace-nowrap">v24.206.0</span>
@@ -23700,7 +23716,7 @@ window.setLyricsStyle = function(style) {
                         if (entry.isIntersecting) showFooter();
                         else hideFooter();
                     });
-                }, { root: null, rootMargin: '0px 0px 80px 0px', threshold: 0 });
+                }, { root: null, rootMargin: '0px 0px 140px 0px', threshold: 0 });
                 observer.observe(footerAnchor);
             }
 
