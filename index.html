@@ -8,6 +8,13 @@
     Änderung bitte hier oben einen neuen Eintrag ergänzen:
     [BUGFIX] oder [PERFORMANCE] oder [FEATURE] als Tag, dann kurz
     Symptom/Ziel, Ursache, Fix, und der beobachtbare Effekt.
+    [BUGFIX / PERF / PWA] Release v24.205.0: Wiederherstellung der vollen Songtext-Animation & PWA-Update-Loop-Beseitigung
+      - Vollständige Songtext- & Silben-Animation wiederhergestellt:
+        Root Cause: Ein fälschlicherweise am scroll-Event hängender Handler sperrte nach dem automatischen Scrollen die Wort- und Zeichen-Animation für 2 Sekunden (isUserScrolling = true). Dadurch animierte nur der allererste Wortanfang. scroll-Listener entfernt und Animation von isUserScrolling entkoppelt: Alle Wörter und Zeichen animieren nun wieder kontinuierlich und butterweich durch die gesamte Zeile!
+      - Ruckelfreies 60 FPS Throttling:
+        Das rAF-Limit wurde von einer harten 15.5ms-Kante auf ein flexibles 11.5ms-Fenster umgestellt. Dadurch werden auf Standard-60Hz-Displays keine VSync-Jitter-Frames mehr verworfen, während 120Hz-Displays (z.B. Pixel 8 Pro) stabil und akkuschonend bei 60 FPS laufen.
+      - PWA-Update-Dauerschleife und Mehrfach-Meldungen beseitigt:
+        Die interne ONBOARDING_VERSION war noch auf v24.203.0 verblieben, wodurch pollVersion() nach jedem Neuladen version.json als neuer erkannte und den Update-Banner erneut anzeigte. Alle Versionskonstanten synchronisiert, Update-Banner dedupliziert und 'Aktualisieren'-Button mit automatischem Service-Worker skipWaiting ausgestattet.
     [FEATURE / EASTER-EGG / CLEANUP] Release v24.204.0: Dynamic Island 5-Tap Secret Trigger & Redesign der Studio/Spatial Experience
       - 5-fach Tap/Klick auf die Dynamic Island:
         Touch-Gesten und Klick-Events auf #dynamic-island wurden synchronisiert und mit Debounce abgesichert. Exakt 5 Taps schalten die Secret Page (spatial-audio.html) zuverlässig frei, sowohl auf Mobilgeräten (Android/iOS) als auch auf Desktop.
@@ -3350,7 +3357,7 @@
             AppStorage.setItem('app_visit_count', String(_visitCount));
 
             // 🛡️ INSTANT ONBOARDING SHIELD
-            const _currVer = window.ONBOARDING_VERSION = 'v24.203.0 · 2026-10-06';
+            const _currVer = window.ONBOARDING_VERSION = 'v24.205.0 · 2026-10-06';
             const _installedVer = AppStorage.getItem('site_version_installed');
             if (_installedVer !== _currVer) {
                 AppStorage.setItem('site_version_installed', _currVer);
@@ -8253,7 +8260,7 @@ html.gp-android:not(.dark) #ui-controls {
     <div id="footer-expandable-menu" class="hidden fixed z-[95] p-3.5 rounded-2xl bg-slate-900/95 border border-slate-700/80 shadow-2xl backdrop-blur-xl w-[315px] xxs:w-[340px] sm:w-[370px] max-w-[calc(100vw-1.5rem)] text-xs space-y-2.5" onclick="event.stopPropagation()">
         <div class="flex items-center justify-between px-1 pb-1.5 border-b border-white/10 gap-2">
             <span id="footer-menu-title" data-i18n="footer_menu_title" class="font-bold text-slate-400 text-[10px] uppercase tracking-wider truncate">Navigation &amp; Rechtliches</span>
-            <span id="footer-menu-hint" class="text-[9px] text-pink-400 font-mono font-bold shrink-0 whitespace-nowrap">v24.204.0</span>
+            <span id="footer-menu-hint" class="text-[9px] text-pink-400 font-mono font-bold shrink-0 whitespace-nowrap">v24.205.0</span>
         </div>
         <div class="grid grid-cols-2 gap-2 text-left">
             <button onclick="openEpicWhatsNewTour(false); toggleFooterMenu(false)" id="footer-whats-new-btn" class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/90 text-slate-200 hover:text-white font-medium flex items-center gap-2 transition-all active:scale-[0.98]">
@@ -8287,7 +8294,7 @@ html.gp-android:not(.dark) #ui-controls {
     <div id="footer-bubble" class="fixed z-[91] inline-flex items-center justify-center gap-1.5 sm:gap-3 px-3 sm:px-6 rounded-full bg-slate-900/85 backdrop-blur-xl border border-white/15 shadow-xl text-[10px] xs:text-xs sm:text-sm text-slate-300 transition-all select-none opacity-0 pointer-events-none">
         <span id="footer-established" class="font-bold tracking-tight text-slate-300 whitespace-nowrap">© 2026 GAMINGPIG</span>
         <span class="text-white/20 select-none">•</span>
-        <span id="footer-version-label" class="font-mono font-bold text-pink-400 whitespace-nowrap">v24.204.0</span>
+        <span id="footer-version-label" class="font-mono font-bold text-pink-400 whitespace-nowrap">v24.205.0</span>
         <span class="text-white/20 select-none">•</span>
         <button id="footer-menu-toggle-btn" onclick="toggleFooterMenu()" class="text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1 sm:gap-1.5 transition-all px-1.5 sm:px-2 py-1 rounded-full hover:bg-white/10 active:scale-95 whitespace-nowrap" aria-expanded="false" aria-label="Mehr Menü öffnen">
             <span id="footer-more-label">Mehr</span>
@@ -15055,7 +15062,13 @@ html.gp-android:not(.dark) #ui-controls {
             function showUpdatePrompt(msg, newVer) {
                 const verKey = newVer || 'generic';
                 if (AppSession.getItem('gp_update_dismissed_' + verKey)) return;
-                if (document.getElementById('gp-update-banner')) return;
+
+                const existingBanner = document.getElementById('gp-update-banner');
+                if (existingBanner) {
+                    const textEl = existingBanner.querySelector('.gp-update-msg');
+                    if (textEl && msg) textEl.textContent = msg;
+                    return;
+                }
 
                 try {
                     const banner = document.createElement('div');
@@ -15064,7 +15077,7 @@ html.gp-android:not(.dark) #ui-controls {
                     banner.innerHTML = `
                         <span class="text-xl shrink-0">✨</span>
                         <div class="flex flex-col xs:flex-row xs:items-center justify-between gap-2 flex-grow min-w-0">
-                            <span class="text-xs sm:text-sm font-semibold tracking-wide truncate">${escapeHTML(msg || 'Neues Update bereit!')}</span>
+                            <span class="gp-update-msg text-xs sm:text-sm font-semibold tracking-wide truncate">${escapeHTML(msg || 'Neues Update bereit!')}</span>
                             <div class="flex items-center gap-2 shrink-0">
                                 <button id="gp-update-reload-btn" type="button" class="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer">Aktualisieren</button>
                                 <button id="gp-update-dismiss-btn" type="button" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition-all active:scale-95 cursor-pointer">Später</button>
@@ -15076,13 +15089,21 @@ html.gp-android:not(.dark) #ui-controls {
                     const reloadBtn = document.getElementById('gp-update-reload-btn');
                     if (reloadBtn) {
                         reloadBtn.onclick = () => {
-                            window.location.reload();
+                            AppSession.setItem('gp_update_dismissed_' + verKey, 'true');
+                            if (swRegistration && swRegistration.waiting) {
+                                swRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
+                            }
+                            if (navigator.serviceWorker.controller) {
+                                navigator.serviceWorker.controller.postMessage({ type: 'SKIP_WAITING' });
+                            }
+                            setTimeout(() => { window.location.reload(); }, 150);
                         };
                     }
                     const dismissBtn = document.getElementById('gp-update-dismiss-btn');
                     if (dismissBtn) {
                         dismissBtn.onclick = () => {
                             AppSession.setItem('gp_update_dismissed_' + verKey, 'true');
+                            AppSession.setItem('gp_update_dismissed_sw_controller', 'true');
                             banner.remove();
                         };
                     }
@@ -16899,6 +16920,38 @@ let shareCardLoading;
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+    { version: "v24.205.0", date: "6. Oktober 2026", type: "fix", items: {
+        de: [
+            "✨ Vollständige Songtext-Animation wiederhergestellt: Alle Silben und Wörter animieren wieder unterbrechungsfrei und flüssig über die gesamte Zeile",
+            "🔄 Update-Loop beseitigt: PWA-Aktualisierungslogik bereinigt und Versionsprüfungen auf den Punkt synchronisiert",
+            "🚀 Ruckelfreies 60 FPS Throttling: Perfekte Bildrate ohne Frame-Drops auf 60Hz- und 120Hz-Displays (Pixel 8 Pro)",
+            "⚡ Nahtloses Neuladen: 'Aktualisieren' übernimmt neue Versionen jetzt sofort im Service Worker ohne Hänger"
+        ],
+        en: [
+            "✨ Full Lyrics Animation Restored: All syllables and words animate continuously and smoothly across entire lines",
+            "🔄 Update Loop Resolved: Synchronized PWA version tracking and eliminated repeated update banners",
+            "🚀 Smooth 60 FPS Throttling: Solid refresh rate without dropped frames on both 60Hz and 120Hz displays",
+            "⚡ Instant Update Reload: One-click update immediately skips waiting in Service Worker for clean refresh"
+        ],
+        es: [
+            "✨ Animación completa de letras restaurada: Todas las sílabas y palabras se animan sin cortes en toda la línea",
+            "🔄 Bucle de actualización resuelto: Seguimiento de versiones sincronizado sin avisos repetidos",
+            "🚀 Límite fluido a 60 FPS: Frecuencia de cuadros estable sin caídas en pantallas de 60Hz y 120Hz",
+            "⚡ Actualización inmediata: El botón recarga limpiamente con la nueva versión del Service Worker"
+        ],
+        fr: [
+            "✨ Animation complète des paroles restaurée : Toutes les syllabes et mots s'animent en continu sur toute la ligne",
+            "🔄 Boucle de mise à jour résolue : Synchronisation exacte des versions PWA sans bannières répétées",
+            "🚀 Plafond fluide à 60 FPS : Fréquence d'images stable sans saccades sur écrans 60Hz et 120Hz",
+            "⚡ Rafraîchissement instantané : Prise en charge immédiate de la mise à jour sans attente"
+        ],
+        pt: [
+            "✨ Animação completa de letras restaurada: Sílabas e palavras animam suavemente por toda a linha",
+            "🔄 Loop de atualização corrigido: Versões sincronizadas sem avisos repetitivos de update",
+            "🚀 Limite suave a 60 FPS: Taxa de quadros estável sem perdas em telas de 60Hz e 120Hz",
+            "⚡ Atualização instantânea: Botão aplica o novo Service Worker imediatamente"
+        ]
+    }},
     { version: "v24.204.0", date: "6. Oktober 2026", type: "feature", items: {
         de: [
             "🚀 Secret Easter Egg optimiert: 5-fach Tap auf die Dynamic Island öffnet zuverlässig die geheime Spatial Experience",
@@ -21272,14 +21325,13 @@ window.setLyricsStyle = function(style) {
             clearTimeout(userScrollTimeout);
             userScrollTimeout = setTimeout(() => {
                 isUserScrolling = false;
-            }, 2000);
+            }, 1200);
         }
 
         if (lyricsContainer) {
             lyricsContainer.addEventListener('wheel', handleUserScroll, {passive: true});
             lyricsContainer.addEventListener('touchstart', handleUserScroll, {passive: true});
             lyricsContainer.addEventListener('touchmove', handleUserScroll, {passive: true});
-            lyricsContainer.addEventListener('scroll', handleUserScroll, {passive: true});
         }
 
         async function syncWorldwideTime() {
@@ -21860,11 +21912,11 @@ window.setLyricsStyle = function(style) {
                 return;
             }
 
-            // 60-FPS-Cap für rAF-Loop (v24.203.0): Auf 120Hz/144Hz-Displays (z.B. Google Pixel 8 Pro mit LTPO 120Hz)
-            // halbiert das die GPU/CPU-Belastung und eliminiert Überhitzung vollständig.
-            const frameNow = now || performance.now();
+            // Smart rAF Throttling: Auf 120Hz/144Hz-Displays (z.B. Google Pixel 8 Pro)
+            // halbiert das die Last auf schonende 60 FPS, während Standard-60Hz-Displays zu 100% flüssig bleiben.
+            const frameNow = performance.now();
             const frameDelta = frameNow - lastLyricFrameTime;
-            if (frameDelta < 15.5) {
+            if (frameDelta < 11.5) {
                 lyricAnimFrame = requestAnimationFrame(animateLoop);
                 return;
             }
@@ -21899,10 +21951,8 @@ window.setLyricsStyle = function(style) {
             if (mainMusicCard && mainMusicCard.classList.contains('lyrics-open')) {
                 syncLyricsUI();
 
-                // PERF-OPTIMIERUNG (v24.203.0): Wenn der Nutzer gerade aktiv scrollt (isUserScrolling),
-                // Wort- & Zeichen-DOM-Mutationen pausieren, damit der GPU-Compositor 100% frei und butterweich
-                // mit 120 FPS ohne Layout-Reflows scrollen kann.
-                if (!isUserScrolling && currentLineAnimCache && currentLineAnimCache.words) {
+                // Wort- & Zeichen-Highlights für Apple Music Pro & animierte Stile
+                if (currentLineAnimCache && currentLineAnimCache.words) {
                     const cache = currentLineAnimCache;
                     const words = cache.words;
                     const adjustedMs = currentMs + liveSyncOffset;
