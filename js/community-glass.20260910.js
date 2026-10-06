@@ -20,7 +20,7 @@ function footer(){
     bubble.id='footer-bubble';
     bubble.className='gp-universal-footer';
     bubble.setAttribute('aria-hidden','true');
-    bubble.innerHTML='<span id="footer-established">© 2026 GAMINGPIG</span><span aria-hidden="true">•</span><span id="footer-version-label">v24.192.0</span><span aria-hidden="true">•</span><button id="footer-menu-toggle-btn" type="button" aria-expanded="false"><span id="footer-more-label">Mehr</span> <span id="footer-menu-arrow">▲</span></button>';
+    bubble.innerHTML='<span id="footer-established">© 2026 GAMINGPIG</span><span aria-hidden="true">•</span><span id="footer-version-label">v24.206.0</span><span aria-hidden="true">•</span><button id="footer-menu-toggle-btn" type="button" aria-expanded="false"><span id="footer-more-label">Mehr</span> <span id="footer-menu-arrow">▲</span></button>';
     body.appendChild(bubble);
   }
   if(!menu){
@@ -29,7 +29,7 @@ function footer(){
     menu.className='gp-universal-footer-menu hidden';
     menu.setAttribute('role','menu');
     menu.setAttribute('aria-label','Navigation und Links');
-    menu.innerHTML='<div class="gp-footer-head"><span id="footer-menu-title">Navigation & Rechtliches</span><span id="footer-menu-hint">v24.192.0</span></div><div class="gp-footer-grid"><a class="gp-footer-link" href="index.html">⌂ <span data-gp-footer="home">Startseite</span></a><button class="gp-footer-link" id="footer-whats-new-btn" type="button">📜 <span data-gp-footer="news">Was ist neu?</span></button><a class="gp-footer-link" href="status.html">🟢 <span data-gp-footer="status">Live-Status</span></a><a class="gp-footer-link" href="privacy.html">🛡️ <span data-gp-footer="privacy">Datenschutz</span></a><a class="gp-footer-link" href="impressum.html">⚖️ <span data-gp-footer="legal">Impressum</span></a><a class="gp-footer-link" href="roadmap.html">🔮 <span data-gp-footer="roadmap">Roadmap</span></a><button class="gp-footer-link" id="footer-settings-btn" type="button">⚙️ <span data-gp-footer="settings">Einstellungen</span></button><a class="gp-footer-link" href="push-admin.html">🔐 <span data-gp-footer="admin">Admin</span></a></div>';
+    menu.innerHTML='<div class="gp-footer-head"><span id="footer-menu-title">Navigation & Rechtliches</span><span id="footer-menu-hint">v24.206.0</span></div><div class="gp-footer-grid"><a class="gp-footer-link" href="index.html">⌂ <span data-gp-footer="home">Startseite</span></a><button class="gp-footer-link" id="footer-whats-new-btn" type="button">📜 <span data-gp-footer="news">Was ist neu?</span></button><a class="gp-footer-link" href="status.html">🟢 <span data-gp-footer="status">Live-Status</span></a><a class="gp-footer-link" href="privacy.html">🛡️ <span data-gp-footer="privacy">Datenschutz</span></a><a class="gp-footer-link" href="impressum.html">⚖️ <span data-gp-footer="legal">Impressum</span></a><a class="gp-footer-link" href="roadmap.html">🔮 <span data-gp-footer="roadmap">Roadmap</span></a><a class="gp-footer-link" href="push-admin.html">🔐 <span data-gp-footer="admin">Admin</span></a></div>';
     body.appendChild(menu);
   }
 
@@ -42,12 +42,12 @@ function footer(){
   let shown=false,open=false,closeTimer=null;
 
   const copy={
-    de:{title:'Navigation & Rechtliches',more:'Mehr',home:'Startseite',news:'Was ist neu?',status:'Live-Status',privacy:'Datenschutz',legal:'Impressum',roadmap:'Roadmap',settings:'Einstellungen',admin:'Admin'},
-    en:{title:'Navigation & Legal',more:'More',home:'Home',news:"What's New",status:'Live Status',privacy:'Privacy',legal:'Legal Notice',roadmap:'Roadmap',settings:'Settings',admin:'Admin'},
-    es:{title:'Navegación y legal',more:'Más',home:'Inicio',news:'Novedades',status:'Estado',privacy:'Privacidad',legal:'Aviso legal',roadmap:'Hoja de ruta',settings:'Ajustes',admin:'Admin'},
-    fr:{title:'Navigation et mentions',more:'Plus',home:'Accueil',news:'Nouveautés',status:'État',privacy:'Confidentialité',legal:'Mentions légales',roadmap:'Feuille de route',settings:'Réglages',admin:'Admin'},
-    pt:{title:'Navegação e legal',more:'Mais',home:'Início',news:'Novidades',status:'Status',privacy:'Privacidade',legal:'Aviso legal',roadmap:'Roteiro',settings:'Ajustes',admin:'Admin'},
-    tr:{title:'Gezinme ve yasal',more:'Daha',home:'Ana sayfa',news:'Yenilikler',status:'Canlı durum',privacy:'Gizlilik',legal:'Yasal bildirim',roadmap:'Yol haritası',settings:'Ayarlar',admin:'Yönetici'}
+    de:{title:'Navigation & Rechtliches',more:'Mehr',home:'Startseite',news:'Was ist neu?',status:'Live-Status',privacy:'Datenschutz',legal:'Impressum',roadmap:'Roadmap',admin:'Admin'},
+    en:{title:'Navigation & Legal',more:'More',home:'Home',news:"What's New",status:'Live Status',privacy:'Privacy',legal:'Legal Notice',roadmap:'Roadmap',admin:'Admin'},
+    es:{title:'Navegación y legal',more:'Más',home:'Inicio',news:'Novedades',status:'Estado',privacy:'Privacidad',legal:'Aviso legal',roadmap:'Hoja de ruta',admin:'Admin'},
+    fr:{title:'Navigation et mentions',more:'Plus',home:'Accueil',news:'Nouveautés',status:'État',privacy:'Confidentialité',legal:'Mentions légales',roadmap:'Feuille de route',admin:'Admin'},
+    pt:{title:'Navegação e legal',more:'Mais',home:'Início',news:'Novidades',status:'Status',privacy:'Privacidade',legal:'Aviso legal',roadmap:'Roteiro',admin:'Admin'},
+    tr:{title:'Gezinme ve yasal',more:'Daha',home:'Ana sayfa',news:'Yenilikler',status:'Canlı durum',privacy:'Gizlilik',legal:'Yasal bildirim',roadmap:'Yol haritası',admin:'Yönetici'}
   };
 
   function translate(){
@@ -147,14 +147,6 @@ function footer(){
     whatsNewBtn.addEventListener('click',()=>{
       closeMenu(false);
       location.href='release.html';
-    });
-  }
-
-  const settingsBtn=menu.querySelector('#footer-settings-btn');
-  if(settingsBtn){
-    settingsBtn.addEventListener('click',()=>{
-      closeMenu(false);
-      location.href='index.html?openSettings=1';
     });
   }
 
