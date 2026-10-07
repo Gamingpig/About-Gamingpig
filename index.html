@@ -8,6 +8,18 @@
     Änderung bitte hier oben einen neuen Eintrag ergänzen:
     [BUGFIX] oder [PERFORMANCE] oder [FEATURE] als Tag, dann kurz
     Symptom/Ziel, Ursache, Fix, und der beobachtbare Effekt.
+    [PLAYBACK / LYRICS / TTS / ANIMATION] Release v24.209.0: Weiches Wallpaper-Ausblenden bei Musik-Pause/Stop, synchronisierte TTS-Pause & stabiler Lyrics-Freeze
+      - Weiches Wallpaper-Ausblenden bei Pause & Stopp (#liquid-blobs):
+        Symptom: Bei pausierter oder gestoppter Musik blieb das Hintergrundbild unverändert sichtbar statt auszublenden.
+        Ursache: Fehlende Opacity-Steuerung für #liquid-blobs in updateMusicUI bei trackIsPlaying === false und Offline-Zustand.
+        Fix: Geschmeidiges Ausblenden (opacity: 0 mit 1.5s CSS-Transition) bei Pause/Stop/Offline und sofortige sanfte Wiedereinblendung (opacity: 1) beim Abspielen, unter Beibehaltung der Liquid-Glass-Display-Regeln.
+      - Synchrone TTS-Vorlese-Pausierung (speakLyricsSynced):
+        Symptom: Die Speech-Synthesis / Read-Aloud-Engine lief bei Musik-Pause einfach unaufhörlich weiter.
+        Ursache: In der Schleife von speakLyricsSynced fehlte die Berücksichtigung von trackIsPlaying.
+        Fix: speechSynthesis pausiert sofort bei Musik-Pause, setzt bei Resume nahtlos fort und bricht bei Stop/Overlay-Schließen kontrolliert ab.
+      - Stabiler Lyrics-Wort- & Zeilen-Freeze bei Pause:
+        Symptom: Songtexte und Silben-Highlights froren bei Pause in unvollständigen Zuständen ein oder blieben desynchronisiert stehen.
+        Fix: Auslagerung in renderActiveLineWordVisuals(adjustedMs) und direkter Aufruf bei Pause/Resync; Zeilen und Füllstände frieren exakt am pausierten Zeitstempel ein.
     [BUGFIX / UI / ANIMATION] Release v24.206.1: Sanfte Fadeout- und Exit-Animation für die Footer-Bubble (#footer-bubble)
       - Sanfte Fadeout- & Slide-Down-Animation beim Ausblenden der Footer-Bubble:
         Symptom: Beim Scrollen nach oben verschwand die Footer-Bubble von jetzt auf gleich ohne jede Animation ("hartes Clipping / Poppen").
@@ -3381,7 +3393,7 @@
             AppStorage.setItem('app_visit_count', String(_visitCount));
 
             // 🛡️ INSTANT ONBOARDING SHIELD
-            const _currVer = window.ONBOARDING_VERSION = 'v24.208.0 · 2026-10-07';
+            const _currVer = window.ONBOARDING_VERSION = 'v24.209.0 · 2026-10-07';
             const _installedVer = AppStorage.getItem('site_version_installed');
             if (_installedVer !== _currVer) {
                 AppStorage.setItem('site_version_installed', _currVer);
@@ -8490,7 +8502,7 @@ html.gp-android:not(.dark) #ui-controls {
     <div id="footer-expandable-menu" class="hidden fixed z-[95] p-3.5 rounded-2xl bg-slate-900/95 border border-slate-700/80 shadow-2xl backdrop-blur-xl w-[315px] xxs:w-[340px] sm:w-[370px] max-w-[calc(100vw-1.5rem)] text-xs space-y-2.5" onclick="event.stopPropagation()">
         <div class="flex items-center justify-between px-1 pb-1.5 border-b border-white/10 gap-2">
             <span id="footer-menu-title" data-i18n="footer_menu_title" class="font-bold text-slate-400 text-[10px] uppercase tracking-wider truncate">Navigation &amp; Rechtliches</span>
-            <span id="footer-menu-hint" class="text-[9px] text-pink-400 font-mono font-bold shrink-0 whitespace-nowrap">v24.208.0</span>
+            <span id="footer-menu-hint" class="text-[9px] text-pink-400 font-mono font-bold shrink-0 whitespace-nowrap">v24.209.0</span>
         </div>
         <div class="grid grid-cols-2 gap-2 text-left">
             <button onclick="openEpicWhatsNewTour(false); toggleFooterMenu(false)" id="footer-whats-new-btn" class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/90 text-slate-200 hover:text-white font-medium flex items-center gap-2 transition-all active:scale-[0.98]">
@@ -8524,7 +8536,7 @@ html.gp-android:not(.dark) #ui-controls {
     <div id="footer-bubble" class="fixed z-[91] inline-flex items-center justify-center gap-1.5 sm:gap-3 px-3 sm:px-6 rounded-full bg-slate-900/85 backdrop-blur-xl border border-white/15 shadow-xl text-[10px] xs:text-xs sm:text-sm text-slate-300 select-none opacity-0 pointer-events-none">
         <span id="footer-established" class="font-bold tracking-tight text-slate-300 whitespace-nowrap">© 2026 GAMINGPIG</span>
         <span class="text-white/20 select-none">•</span>
-        <span id="footer-version-label" class="font-mono font-bold text-pink-400 whitespace-nowrap">v24.208.0</span>
+        <span id="footer-version-label" class="font-mono font-bold text-pink-400 whitespace-nowrap">v24.209.0</span>
         <span class="text-white/20 select-none">•</span>
         <button id="footer-menu-toggle-btn" onclick="toggleFooterMenu()" class="text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1 sm:gap-1.5 transition-all px-1.5 sm:px-2 py-1 rounded-full hover:bg-white/10 active:scale-95 whitespace-nowrap" aria-expanded="false" aria-label="Mehr Menü öffnen">
             <span id="footer-more-label">Mehr</span>
@@ -14609,7 +14621,22 @@ html.gp-android:not(.dark) #ui-controls {
         let ttsSyncedPlaybackActive = false;
 
         function ttsSleep(ms) {
-            return new Promise(resolve => setTimeout(resolve, ms));
+            return new Promise(resolve => {
+                let remaining = ms;
+                const interval = setInterval(() => {
+                    if (!ttsSyncedPlaybackActive) {
+                        clearInterval(interval);
+                        return resolve();
+                    }
+                    if (trackIsPlaying) {
+                        remaining -= 50;
+                        if (remaining <= 0) {
+                            clearInterval(interval);
+                            resolve();
+                        }
+                    }
+                }, 50);
+            });
         }
 
         function speakUtteranceAndWait(text, voice, rate, optLang) {
@@ -14626,9 +14653,14 @@ html.gp-android:not(.dark) #ui-controls {
                 u.volume = 1.0;
 
                 let finished = false;
+                let pauseCheckInterval = null;
                 const done = () => {
                     if (finished) return;
                     finished = true;
+                    if (pauseCheckInterval) {
+                        clearInterval(pauseCheckInterval);
+                        pauseCheckInterval = null;
+                    }
                     u.onend = null;
                     u.onerror = null;
                     window._activeTtsUtterance = null;
@@ -14640,6 +14672,21 @@ html.gp-android:not(.dark) #ui-controls {
 
                 const maxWait = Math.max(1500, (text.length * 150) / Math.max(0.5, u.rate));
                 setTimeout(done, maxWait);
+
+                pauseCheckInterval = setInterval(() => {
+                    if (!ttsSyncedPlaybackActive) {
+                        if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel();
+                        done();
+                        return;
+                    }
+                    if (typeof speechSynthesis !== 'undefined') {
+                        if (!trackIsPlaying && speechSynthesis.speaking && !speechSynthesis.paused) {
+                            speechSynthesis.pause();
+                        } else if (trackIsPlaying && speechSynthesis.paused) {
+                            speechSynthesis.resume();
+                        }
+                    }
+                }, 100);
 
                 window._activeTtsUtterance = u;
                 speechSynthesis.speak(u);
@@ -14733,7 +14780,13 @@ html.gp-android:not(.dark) #ui-controls {
 
             for (let i = 0; i < items.length; i++) {
                 if (!ttsSyncedPlaybackActive) break;
-                const item = items[i];
+                while (!trackIsPlaying && ttsSyncedPlaybackActive) {
+                    if (typeof speechSynthesis !== 'undefined' && speechSynthesis.speaking && !speechSynthesis.paused) {
+                        speechSynthesis.pause();
+                    }
+                    await new Promise(r => setTimeout(r, 100));
+                }
+                if (!ttsSyncedPlaybackActive) break;
 
                 // Dynamische Echtzeit-Synchronisation mit dem laufenden Track
                 const liveMusicMs = (typeof currentMs === 'number' && trackIsPlaying) ? (currentMs + liveSyncOffset) : (referenceMs + cursor);
@@ -14748,6 +14801,14 @@ html.gp-android:not(.dark) #ui-controls {
                 const waitMs = Math.max(0, item.timeMs - liveMusicMs);
                 if (waitMs > 0) {
                     await ttsSleep(waitMs);
+                }
+                if (!ttsSyncedPlaybackActive) break;
+
+                while (!trackIsPlaying && ttsSyncedPlaybackActive) {
+                    if (typeof speechSynthesis !== 'undefined' && speechSynthesis.speaking && !speechSynthesis.paused) {
+                        speechSynthesis.pause();
+                    }
+                    await new Promise(r => setTimeout(r, 100));
                 }
                 if (!ttsSyncedPlaybackActive) break;
 
@@ -17196,6 +17257,43 @@ let shareCardLoading;
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+    { version: "v24.209.0", date: "7. Oktober 2026", type: "fix", items: {
+        de: [
+            "🌅 Sanftes Hintergrundbild-Ausblenden: Beim Pausieren oder Stoppen der Musik blendet das Cover-Wallpaper (#liquid-blobs) sanft und weich aus (1.5s Transition) und wird bei Play sofort wieder geschmeidig eingeblendet",
+            "🗣️ Intelligente Lyrics-Vorlese-Pause: Die Sprachausgabe (TTS Read-Aloud) pausiert jetzt synchron und verlässlich mit der Musik und läuft nicht mehr unkontrolliert weiter",
+            "⏯️ Nahtlose TTS-Wiederaufnahme: Bei Fortsetzen des Tracks liest die Sprachausgabe punktgenau an der passenden Stelle weiter",
+            "⏱️ Felsenfest eingefrorene Lyrics: Bei Musik-Pause bleiben Songtext-Zeilen und Wort-Highlights exakt am aktuellen Zeitstempel synchronisiert stehen",
+            "🛑 Zuverlässiger Stop- & Schließ-Reset: Beim Schließen des Songtexts oder Offline-Gehen stoppt die Sprachausgabe sofort und setzt den Button zurück"
+        ],
+        en: [
+            "🌅 Smooth Wallpaper Fade-Out: Pausing or stopping music now softly fades out the cover wallpaper (#liquid-blobs) with a 1.5s ease and fades back in seamlessly on resume",
+            "🗣️ Synchronized Read-Aloud Pause: TTS lyrics speech synthesis now pauses instantly when track playback is paused instead of continuing unchecked",
+            "⏯️ Seamless Speech Resumption: Resuming music smoothly unpauses speech right at the synchronized position",
+            "⏱️ Rock-Solid Lyrics Freeze: Lyrics lines and word/character highlights freeze precisely at the paused playback timestamp without random drifting",
+            "🛑 Clean Stop & Dismiss Reset: Closing lyrics or switching offline immediately cancels voice playback and restores the idle button state"
+        ],
+        es: [
+            "🌅 Desvanecimiento suave del fondo: Al pausar o detener la música, el fondo (#liquid-blobs) se desvanece suavemente y reaparece al reproducir",
+            "🗣️ Pausa sincronizada de lectura de voz: La síntesis de voz (TTS) se pausa al instante cuando se detiene la música",
+            "⏯️ Reanudación fluida de voz: Al reanudar la reproducción, la lectura continúa perfectamente en su sitio",
+            "⏱️ Congelación precisa de letras: Las líneas y resaltados de palabras se congelan exactamente en el punto de pausa",
+            "🛑 Cancelación limpia: Cerrar las letras o pasar a modo inactivo detiene la voz de inmediato"
+        ],
+        fr: [
+            "🌅 Fondu doux de l'arrière-plan : Mettre la musique en pause ou à l'arrêt estompe délicatement le fond (#liquid-blobs) avec transition fluide",
+            "🗣️ Pause synchronisée de la lecture vocale : La synthèse vocale TTS se met immédiatement en pause avec la musique",
+            "⏯️ Reprise fluide de la voix : La lecture vocale reprend de façon synchronisée dès la reprise de la piste",
+            "⏱️ Paroles figées avec précision : Les lignes et surbrillances de mots restent parfaitement gelées au moment précis de la pause",
+            "🛑 Réinitialisation propre : Fermer les paroles ou passer hors ligne interrompt aussitôt la voix et réinitialise le bouton"
+        ],
+        pt: [
+            "🌅 Esmaecimento suave do papel de parede: Pausar ou parar a música esmaece suavemente o fundo (#liquid-blobs) e o restaura ao tocar",
+            "🗣️ Pausa sincronizada da leitura de voz: A síntese de voz TTS pausa imediatamente junto com a música sem continuar sozinha",
+            "⏯️ Retomada fluida da voz: Ao despausar, a leitura de voz continua exatamente no ponto sincronizado",
+            "⏱️ Congelamento estável da letra: Linhas e destaques de palavras congelam exatamente no milissegundo em que a música foi pausada",
+            "🛑 Parada e encerramento seguros: Fechar a visualização de letras ou ficar offline cancela a voz e redefine o botão"
+        ]
+    }},
     { version: "v24.208.0", date: "7. Oktober 2026", type: "feature", items: {
         de: [
             "🪞 Nahtloses Single-Layer Lyrics Dashboard: Songtexte verschmelzen im Liquid-Glass-Modus zu einer einzigen, harmonischen Schicht ohne störende Doppelränder oder Kantenversatz",
@@ -21722,6 +21820,13 @@ window.setLyricsStyle = function(style) {
                 if (isLyricsSettingsOpen) {
                     toggleLyricsSettings();
                 }
+                if (ttsSyncedPlaybackActive || (typeof ttsQueueActive !== 'undefined' && ttsQueueActive)) {
+                    ttsSyncedPlaybackActive = false;
+                    if (typeof ttsQueueActive !== 'undefined') ttsQueueActive = false;
+                    if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel();
+                    const btnSpeak = document.getElementById('btn-speak-lyrics');
+                    if (btnSpeak && typeof ttsSetButtonState === 'function') ttsSetButtonState(btnSpeak, 'idle');
+                }
                 stopLyricsStylePreviewLoop();
                 mainMusicCard.classList.add('lyrics-closing-state');
                 mainMusicCard.classList.remove('lyrics-open');
@@ -22288,10 +22393,92 @@ window.setLyricsStyle = function(style) {
                     }
                 }
             }
+
+            if (currentLineAnimCache && currentLineAnimCache.words) {
+                renderActiveLineWordVisuals(adjustedMs);
+            }
         }
 
         let lastProgressUiUpdate = 0;
         let lastLyricFrameTime = 0;
+
+        function renderActiveLineWordVisuals(adjustedMs) {
+            if (!currentLineAnimCache || !currentLineAnimCache.words) return;
+            const words = currentLineAnimCache.words;
+
+            for (let w = 0; w < words.length; w++) {
+                const word = words[w];
+                const wSpan = word.span;
+
+                if (adjustedMs < word.startMs) {
+                    if (wSpan) {
+                        wSpan.style.setProperty('--fill-percent', '0%');
+                        wSpan.classList.remove('word-active', 'word-passed');
+                    }
+                    for (let c = 0; c < word.chars.length; c++) {
+                        const charObj = word.chars[c];
+                        if (charObj.el && charObj.lastState !== 'none') {
+                            charObj.lastState = 'none';
+                            charObj.el.classList.remove('char-passed', 'char-active');
+                        }
+                    }
+                } else if (adjustedMs >= word.endMs) {
+                    if (wSpan) {
+                        wSpan.style.setProperty('--fill-percent', '100%');
+                        wSpan.classList.add('word-passed');
+                        wSpan.classList.remove('word-active');
+                    }
+                    for (let c = 0; c < word.chars.length; c++) {
+                        const charObj = word.chars[c];
+                        if (charObj.el && charObj.lastState !== 'passed') {
+                            charObj.lastState = 'passed';
+                            charObj.el.classList.add('char-passed');
+                            charObj.el.classList.remove('char-active');
+                        }
+                    }
+                } else {
+                    const wordElapsed = adjustedMs - word.startMs;
+                    const wordProgress = word.duration > 0 ? Math.min(1, Math.max(0, wordElapsed / word.duration)) : 1;
+                    const fillPercent = (wordProgress * 100).toFixed(1) + '%';
+
+                    if (wSpan) {
+                        wSpan.style.setProperty('--fill-percent', fillPercent);
+                        wSpan.style.setProperty('--word-hold-scale', word.holdScale);
+                        wSpan.classList.add('word-active');
+                        wSpan.classList.remove('word-passed');
+                    }
+
+                    for (let c = 0; c < word.chars.length; c++) {
+                        const charObj = word.chars[c];
+                        if (!charObj.el) continue;
+                        let state = 'none';
+                        if (wordProgress === 0) {
+                            state = 'none';
+                        } else if (wordProgress >= charObj.endRatio) {
+                            state = 'passed';
+                        } else if (wordProgress >= charObj.startRatio && wordProgress < charObj.endRatio) {
+                            state = 'active';
+                        } else {
+                            state = 'none';
+                        }
+
+                        if (state !== charObj.lastState) {
+                            charObj.lastState = state;
+                            if (state === 'passed') {
+                                charObj.el.classList.add('char-passed');
+                                charObj.el.classList.remove('char-active');
+                            } else if (state === 'active') {
+                                charObj.el.classList.add('char-active');
+                                charObj.el.classList.remove('char-passed');
+                            } else {
+                                charObj.el.classList.remove('char-passed', 'char-active');
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        window.renderActiveLineWordVisuals = renderActiveLineWordVisuals;
 
         function animateLoop(now) {
             if (!trackIsPlaying) {
@@ -22370,81 +22557,7 @@ window.setLyricsStyle = function(style) {
 
                 // Wort- & Zeichen-Highlights für Apple Music Pro & animierte Stile
                 if (currentLineAnimCache && currentLineAnimCache.words) {
-                    const cache = currentLineAnimCache;
-                    const words = cache.words;
-                    const adjustedMs = currentMs + liveSyncOffset;
-
-                    for (let w = 0; w < words.length; w++) {
-                        const word = words[w];
-                        const wSpan = word.span;
-
-                        if (adjustedMs < word.startMs) {
-                            if (wSpan) {
-                                wSpan.style.setProperty('--fill-percent', '0%');
-                                wSpan.classList.remove('word-active', 'word-passed');
-                            }
-                            for (let c = 0; c < word.chars.length; c++) {
-                                const charObj = word.chars[c];
-                                if (charObj.el && charObj.lastState !== 'none') {
-                                    charObj.lastState = 'none';
-                                    charObj.el.classList.remove('char-passed', 'char-active');
-                                }
-                            }
-                        } else if (adjustedMs >= word.endMs) {
-                            if (wSpan) {
-                                wSpan.style.setProperty('--fill-percent', '100%');
-                                wSpan.classList.add('word-passed');
-                                wSpan.classList.remove('word-active');
-                            }
-                            for (let c = 0; c < word.chars.length; c++) {
-                                const charObj = word.chars[c];
-                                if (charObj.el && charObj.lastState !== 'passed') {
-                                    charObj.lastState = 'passed';
-                                    charObj.el.classList.add('char-passed');
-                                    charObj.el.classList.remove('char-active');
-                                }
-                            }
-                        } else {
-                            const wordElapsed = adjustedMs - word.startMs;
-                            const wordProgress = word.duration > 0 ? Math.min(1, Math.max(0, wordElapsed / word.duration)) : 1;
-                            const fillPercent = (wordProgress * 100).toFixed(1) + '%';
-
-                            if (wSpan) {
-                                wSpan.style.setProperty('--fill-percent', fillPercent);
-                                wSpan.style.setProperty('--word-hold-scale', word.holdScale);
-                                wSpan.classList.add('word-active');
-                                wSpan.classList.remove('word-passed');
-                            }
-
-                            for (let c = 0; c < word.chars.length; c++) {
-                                const charObj = word.chars[c];
-                                if (!charObj.el) continue;
-                                let state = 'none';
-                                if (wordProgress === 0) {
-                                    state = 'none';
-                                } else if (wordProgress >= charObj.endRatio) {
-                                    state = 'passed';
-                                } else if (wordProgress >= charObj.startRatio && wordProgress < charObj.endRatio) {
-                                    state = 'active';
-                                } else {
-                                    state = 'none';
-                                }
-
-                                if (state !== charObj.lastState) {
-                                    charObj.lastState = state;
-                                    if (state === 'passed') {
-                                        charObj.el.classList.add('char-passed');
-                                        charObj.el.classList.remove('char-active');
-                                    } else if (state === 'active') {
-                                        charObj.el.classList.add('char-active');
-                                        charObj.el.classList.remove('char-passed');
-                                    } else {
-                                        charObj.el.classList.remove('char-passed', 'char-active');
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    renderActiveLineWordVisuals(currentMs + liveSyncOffset);
                 }
             }
 
@@ -22755,6 +22868,15 @@ window.setLyricsStyle = function(style) {
                 }
                 trackIsPlaying = false;
                 stopProgressTracking();
+                const liquidBg = document.getElementById('liquid-blobs');
+                if (liquidBg) liquidBg.style.setProperty('opacity', '0');
+                if (ttsSyncedPlaybackActive || (typeof ttsQueueActive !== 'undefined' && ttsQueueActive)) {
+                    ttsSyncedPlaybackActive = false;
+                    if (typeof ttsQueueActive !== 'undefined') ttsQueueActive = false;
+                    if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel();
+                    const btnSpeak = document.getElementById('btn-speak-lyrics');
+                    if (btnSpeak && typeof ttsSetButtonState === 'function') ttsSetButtonState(btnSpeak, 'idle');
+                }
                 if (!offlineTimeout) {
                     offlineTimeout = setTimeout(() => {
                         if (mainMusicCard) {
@@ -22877,6 +22999,9 @@ window.setLyricsStyle = function(style) {
                         liquidBg.style.setProperty('background-position', 'center center', 'important');
                         liquidBg.style.setProperty('background-repeat', 'no-repeat', 'important');
                         liquidBg.style.setProperty('background-color', 'transparent', 'important');
+                    }
+                    if (trackIsPlaying) {
+                        liquidBg.style.setProperty('opacity', '1');
                     }
                 }
                 if (mAmbient && mAmbient.style.backgroundImage !== urlBg) mAmbient.style.backgroundImage = urlBg;
@@ -23049,7 +23174,14 @@ window.setLyricsStyle = function(style) {
                     if (timeTotalEl) timeTotalEl.innerText = formatTime(totalMs);
                     
                     trackIsPlaying = isPlaying;
-                    if (!isPlaying) stopProgressTracking();
+                    if (!isPlaying) {
+                        stopProgressTracking();
+                        const liquidBg = document.getElementById('liquid-blobs');
+                        if (liquidBg) liquidBg.style.setProperty('opacity', '0');
+                    } else {
+                        const liquidBg = document.getElementById('liquid-blobs');
+                        if (liquidBg) liquidBg.style.setProperty('opacity', '1');
+                    }
                     updateWakeLockForPlaybackState();
                     serverBaseProgress = apiProgress + addedDelay;
                     localStartTime = performance.now();
@@ -23060,6 +23192,11 @@ window.setLyricsStyle = function(style) {
                 } else {
                     if (!trackIsPlaying && isPlaying) {
                         trackIsPlaying = true;
+                        const liquidBg = document.getElementById('liquid-blobs');
+                        if (liquidBg) liquidBg.style.setProperty('opacity', '1');
+                        if (ttsSyncedPlaybackActive && typeof speechSynthesis !== 'undefined' && speechSynthesis.paused) {
+                            speechSynthesis.resume();
+                        }
                         updateWakeLockForPlaybackState();
                         serverBaseProgress = apiProgress + addedDelay;
                         localStartTime = performance.now();
@@ -23067,6 +23204,11 @@ window.setLyricsStyle = function(style) {
                         syncLyricsUI(true, true);
                     } else if (trackIsPlaying && !isPlaying) {
                         trackIsPlaying = false;
+                        const liquidBg = document.getElementById('liquid-blobs');
+                        if (liquidBg) liquidBg.style.setProperty('opacity', '0');
+                        if (ttsSyncedPlaybackActive && typeof speechSynthesis !== 'undefined' && speechSynthesis.speaking && !speechSynthesis.paused) {
+                            speechSynthesis.pause();
+                        }
                         updateWakeLockForPlaybackState();
                         stopProgressTracking();
                         currentMs = apiProgress + addedDelay;

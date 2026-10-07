@@ -46,17 +46,18 @@ describe('Single-Layer Lyrics Dashboard & Liquid Glass Corner Unification (v24.2
         assert.doesNotMatch(indexHtml, /body\.liquid-glass-active\s+\.lyrics-open\s+#lyrics-overlay,\s*body\.liquid-glass-active\s+\.picker-opening/);
     });
 
-    it('T2.1: Version numbers are perfectly synchronized to v24.208.0 across all relevant files', () => {
-        assert.equal(versionJson.version, '24.208.0', 'version.json must be 24.208.0');
-        assert.match(swJs, /const\s+SW_VERSION\s*=\s*"24\.208\.0";/, 'sw.js must be 24.208.0');
-        assert.match(indexHtml, /ONBOARDING_VERSION\s*=\s*'v24\.208\.0/, 'index.html ONBOARDING_VERSION must be v24.208.0');
-        assert.match(indexHtml, /id="footer-menu-hint"[^>]*>v24\.208\.0<\/span>/, 'footer-menu-hint must be v24.208.0');
-        assert.match(indexHtml, /id="footer-version-label"[^>]*>v24\.208\.0<\/span>/, 'footer-version-label must be v24.208.0');
-        assert.match(releaseHtml, /<title>Release Notes v24\.208\.0 – Gamingpig<\/title>/, 'release.html title must be v24.208.0');
-        assert.match(releaseHtml, /v24\.208\.0/, 'release.html content must feature v24.208.0');
+    it('T2.1: Version numbers are perfectly synchronized to v24.209.0 across all relevant files', () => {
+        assert.equal(versionJson.version, '24.209.0', 'version.json must be 24.209.0');
+        assert.match(swJs, /const\s+SW_VERSION\s*=\s*"24\.209\.0";/, 'sw.js must be 24.209.0');
+        assert.match(indexHtml, /ONBOARDING_VERSION\s*=\s*'v24\.209\.0/, 'index.html ONBOARDING_VERSION must be v24.209.0');
+        assert.match(indexHtml, /id="footer-menu-hint"[^>]*>v24\.209\.0<\/span>/, 'footer-menu-hint must be v24.209.0');
+        assert.match(indexHtml, /id="footer-version-label"[^>]*>v24\.209\.0<\/span>/, 'footer-version-label must be v24.209.0');
+        assert.match(releaseHtml, /<title>Release Notes v24\.209\.0 – Gamingpig<\/title>/, 'release.html title must be v24.209.0');
+        assert.match(releaseHtml, /v24\.209\.0/, 'release.html content must feature v24.209.0');
     });
 
-    it('T2.2: PUBLIC_CHANGELOG in index.html contains comprehensive v24.208.0 and v24.207.0 entries', () => {
+    it('T2.2: PUBLIC_CHANGELOG in index.html contains comprehensive v24.209.0, v24.208.0 and v24.207.0 entries', () => {
+        assert.match(indexHtml, /version:\s*"v24\.209\.0"/);
         assert.match(indexHtml, /version:\s*"v24\.208\.0"/);
         assert.match(indexHtml, /version:\s*"v24\.207\.0"/);
         assert.match(indexHtml, /arcade\.html/);
