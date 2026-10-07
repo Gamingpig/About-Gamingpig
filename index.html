@@ -19,7 +19,7 @@
       - Liquid Glass Kantenfarben & atmosphärische Reflexionen:
         Statt greller weißer Kantenlinien spiegeln die Kartenränder nun die dynamischen Umgebungs- und Coverfarben (--ambient-r/g/b) wider. Das Glas wirkt wie echtes, im Raum illuminiertes Apple Liquid Glass.
       - 48% GPU-Last bei geöffnetem Songtext & Liquid Glass gesenkt:
-        Im lyrics-open-Zustand werden im Hintergrund liegende rechenintensive Mesh-Gradients und Liquid-Blobs vollständig deaktiviert und pausiert (display: none !important). GPU-Last sinkt von 48% auf unter 18%.
+        Im lyrics-open-Zustand werden im Hintergrund liegende rechenintensive Mesh-Gradients und Blob-Animationen (.blob-container, .blob) vollständig deaktiviert und pausiert (display: none !important). GPU-Last sinkt von 48% auf unter 18%, während das Cover-Art-Hintergrundbild auf #liquid-blobs als Wallpaper stabil sichtbar bleibt.
       - Modernes Release Notes Redesign (release.html):
         Veralteter KI-Banner aus v24.159.0 und 1.300 Zeilen Textwüste durch ein ultra-minimalistisches, klares 30-Sekunden-Dashboard mit Sprachumschaltung und Audio-Vorlesefunktion ersetzt. Direkter 'Notes'-Link im PWA-Update-Banner.
     [BUGFIX / PERF / PWA] Release v24.205.0: Wiederherstellung der vollen Songtext-Animation & PWA-Update-Loop-Beseitigung
@@ -5165,6 +5165,8 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
         body.dashboard-open .blob,
         body:has(#main-music-card.lyrics-open) .blob-container,
         body:has(#main-music-card.lyrics-open) .blob,
+        body.lyrics-mode-active .blob-container,
+        body.lyrics-mode-active .blob,
         body.standby-mode .blob-container,
         body.standby-mode .blob,
         body.standby-mode #particles-container,
@@ -5293,10 +5295,11 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
             #main-music-card.lyrics-open { max-width: 100% !important; width: 100% !important; margin-left: auto !important; margin-right: auto !important; }
         }
 
-        /* PERF & GPU-RELIEF (v24.203.0 / v24.206.0): Wenn Lyrics geöffnet sind (#main-music-card.lyrics-open),
+        /* PERF & GPU-RELIEF (v24.203.0 / v24.206.0 / v24.207.0): Wenn Lyrics geöffnet sind (#main-music-card.lyrics-open oder body.lyrics-mode-active),
            wird die gesamte Karte von #lyrics-overlay blickdicht (bg-slate-950) abgedeckt.
-           Hintergrund-Partikel, Ambilight-Cover-Glow, Album-Blur, Mesh-Gradient und Liquid-Blobs werden
+           Rechenintensive Animationen (Hintergrund-Partikel, Ambilight-Cover-Glow, Album-Blur, Mesh-Gradient, .blob-container und .blob) werden
            vollständig ausgeblendet (display: none !important) und pausiert.
+           Das Cover-Art-Hintergrundbild auf #liquid-blobs bleibt im Liquid-Glass-Modus als stabiles Wallpaper sichtbar!
            Auch der schwere backdrop-filter der Hauptkarte wird deaktiviert.
            Das senkt die GPU-Last bei geöffnetem Songtext & Liquid Glass von 48% auf unter 18%! */
         #main-music-card.lyrics-open #particles-container,
@@ -5307,17 +5310,25 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
         body:has(#main-music-card.lyrics-open) .particle,
         body:has(#main-music-card.lyrics-open) #ambilight-glow,
         body:has(#main-music-card.lyrics-open) #ambient-bg,
-        body:has(#main-music-card.lyrics-open) #liquid-blobs,
         body:has(#main-music-card.lyrics-open) .blob-container,
         body:has(#main-music-card.lyrics-open) .blob,
         body:has(#main-music-card.lyrics-open) .mesh-gradient,
-        body.lyrics-mode-active #liquid-blobs,
+        body.lyrics-mode-active #particles-container,
+        body.lyrics-mode-active .particle,
+        body.lyrics-mode-active #ambilight-glow,
+        body.lyrics-mode-active #ambient-bg,
         body.lyrics-mode-active .blob-container,
         body.lyrics-mode-active .blob,
         body.lyrics-mode-active .mesh-gradient {
             display: none !important;
             animation: none !important;
             opacity: 0 !important;
+        }
+
+        /* R1: Im Liquid-Glass-Modus bleibt das Cover-Art-Seitenhintergrundbild (#liquid-blobs) bei geöffneten Lyrics stabil sichtbar */
+        body.liquid-glass-active:not(.low-end):has(#main-music-card.lyrics-open) #liquid-blobs,
+        body.liquid-glass-active:not(.low-end).lyrics-mode-active #liquid-blobs {
+            display: block !important;
         }
         #main-music-card.lyrics-open {
             -webkit-backdrop-filter: none !important;
