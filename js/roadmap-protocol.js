@@ -25,11 +25,26 @@
             new Set(payload.features).size === payload.features.length &&
             payload.features.every(id => Number.isInteger(id) && id >= 1 && id <= 6);
         if (payload.type !== 'wish') return false;
-        return [['author', 60], ['category', 60], ['title', 100], ['desc', 500]].every(([key, limit]) =>
-            typeof payload[key] === 'string' && payload[key].trim().length > 0 && payload[key].length <= limit);
+        if (![['author', 60], ['category', 60], ['title', 100], ['desc', 500]].every(([key, limit]) =>
+            typeof payload[key] === 'string' && payload[key].trim().length > 0 && payload[key].length <= limit)) return false;
+        if (payload.parentWishId !== undefined && payload.parentWishId !== null) {
+            if (typeof payload.parentWishId !== 'string' || payload.parentWishId.length > 50) return false;
+        }
+        if (payload.parentWishTitle !== undefined && payload.parentWishTitle !== null) {
+            if (typeof payload.parentWishTitle !== 'string' || payload.parentWishTitle.length > 100) return false;
+        }
+        return true;
     }
     async function sign(keys, data) {
         const payload = { ...data, v: 1, id: data.id || crypto.randomUUID() };
+        if (payload.parentWishId !== undefined && payload.parentWishId !== null) {
+            payload.parentWishId = String(payload.parentWishId).trim();
+            if (!payload.parentWishId) delete payload.parentWishId;
+        }
+        if (payload.parentWishTitle !== undefined && payload.parentWishTitle !== null) {
+            payload.parentWishTitle = String(payload.parentWishTitle).trim();
+            if (!payload.parentWishTitle) delete payload.parentWishTitle;
+        }
         if (!valid(payload)) throw new Error('Invalid roadmap entry');
         const key = await crypto.subtle.importKey('jwk', keys.privateKey, algorithm, false, ['sign']);
         const message = JSON.stringify(payload);

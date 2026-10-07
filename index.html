@@ -23143,45 +23143,95 @@ window.setLyricsStyle = function(style) {
         // =========================================================
         // FIX v24.122: Trigger auf das obere "Gamingpig is Live / Offline" Badge gelegt,
         // damit normales Antippen des Covers wie gewohnt das Streaming-Dienste-Menü öffnet!
-        let secretBadgeClickCount = 0;
-        let secretBadgeTimer = null;
-        const triggerEasterWarp = () => {
-            haptic(60);
-            showToast('🚀 HYPERSPACE WARP: 3D Spatial Matrix freigeschaltet!', 3000);
-            setTimeout(() => { window.location.href = 'spatial-audio.html'; }, 1000);
+        // =========================================================
+        // NEU: DECOUPLED SECRET EASTER EGGS (Arcade & Spatial Audio)
+        // =========================================================
+
+        // Trigger 1 (Dashboard Badge): 5-fach Klick auf #music-header-tag
+        // Exklusiver Easter-Egg-Trigger zur Retro Neon Arcade (arcade.html)
+        // =========================================================
+        let secretArcadeBadgeClickCount = 0;
+        let secretArcadeBadgeTimer = null;
+        let isArcadeWarping = false;
+
+        const triggerArcadeWarp = () => {
+            if (isArcadeWarping) return;
+            isArcadeWarping = true;
+            if (navigator && typeof navigator.vibrate === 'function') {
+                try { navigator.vibrate(60); } catch (_) {}
+            }
+            if (typeof haptic === 'function') haptic(60);
+            if (typeof showToast === 'function') {
+                showToast('🎮 ARCADE WARP: Retro Neon Arcade freigeschaltet!', 3000);
+            }
+            setTimeout(() => {
+                window.location.href = 'arcade.html';
+            }, 1000);
         };
 
         const musicHeaderTag = document.getElementById('music-header-tag');
         if (musicHeaderTag) {
             musicHeaderTag.style.cursor = 'pointer';
+            musicHeaderTag.style.userSelect = 'none';
+            musicHeaderTag.style.webkitUserSelect = 'none';
+
             musicHeaderTag.addEventListener('click', (e) => {
                 e.stopPropagation();
-                secretBadgeClickCount++;
-                clearTimeout(secretBadgeTimer);
-                if (secretBadgeClickCount >= 5) {
-                    secretBadgeClickCount = 0;
-                    triggerEasterWarp();
+                if (isArcadeWarping) return;
+                secretArcadeBadgeClickCount++;
+                clearTimeout(secretArcadeBadgeTimer);
+                if (secretArcadeBadgeClickCount >= 5) {
+                    secretArcadeBadgeClickCount = 0;
+                    triggerArcadeWarp();
                 } else {
-                    secretBadgeTimer = setTimeout(() => { secretBadgeClickCount = 0; }, 1500);
+                    secretArcadeBadgeTimer = setTimeout(() => {
+                        secretArcadeBadgeClickCount = 0;
+                    }, 1500);
                 }
             });
         }
 
-        // 5-fach Klick / Tap auf die Dynamic Island als Secret-Trigger zur Spatial Experience
+        // =========================================================
+        // Trigger 2 (Dynamic Island): 5-fach Klick / Tap auf #dynamic-island
+        // Exklusiver Easter-Egg-Trigger zur Spatial Experience (spatial-audio.html)
+        // =========================================================
         let diClickCount = 0;
         let diTimer = null;
+        let lastDiTapTime = 0;
         let lastDiEasterTapTime = 0;
+        let isSpatialWarping = false;
+
+        const triggerSpatialWarp = () => {
+            if (isSpatialWarping) return;
+            isSpatialWarping = true;
+            if (navigator && typeof navigator.vibrate === 'function') {
+                try { navigator.vibrate(60); } catch (_) {}
+            }
+            if (typeof haptic === 'function') haptic(60);
+            if (typeof showToast === 'function') {
+                showToast('🚀 HYPERSPACE WARP: 3D Spatial Matrix freigeschaltet!', 3000);
+            }
+            setTimeout(() => {
+                window.location.href = 'spatial-audio.html';
+            }, 1000);
+        };
+        const triggerEasterWarp = triggerSpatialWarp;
+
         function registerDynamicIslandEasterClick() {
+            if (isSpatialWarping) return;
             const now = Date.now();
-            if (now - lastDiEasterTapTime < 100) return; // Doppel-Trigger bei Touch/Click verhindern
+            if (now - lastDiTapTime < 100) return; // Debounce threshold (<100ms) prevents double-trigger
+            lastDiTapTime = now;
             lastDiEasterTapTime = now;
             diClickCount++;
             clearTimeout(diTimer);
             if (diClickCount >= 5) {
                 diClickCount = 0;
-                triggerEasterWarp();
+                triggerSpatialWarp();
             } else {
-                diTimer = setTimeout(() => { diClickCount = 0; }, 2000);
+                diTimer = setTimeout(() => {
+                    diClickCount = 0;
+                }, 2000);
             }
         }
         window.registerDynamicIslandEasterClick = registerDynamicIslandEasterClick;

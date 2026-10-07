@@ -461,6 +461,12 @@
         // ========================================== //
         // 💌 WISHES MODERATOR (DELETE SPAM WISHES)   //
         // ========================================== //
+        function escapeHtml(str) {
+            return String(str || '').replace(/[&<>"']/g, m => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            })[m]);
+        }
+
         async function loadCommunityWishes() {
             const listEl = document.getElementById('wishes-moderation-list');
             listEl.innerHTML = '<div class="p-8 text-center text-slate-400 font-mono text-xs">Lade Wünsche aus data/roadmap.json...</div>';
@@ -482,18 +488,31 @@
                 wishes.forEach(w => {
                     const row = document.createElement('div');
                     row.className = "glow-card p-4 rounded-2xl border border-white/10 flex items-start justify-between gap-4";
+                    const isThreaded = Boolean(w.parentWishTitle || w.parentWishId);
+                    const safeParent = escapeHtml(w.parentWishTitle || w.parentWishId || '');
+                    const safeTitle = escapeHtml(w.title || '');
+                    const safeDesc = escapeHtml(w.desc || '');
+                    const safeAuthor = escapeHtml(w.author || 'Gast');
+                    const safeCategory = escapeHtml(w.category || 'Idee');
+                    const safeId = escapeHtml(w.id || '');
                     row.innerHTML = `
                         <div class="min-w-0 flex-1">
+                            ${isThreaded ? `
+                            <div class="mb-1.5 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-[10px] font-mono font-bold">
+                                <span>↳ Ergänzung zu:</span>
+                                <span>${safeParent}</span>
+                            </div>
+                            ` : ''}
                             <div class="flex items-center gap-2 mb-1">
-                                <span class="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-mono text-[10px]">${w.category || 'Idee'}</span>
-                                <span class="text-xs font-bold text-slate-300">${w.author || 'Gast'}</span>
+                                <span class="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-mono text-[10px]">${safeCategory}</span>
+                                <span class="text-xs font-bold text-slate-300">${safeAuthor}</span>
                                 <span class="text-[10px] text-slate-500 font-mono">${w.date ? new Date(w.date).toLocaleString('de-DE') : ''}</span>
                             </div>
-                            <h4 class="text-sm font-black text-white">${w.title}</h4>
-                            <p class="text-xs text-slate-400 mt-1 leading-relaxed">${w.desc}</p>
-                            <span class="text-[9px] font-mono text-slate-600">ID: ${w.id}</span>
+                            <h4 class="text-sm font-black text-white">${safeTitle}</h4>
+                            <p class="text-xs text-slate-400 mt-1 leading-relaxed">${safeDesc}</p>
+                            <span class="text-[9px] font-mono text-slate-600">ID: ${safeId}</span>
                         </div>
-                        <button onclick="deleteWish('${w.id}')" class="px-3 py-1.5 rounded-xl bg-rose-600/20 hover:bg-rose-600/40 text-rose-400 border border-rose-500/30 text-xs font-bold transition-all active:scale-95 shrink-0 flex items-center gap-1">
+                        <button onclick="deleteWish('${safeId}')" class="px-3 py-1.5 rounded-xl bg-rose-600/20 hover:bg-rose-600/40 text-rose-400 border border-rose-500/30 text-xs font-bold transition-all active:scale-95 shrink-0 flex items-center gap-1">
                             <span>🗑️</span> <span>Löschen</span>
                         </button>
                     `;

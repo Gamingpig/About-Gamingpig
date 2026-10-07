@@ -90,6 +90,12 @@
         for (const wish of data.wishes.slice(0,30)) {
             const item = document.createElement('div');
             item.className = 'block p-3.5 rounded-2xl bg-white/5 border border-white/10';
+            if (wish.parentWishTitle || wish.parentWishId) {
+                const badge = document.createElement('div');
+                badge.className = 'sub-badge inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-[10px] font-mono font-bold mb-1.5';
+                badge.textContent = `↳ Ergänzung zu: ${wish.parentWishTitle || wish.parentWishId}`;
+                item.appendChild(badge);
+            }
             for (const [value,cls] of [
                 [wish.title,'font-bold text-sm text-white'],
                 [`${wish.author} · ${wish.category} · ${new Date(wish.date).toLocaleDateString()}`,'text-xs text-slate-400 mt-1'],
@@ -99,8 +105,49 @@
             }
             list.appendChild(item);
         }
+        const optWishes = el('optgroup-community-wishes');
+        if (optWishes) {
+            optWishes.replaceChildren();
+            for (const wish of data.wishes) {
+                const opt = document.createElement('option');
+                opt.value = wish.id;
+                opt.textContent = wish.title;
+                opt.dataset.title = wish.title;
+                optWishes.appendChild(opt);
+            }
+        }
+        populateRoadmapCards();
         el('community-wishes-container').classList.toggle('hidden', data.wishes.length === 0);
         updateVoteStatus();
+    }
+    function populateRoadmapCards() {
+        const optCards = el('optgroup-roadmap-cards');
+        if (!optCards) return;
+        optCards.replaceChildren();
+        for (let i = 1; i <= 6; i++) {
+            const titleEl = el(`card-${i}-title`);
+            let title = '';
+            if (titleEl) {
+                const icon = titleEl.previousElementSibling?.textContent?.trim() || '';
+                title = (icon ? icon + ' ' : '') + titleEl.textContent.trim();
+            }
+            if (!title) {
+                const defaults = [
+                    '🏎️ Echtzeit Kartbahn Telemetrie & Live-Tracker',
+                    '🎚️ KI-DJ & Nahtlose 3D Audio-Transitionen',
+                    '🎮 Community Mini-Game (Retro Arcade)',
+                    '📲 Interaktive Widgets für iOS & Android Homescreen',
+                    '✨ Überall Liquid Glass',
+                    '🎙️ Eigene KI-Stimmen für Songtext-Vorlesen'
+                ];
+                title = defaults[i - 1];
+            }
+            const opt = document.createElement('option');
+            opt.value = `card-${i}`;
+            opt.textContent = title;
+            opt.dataset.title = title;
+            optCards.appendChild(opt);
+        }
     }
     function schedule(delay = 300000) {
         clearTimeout(timer);
@@ -160,7 +207,8 @@
                 const duplicate = action.type === 'wish' && entries.find(entry => {
                     const p = JSON.parse(entry.message);
                     return entry.publicKey.x === keys.publicKey.x && entry.publicKey.y === keys.publicKey.y &&
-                        p.type === 'wish' && ['author','category','title','desc'].every(key => p[key] === action[key]);
+                        p.type === 'wish' && ['author','category','title','desc'].every(key => p[key] === action[key]) &&
+                        p.parentWishId === action.parentWishId && p.parentWishTitle === action.parentWishTitle;
                 });
                 if (duplicate) { await post(duplicate); window.showToast(strings().queued,'⏳'); return true; }
                 const entry = await P.sign(keys,action);
@@ -190,9 +238,28 @@
         event.preventDefault();
         const fields = Object.fromEntries(['author','category','title','desc'].map(key=>[key,el('wish-'+key).value.trim()]));
         if (Object.values(fields).some(value=>!value)) { window.showToast(strings().invalid,'⚠️'); return; }
-        const accepted = await submitAction(()=>({type:'wish',...fields}));
+        const isReply = el('wish-type-reply')?.checked;
+        const parentSelect = el('parent-wish-select');
+        let parentWishId = undefined;
+        let parentWishTitle = undefined;
+        if (isReply && parentSelect && parentSelect.value) {
+            parentWishId = parentSelect.value.trim();
+            const selectedOpt = parentSelect.options ? parentSelect.options[parentSelect.selectedIndex] : null;
+            parentWishTitle = selectedOpt ? selectedOpt.textContent.trim() : parentWishId;
+        }
+        const actionPayload = {
+            type: 'wish',
+            ...fields,
+            ...(parentWishId ? { parentWishId, parentWishTitle } : {})
+        };
+        const accepted = await submitAction(()=>actionPayload);
         // Only clear unchanged input after ntfy confirms receipt. Pending status remains until GitHub confirms.
-        if (accepted && Object.entries(fields).every(([key,value])=>el('wish-'+key).value.trim()===value)) event.target.reset();
+        if (accepted && Object.entries(fields).every(([key,value])=>el('wish-'+key).value.trim()===value)) {
+            event.target.reset();
+            if (el('wish-type-new')) el('wish-type-new').checked = true;
+            if (el('parent-wish-wrapper')) el('parent-wish-wrapper').style.display = 'none';
+            if (parentSelect) parentSelect.value = '';
+        }
     }
     async function retryPending() {
         if (busy) return;
@@ -234,6 +301,17 @@
         el('roadmap-retry').addEventListener('click',retryPending);
         el('roadmap-copy').addEventListener('click',copyDevice);
         el('roadmap-paste').addEventListener('click',pasteDevice);
+        const newRadio = el('wish-type-new');
+        const replyRadio = el('wish-type-reply');
+        const wrapper = el('parent-wish-wrapper');
+        if (newRadio && replyRadio && wrapper) {
+            const toggle = () => {
+                wrapper.style.display = replyRadio.checked ? 'block' : 'none';
+            };
+            newRadio.addEventListener('change', toggle);
+            replyRadio.addEventListener('change', toggle);
+        }
+        populateRoadmapCards();
         try {
             const drafts=JSON.parse(localStorage.getItem('gp_community_wishes')||'[]');
             if (Array.isArray(drafts) && drafts.length) {

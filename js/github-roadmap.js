@@ -151,10 +151,60 @@
             const body = document.createElement('div');
             body.className = 'text-xs text-slate-400 mt-1 line-clamp-2 whitespace-pre-line';
             body.textContent = wish.body;
-            item.append(heading, meta, body);
+            if (wish.parentWishTitle || wish.parentWishId) {
+                const badge = document.createElement('div');
+                badge.className = 'sub-badge inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-[10px] font-mono font-bold mb-1.5';
+                badge.textContent = `↳ Ergänzung zu: ${wish.parentWishTitle || wish.parentWishId}`;
+                item.append(badge, heading, meta, body);
+            } else {
+                item.append(heading, meta, body);
+            }
             list.appendChild(item);
         }
+        const optWishes = document.getElementById('optgroup-community-wishes');
+        if (optWishes && typeof optWishes.replaceChildren === 'function') {
+            const options = [];
+            for (const wish of data.wishes) {
+                const opt = document.createElement('option');
+                opt.value = wish.id || String(wish.number);
+                opt.textContent = wish.title;
+                opt.dataset.title = wish.title;
+                options.push(opt);
+            }
+            optWishes.replaceChildren(...options);
+        }
+        populateRoadmapCards();
         document.getElementById('community-wishes-container').classList.toggle('hidden', data.wishes.length === 0);
+    }
+    function populateRoadmapCards() {
+        const optCards = document.getElementById('optgroup-roadmap-cards');
+        if (!optCards || typeof optCards.replaceChildren !== 'function') return;
+        const options = [];
+        for (let i = 1; i <= 6; i++) {
+            const titleEl = document.getElementById(`card-${i}-title`);
+            let title = '';
+            if (titleEl) {
+                const icon = titleEl.previousElementSibling?.textContent?.trim() || '';
+                title = (icon ? icon + ' ' : '') + titleEl.textContent.trim();
+            }
+            if (!title) {
+                const defaults = [
+                    '🏎️ Echtzeit Kartbahn Telemetrie & Live-Tracker',
+                    '🎚️ KI-DJ & Nahtlose 3D Audio-Transitionen',
+                    '🎮 Community Mini-Game (Retro Arcade)',
+                    '📲 Interaktive Widgets für iOS & Android Homescreen',
+                    '✨ Überall Liquid Glass',
+                    '🎙️ Eigene KI-Stimmen für Songtext-Vorlesen'
+                ];
+                title = defaults[i - 1];
+            }
+            const opt = document.createElement('option');
+            opt.value = `card-${i}`;
+            opt.textContent = title;
+            opt.dataset.title = title;
+            options.push(opt);
+        }
+        optCards.replaceChildren(...options);
     }
     async function getIssues(label, count, direction) {
         const controller = new AbortController();
@@ -222,10 +272,23 @@
         const title = document.getElementById('wish-title').value.trim();
         const desc = document.getElementById('wish-desc').value.trim();
         if (!author || !title || !desc) { window.showToast(strings().invalid, '⚠️'); return; }
+        const isReply = Boolean(document.getElementById('wish-type-reply')?.checked);
+        const parentSelect = document.getElementById('parent-wish-select');
+        let parentWishId = undefined;
+        let parentWishTitle = undefined;
+        if (isReply && parentSelect && parentSelect.value) {
+            parentWishId = parentSelect.value.trim();
+            const selectedOpt = parentSelect.options ? parentSelect.options[parentSelect.selectedIndex] : null;
+            parentWishTitle = selectedOpt ? selectedOpt.textContent.trim() : parentWishId;
+        }
         const url = new URL(`${BASE}/issues/new`);
         url.searchParams.set('template', 'community-wish.md');
         url.searchParams.set('title', `[Wunsch] ${title}`);
-        url.searchParams.set('body', `### Name / Discord\n${author}\n\n### Kategorie\n${category}\n\n### Wunsch\n${desc}`);
+        let body = `### Name / Discord\n${author}\n\n### Kategorie\n${category}\n\n### Wunsch\n${desc}`;
+        if (parentWishId) {
+            body += `\n\n### Bezug\n${parentWishTitle || parentWishId}`;
+        }
+        url.searchParams.set('body', body);
         if (url.href.length > 7500) { window.showToast(strings().tooLong, '⚠️'); return; }
         window.open(url.href, '_blank', 'noopener,noreferrer');
         // Keep the form intact: opening GitHub does not mean the issue was submitted.
@@ -238,6 +301,17 @@
                 render(saved); lastSuccess = saved.time; status = 'loading';
             }
         } catch (_) { /* A missing or invalid cache never prevents a network read. */ }
+        const newRadio = document.getElementById('wish-type-new');
+        const replyRadio = document.getElementById('wish-type-reply');
+        const wrapper = document.getElementById('parent-wish-wrapper');
+        if (newRadio && replyRadio && wrapper) {
+            const toggle = () => {
+                wrapper.style.display = replyRadio.checked ? 'block' : 'none';
+            };
+            newRadio.addEventListener('change', toggle);
+            replyRadio.addEventListener('change', toggle);
+        }
+        populateRoadmapCards();
         // Preserve access to wishes left by the previous local-only implementation.
         try {
             const drafts = JSON.parse(localStorage.getItem('gp_community_wishes') || '[]');

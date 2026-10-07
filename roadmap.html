@@ -307,19 +307,19 @@
                     </div>
                 </div>
 
-                <div class="glow-card p-5 sm:p-6 rounded-2xl sm:rounded-3xl border-l-4 border-l-purple-500 flex flex-col justify-between" data-category="planned" data-card-id="3">
+                <div class="glow-card p-5 sm:p-6 rounded-2xl sm:rounded-3xl border-l-4 border-l-emerald-500 flex flex-col justify-between" data-category="live" data-card-id="3">
                     <div>
                         <div class="flex items-center justify-between gap-2 mb-3">
-                            <span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                                📋 Geplant
+                            <span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                                🚀 Live / Verfügbar
                             </span>
-                            <span class="text-xs font-mono text-slate-400">Ziel: Herbst 2026</span>
+                            <span class="text-xs font-mono text-slate-400">Ziel: v24.195 (Live)</span>
                         </div>
                         <h3 class="text-lg font-black text-white mb-2 flex items-center gap-2">
                             <span>🎮</span> <span id="card-3-title">Community Mini-Game (Retro Arcade)</span>
                         </h3>
                         <p id="card-3-desc" class="text-xs sm:text-sm text-slate-300 leading-relaxed mb-4">
-                            Ein spielbares Pixel-Art Mini-Game direkt im Browser mit globaler Highscore-Liste und freischaltbaren Secret-Songs für Spotify & Soundcloud.
+                            Das erste spielbare Mini-Game ist jetzt als geheimes Easter Egg live. Wir sammeln ab sofort eure Ideen und Wünsche für neue Level, Musik und Spielmodi!
                         </p>
                     </div>
                     <div class="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-white/10">
@@ -438,7 +438,27 @@
                 </p>
             </div>
 
-            <form onsubmit="submitWish(event)" class="space-y-4">
+            <form id="wish-form" onsubmit="submitWish(event)" class="space-y-4">
+                <div class="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-3">
+                    <div class="flex flex-wrap items-center gap-4 text-xs font-semibold text-slate-300">
+                        <label class="inline-flex items-center gap-2 cursor-pointer">
+                            <input type="radio" id="wish-type-new" name="wish-type" value="new" checked class="accent-purple-500">
+                            <span>Neuer eigenständiger Wunsch</span>
+                        </label>
+                        <label class="inline-flex items-center gap-2 cursor-pointer">
+                            <input type="radio" id="wish-type-reply" name="wish-type" value="reply" class="accent-cyan-400">
+                            <span>Ergänzung / Feedback zu einem existierenden Wunsch</span>
+                        </label>
+                    </div>
+                    <div id="parent-wish-wrapper" style="display: none;">
+                        <label for="parent-wish-select" class="block text-xs font-bold text-cyan-300 mb-1">Bezug wählen (Roadmap-Karte oder bestehender Wunsch)</label>
+                        <select id="parent-wish-select" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-cyan-500/40 text-sm text-white focus:outline-none focus:border-cyan-400 transition-colors">
+                            <option value="">-- Bitte Thema wählen --</option>
+                            <optgroup label="🔮 Roadmap-Karten" id="optgroup-roadmap-cards"></optgroup>
+                            <optgroup label="💌 Community-Wünsche" id="optgroup-community-wishes"></optgroup>
+                        </select>
+                    </div>
+                </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                         <label id="form-label-author" class="block text-xs font-bold text-slate-300 mb-1">Dein Name / Discord-Tag</label>
@@ -749,6 +769,12 @@
                             badge: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
                             dot: '',
                             label: '💡 Konzept'
+                        },
+                        live: {
+                            border: 'border-l-emerald-500',
+                            badge: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+                            dot: '',
+                            label: '🚀 Live / Verfügbar'
                         }
                     };
 
@@ -787,6 +813,7 @@
                         grid.appendChild(card);
                     });
 
+                    populateParentWishDropdown(getRoadmapCardsList());
                     // Vote-Counts neu abgleichen nach DOM-Generierung
                     if (window.GitHubRoadmap?.updateCopy) {
                         window.GitHubRoadmap.updateCopy();
@@ -797,15 +824,80 @@
             }
         }
 
+        function setupWishThreadingUI() {
+            const newRadio = document.getElementById('wish-type-new');
+            const replyRadio = document.getElementById('wish-type-reply');
+            const wrapper = document.getElementById('parent-wish-wrapper');
+            if (newRadio && replyRadio && wrapper) {
+                const toggle = () => {
+                    wrapper.style.display = replyRadio.checked ? 'block' : 'none';
+                };
+                newRadio.addEventListener('change', toggle);
+                replyRadio.addEventListener('change', toggle);
+            }
+        }
+
+        function populateParentWishDropdown(cards, wishes) {
+            const optCards = document.getElementById('optgroup-roadmap-cards');
+            const optWishes = document.getElementById('optgroup-community-wishes');
+            if (optCards && Array.isArray(cards)) {
+                optCards.replaceChildren();
+                cards.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.id;
+                    opt.textContent = c.title;
+                    opt.dataset.title = c.title;
+                    optCards.appendChild(opt);
+                });
+            }
+            if (optWishes && Array.isArray(wishes)) {
+                optWishes.replaceChildren();
+                wishes.forEach(w => {
+                    const opt = document.createElement('option');
+                    opt.value = w.id;
+                    opt.textContent = w.title;
+                    opt.dataset.title = w.title;
+                    optWishes.appendChild(opt);
+                });
+            }
+        }
+
+        function getRoadmapCardsList() {
+            const cards = [];
+            for (let i = 1; i <= 6; i++) {
+                const titleEl = document.getElementById(`card-${i}-title`);
+                let title = '';
+                if (titleEl) {
+                    const icon = titleEl.previousElementSibling?.textContent?.trim() || '';
+                    title = (icon ? icon + ' ' : '') + titleEl.textContent.trim();
+                }
+                if (!title) {
+                    const defaults = [
+                        '🏎️ Echtzeit Kartbahn Telemetrie & Live-Tracker',
+                        '🎚️ KI-DJ & Nahtlose 3D Audio-Transitionen',
+                        '🎮 Community Mini-Game (Retro Arcade)',
+                        '📲 Interaktive Widgets für iOS & Android Homescreen',
+                        '✨ Überall Liquid Glass',
+                        '🎙️ Eigene KI-Stimmen für Songtext-Vorlesen'
+                    ];
+                    title = defaults[i - 1];
+                }
+                cards.push({ id: `card-${i}`, title });
+            }
+            return cards;
+        }
+
         // Initialize
         window.addEventListener('DOMContentLoaded', async () => {
-            window.GitHubRoadmap.init();
+            setupWishThreadingUI();
+            populateParentWishDropdown(getRoadmapCardsList(), []);
+            if (window.GitHubRoadmap?.init) window.GitHubRoadmap.init();
             updateTtsSpeedUI();
             const selectEl = document.getElementById('lang-select');
             if (selectEl) selectEl.value = currentLang;
             if (currentLang !== 'de') changeLanguage(currentLang);
             await applyDynamicRoadmapMeta();
-            window.GitHubRoadmap.updateCopy();
+            if (window.GitHubRoadmap?.updateCopy) window.GitHubRoadmap.updateCopy();
         });
     </script>
 <script src="js/community-glass.20260910.js?v=v24.192.0"></script>
