@@ -13,6 +13,16 @@
         Symptom: Beim Scrollen nach oben verschwand die Footer-Bubble von jetzt auf gleich ohne jede Animation ("hartes Clipping / Poppen").
         Ursache: Der Basis-Zustand von #footer-bubble besaß keine explizite Opacity/Visibility-Transition, während generische Liquid-Glass-Kartenregeln mit hoher Spezifität die Transition überschrieben und Opacity ausschlossen.
         Fix: Asymmetrische Enter- und Exit-Transitions mit hoher Spezifität definiert. Beim Hochscrollen gleitet die Bubble mit einer geschmeidigen 350ms-Fadeout- und Absenk-Animation (opacity: 0, translateY(32px) scale(0.96)) sanft aus dem Sichtfeld.
+    [LIQUID-GLASS / LYRICS / UI / PERF] Release v24.208.0: Nahtloses Single-Layer Lyrics Dashboard, gleichmäßige Liquid-Glass-Kantenradien & Settings-Menü Overhaul
+      - Nahtloses Single-Layer Lyrics Dashboard (keine doppelte Kartenschicht):
+        #lyrics-overlay ist nun vollständig transparent integriert und übernimmt exakt Kontur, Radien (border-radius: inherit !important; 26px in Liquid Glass) und Kanten der Hauptkarte (#main-music-card). Alle inneren doppelten Rahmen (border border-white/10) wurden eliminiert und die störende Pop-In-Skalierung (ext-pop-in/std-pop-in) durch einen sauberen, kantentreuen Opacity-Crossfade ersetzt.
+      - Überholung des Songtext-Einstellungsmenüs (#lyrics-settings-menu):
+        Unterbrechungsfreie Songtext-Animation bei geöffnetem Menü (isLyricsSettingsOpen blockiert den rAF-Loop nicht mehr), wackelfreie Steuerelemente ohne Sprünge/active:scale-95, direktes numerisches Offset-Eingabefeld mit Enter- und Übernehmen-Button sowie Bereinigung redundanter UI-Animations-Optionen.
+    [FEATURE / EASTER-EGG / ROADMAP] Release v24.207.0: Retro Neon Arcade Easter Egg (arcade.html) & Roadmap Live Wish Threading
+      - Retro Neon Arcade Minigame Easter Egg (arcade.html):
+        5-Tap Klick-Geste auf #music-header-tag öffnet nun exklusiv das nagelneue Retro Arcade Easter Egg mit CRT-Scanlines und Synthwave-Audio, während 5 Taps auf die Dynamic Island weiterhin das Matrix/Studio-Terminal ansteuern.
+      - Roadmap Card 3 "Live" & Community Wish-Threading:
+        Roadmap-Status für Community-Wünsche auf "Live" gehoben, interaktive Diskussions- und Antwort-Threads direkt an Wünschen freigeschaltet.
     [DESIGN / ALIGNMENT / PERF / RELEASE] Release v24.206.0: Perfekte Footer-Symmetrie, dynamische Ambient-Kantenreflexionen, GPU-Entlastung bei Songtexten & Release Notes Redesign
       - Footer-Dock & Spotlight-Symmetrie (#footer-bubble, #cp-trigger, #back-to-top):
         Footer-Bubble, Spotlight-Button (⌘K / Strg+K) und Nach-oben-Scroll-Button teilen sich nun exakt dieselbe vertikale Baseline (bottom: 1.25rem mobil / 2rem Desktop), dieselbe Höhe (2.75rem / 3.25rem), Pillen-Form und einheitliche Frosted-Glass-Kantenstärke (1.5px / 2px).
@@ -3371,7 +3381,7 @@
             AppStorage.setItem('app_visit_count', String(_visitCount));
 
             // 🛡️ INSTANT ONBOARDING SHIELD
-            const _currVer = window.ONBOARDING_VERSION = 'v24.206.0 · 2026-10-06';
+            const _currVer = window.ONBOARDING_VERSION = 'v24.208.0 · 2026-10-07';
             const _installedVer = AppStorage.getItem('site_version_installed');
             if (_installedVer !== _currVer) {
                 AppStorage.setItem('site_version_installed', _currVer);
@@ -4528,7 +4538,6 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
         #kart-card-wrapper { min-height: 0; width: 100%; display: flex; justify-content: center; align-items: flex-start; overflow: visible; }
 
         body.liquid-glass-active .modal-opening .modal-content,
-        body.liquid-glass-active .lyrics-open #lyrics-overlay,
         body.liquid-glass-active .picker-opening,
         body.liquid-glass-active .tutorial-opening {
             display: flex !important;
@@ -4538,13 +4547,36 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
         }
         
         body.liquid-glass-active .modal-closing .modal-content,
-        body.liquid-glass-active .lyrics-closing-state #lyrics-overlay,
         body.liquid-glass-active .picker-closing,
         body.liquid-glass-active .tutorial-closing {
             animation: ext-pop-out 0.4s var(--liquid-fluid) forwards !important;
             transform-origin: center center;
             will-change: transform, opacity;
             display: flex !important; /* Sicherstellen, dass es sichtbar bleibt während Animation */
+        }
+
+        /* Seamless Single-Layer Lyrics Dashboard (kein inneres Skalieren/Wegbewegen von Kartenkanten) */
+        body.liquid-glass-active .lyrics-open #lyrics-overlay,
+        .lyrics-open #lyrics-overlay {
+            display: flex !important;
+            animation: lyrics-seamless-fade-in 0.35s var(--liquid-fluid) forwards !important;
+            transform: none !important;
+            will-change: opacity;
+        }
+        body.liquid-glass-active .lyrics-closing-state #lyrics-overlay,
+        .lyrics-closing-state #lyrics-overlay {
+            display: flex !important;
+            animation: lyrics-seamless-fade-out 0.25s var(--liquid-fluid) forwards !important;
+            transform: none !important;
+            will-change: opacity;
+        }
+        @keyframes lyrics-seamless-fade-in {
+            0% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+        @keyframes lyrics-seamless-fade-out {
+            0% { opacity: 1; }
+            100% { opacity: 0; }
         }
 
         /* Settings Windows Liquid Animations */
@@ -5226,8 +5258,8 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
         body.low-end #kart-card-wrapper.kart-dashboard-opening, body.low-end #kart-card-wrapper.kart-dashboard-closing {
             opacity: 1 !important; visibility: visible !important; transform: none !important; animation: none !important;
         }
-        .lyrics-open #lyrics-overlay { animation: std-pop-in 0.5s var(--apple-spring) forwards; }
-        .lyrics-closing-state #lyrics-overlay { animation: std-pop-out 0.4s var(--apple-ease) forwards; }
+        .lyrics-open #lyrics-overlay { animation: lyrics-seamless-fade-in 0.35s var(--apple-ease) forwards !important; transform: none !important; }
+        .lyrics-closing-state #lyrics-overlay { animation: lyrics-seamless-fade-out 0.25s var(--apple-ease) forwards !important; transform: none !important; }
 
         @keyframes std-pop-in { 0% { opacity: 0; transform: scale(0.8) translate3d(0, -20px, 0); } 100% { opacity: 1; transform: scale(1) translate3d(0, 0, 0); } }
         @keyframes std-pop-out { 0% { opacity: 1; transform: scale(1) translate3d(0, 0, 0); } 100% { opacity: 0; transform: scale(0.8) translate3d(0, 20px, 0); } }
@@ -5433,11 +5465,40 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
         #main-music-card.lyrics-open {
             -webkit-backdrop-filter: none !important;
             backdrop-filter: none !important;
+            overflow: hidden !important;
         }
         #main-music-card.lyrics-open #media-container,
         #main-music-card.lyrics-open #media-container * {
             transform: none !important;
             perspective: none !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
+        }
+        #main-music-card.lyrics-open #lyrics-overlay {
+            border-radius: inherit !important;
+            border: none !important;
+            box-shadow: none !important;
+        }
+        body.liquid-glass-active #main-music-card.lyrics-open #lyrics-overlay {
+            background: transparent !important;
+            border-radius: inherit !important;
+            border: none !important;
+            box-shadow: none !important;
+        }
+        .dark body.liquid-glass-active #main-music-card.lyrics-open {
+            background: linear-gradient(
+                135deg,
+                rgba(15, 23, 42, 0.96) 0%,
+                rgba(2, 6, 23, 0.98) 100%
+            ) !important;
+        }
+        html:not(.dark) body.liquid-glass-active #main-music-card.lyrics-open {
+            background: linear-gradient(
+                135deg,
+                rgba(15, 23, 42, 0.95) 0%,
+                rgba(2, 6, 23, 0.98) 100%
+            ) !important;
         }
 
         /* Verhindert Kollisionen: Hinweis und Steuerungselemente ausblenden, solange Lyrics aktiv sind (#mini-player-toggle bleibt sichtbar zum direkten Schließen) */
@@ -5891,16 +5952,21 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
 
         .mask-image-gradient { -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%); mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%); }
 
-        <!-- PERF-FIX v24.18: #lyrics-overlay/#lyrics-container hatten will-change fest auf der
-             Basis-Regel - das Element liegt permanent im DOM (nur per opacity/visibility
-             versteckt, kein display:none), hielt also AUCH BEI GESCHLOSSENEN LYRICS dauerhaft
-             eine eigene GPU-Ebene über fast die komplette Kartenfläche offen. Erklärt
-             plausibel "Handy wird schon beim bloßen Öffnen der Seite heiß" - dieses Element
-             existiert ja auf jeder einzelnen Seitenansicht. will-change jetzt nur noch, wenn
-             die Lyrics-Ansicht tatsächlich offen ist (per bestehender lyrics-open-Klasse). -->
-        #lyrics-overlay { border-radius: inherit; }
+        /* PERF-FIX v24.18 & v24.208.0: Einheitliches Single-Layer Lyrics Dashboard.
+           #lyrics-overlay übernimmt 1:1 die Kanten, Radien und Konturen von #main-music-card,
+           wodurch im Liquid-Glass-Modus keine doppelte Schicht oder abweichende Rundung mehr existiert. */
+        #lyrics-overlay {
+            border-radius: inherit !important;
+            border: none !important;
+            box-shadow: none !important;
+        }
         #lyrics-container { overflow: hidden; border-radius: inherit; }
-        #main-music-card.lyrics-open #lyrics-overlay { will-change: opacity; }
+        #main-music-card.lyrics-open #lyrics-overlay {
+            border-radius: inherit !important;
+            border: none !important;
+            box-shadow: none !important;
+            will-change: opacity;
+        }
         #lyrics-container { overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
         #lyrics-container::-webkit-scrollbar { width: 4px; }
         #lyrics-container::-webkit-scrollbar-track { background: transparent; }
@@ -8424,7 +8490,7 @@ html.gp-android:not(.dark) #ui-controls {
     <div id="footer-expandable-menu" class="hidden fixed z-[95] p-3.5 rounded-2xl bg-slate-900/95 border border-slate-700/80 shadow-2xl backdrop-blur-xl w-[315px] xxs:w-[340px] sm:w-[370px] max-w-[calc(100vw-1.5rem)] text-xs space-y-2.5" onclick="event.stopPropagation()">
         <div class="flex items-center justify-between px-1 pb-1.5 border-b border-white/10 gap-2">
             <span id="footer-menu-title" data-i18n="footer_menu_title" class="font-bold text-slate-400 text-[10px] uppercase tracking-wider truncate">Navigation &amp; Rechtliches</span>
-            <span id="footer-menu-hint" class="text-[9px] text-pink-400 font-mono font-bold shrink-0 whitespace-nowrap">v24.206.0</span>
+            <span id="footer-menu-hint" class="text-[9px] text-pink-400 font-mono font-bold shrink-0 whitespace-nowrap">v24.208.0</span>
         </div>
         <div class="grid grid-cols-2 gap-2 text-left">
             <button onclick="openEpicWhatsNewTour(false); toggleFooterMenu(false)" id="footer-whats-new-btn" class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/90 text-slate-200 hover:text-white font-medium flex items-center gap-2 transition-all active:scale-[0.98]">
@@ -8458,7 +8524,7 @@ html.gp-android:not(.dark) #ui-controls {
     <div id="footer-bubble" class="fixed z-[91] inline-flex items-center justify-center gap-1.5 sm:gap-3 px-3 sm:px-6 rounded-full bg-slate-900/85 backdrop-blur-xl border border-white/15 shadow-xl text-[10px] xs:text-xs sm:text-sm text-slate-300 select-none opacity-0 pointer-events-none">
         <span id="footer-established" class="font-bold tracking-tight text-slate-300 whitespace-nowrap">© 2026 GAMINGPIG</span>
         <span class="text-white/20 select-none">•</span>
-        <span id="footer-version-label" class="font-mono font-bold text-pink-400 whitespace-nowrap">v24.206.0</span>
+        <span id="footer-version-label" class="font-mono font-bold text-pink-400 whitespace-nowrap">v24.208.0</span>
         <span class="text-white/20 select-none">•</span>
         <button id="footer-menu-toggle-btn" onclick="toggleFooterMenu()" class="text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1 sm:gap-1.5 transition-all px-1.5 sm:px-2 py-1 rounded-full hover:bg-white/10 active:scale-95 whitespace-nowrap" aria-expanded="false" aria-label="Mehr Menü öffnen">
             <span id="footer-more-label">Mehr</span>
@@ -9027,7 +9093,7 @@ html.gp-android:not(.dark) #ui-controls {
                          durchschimmerten und sich mit dem Songtext überlagerten. Auf volle
                          Deckkraft (bg-slate-950, kein Opacity-Suffix mehr = 100%) umgestellt -
                          jetzt eine komplett solide Fläche, nichts scheint mehr durch. -->
-                    <div id="lyrics-overlay" class="absolute inset-0 bg-slate-950 rounded-[1.5rem] xxs:rounded-3xl md:rounded-[3rem] flex-col p-2 xxs:p-3 xs:p-6 md:p-8 z-40 transition-all duration-500 opacity-0 pointer-events-none flex border border-white/10 invisible overflow-hidden">
+                    <div id="lyrics-overlay" class="absolute inset-0 bg-slate-950 rounded-[inherit] flex-col p-2 xxs:p-3 xs:p-6 md:p-8 z-40 transition-all duration-500 opacity-0 pointer-events-none flex border-0 invisible overflow-hidden">
                         <div id="lyrics-ambient-bg"></div>
                         <div id="lyrics-ambient-tint"></div>
                         
@@ -17130,6 +17196,70 @@ let shareCardLoading;
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+    { version: "v24.208.0", date: "7. Oktober 2026", type: "feature", items: {
+        de: [
+            "🪞 Nahtloses Single-Layer Lyrics Dashboard: Songtexte verschmelzen im Liquid-Glass-Modus zu einer einzigen, harmonischen Schicht ohne störende Doppelränder oder Kantenversatz",
+            "📐 Perfekt symmetrische Eckradien (26px): Kanten und Rundungen passen sich im Liquid-Glass-Modus pixelgenau der Hauptkarte an",
+            "🎵 Live-Songtext bei offenen Einstellungen: Songtext-Animation läuft beim Feintunen von Stilen und Offsets ohne Unterbrechung im Hintergrund weiter",
+            "⚡ Direkte Offset-Zahleneingabe: Millisekunden-Sync direkt per Zahlenfeld eingeben und mit Enter oder 'Übernehmen' sofort sichern",
+            "🎯 Ruhige Menüführung: Wackelfreie Steuerelemente ohne Sprünge oder ungewollte Button-Deformationen"
+        ],
+        en: [
+            "🪞 Seamless Single-Layer Lyrics Dashboard: Lyrics merge into one unified surface in Liquid Glass mode without double borders or layered outlines",
+            "📐 Pixel-Perfect 26px Corner Radii: Flawlessly aligned rounded corners matching the main music card edge-to-edge",
+            "🎵 Uninterrupted Live Lyrics: Animations continue playing smoothly while customizing styles or sync offsets in the settings menu",
+            "⚡ Direct Numeric Sync Offset: Enter milliseconds directly via keyboard and confirm instantly with Enter or the 'Apply' button",
+            "🎯 Stabilized Settings Navigation: Calm button interaction without jumping transforms or accidental scaling shifts"
+        ],
+        es: [
+            "🪞 Panel de letras de capa única: Las letras se integran en una sola superficie uniforme en Liquid Glass sin bordes dobles",
+            "📐 Esquinas redondeadas perfectas (26px): Radios y contornos idénticos y alineados con la tarjeta de música principal",
+            "🎵 Letras en vivo con ajustes abiertos: La animación sincronizada sigue activa mientras ajustas estilos y tiempos",
+            "⚡ Entrada numérica directa de desfase: Escribe los milisegundos directamente y confirma con Enter o el botón de confirmación",
+            "🎯 Controles estabilizados: Botones suaves y firmes sin saltos ni deformaciones visuales"
+        ],
+        fr: [
+            "🪞 Dashboard de paroles à couche unique : Fusion parfaite des paroles en mode Liquid Glass sans double bordure ni superposition",
+            "📐 Rayons d'angles parfaits (26px) : Alignement au pixel près des bords arrondis avec la carte musicale principale",
+            "🎵 Paroles en direct pendant les réglages : L'animation continue de défiler en continu lors des ajustements d'offset",
+            "⚡ Saisie directe du décalage numérique : Entrez le timing en millisecondes et validez instantanément avec Entrée ou le bouton dédié",
+            "🎯 Menu de réglages stabilisé : Interactions calmes et précises sans sauts ni déformations"
+        ],
+        pt: [
+            "🪞 Painel de letras em camada única: Letras integradas perfeitamente no modo Liquid Glass sem bordas duplas ou sobreposições",
+            "📐 Cantos arredondados perfeitamente alinhados (26px): Raio de curvatura idêntico ao do cartão de música principal",
+            "🎵 Letras ao vivo com menu de ajustes: A animação continua fluindo normalmente enquanto você afina o sincronismo",
+            "⚡ Entrada numérica direta de sincronização: Digite o offset em milissegundos e confirme com Enter ou botão aplicar",
+            "🎯 Navegação de menu estável: Controles firmes e responsivos sem pulos ou deformações de clique"
+        ]
+    }},
+    { version: "v24.207.0", date: "6. Oktober 2026", type: "feature", items: {
+        de: [
+            "🕹️ Retro Neon Arcade Easter Egg (arcade.html): Exklusiver 5-Tap-Trigger auf den Musik-Header startet die neue Retro-Gaming-Welt mit CRT-Scanlines",
+            "🔮 Roadmap Live-Status & Community-Wunsch-Threads: Roadmap Card 3 ist offiziell 'Live' mit interaktivem Wunsch-Antwortsystem",
+            "🖼️ Stabiles Wallpaper im Lyrics-Modus: Seiten-Hintergrundbild bleibt bei geöffneten Lyrics in Liquid Glass erhalten, während rechenintensive Blobs pausieren"
+        ],
+        en: [
+            "🕹️ Retro Neon Arcade Easter Egg (arcade.html): Dedicated 5-tap gesture on the music tag unlocks the new retro arcade universe with CRT scanlines",
+            "🔮 Roadmap Live Status & Community Wish Threads: Roadmap Card 3 marked 'Live' with interactive threaded wish discussions",
+            "🖼️ Persistent Wallpaper in Lyrics View: Cover wallpaper stays visibly crisp in Liquid Glass while pausing heavy animated blobs"
+        ],
+        es: [
+            "🕹️ Easter Egg Arcade Retro Neon (arcade.html): 5 toques en la cabecera de música abren el juego retro con líneas CRT",
+            "🔮 Roadmap en vivo e hilos de deseos: Tarjeta 3 de la hoja de ruta en estado 'En Vivo' con respuestas en comunidad",
+            "🖼️ Fondo estable en modo letras: El wallpaper permanece visible en Liquid Glass mientras se pausan efectos pesados"
+        ],
+        fr: [
+            "🕹️ Easter Egg Arcade Rétro Néon (arcade.html): 5 clics sur le tag musical débloquent le mini-jeu rétro avec effets CRT",
+            "🔮 Roadmap en direct & fils de souhaits : Carte 3 désormais 'Live' avec système de discussions interactif",
+            "🖼️ Fond d'écran stable en mode paroles : Le wallpaper reste net en Liquid Glass tout en allégeant les effets GPU"
+        ],
+        pt: [
+            "🕹️ Easter Egg Arcade Retrô Neon (arcade.html): Toque 5 vezes no título musical para abrir o novo mundo arcade com linhas CRT",
+            "🔮 Roadmap ao vivo & tópicos de desejos: Cartão 3 da roadmap em status 'Live' com respostas comunitárias",
+            "🖼️ Papel de parede estável em letras: Wallpaper preservado no Liquid Glass com redução inteligente de carga na GPU"
+        ]
+    }},
     { version: "v24.206.0", date: "6. Oktober 2026", type: "feature", items: {
         de: [
             "✨ Symmetrisches Footer-Dock: Footer-Bubble, Spotlight-Button (⌘K / Strg+K) und Scroll-Button teilen dieselbe Höhe, Kantenstärke und Baseline",
