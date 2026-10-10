@@ -8,6 +8,21 @@
     Änderung bitte hier oben einen neuen Eintrag ergänzen:
     [BUGFIX] oder [PERFORMANCE] oder [FEATURE] als Tag, dann kurz
     Symptom/Ziel, Ursache, Fix, und der beobachtbare Effekt.
+    [LIQUID GLASS / DYNAMIC ISLAND / STANDBY / LYRICS] Release v24.210.0: Anti-Burn-In Rand-Schutz, iOS Dynamic Island Kollisionsschutz, einheitliche Liquid-Glass-Transparenz & kontrastreicher Lyrics-Hintergrund
+      - StandBy Anti-Burn-In Rand-Schutz (#standby-nowplaying & #standby-overlay):
+        Symptom: Bei Pixel-Shifting im Lockscreen/StandBy-Modus bewegte sich die Karte über den Bildschirmrand hinaus.
+        Ursache: 13px Pixel-Shift auf schmalen Viewports stieß an den Displayrand; fehlendes bounds-clamping und unzureichender Puffer in fitStandbyToScreen.
+        Fix: Strenges contain: strict und overflow: hidden auf #standby-overlay, 40px Randpuffer in fitStandbyToScreen, und dynamisches Clamping in shiftStandbyContent.
+      - iOS Dynamic Island & Text-Karten Kollisionsschutz (#dynamic-island & #header-section):
+        Symptom: Dynamic Island kollidierte auf iOS mit der Text-Karte (#header-section) und Gesten wurden teilweise verschluckt.
+        Ursache: Feste 54px Offset-Annahme ignorierte die reale iOS Safe-Area; unzureichende Tap-Toleranz bei Touch-Gesten.
+        Fix: Echte Safe-Area DOM-Messung (#safe-area-top-probe), automatisches Einklappen beim Scrollen, vergrößerte Tap-Toleranz (16px) und 7.5rem mobiler Freiraum für #main-content.
+      - Harmonisierte Liquid-Glass-Transparenz:
+        Symptom: Unterschiedliche Transparenz- und Helligkeitswerte auf Karten, Popups und Headern im Liquid-Glass-Modus.
+        Fix: Vereinheitlichung auf abgestimmte Apple Glass Tokens (0.82 Dark / 0.84 Light) mit 22px Backdrop-Blur über alle Flächen.
+      - Kontrastreicher Songtext-Hintergrund für Standard-Lyrics im Liquid-Glass-Modus:
+        Symptom: Bei normalen Songtext-Animationen (ohne Apple Ambient) war der Hintergrund zu transparent, sodass Text auf dem Wallpaper unlesbar wurde.
+        Fix: Dunkler, schützender Glas-Hintergrund (94-97% Opacity) auf #lyrics-overlay:not(.apple-ambient-active) für gestochen scharfen Kontrast.
     [PLAYBACK / LYRICS / TTS / ANIMATION] Release v24.209.0: Weiches Wallpaper-Ausblenden bei Musik-Pause/Stop, synchronisierte TTS-Pause & stabiler Lyrics-Freeze
       - Weiches Wallpaper-Ausblenden bei Pause & Stopp (#liquid-blobs):
         Symptom: Bei pausierter oder gestoppter Musik blieb das Hintergrundbild unverändert sichtbar statt auszublenden.
@@ -3393,7 +3408,7 @@
             AppStorage.setItem('app_visit_count', String(_visitCount));
 
             // 🛡️ INSTANT ONBOARDING SHIELD
-            const _currVer = window.ONBOARDING_VERSION = 'v24.209.0 · 2026-10-07';
+            const _currVer = window.ONBOARDING_VERSION = 'v24.210.0 · 2026-10-10';
             const _installedVer = AppStorage.getItem('site_version_installed');
             if (_installedVer !== _currVer) {
                 AppStorage.setItem('site_version_installed', _currVer);
@@ -3462,26 +3477,12 @@
             transform-origin: bottom center !important;
         }
     
-        /* Schleier entfernt - klares Bild */
+        /* FIX v24.210.0: Vereinheitlichte Liquid-Glass-Transparenz - #header-section teilt nun
+           das identische hochwertige Apple Glass Material (0.82-0.88 Opacity Gradient) mit
+           allen anderen .glass-card Elementen, statt abweichender flacher 0.72/0.75-Farbwerte. */
         html:not(.gp-android) body.liquid-glass-active #header-section {
-            background: rgba(15, 23, 42, 0.72) !important;
-            -webkit-backdrop-filter: blur(20px) saturate(170%) !important;
-            backdrop-filter: blur(20px) saturate(170%) !important;
             padding: 1.5rem;
             border-radius: 2rem;
-            border: 1px solid rgba(255, 255, 255, 0.20) !important;
-            border-top: 1.5px solid rgba(255, 255, 255, 0.60) !important;
-            border-left: 1.5px solid rgba(255, 255, 255, 0.35) !important;
-            box-shadow: 0 20px 50px -15px rgba(0, 0, 0, 0.65), inset 0 1px 1px rgba(255, 255, 255, 0.25) !important;
-        }
-        html:not(.gp-android):not(.dark) body.liquid-glass-active #header-section {
-            background: rgba(255, 255, 255, 0.75) !important;
-            -webkit-backdrop-filter: blur(20px) saturate(170%) !important;
-            backdrop-filter: blur(20px) saturate(170%) !important;
-            border: 1px solid rgba(255, 255, 255, 0.55) !important;
-            border-top: 1.5px solid rgba(255, 255, 255, 0.85) !important;
-            border-left: 1.5px solid rgba(255, 255, 255, 0.65) !important;
-            box-shadow: 0 20px 50px -15px rgba(0, 0, 0, 0.12), inset 0 1px 1px rgba(255, 255, 255, 0.8) !important;
         }
         body.liquid-glass-active #header-main-title {
             text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
@@ -4209,9 +4210,9 @@ body.liquid-glass-active :is(.glass-card:not(#back-to-top), #header-section, #fo
 
     background: linear-gradient(
         135deg,
-        rgba(255, 255, 255, 0.65) 0%,
-        rgba(248, 250, 252, 0.52) 40%,
-        rgba(241, 245, 249, 0.62) 100%
+        rgba(255, 255, 255, 0.84) 0%,
+        rgba(248, 250, 252, 0.78) 45%,
+        rgba(241, 245, 249, 0.82) 100%
     ) !important;
 
     border: 1.5px solid rgba(255, 255, 255, 0.85) !important;
@@ -4238,14 +4239,14 @@ body.liquid-glass-active :is(.glass-card:not(#back-to-top), #header-section, #fo
 }
 
 .dark body.liquid-glass-active :is(.glass-card:not(#back-to-top), #header-section, #footer-expandable-menu) {
-    -webkit-backdrop-filter: blur(20px) saturate(190%) brightness(1.05) !important;
-    backdrop-filter: blur(20px) saturate(190%) brightness(1.05) !important;
+    -webkit-backdrop-filter: blur(22px) saturate(190%) brightness(1.05) !important;
+    backdrop-filter: blur(22px) saturate(190%) brightness(1.05) !important;
 
     background: linear-gradient(
         135deg,
-        rgba(30, 41, 59, 0.70) 0%,
-        rgba(15, 23, 42, 0.75) 35%,
-        rgba(15, 23, 42, 0.85) 100%
+        rgba(30, 41, 59, 0.82) 0%,
+        rgba(15, 23, 42, 0.86) 45%,
+        rgba(15, 23, 42, 0.90) 100%
     ) !important;
 
     border: 1.5px solid rgba(255, 255, 255, 0.12) !important;
@@ -4323,20 +4324,20 @@ body.liquid-glass-active #footer-bubble {
 .dark body.liquid-glass-active #spotify-wrapped-modal > div {
 
     -webkit-backdrop-filter:
-        blur(24px)
+        blur(22px)
         saturate(190%)
         brightness(1.05) !important;
 
     backdrop-filter:
-        blur(24px)
+        blur(22px)
         saturate(190%)
         brightness(1.05) !important;
 
     background: linear-gradient(
         135deg,
-        rgba(30, 41, 59, 0.88) 0%,
-        rgba(15, 23, 42, 0.92) 50%,
-        rgba(15, 23, 42, 0.96) 100%
+        rgba(30, 41, 59, 0.82) 0%,
+        rgba(15, 23, 42, 0.86) 45%,
+        rgba(15, 23, 42, 0.90) 100%
     ) !important;
 
     border: 1.5px solid rgba(255, 255, 255, 0.15) !important;
@@ -4365,8 +4366,9 @@ html:not(.dark) body.liquid-glass-active #spotify-wrapped-modal > div {
 
     background: linear-gradient(
         135deg,
-        rgba(255, 255, 255, 0.97) 0%,
-        rgba(248, 250, 252, 0.94) 100%
+        rgba(255, 255, 255, 0.84) 0%,
+        rgba(248, 250, 252, 0.78) 45%,
+        rgba(241, 245, 249, 0.82) 100%
     ) !important;
 
     border: 1px solid rgba(203, 213, 225, 0.8) !important;
@@ -5498,6 +5500,22 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
             border: none !important;
             box-shadow: none !important;
         }
+        /* FIX v24.210.0: Bei normalen Lyrics-Animationen (nicht Apple Music Ambient)
+           sorgt ein deckender, eleganter Tiefschwarz-Glas-Hintergrund für gestochen
+           scharfe Lesbarkeit aller Zeilen und verhindert Auswaschen über #liquid-blobs. */
+        body.liquid-glass-active #main-music-card.lyrics-open #lyrics-overlay:not(.apple-ambient-active) {
+            background: linear-gradient(
+                135deg,
+                rgba(15, 23, 42, 0.94) 0%,
+                rgba(2, 6, 23, 0.97) 100%
+            ) !important;
+            -webkit-backdrop-filter: blur(24px) saturate(190%) brightness(1.05) !important;
+            backdrop-filter: blur(24px) saturate(190%) brightness(1.05) !important;
+        }
+        body.liquid-glass-active #lyrics-container:not(.lyrics-style-applemusic):not(.lyrics-style-applemusicpro) {
+            background: rgba(2, 6, 23, 0.35);
+            border-radius: inherit;
+        }
         .dark body.liquid-glass-active #main-music-card.lyrics-open {
             background: linear-gradient(
                 135deg,
@@ -6617,6 +6635,13 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
         @media (min-width: 475px) { #ui-controls { top: calc(env(safe-area-inset-top, 0px) + 1rem) !important; } }
         @media (min-width: 640px) { #ui-controls { top: calc(env(safe-area-inset-top, 0px) + 1.5rem) !important; } }
 
+        /* FIX v24.210.0: Kollisionsschutz zwischen Dynamic Island / Header Controls und der Text-Karte (#header-section) auf Mobilgeräten */
+        @media (max-width: 639px) {
+            #main-content {
+                padding-top: max(7.5rem, calc(env(safe-area-inset-top, 0px) + 6rem)) !important;
+            }
+        }
+
         /* NEW: Performance-Fix - pausiert ALLE Endlos-Animationen komplett, sobald der
            Tab/Bildschirm nicht sichtbar ist (siehe visibilitychange-Handler im Script).
            Betrifft: Blob-Hintergrund, Ken-Burns, Puls-Ring, EQ-Balken, Ambient-Drift,
@@ -6757,6 +6782,8 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
             position: fixed; inset: 0; z-index: 400; background: #000;
             display: flex; flex-direction: column; align-items: center; justify-content: space-between;
             opacity: 0; visibility: hidden; pointer-events: none; cursor: pointer;
+            overflow: hidden !important; contain: strict !important;
+            box-sizing: border-box; max-width: 100vw; max-height: 100vh;
             transition: opacity 0.6s var(--apple-ease), visibility 0.6s;
         }
         /* NEW: --standby-bg-blur ist einstellbar über den "StandBy-Bild schärfer"-Regler im
@@ -6780,7 +6807,8 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
            dezente transform-Verschiebung. */
         #standby-shift-wrapper {
             display: flex; flex-direction: column; align-items: center; justify-content: space-between;
-            flex: 1; width: 100%; min-height: 0;
+            flex: 1; width: 100%; min-height: 0; box-sizing: border-box; max-width: 100vw;
+            padding: 0 12px;
             transform: translate(var(--standby-shift-x, 0px), var(--standby-shift-y, 0px));
             transition: transform 2.5s ease-in-out;
         }
@@ -6895,7 +6923,7 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
         }
 
         #standby-nowplaying {
-            position: relative; z-index: 2; width: min(94vw, 520px); margin-bottom: 40px;
+            position: relative; z-index: 2; width: min(94vw, 520px); max-width: calc(100vw - 28px) !important; box-sizing: border-box; margin-bottom: 40px;
             /* Nahtloses Glasdesign: Eigene sparsame Hintergrundebene (#standby-card-blur-bg)
                mit identischem Ausschnitt und Kontrast zum StandBy-Hintergrund für einen
                perfekt durchgehenden Look ohne GPU-Overhead. */
@@ -8502,7 +8530,7 @@ html.gp-android:not(.dark) #ui-controls {
     <div id="footer-expandable-menu" class="hidden fixed z-[95] p-3.5 rounded-2xl bg-slate-900/95 border border-slate-700/80 shadow-2xl backdrop-blur-xl w-[315px] xxs:w-[340px] sm:w-[370px] max-w-[calc(100vw-1.5rem)] text-xs space-y-2.5" onclick="event.stopPropagation()">
         <div class="flex items-center justify-between px-1 pb-1.5 border-b border-white/10 gap-2">
             <span id="footer-menu-title" data-i18n="footer_menu_title" class="font-bold text-slate-400 text-[10px] uppercase tracking-wider truncate">Navigation &amp; Rechtliches</span>
-            <span id="footer-menu-hint" class="text-[9px] text-pink-400 font-mono font-bold shrink-0 whitespace-nowrap">v24.209.0</span>
+            <span id="footer-menu-hint" class="text-[9px] text-pink-400 font-mono font-bold shrink-0 whitespace-nowrap">v24.210.0</span>
         </div>
         <div class="grid grid-cols-2 gap-2 text-left">
             <button onclick="openEpicWhatsNewTour(false); toggleFooterMenu(false)" id="footer-whats-new-btn" class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/90 text-slate-200 hover:text-white font-medium flex items-center gap-2 transition-all active:scale-[0.98]">
@@ -8536,7 +8564,7 @@ html.gp-android:not(.dark) #ui-controls {
     <div id="footer-bubble" class="fixed z-[91] inline-flex items-center justify-center gap-1.5 sm:gap-3 px-3 sm:px-6 rounded-full bg-slate-900/85 backdrop-blur-xl border border-white/15 shadow-xl text-[10px] xs:text-xs sm:text-sm text-slate-300 select-none opacity-0 pointer-events-none">
         <span id="footer-established" class="font-bold tracking-tight text-slate-300 whitespace-nowrap">© 2026 GAMINGPIG</span>
         <span class="text-white/20 select-none">•</span>
-        <span id="footer-version-label" class="font-mono font-bold text-pink-400 whitespace-nowrap">v24.209.0</span>
+        <span id="footer-version-label" class="font-mono font-bold text-pink-400 whitespace-nowrap">v24.210.0</span>
         <span class="text-white/20 select-none">•</span>
         <button id="footer-menu-toggle-btn" onclick="toggleFooterMenu()" class="text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1 sm:gap-1.5 transition-all px-1.5 sm:px-2 py-1 rounded-full hover:bg-white/10 active:scale-95 whitespace-nowrap" aria-expanded="false" aria-label="Mehr Menü öffnen">
             <span id="footer-more-label">Mehr</span>
@@ -8602,6 +8630,8 @@ html.gp-android:not(.dark) #ui-controls {
         </div>
     </div>
 
+    <!-- Safe-Area Probe für exakte iOS / Notched Screen Messung -->
+    <div id="safe-area-top-probe" style="position: fixed; top: env(safe-area-inset-top, 0px); left: 0; width: 0; height: 0; pointer-events: none; opacity: 0; visibility: hidden;" aria-hidden="true"></div>
     <div id="dynamic-island-ring" aria-hidden="true"></div>
     <div id="dynamic-island" role="button" tabindex="0" aria-label="Song-Details öffnen, nach oben wischen zum Ausblenden">
         <div id="dynamic-island-row">
@@ -13713,11 +13743,12 @@ html.gp-android:not(.dark) #ui-controls {
                     const rect = card.getBoundingClientRect();
                     const clockzone = document.getElementById('standby-clockzone');
                     const clockH = (clockzone && clockzone.offsetHeight) || 0;
-                    const availW = overlay.clientWidth * 0.95;
-                    const availH = Math.max(160, (overlay.clientHeight - clockH) * 0.88);
+                    // FIX v24.210.0: Mindestens 40px Randpuffer reservieren, damit der Anti-Burn-In Pixel-Shift die Karte nie über den Rand schiebt
+                    const availW = Math.max(180, overlay.clientWidth - 40);
+                    const availH = Math.max(160, (overlay.clientHeight - clockH) - 40);
                     
                     let autoScale = Math.min(availW / (rect.width || 1), availH / (rect.height || 1));
-                    autoScale = Math.min(1.15, Math.max(0.4, autoScale));
+                    autoScale = Math.min(1.0, Math.max(0.4, autoScale));
                     if (!isFinite(autoScale) || autoScale <= 0) autoScale = 1;
                     
                     AppStorage.setItem(cacheKey, autoScale.toString());
@@ -15721,27 +15752,39 @@ html.gp-android:not(.dark) #ui-controls {
         // (#ui-controls), egal welche Bildschirmgröße - misst deren tatsächliche, live
         // gerenderte Position/Größe (statt starrer Media-Query-Werte), da diese sich je nach
         // Breakpoint/Sprache/Inhalt unterscheiden kann. Wird unterhalb + links davon zentriert,
-        // sodass auf breiten Screens viel Platz bleibt (Insel bleibt dann schön mittig-links),
-        // auf schmalen Screens (z.B. iPhone) aber garantiert kein Overlap mehr entsteht.
+        // FIX v24.210.0: Positioniert Dynamic Island mit echter Safe-Area-Messung via DOM-Probe
+        // (verhindert Überlagerung mit iOS-Notch / Dynamic Island & Kollision mit #header-section)
         function positionDynamicIsland() {
             const island = document.getElementById('dynamic-island');
             const ring = document.getElementById('dynamic-island-ring');
             const uiControls = document.getElementById('ui-controls');
-            if (!island || !uiControls) return;
+            if (!island) return;
 
-            const safeAreaTop = 14;
-            const defaultBaseTop = safeAreaTop + 40;
+            let safeAreaTop = 14;
+            const probe = document.getElementById('safe-area-top-probe');
+            if (probe) {
+                const pRect = probe.getBoundingClientRect();
+                if (pRect.top > 0) safeAreaTop = pRect.top;
+            }
 
-            const uiRect = uiControls.getBoundingClientRect();
-            const maxIslandWidth = Math.min(330, window.innerWidth * 0.88);
-            const islandLeftEdge = (window.innerWidth - maxIslandWidth) / 2;
-            const islandRightEdge = (window.innerWidth + maxIslandWidth) / 2;
+            const defaultBaseTop = Math.max(safeAreaTop + 8, 16);
+            let topPx = defaultBaseTop;
 
-            // Prüfe präzise 2D-Kollision zwischen Insel und Kontrollleiste (#ui-controls)
-            const wouldOverlapX = (islandRightEdge > (uiRect.left - 12)) && (islandLeftEdge < (uiRect.right + 12));
-            const wouldOverlapY = defaultBaseTop < (uiRect.bottom + 8);
+            if (uiControls) {
+                const uiRect = uiControls.getBoundingClientRect();
+                const isExpanded = island.classList.contains('di-expanded');
+                const islandWidth = isExpanded ? Math.min(320, window.innerWidth * 0.86) : 48;
+                const islandLeftEdge = (window.innerWidth - islandWidth) / 2;
+                const islandRightEdge = (window.innerWidth + islandWidth) / 2;
 
-            const topPx = (wouldOverlapX && wouldOverlapY) ? Math.round(uiRect.bottom + 12) : defaultBaseTop;
+                // Prüfe 2D-Kollision zwischen Insel und Kontrollleiste (#ui-controls)
+                const wouldOverlapX = (islandRightEdge > (uiRect.left - 8)) && (islandLeftEdge < (uiRect.right + 8));
+                const wouldOverlapY = defaultBaseTop < (uiRect.bottom + 6);
+
+                if (wouldOverlapX && wouldOverlapY) {
+                    topPx = Math.round(uiRect.bottom + 8);
+                }
+            }
 
             island.style.top = topPx + 'px';
             island.style.left = '50%';
@@ -15754,6 +15797,13 @@ html.gp-android:not(.dark) #ui-controls {
         }
         window.addEventListener('resize', () => { clearTimeout(window._diPosTimeout); window._diPosTimeout = setTimeout(positionDynamicIsland, 100); });
         window.addEventListener('orientationchange', () => setTimeout(positionDynamicIsland, 150));
+        window.addEventListener('scroll', () => {
+            const island = document.getElementById('dynamic-island');
+            if (island && island.classList.contains('di-expanded')) {
+                island.classList.remove('di-expanded');
+                updateIslandRing();
+            }
+        }, { passive: true });
 
         function updateIslandRing() {
             const ring = document.getElementById('dynamic-island-ring');
@@ -15837,8 +15887,8 @@ html.gp-android:not(.dark) #ui-controls {
         (function initIslandGestures() {
             const island = document.getElementById('dynamic-island');
             if (!island) return;
-            const DISMISS_THRESHOLD = 34; // px nach oben, um als "Wegwisch-Geste" zu zählen
-            const TAP_TOLERANCE = 8; // px Toleranz, ab der es als Wisch statt Tap zählt
+            const DISMISS_THRESHOLD = 32; // px nach oben, um als "Wegwisch-Geste" zu zählen
+            const TAP_TOLERANCE = 16; // px Toleranz, ab der es als Wisch statt Tap zählt (robust auf iOS Touchscreens)
 
             function dragStart(clientY) {
                 islandDragStartY = clientY;
@@ -15865,7 +15915,7 @@ html.gp-android:not(.dark) #ui-controls {
                 const delta = islandDragCurrentY - islandDragStartY;
                 if (delta < -DISMISS_THRESHOLD) {
                     dismissIslandPermanently();
-                } else if (!islandDragMoved) {
+                } else if (!islandDragMoved || Math.abs(delta) <= TAP_TOLERANCE) {
                     handleIslandTap();
                 }
                 islandDragStartY = null;
@@ -16376,24 +16426,41 @@ let shareCardLoading;
         const AOD_DEEP_DIM_AFTER_MS = 20 * 60 * 1000; // NEW: von 30min auf 20min verschärft - dunkelt früher zusätzlich ab
         const AOD_SHIFT_POSITIONS = [
             { x: 0, y: 0 },
-            { x: 12, y: 8 }, { x: -12, y: -8 },
-            { x: 11, y: -9 }, { x: -11, y: 9 },
-            { x: 8, y: 0 }, { x: -8, y: 0 },
-            { x: 0, y: 10 }, { x: 0, y: -10 },
-            { x: 7, y: 7 }, { x: -7, y: -7 },
-            { x: 10, y: -5 }, { x: -10, y: 5 },
-            { x: 5, y: 11 }, { x: -5, y: -11 },
-            { x: 13, y: 3 }, { x: -13, y: -3 },
-            { x: 3, y: -12 }, { x: -3, y: 12 },
-            { x: 9, y: -11 }, { x: -9, y: 11 }
+            { x: 7, y: 5 }, { x: -7, y: -5 },
+            { x: 6, y: -6 }, { x: -6, y: 6 },
+            { x: 6, y: 0 }, { x: -6, y: 0 },
+            { x: 0, y: 6 }, { x: 0, y: -6 },
+            { x: 5, y: 5 }, { x: -5, y: -5 },
+            { x: 7, y: -4 }, { x: -7, y: 4 },
+            { x: 4, y: 7 }, { x: -4, y: -7 },
+            { x: 8, y: 2 }, { x: -8, y: -2 },
+            { x: 2, y: -7 }, { x: -2, y: 7 },
+            { x: 6, y: -5 }, { x: -6, y: 5 }
         ];
         let standByShiftIndex = 0;
         let standByDeepDimTimeout = null;
         function shiftStandbyContent() {
             standByShiftIndex = (standByShiftIndex + 1) % AOD_SHIFT_POSITIONS.length;
             const pos = AOD_SHIFT_POSITIONS[standByShiftIndex];
-            document.documentElement.style.setProperty('--standby-shift-x', pos.x + 'px');
-            document.documentElement.style.setProperty('--standby-shift-y', pos.y + 'px');
+            const card = document.getElementById('standby-nowplaying');
+            let clampedX = pos.x;
+            let clampedY = pos.y;
+            // FIX v24.210.0: Mathematischer Kollisionsschutz - Pixel-Shift wird garantiert innerhalb der Display-Ränder gehalten
+            if (card) {
+                const rect = card.getBoundingClientRect();
+                const pad = 10;
+                const maxRight = Math.max(0, window.innerWidth - pad - rect.right);
+                const maxLeft = Math.max(0, rect.left - pad);
+                if (clampedX > maxRight) clampedX = Math.floor(maxRight);
+                if (clampedX < -maxLeft) clampedX = -Math.floor(maxLeft);
+
+                const maxBottom = Math.max(0, window.innerHeight - pad - rect.bottom);
+                const maxTop = Math.max(0, rect.top - pad);
+                if (clampedY > maxBottom) clampedY = Math.floor(maxBottom);
+                if (clampedY < -maxTop) clampedY = -Math.floor(maxTop);
+            }
+            document.documentElement.style.setProperty('--standby-shift-x', clampedX + 'px');
+            document.documentElement.style.setProperty('--standby-shift-y', clampedY + 'px');
         }
         function scheduleStandbyDeepDim() {
             clearTimeout(standByDeepDimTimeout);
@@ -17257,6 +17324,43 @@ let shareCardLoading;
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+    { version: "v24.210.0", date: "10. Oktober 2026", type: "fix", items: {
+        de: [
+            "🛡️ StandBy Anti-Burn-In Rand-Schutz: Pixel-Shifting bleibt mathematisch sicher innerhalb der Bildschirmgrenzen, sodass die Lockscreen-Karte niemals über den Rand hinausgeschoben wird",
+            "🏝️ iOS Dynamic Island & Header-Harmonisierung: Verhindert Kollisionen mit der Text-Karte (#header-section) und misst iOS Safe-Areas präzise per DOM-Probe",
+            "🪞 Einheitliche Liquid-Glass-Transparenz: Konsistente Farbwerte und Weichzeichnungs-Deckung über alle Glaskarten und Popups hinweg",
+            "📜 Kontrastreicher Songtext-Hintergrund: Normale Songtext-Animationen im Liquid-Glass-Modus erhalten einen eleganten, dunklen Schutzhintergrund für perfekte Lesbarkeit",
+            "👆 Flüssigere Touch-Gesten: Optimierte Wisch- und Tipp-Toleranz auf iOS für zuverlässiges Öffnen und Schließen der Dynamic Island"
+        ],
+        en: [
+            "🛡️ StandBy Anti-Burn-In Edge Protection: Pixel shifting is clamped mathematically within display boundaries so the lockscreen card never moves off-screen",
+            "🏝️ iOS Dynamic Island & Header Clearance: Prevents collisions with the header text card (#header-section) with live DOM safe-area detection",
+            "🪞 Unified Liquid Glass Transparency: Harmonized opacities and backdrop blur levels across all glass cards, menus, and modals",
+            "📜 High-Contrast Normal Lyrics Backdrop: Standard lyrics animations in Liquid Glass mode now feature a sleek dark protective scrim for crisp readability",
+            "👆 Responsive iOS Gestures: Refined swipe and tap tolerances for effortless Dynamic Island expansion and dismiss"
+        ],
+        es: [
+            "🛡️ Protección de bordes en StandBy: El desplazamiento de píxeles se mantiene dentro de la pantalla sin desbordarse",
+            "🏝️ Dynamic Island en iOS sin colisiones: Espaciado seguro con respecto a la tarjeta de texto superior con detección precisa de safe-area",
+            "🪞 Transparencia unificada en Liquid Glass: Opacidades consistentes en todas las tarjetas de vidrio y menús",
+            "📜 Fondo de letras de alto contraste: Las animaciones de letras normales en Liquid Glass ahora tienen un fondo oscuro que facilita la lectura",
+            "👆 Gestos táctiles optimizados en iOS: Mayor precisión al tocar y deslizar en Dynamic Island"
+        ],
+        fr: [
+            "🛡️ Protection anti-débordement StandBy : Le décalage anti-marquage reste parfaitement contenu à l'intérieur de l'écran",
+            "🏝️ Dynamic Island iOS sans collision : Dégagement optimisé évitant tout chevauchement avec la carte de texte supérieure",
+            "🪞 Transparence harmonisée en Liquid Glass : Niveaux d'opacité et de flou unifiés sur toutes les cartes et fenêtres",
+            "📜 Arrière-plan des paroles haute lisibilité : Les styles d'animation standard bénéficient d'un fond protecteur sombre pour un contraste optimal",
+            "👆 Gestes tactiles iOS fiabilisés : Tolérance de toucher et de balayage optimisée pour la Dynamic Island"
+        ],
+        pt: [
+            "🛡️ Proteção de bordas no StandBy: O deslocamento de pixels não move o cartão para fora dos limites da tela",
+            "🏝️ Dynamic Island no iOS sem colisões: Evita sobreposição com o cartão de texto superior com medição precisa da safe-area",
+            "🪞 Transparência unificada no Liquid Glass: Opacidade e desfoque consistentes em todos os cartões e menus",
+            "📜 Fundo de letras com alto contraste: Animações normais de letras no Liquid Glass recebem um fundo escuro protetor para leitura impecável",
+            "👆 Gestos de toque aprimorados no iOS: Toque e deslizamento na Dynamic Island agora respondem com precisão"
+        ]
+    }},
     { version: "v24.209.0", date: "7. Oktober 2026", type: "fix", items: {
         de: [
             "🌅 Sanftes Hintergrundbild-Ausblenden: Beim Pausieren oder Stoppen der Musik blendet das Cover-Wallpaper (#liquid-blobs) sanft und weich aus (1.5s Transition) und wird bei Play sofort wieder geschmeidig eingeblendet",
