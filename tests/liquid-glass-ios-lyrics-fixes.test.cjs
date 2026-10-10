@@ -53,13 +53,13 @@ test('iOS Dynamic Island Collision & Tap Handling', async (t) => {
 
 test('Liquid Glass Transparency Harmonization', async (t) => {
     await t.test('L1: Dark mode liquid glass uses unified rich opacity across cards and surfaces', () => {
-        assert.match(indexHtml, /\.dark body\.liquid-glass-active :is\(\.glass-card:not\(#back-to-top\), #header-section, #footer-expandable-menu\)\s*\{[^}]*rgba\(30,\s*41,\s*59,\s*0\.82\)/s);
-        assert.match(indexHtml, /\.dark body\.liquid-glass-active #main-music-card,[^}]*rgba\(30,\s*41,\s*59,\s*0\.82\)/s);
+        assert.match(indexHtml, /\.dark body\.liquid-glass-active :is\([^)]*\.glass-card[^)]*#header-section[^)]*#footer-expandable-menu[^)]*\)\s*\{[^}]*rgba\(30,\s*41,\s*59,\s*0\.82\)/s);
+        assert.match(indexHtml, /\.dark body\.liquid-glass-active :is\([^)]*#main-music-card[^)]*\)\s*\{[^}]*rgba\(30,\s*41,\s*59,\s*0\.82\)/s);
     });
 
     await t.test('L2: Light mode liquid glass uses unified opacity across cards and surfaces', () => {
-        assert.match(indexHtml, /body\.liquid-glass-active :is\(\.glass-card:not\(#back-to-top\), #header-section, #footer-expandable-menu\)\s*\{[^}]*rgba\(255,\s*255,\s*255,\s*0\.84\)/s);
-        assert.match(indexHtml, /html:not\(\.dark\) body\.liquid-glass-active #main-music-card,[^}]*rgba\(255,\s*255,\s*255,\s*0\.84\)/s);
+        assert.match(indexHtml, /body\.liquid-glass-active :is\([^)]*\.glass-card[^)]*#header-section[^)]*#footer-expandable-menu[^)]*\)\s*\{[^}]*rgba\(255,\s*255,\s*255,\s*0\.84\)/s);
+        assert.match(indexHtml, /body\.liquid-glass-active :is\([^)]*#main-music-card[^)]*\)\s*\{[^}]*rgba\(255,\s*255,\s*255,\s*0\.84\)/s);
     });
 });
 

@@ -90,25 +90,25 @@ test('Issue 2: Subpage Top Bar & Back Button Tappability on iOS', async (t) => {
 });
 
 test('Issue 3: Harmonized Liquid Glass Card Transparency', async (t) => {
-    await t.test('C1: Mobile header-section matches general card opacity (0.82 / 0.92 dark, 0.88 / 0.82 / 0.88 light)', () => {
-        assert.match(indexHtml, /:is\(html\.gp-android,\s*html\.gp-mobile\)\s*#header-section\s*\{[^}]*rgba\(30,\s*41,\s*59,\s*0\.82\)[^}]*rgba\(15,\s*23,\s*42,\s*0\.92\)/s);
+    await t.test('C1: Mobile header-section matches general card opacity (0.82 / 0.90 dark)', () => {
+        assert.match(indexHtml, /:is\(html\.gp-android,\s*html\.gp-mobile\)\s*#header-section\s*\{[^}]*rgba\(30,\s*41,\s*59,\s*0\.82\)[^}]*rgba\(15,\s*23,\s*42,\s*0\.90\)/s);
         assert.doesNotMatch(indexHtml, /:is\(html\.gp-android,\s*html\.gp-mobile\)\s*#header-section\s*\{[^}]*rgba\(30,\s*41,\s*59,\s*0\.58\)/s);
     });
 
-    await t.test('C2: Mobile glass-card light mode uses unified 0.88 / 0.82 opacity', () => {
-        assert.match(indexHtml, /body\.liquid-glass-active :is\(\.glass-card:not\(#back-to-top\), #header-section, #footer-bubble, #footer-expandable-menu\)\s*\{[^}]*rgba\(255,\s*255,\s*255,\s*0\.88\)/s);
+    await t.test('C2: Mobile glass-card light mode uses unified opacity', () => {
+        assert.match(indexHtml, /body\.liquid-glass-active :is\([^)]*\.glass-card[^)]*#header-section[^)]*#footer-bubble[^)]*#footer-expandable-menu[^)]*\)\s*\{[^}]*rgba\(255,\s*255,\s*255,\s*0\.84\)/s);
     });
 
     await t.test('C3: audience-hub glass-card does not have conflicting rainbow background gradients', () => {
         assert.doesNotMatch(indexHtml, /id="audience-hub"[^>]*>[\s\S]*?<div class="glass-card[^"]*bg-gradient-to-r/);
     });
 
-    await t.test('C4: Version 24.212.0 is synchronized across version.json, sw.js, index.html, release.html', () => {
-        assert.equal(versionJson.version, '24.212.0');
-        assert.match(swJs, /const SW_VERSION = "24\.212\.0";/);
-        assert.match(indexHtml, /ONBOARDING_VERSION = 'v24\.212\.0/);
-        assert.match(indexHtml, /id="footer-menu-hint"[^>]*>v24\.212\.0<\/span>/);
-        assert.match(indexHtml, /id="footer-version-label"[^>]*>v24\.212\.0<\/span>/);
-        assert.match(releaseHtml, /<title>Release Notes v24\.212\.0 – Gamingpig<\/title>/);
+    await t.test('C4: Version 24.213.0 is synchronized across version.json, sw.js, index.html, release.html', () => {
+        assert.equal(versionJson.version, '24.213.0');
+        assert.match(swJs, /const SW_VERSION = "24\.213\.0";/);
+        assert.match(indexHtml, /ONBOARDING_VERSION = 'v24\.213\.0/);
+        assert.match(indexHtml, /id="footer-menu-hint"[^>]*>v24\.213\.0<\/span>/);
+        assert.match(indexHtml, /id="footer-version-label"[^>]*>v24\.213\.0<\/span>/);
+        assert.match(releaseHtml, /<title>Release Notes v24\.213\.0 – Gamingpig<\/title>/);
     });
 });

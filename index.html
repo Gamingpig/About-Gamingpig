@@ -7,6 +7,11 @@
     diesem Repo Release Notes erzeugen. Bei jeder inhaltlichen
     Änderung bitte hier oben einen neuen Eintrag ergänzen:
     [BUGFIX] oder [PERFORMANCE] oder [FEATURE] als Tag, dann kurz
+    [LIQUID GLASS / TRANSPARENCY UNIFICATION] Release v24.213.0: Vollständige Harmonisierung aller Glaskarten-Transparenzen & Beseitigung von Opazitäts-Sprüngen im Liquid Glass Modus
+      - Einheitliche Hintergrund-Transparenzen aller Karten:
+        Symptom: Im Liquid Glass Modus wiesen Karten stark abweichende Transparenz- und Hintergrundwerte auf (#main-music-card 40%, #footer-bubble 44%, #footer-expandable-menu 52%, #back-to-top 44%, normale Karten 82-90%).
+        Ursache: Spezifische ID-Selektoren mit !important (#main-music-card in Zeile 5448) sowie späte abweichende Liquid-Glass-Regeln für Footer-Docks und Back-to-Top überschrieben die harmonisierten Glass-Tokens.
+        Fix: #main-music-card ist im Standard-Modus auf body:not(.liquid-glass-active) begrenzt; im Liquid Glass Modus teilen sich nun ausnahmslos alle Karten (#header-section, #main-music-card, #mini-player-toggle, #kart-mini-toggle, .glass-card, #footer-bubble, #footer-expandable-menu, #back-to-top) die identischen hochwertigen Gradient-Tokens (Dark: 82%-90%, Light: 84%-82%) über Desktop und Mobilgeräte.
     [ONBOARDING / LANGUAGE PICKER / TUTORIAL AUTOSTART] Release v24.212.0: Automatischer Start der Sprachauswahl und des Tutorials für Erstbesucher & unvollständige Onboarding-Durchläufe
       - Automatischer Sprachauswahl-Start für Erstbesucher:
         Symptom: Erstbesucher ohne gespeicherte Sprache sahen weder die Sprachauswahl noch das Tutorial automatisch.
@@ -3429,7 +3434,7 @@
             AppStorage.setItem('app_visit_count', String(_visitCount));
 
             // 🛡️ INSTANT ONBOARDING SHIELD
-            const _currVer = window.ONBOARDING_VERSION = 'v24.212.0 · 2026-10-10';
+            const _currVer = window.ONBOARDING_VERSION = 'v24.213.0 · 2026-10-10';
             const _installedVer = AppStorage.getItem('site_version_installed');
             if (_installedVer !== _currVer) {
                 AppStorage.setItem('site_version_installed', _currVer);
@@ -3544,12 +3549,12 @@
         
 
         /* Spekulare Kantenbrechung & Apple Glass Reflektions-Glanz */
-        body.liquid-glass-active :is(.glass-card:not(#back-to-top), #header-section, #footer-bubble, #footer-expandable-menu) {
+        body.liquid-glass-active :is(.glass-card, #header-section, #footer-bubble, #footer-expandable-menu, #main-music-card, #mini-player-toggle, #kart-mini-toggle, #back-to-top) {
             position: relative;
         }
 
         /* Dynamischer Licht-Glanzstreifen über die Glaskanten (Prismen-Lichtbrechung & Reflektion) */
-        body.liquid-glass-active :is(.glass-card:not(#back-to-top), #header-section, #footer-bubble, #footer-expandable-menu)::after {
+        body.liquid-glass-active :is(.glass-card, #header-section, #footer-bubble, #footer-expandable-menu, #main-music-card, #mini-player-toggle, #kart-mini-toggle, #back-to-top)::after {
             content: '';
             position: absolute;
             inset: 0;
@@ -4223,7 +4228,7 @@ body.liquid-glass-active .mesh-gradient {
 
 
 /* Liquid Glass Karten - Echtes kristallklares Apple Glas mit edlem Frosted-Blur & prismatischer Kantenbrechung */
-body.liquid-glass-active :is(.glass-card:not(#back-to-top), #header-section, #footer-expandable-menu) {
+body.liquid-glass-active :is(.glass-card, #header-section, #footer-bubble, #footer-expandable-menu, #main-music-card, #mini-player-toggle, #kart-mini-toggle, #back-to-top) {
     position: relative;
     overflow: hidden;
 
@@ -4260,7 +4265,7 @@ body.liquid-glass-active :is(.glass-card:not(#back-to-top), #header-section, #fo
         background-color 0.35s ease !important;
 }
 
-.dark body.liquid-glass-active :is(.glass-card:not(#back-to-top), #header-section, #footer-expandable-menu) {
+.dark body.liquid-glass-active :is(.glass-card, #header-section, #footer-bubble, #footer-expandable-menu, #main-music-card, #mini-player-toggle, #kart-mini-toggle, #back-to-top) {
     -webkit-backdrop-filter: blur(22px) saturate(190%) brightness(1.05) !important;
     backdrop-filter: blur(22px) saturate(190%) brightness(1.05) !important;
 
@@ -4282,6 +4287,11 @@ body.liquid-glass-active :is(.glass-card:not(#back-to-top), #header-section, #fo
         inset 0 1.5px 2px 0 rgba(255, 255, 255, 0.25),
         inset 0 -1.5px 2px 0 rgba(0, 0, 0, 0.45) !important;
     color: #f8fafc !important;
+}
+
+body.liquid-glass-active #footer-bubble,
+body.liquid-glass-active #back-to-top {
+    border-radius: 9999px !important;
 }
 
 
@@ -5440,7 +5450,7 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
            unabhängig davon ob Dashboard oder Lyrics überhaupt genutzt wurden. Entfernt - die
            Übergänge selbst bleiben genauso weich (CSS-Transition unverändert), nur ohne die
            permanente Ebenen-Reservierung dazwischen. */
-        #main-music-card {
+        body:not(.liquid-glass-active) #main-music-card {
             background: rgba(15, 23, 42, 0.4) !important; border-color: rgba(255, 255, 255, 0.15) !important;
             -webkit-backdrop-filter: blur(25px) saturate(1.5); backdrop-filter: blur(25px) saturate(1.5);
             /* FIX: Butterweiche Animationen für Dimensionen hinzufügen! */
@@ -6252,20 +6262,22 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
         body.liquid-glass-active #footer-bubble {
             background: linear-gradient(
                 135deg,
-                rgba(255, 255, 255, 0.14) 0%,
-                rgba(255, 255, 255, 0.03) 40%,
-                rgba(15, 23, 42, 0.44) 100%
+                rgba(30, 41, 59, 0.82) 0%,
+                rgba(15, 23, 42, 0.86) 45%,
+                rgba(15, 23, 42, 0.90) 100%
             ) !important;
-            backdrop-filter: blur(16px) saturate(180%) brightness(1.06) !important;
-            -webkit-backdrop-filter: blur(16px) saturate(180%) brightness(1.06) !important;
-            border: 1.5px solid rgba(255, 255, 255, 0.24) !important;
-            border-top: 2px solid rgba(255, 255, 255, 0.85) !important;
-            border-left: 1.5px solid rgba(255, 255, 255, 0.55) !important;
-            box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.6),
-                        inset 0 1.5px 2px rgba(255, 255, 255, 0.7),
-                        inset 0 -1px 2px rgba(0, 0, 0, 0.25),
-                        0 0 1px 1px rgba(255, 255, 255, 0.15) !important;
-            color: #f1f5f9 !important;
+            backdrop-filter: blur(22px) saturate(190%) brightness(1.05) !important;
+            -webkit-backdrop-filter: blur(22px) saturate(190%) brightness(1.05) !important;
+            border: 1.5px solid rgba(255, 255, 255, 0.12) !important;
+            border-top: 2px solid rgba(255, 255, 255, 0.32) !important;
+            border-left: 1.5px solid rgba(255, 255, 255, 0.22) !important;
+            border-bottom: 1.5px solid rgba(255, 255, 255, 0.08) !important;
+            border-right: 1.5px solid rgba(255, 255, 255, 0.10) !important;
+            box-shadow: 0 24px 55px -12px rgba(0, 0, 0, 0.68),
+                        inset 0 1.5px 2px rgba(255, 255, 255, 0.25),
+                        inset 0 -1.5px 2px rgba(0, 0, 0, 0.45) !important;
+            color: #f8fafc !important;
+            border-radius: 9999px !important;
         }
 
         /* Popup menu: fixed, appears above the bubble */
@@ -6290,25 +6302,26 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
         body.liquid-glass-active #footer-expandable-menu {
             background: linear-gradient(
                 135deg,
-                rgba(255, 255, 255, 0.12) 0%,
-                rgba(255, 255, 255, 0.02) 35%,
-                rgba(15, 23, 42, 0.52) 100%
+                rgba(30, 41, 59, 0.82) 0%,
+                rgba(15, 23, 42, 0.86) 45%,
+                rgba(15, 23, 42, 0.90) 100%
             ) !important;
-            backdrop-filter: blur(18px) saturate(190%) brightness(1.06) !important;
-            -webkit-backdrop-filter: blur(18px) saturate(190%) brightness(1.06) !important;
-            border: 1px solid rgba(255, 255, 255, 0.22) !important;
-            border-top: 1.5px solid rgba(255, 255, 255, 0.85) !important;
-            border-left: 1.5px solid rgba(255, 255, 255, 0.45) !important;
-            box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.8),
-                        inset 0 1.5px 2px rgba(255, 255, 255, 0.6),
-                        inset 0 -1px 2px rgba(0, 0, 0, 0.25),
-                        0 0 1px 1px rgba(255, 255, 255, 0.12) !important;
-            color: #f1f5f9 !important;
+            backdrop-filter: blur(22px) saturate(190%) brightness(1.05) !important;
+            -webkit-backdrop-filter: blur(22px) saturate(190%) brightness(1.05) !important;
+            border: 1.5px solid rgba(255, 255, 255, 0.12) !important;
+            border-top: 2px solid rgba(255, 255, 255, 0.32) !important;
+            border-left: 1.5px solid rgba(255, 255, 255, 0.22) !important;
+            border-bottom: 1.5px solid rgba(255, 255, 255, 0.08) !important;
+            border-right: 1.5px solid rgba(255, 255, 255, 0.10) !important;
+            box-shadow: 0 24px 55px -12px rgba(0, 0, 0, 0.68),
+                        inset 0 1.5px 2px rgba(255, 255, 255, 0.25),
+                        inset 0 -1.5px 2px rgba(0, 0, 0, 0.45) !important;
+            color: #f8fafc !important;
         }
 
         /* Light Mode Footer Dock & Menu Overrides */
         html:not(.dark) #footer-bubble,
-        html:not(.dark) body.liquid-glass-active #footer-bubble {
+        html:not(.dark) body:not(.liquid-glass-active) #footer-bubble {
             background: rgba(255, 255, 255, 0.92) !important;
             border: 1px solid rgba(203, 213, 225, 0.85) !important;
             border-top: 1.5px solid rgba(255, 255, 255, 1) !important;
@@ -6322,12 +6335,31 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
             color: rgba(0, 0, 0, 0.2) !important;
         }
         html:not(.dark) #footer-expandable-menu,
-        html:not(.dark) body.liquid-glass-active #footer-expandable-menu {
+        html:not(.dark) body:not(.liquid-glass-active) #footer-expandable-menu {
             background: rgba(255, 255, 255, 0.97) !important;
             border: 1px solid rgba(203, 213, 225, 0.9) !important;
             border-top: 1.5px solid rgba(255, 255, 255, 1) !important;
             box-shadow: 0 20px 45px -8px rgba(15, 23, 42, 0.18) !important;
             color: #1e293b !important;
+        }
+        html:not(.dark) body.liquid-glass-active #footer-bubble,
+        html:not(.dark) body.liquid-glass-active #footer-expandable-menu {
+            background: linear-gradient(
+                135deg,
+                rgba(255, 255, 255, 0.84) 0%,
+                rgba(248, 250, 252, 0.78) 45%,
+                rgba(241, 245, 249, 0.82) 100%
+            ) !important;
+            border: 1.5px solid rgba(255, 255, 255, 0.85) !important;
+            border-top: 2px solid rgba(255, 255, 255, 1) !important;
+            border-left: 1.5px solid rgba(255, 255, 255, 0.95) !important;
+            border-bottom: 1.5px solid rgba(203, 213, 225, 0.40) !important;
+            border-right: 1.5px solid rgba(203, 213, 225, 0.45) !important;
+            box-shadow: 0 14px 34px -8px rgba(15, 23, 42, 0.08),
+                        0 2px 6px -1px rgba(15, 23, 42, 0.04),
+                        inset 0 1.5px 2px rgba(255, 255, 255, 0.95),
+                        inset 0 -1.5px 2px rgba(0, 0, 0, 0.02) !important;
+            color: #0f172a !important;
         }
         html:not(.dark) #footer-expandable-menu .border-white\/10 {
             border-color: rgba(0, 0, 0, 0.08) !important;
@@ -6470,20 +6502,40 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
         body.liquid-glass-active #back-to-top {
             background: linear-gradient(
                 135deg,
-                rgba(255, 255, 255, 0.14) 0%,
-                rgba(255, 255, 255, 0.03) 40%,
-                rgba(15, 23, 42, 0.44) 100%
+                rgba(30, 41, 59, 0.82) 0%,
+                rgba(15, 23, 42, 0.86) 45%,
+                rgba(15, 23, 42, 0.90) 100%
             ) !important;
-            backdrop-filter: blur(16px) saturate(180%) brightness(1.06) !important;
-            -webkit-backdrop-filter: blur(16px) saturate(180%) brightness(1.06) !important;
-            border: 1.5px solid rgba(255, 255, 255, 0.24) !important;
-            border-top: 2px solid rgba(255, 255, 255, 0.85) !important;
-            border-left: 1.5px solid rgba(255, 255, 255, 0.55) !important;
-            box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.6),
-                        inset 0 1.5px 2px rgba(255, 255, 255, 0.7),
-                        inset 0 -1px 2px rgba(0, 0, 0, 0.25),
-                        0 0 1px 1px rgba(255, 255, 255, 0.15) !important;
+            backdrop-filter: blur(22px) saturate(190%) brightness(1.05) !important;
+            -webkit-backdrop-filter: blur(22px) saturate(190%) brightness(1.05) !important;
+            border: 1.5px solid rgba(255, 255, 255, 0.12) !important;
+            border-top: 2px solid rgba(255, 255, 255, 0.32) !important;
+            border-left: 1.5px solid rgba(255, 255, 255, 0.22) !important;
+            border-bottom: 1.5px solid rgba(255, 255, 255, 0.08) !important;
+            border-right: 1.5px solid rgba(255, 255, 255, 0.10) !important;
+            box-shadow: 0 24px 55px -12px rgba(0, 0, 0, 0.68),
+                        inset 0 1.5px 2px rgba(255, 255, 255, 0.25),
+                        inset 0 -1.5px 2px rgba(0, 0, 0, 0.45) !important;
             color: #60a5fa !important;
+            border-radius: 9999px !important;
+        }
+        html:not(.dark) body.liquid-glass-active #back-to-top {
+            background: linear-gradient(
+                135deg,
+                rgba(255, 255, 255, 0.84) 0%,
+                rgba(248, 250, 252, 0.78) 45%,
+                rgba(241, 245, 249, 0.82) 100%
+            ) !important;
+            border: 1.5px solid rgba(255, 255, 255, 0.85) !important;
+            border-top: 2px solid rgba(255, 255, 255, 1) !important;
+            border-left: 1.5px solid rgba(255, 255, 255, 0.95) !important;
+            border-bottom: 1.5px solid rgba(203, 213, 225, 0.40) !important;
+            border-right: 1.5px solid rgba(203, 213, 225, 0.45) !important;
+            box-shadow: 0 14px 34px -8px rgba(15, 23, 42, 0.08),
+                        0 2px 6px -1px rgba(15, 23, 42, 0.04),
+                        inset 0 1.5px 2px rgba(255, 255, 255, 0.95),
+                        inset 0 -1.5px 2px rgba(0, 0, 0, 0.02) !important;
+            color: #2563eb !important;
         }
         .dark body.liquid-glass-active #back-to-top {
             color: #93c5fd !important;
@@ -8028,14 +8080,14 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
 }
 
 /* --- 2. Liquid Glass on mobile: Authentic specular frosted glass without GPU shader passes --- */
-:is(html.gp-android, html.gp-mobile, html.gp-pixel) body.liquid-glass-active :is(.glass-card:not(#back-to-top), #header-section, #footer-bubble, #footer-expandable-menu) {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(30, 41, 59, 0.82) 40%, rgba(15, 23, 42, 0.92) 100%) !important;
+:is(html.gp-android, html.gp-mobile, html.gp-pixel) body.liquid-glass-active :is(.glass-card, #header-section, #footer-bubble, #footer-expandable-menu, #main-music-card, #mini-player-toggle, #kart-mini-toggle, #back-to-top) {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.82) 0%, rgba(15, 23, 42, 0.86) 45%, rgba(15, 23, 42, 0.90) 100%) !important;
   border: 1px solid rgba(255, 255, 255, 0.22) !important;
   border-top: 1.8px solid rgba(255, 255, 255, 0.65) !important;
   box-shadow: 0 16px 44px rgba(0, 0, 0, 0.55), inset 0 1.5px 2px rgba(255, 255, 255, 0.25) !important;
 }
-:is(html.gp-android, html.gp-mobile, html.gp-pixel):not(.dark) body.liquid-glass-active :is(.glass-card:not(#back-to-top), #header-section, #footer-bubble, #footer-expandable-menu) {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.88) 0%, rgba(248, 250, 252, 0.82) 40%, rgba(241, 245, 249, 0.88) 100%) !important;
+:is(html.gp-android, html.gp-mobile, html.gp-pixel):not(.dark) body.liquid-glass-active :is(.glass-card, #header-section, #footer-bubble, #footer-expandable-menu, #main-music-card, #mini-player-toggle, #kart-mini-toggle, #back-to-top) {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.84) 0%, rgba(248, 250, 252, 0.78) 45%, rgba(241, 245, 249, 0.82) 100%) !important;
   border: 1.5px solid rgba(255, 255, 255, 0.85) !important;
   border-top: 2px solid rgba(255, 255, 255, 1) !important;
   box-shadow: 0 14px 36px rgba(15, 23, 42, 0.06), inset 0 1.5px 2px rgba(255, 255, 255, 0.95) !important;
@@ -8158,25 +8210,25 @@ html.glass-strat-fluid:not(.gp-android) :is(#global-settings-menu, #lyrics-setti
 :is(html.gp-android, html.gp-mobile) #footer-bubble {
   -webkit-backdrop-filter: blur(16px) saturate(140%) !important;
   backdrop-filter: blur(16px) saturate(140%) !important;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(30, 41, 59, 0.82) 40%, rgba(15, 23, 42, 0.92) 100%) !important;
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.82) 0%, rgba(15, 23, 42, 0.86) 45%, rgba(15, 23, 42, 0.90) 100%) !important;
   border: 1px solid rgba(255, 255, 255, 0.22) !important;
   border-top: 1.8px solid rgba(255, 255, 255, 0.65) !important;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6) !important;
 }
 :is(html.gp-android, html.gp-mobile):not(.dark) #footer-bubble {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.88) 0%, rgba(248, 250, 252, 0.82) 40%, rgba(241, 245, 249, 0.88) 100%) !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.84) 0%, rgba(248, 250, 252, 0.78) 45%, rgba(241, 245, 249, 0.82) 100%) !important;
   border-top: 1.8px solid rgba(255, 255, 255, 1) !important;
 }
 :is(html.gp-android, html.gp-mobile) #footer-expandable-menu {
   -webkit-backdrop-filter: blur(16px) saturate(140%) !important;
   backdrop-filter: blur(16px) saturate(140%) !important;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(30, 41, 59, 0.82) 40%, rgba(15, 23, 42, 0.92) 100%) !important;
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.82) 0%, rgba(15, 23, 42, 0.86) 45%, rgba(15, 23, 42, 0.90) 100%) !important;
   border: 1px solid rgba(255, 255, 255, 0.22) !important;
   border-top: 1.8px solid rgba(255, 255, 255, 0.65) !important;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.75) !important;
 }
 :is(html.gp-android, html.gp-mobile):not(.dark) #footer-expandable-menu {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.88) 0%, rgba(248, 250, 252, 0.82) 40%, rgba(241, 245, 249, 0.88) 100%) !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.84) 0%, rgba(248, 250, 252, 0.78) 45%, rgba(241, 245, 249, 0.82) 100%) !important;
   border-top: 1.8px solid rgba(255, 255, 255, 1) !important;
 }
 
@@ -8239,12 +8291,12 @@ html.glass-strat-fluid:not(.gp-android) :is(#global-settings-menu, #lyrics-setti
 :is(html.gp-android, html.gp-mobile) #header-section {
   -webkit-backdrop-filter: blur(16px) saturate(140%) !important;
   backdrop-filter: blur(16px) saturate(140%) !important;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(30, 41, 59, 0.82) 40%, rgba(15, 23, 42, 0.92) 100%) !important;
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.82) 0%, rgba(15, 23, 42, 0.86) 45%, rgba(15, 23, 42, 0.90) 100%) !important;
   border: 1px solid rgba(255, 255, 255, 0.22) !important;
   border-top: 1.8px solid rgba(255, 255, 255, 0.65) !important;
 }
 :is(html.gp-android, html.gp-mobile):not(.dark) #header-section {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.88) 0%, rgba(248, 250, 252, 0.82) 40%, rgba(241, 245, 249, 0.88) 100%) !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.84) 0%, rgba(248, 250, 252, 0.78) 45%, rgba(241, 245, 249, 0.82) 100%) !important;
   border: 1.5px solid rgba(255, 255, 255, 0.85) !important;
   border-top: 2px solid rgba(255, 255, 255, 1) !important;
 }
@@ -8553,7 +8605,7 @@ html.gp-android:not(.dark) #ui-controls {
     <div id="footer-expandable-menu" class="hidden fixed z-[95] p-3.5 rounded-2xl bg-slate-900/95 border border-slate-700/80 shadow-2xl backdrop-blur-xl w-[315px] xxs:w-[340px] sm:w-[370px] max-w-[calc(100vw-1.5rem)] text-xs space-y-2.5" onclick="event.stopPropagation()">
         <div class="flex items-center justify-between px-1 pb-1.5 border-b border-white/10 gap-2">
             <span id="footer-menu-title" data-i18n="footer_menu_title" class="font-bold text-slate-400 text-[10px] uppercase tracking-wider truncate">Navigation &amp; Rechtliches</span>
-            <span id="footer-menu-hint" class="text-[9px] text-pink-400 font-mono font-bold shrink-0 whitespace-nowrap">v24.212.0</span>
+            <span id="footer-menu-hint" class="text-[9px] text-pink-400 font-mono font-bold shrink-0 whitespace-nowrap">v24.213.0</span>
         </div>
         <div class="grid grid-cols-2 gap-2 text-left">
             <button onclick="openEpicWhatsNewTour(false); toggleFooterMenu(false)" id="footer-whats-new-btn" class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/90 text-slate-200 hover:text-white font-medium flex items-center gap-2 transition-all active:scale-[0.98]">
@@ -8587,7 +8639,7 @@ html.gp-android:not(.dark) #ui-controls {
     <div id="footer-bubble" class="fixed z-[91] inline-flex items-center justify-center gap-1.5 sm:gap-3 px-3 sm:px-6 rounded-full bg-slate-900/85 backdrop-blur-xl border border-white/15 shadow-xl text-[10px] xs:text-xs sm:text-sm text-slate-300 select-none opacity-0 pointer-events-none">
         <span id="footer-established" class="font-bold tracking-tight text-slate-300 whitespace-nowrap">© 2026 GAMINGPIG</span>
         <span class="text-white/20 select-none">•</span>
-        <span id="footer-version-label" class="font-mono font-bold text-pink-400 whitespace-nowrap">v24.212.0</span>
+        <span id="footer-version-label" class="font-mono font-bold text-pink-400 whitespace-nowrap">v24.213.0</span>
         <span class="text-white/20 select-none">•</span>
         <button id="footer-menu-toggle-btn" onclick="toggleFooterMenu()" class="text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1 sm:gap-1.5 transition-all px-1.5 sm:px-2 py-1 rounded-full hover:bg-white/10 active:scale-95 whitespace-nowrap" aria-expanded="false" aria-label="Mehr Menü öffnen">
             <span id="footer-more-label">Mehr</span>
@@ -17377,6 +17429,38 @@ let shareCardLoading;
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+    { version: "v24.213.0", date: "10. Oktober 2026", type: "fix", items: {
+        de: [
+            "💎 Einheitliche Liquid-Glass-Transparenz: Alle Karten und Widgets besitzen nun absolut identische Glas-Tokens und Hintergrund-Opazitäten ohne visuelle Sprünge",
+            "🎵 Spezifitäts-Fix für Musikkarte: #main-music-card hat im Liquid-Glass-Modus dieselbe edle Transparenz wie alle anderen Systemkarten",
+            "🫧 Perfekt abgestimmte Dock- & Menü-Elemente: Footer-Bubble, Popups und Back-to-Top-Button fügen sich harmonisch in das Gesamtdesign ein",
+            "🌓 Optimiert für Hell- & Dunkelmodus: Kristallklare prismatische Kanten auf Desktop- und Mobilgeräten bei voller 60 FPS Performance"
+        ],
+        en: [
+            "💎 Unified Liquid Glass Transparency: All cards and widgets now share identical glass tokens and background opacities without visual discrepancies",
+            "🎵 Music Card Specificity Fix: #main-music-card seamlessly matches the refined transparency of all other cards in Liquid Glass mode",
+            "🫧 Cohesive Dock & Menu Elements: Footer bubble, flyout menus, and the back-to-top button now blend harmoniously into the UI",
+            "🌓 Optimized for Dark & Light Themes: Crystal-clear prismatic refraction across desktop and mobile devices at 60 FPS"
+        ],
+        es: [
+            "💎 Transparencia unificada de Liquid Glass: Todas las tarjetas y widgets comparten exactamente los mismos niveles de opacidad",
+            "🎵 Tarjeta de música corregida: #main-music-card coincide perfectamente con las demás tarjetas en modo Liquid Glass",
+            "🫧 Elementos de menú y dock armónicos: El dock inferior, menús y botón superior se integran a la perfección",
+            "🌓 Optimizado para modos claro y oscuro: Acabado nítido en escritorio y móviles con rendimiento impecable"
+        ],
+        fr: [
+            "💎 Transparence Liquid Glass harmonisée : Toutes les cartes et widgets partagent des opacités et reflets parfaitement identiques",
+            "🎵 Carte musicale harmonisée : #main-music-card adopte la même élégante transparence que le reste de l'interface",
+            "🫧 Éléments de dock et menus assortis : La bulle de pied de page et le bouton retour en haut s'intègrent sans rupture",
+            "🌓 Optimisé pour thèmes sombre et clair : Rendu ultra-net sur mobile et ordinateur à 60 FPS"
+        ],
+        pt: [
+            "💎 Transparência unificada Liquid Glass: Todos os cartões e widgets agora têm exatamente o mesmo nível de opacidade",
+            "🎵 Correção do cartão de música: #main-music-card agora acompanha perfeitamente os demais cartões no modo Liquid Glass",
+            "🫧 Dock e menus harmoniosos: Bolha de rodapé, menus e botão de retorno integram-se com fluidez",
+            "🌓 Otimizado para modos escuro e claro: Visual refinado e uniforme em computadores e celulares"
+        ]
+    }},
     { version: "v24.212.0", date: "10. Oktober 2026", type: "fix", items: {
         de: [
             "🌐 Automatischer Onboarding- & Sprachauswahl-Start: Erstbesucher erhalten jetzt sofort beim ersten Laden der Seite das Sprachauswahl-Menü, ohne dass spezielle URL-Parameter erforderlich sind",
