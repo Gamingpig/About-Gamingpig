@@ -523,7 +523,10 @@
             }
         };
 
-        let currentLang = AppStorage.getItem('selectedLanguage') || 'de';
+        let currentLang = 'de';
+        try {
+            currentLang = (window.AppStorage ? AppStorage.getItem('selectedLanguage') || AppStorage.getItem('app_language') : null) || localStorage.getItem('selectedLanguage') || localStorage.getItem('app_language') || 'de';
+        } catch(e) {}
 
         function applyTranslations(lang) {
             const t = TRANSLATIONS[lang] || TRANSLATIONS.de;
@@ -579,7 +582,15 @@
 
         function changeLanguage(lang) {
             currentLang = lang;
-            AppStorage.setItem('selectedLanguage', lang);
+            try {
+                if (window.AppStorage) {
+                    AppStorage.setItem('selectedLanguage', lang);
+                    AppStorage.setItem('app_language', lang);
+                } else {
+                    localStorage.setItem('selectedLanguage', lang);
+                    localStorage.setItem('app_language', lang);
+                }
+            } catch(e) {}
             applyTranslations(lang);
             if (window.isSpeaking) {
                 stopSpeech();
