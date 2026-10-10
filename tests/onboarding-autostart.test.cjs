@@ -24,6 +24,9 @@ test('Automatic Language Selection & Tutorial Startup (v24.213.0)', async (t) =>
         // Must check if saved language or onboarding_completed is missing
         assert.match(indexHtml, /const _isFirstVisit = !savedAppLang \|\| !AppStorage\.getItem\('onboarding_completed'\);/);
         assert.match(indexHtml, /if \(_forceStart \|\| _isFirstVisit\) \{\s*document\.documentElement\.classList\.add\('needs-onboarding'\);/);
+        // Instant CSS shield forces language picker overlay to be visible as the very first screen
+        assert.match(indexHtml, /html\.needs-onboarding #language-picker-overlay/);
+        assert.match(indexHtml, /html\.needs-onboarding #language-picker-overlay\.hidden/);
     });
 
     await t.test('O3: Automatic language selection condition evaluates to true for first-time visitors', () => {

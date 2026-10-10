@@ -3409,18 +3409,14 @@
     <meta http-equiv="Expires" content="0">
     <script>
         try {
-            let savedAppLang = AppStorage.getItem('app_language') || AppStorage.getItem('selectedLanguage');
-            // Graceful auto-detection: detect language without aggressive blocking modals
+            const savedAppLang = AppStorage.getItem('app_language') || AppStorage.getItem('selectedLanguage');
             const _urlP = new URLSearchParams(window.location.search);
             const _forceStart = _urlP.has('first_visit') || _urlP.has('onboarding') || _urlP.has('tutorial');
             
-            if (!savedAppLang) {
-                const navLang = (navigator.language || 'de').slice(0, 2).toLowerCase();
-                const supported = ['de', 'en', 'es', 'fr', 'pt', 'tr'];
-                savedAppLang = supported.includes(navLang) ? navLang : 'de';
-                AppStorage.setItem('app_lang', savedAppLang);
-            }
-            if (savedAppLang) document.documentElement.setAttribute('lang', savedAppLang);
+            const navLang = (navigator.language || 'de').slice(0, 2).toLowerCase();
+            const supported = ['de', 'en', 'es', 'fr', 'pt', 'tr'];
+            const initialLang = savedAppLang || (supported.includes(navLang) ? navLang : 'de');
+            if (initialLang) document.documentElement.setAttribute('lang', initialLang);
             
             // Animation Style Initialisierung
             const savedAnimStyle = AppStorage.getItem('app_animation_style') || 'smooth';
@@ -3447,7 +3443,24 @@
         } catch(e) {}
     </script>
     <style id="onboarding-shield-style">
-        /* Clean unobtrusive styling - modal displays only when triggered */
+        /* 🛡️ Sofort-Blockade: Onboarding-Schritt 1 (Sprachauswahl) kommt ganz als aller erstes */
+        html.needs-onboarding #language-picker-overlay,
+        html.needs-onboarding #language-picker-overlay.hidden {
+            display: flex !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+            pointer-events: auto !important;
+            z-index: 100005 !important;
+        }
+        html.needs-onboarding #language-picker-overlay #language-picker-box {
+            opacity: 1 !important;
+            transform: translateY(0) !important;
+        }
+        html.needs-onboarding,
+        html.needs-onboarding body {
+            overflow: hidden !important;
+        }
+
         #language-picker-overlay:not(.hidden) {
             z-index: 100005;
         }
@@ -12181,6 +12194,14 @@ html.gp-android:not(.dark) #ui-controls {
                 </button>`).join('');
         }
 
+        if (!window.OnboardingCoordinator) {
+            window.OnboardingCoordinator = {
+                isOnboarding: document.documentElement.classList.contains('needs-onboarding')
+            };
+        } else if (document.documentElement.classList.contains('needs-onboarding')) {
+            window.OnboardingCoordinator.isOnboarding = true;
+        }
+
         window.closeLanguagePicker = function() {
             const wasOnboarding = window.OnboardingCoordinator && window.OnboardingCoordinator.isOnboarding;
             document.documentElement.classList.remove('needs-onboarding');
@@ -12206,6 +12227,9 @@ html.gp-android:not(.dark) #ui-controls {
 
         window.openLanguagePicker = function(isManual = false) {
             window._manualLangChange = isManual;
+            if (!isManual && window.OnboardingCoordinator) {
+                window.OnboardingCoordinator.isOnboarding = true;
+            }
             renderLanguagePicker();
             const overlay = document.getElementById('language-picker-overlay');
             if (!overlay) return;
@@ -20560,6 +20584,9 @@ let shareCardLoading;
 
             reset() {
                 try {
+                    AppStorage.removeItem('site_version_installed');
+                    AppStorage.removeItem('app_language');
+                    AppStorage.removeItem('selectedLanguage');
                     AppStorage.removeItem('onboarding_completed_version');
                     AppStorage.removeItem('onboarding_completed');
                     AppStorage.removeItem('tutorialCompletedV5');
@@ -20668,7 +20695,7 @@ let shareCardLoading;
         // 4. Datenschutz -> 5. Fertig!                              //
         // ========================================================= //
         window.OnboardingCoordinator = {
-            isOnboarding: false,
+            isOnboarding: (window.OnboardingCoordinator && window.OnboardingCoordinator.isOnboarding) || document.documentElement.classList.contains('needs-onboarding'),
 
             // Schritt 1: Sprachauswahl
             step1_language() {
