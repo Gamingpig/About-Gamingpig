@@ -7,7 +7,19 @@
     diesem Repo Release Notes erzeugen. Bei jeder inhaltlichen
     Änderung bitte hier oben einen neuen Eintrag ergänzen:
     [BUGFIX] oder [PERFORMANCE] oder [FEATURE] als Tag, dann kurz
-    Symptom/Ziel, Ursache, Fix, und der beobachtbare Effekt.
+    [IOS DYNAMIC ISLAND / SUBPAGE TAPPABILITY / UNIFIED TRANSPARENCY] Release v24.211.0: iOS Dynamic Island Tap-Lock, Unterseiten Safe-Area & Zurück-Button Tippbarkeit, Harmonisierte Glaskarten-Transparenz
+      - iOS Dynamic Island Öffnen & Tap-Schutz:
+        Symptom: Dynamic Island ließ sich unter iOS nicht öffnen bzw. schloss sich sofort wieder.
+        Ursache: window.scroll-Listener feuerte auf iOS durch Microscrolls / Rubberband-Bouncing direkt nach dem Tap und entfernte di-expanded vor dem Rendern; touch-action: none blockierte Klick-Synthese.
+        Fix: 800ms Tap-Lock & 25px Schwellwert im Scroll-Listener, onclick-Handler, touch-action: manipulation und deduplizierte Tap-Erkennung (350ms Debounce).
+      - Unterseiten Top-Bar & Zurück-Button Tippbarkeit:
+        Symptom: Auf Unterseiten (Release, Status, Privacy, Impressum, Roadmap, Arcade) war die obere Leiste / der Zurück-Button manchmal nicht antippbar.
+        Ursache: Fehlender safe-area-inset-top Puffer führte zur Überlappung durch die iOS System-Statusleiste; unpositionierte .card-Elemente ließen das globale ::after Prism-Overlay über den Body laufen.
+        Fix: padding-top: max(..., env(safe-area-inset-top)), z-index Isolierung, touch-action: manipulation und position: relative auf allen Glaskarten.
+      - Vollständig harmonisierte Glaskarten-Transparenz:
+        Symptom: Karten hatten im Liquid Glass Modus immer noch unterschiedlich viel Transparenz.
+        Ursache: Mobile Header-Karte (#header-section) wurde durch mobile Sonderregel auf 0.58/0.68 herabgesetzt; veraltete 0.05 Fallback-Regel und Fremd-Gradients auf #audience-hub sorgten für Abweichungen.
+        Fix: Einheitliche Deckkraft-Tokens (0.82 Dark / 0.85 Light) über alle Karten, Header, Footers und Dialoge hinweg.
     [LIQUID GLASS / DYNAMIC ISLAND / STANDBY / LYRICS] Release v24.210.0: Anti-Burn-In Rand-Schutz, iOS Dynamic Island Kollisionsschutz, einheitliche Liquid-Glass-Transparenz & kontrastreicher Lyrics-Hintergrund
       - StandBy Anti-Burn-In Rand-Schutz (#standby-nowplaying & #standby-overlay):
         Symptom: Bei Pixel-Shifting im Lockscreen/StandBy-Modus bewegte sich die Karte über den Bildschirmrand hinaus.
@@ -3408,7 +3420,7 @@
             AppStorage.setItem('app_visit_count', String(_visitCount));
 
             // 🛡️ INSTANT ONBOARDING SHIELD
-            const _currVer = window.ONBOARDING_VERSION = 'v24.210.0 · 2026-10-10';
+            const _currVer = window.ONBOARDING_VERSION = 'v24.211.0 · 2026-10-10';
             const _installedVer = AppStorage.getItem('site_version_installed');
             if (_installedVer !== _currVer) {
                 AppStorage.setItem('site_version_installed', _currVer);
@@ -5374,8 +5386,8 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
         .reveal.active { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
 
         @supports (backdrop-filter: blur(3px)) or (-webkit-backdrop-filter: blur(3px)) {
-            .glass-card { background: rgba(255, 255, 255, 0.05); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
-            .dark .glass-card { background: rgba(15, 23, 42, 0.05); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+            .glass-card { background: rgba(255, 255, 255, 0.85); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
+            .dark .glass-card { background: rgba(15, 23, 42, 0.82); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
         }
         
         /* ========================================================= */
@@ -6591,7 +6603,7 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
             z-index: 500; width: 38px; height: 38px; border-radius: 999px;
             background: #000; box-shadow: 0 6px 20px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.1);
             overflow: hidden; display: flex; flex-direction: column; justify-content: flex-start;
-            padding: 0; opacity: 0; pointer-events: none; cursor: pointer; touch-action: none;
+            padding: 0; opacity: 0; pointer-events: none; cursor: pointer; touch-action: manipulation;
             -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
             -webkit-tap-highlight-color: transparent;
             transition: width 0.7s var(--liquid-fluid), height 0.7s var(--liquid-fluid), border-radius 0.6s var(--liquid-fluid), opacity 0.4s ease, padding 0.7s var(--liquid-fluid), box-shadow 0.4s ease, top 0.4s ease, left 0.4s ease;
@@ -8013,7 +8025,7 @@ body.low-end.liquid-glass-active #footer-expandable-menu {
   box-shadow: 0 16px 44px rgba(0, 0, 0, 0.55), inset 0 1.5px 2px rgba(255, 255, 255, 0.25) !important;
 }
 :is(html.gp-android, html.gp-mobile, html.gp-pixel):not(.dark) body.liquid-glass-active :is(.glass-card:not(#back-to-top), #header-section, #footer-bubble, #footer-expandable-menu) {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.72) 0%, rgba(248, 250, 252, 0.58) 40%, rgba(241, 245, 249, 0.65) 100%) !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.88) 0%, rgba(248, 250, 252, 0.82) 40%, rgba(241, 245, 249, 0.88) 100%) !important;
   border: 1.5px solid rgba(255, 255, 255, 0.85) !important;
   border-top: 2px solid rgba(255, 255, 255, 1) !important;
   box-shadow: 0 14px 36px rgba(15, 23, 42, 0.06), inset 0 1.5px 2px rgba(255, 255, 255, 0.95) !important;
@@ -8134,28 +8146,28 @@ html.glass-strat-fluid:not(.gp-android) :is(#global-settings-menu, #lyrics-setti
 
 /* --- 3. Footer: authentic translucent frosted glass + tuned blur --- */
 :is(html.gp-android, html.gp-mobile) #footer-bubble {
-  -webkit-backdrop-filter: blur(12px) saturate(140%) !important;
-  backdrop-filter: blur(12px) saturate(140%) !important;
-  background: linear-gradient(135deg, rgba(30, 41, 59, 0.75) 0%, rgba(15, 23, 42, 0.82) 100%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.16) !important;
-  border-top: 1.5px solid rgba(255, 255, 255, 0.40) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(140%) !important;
+  backdrop-filter: blur(16px) saturate(140%) !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(30, 41, 59, 0.82) 40%, rgba(15, 23, 42, 0.92) 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  border-top: 1.8px solid rgba(255, 255, 255, 0.65) !important;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6) !important;
 }
 :is(html.gp-android, html.gp-mobile):not(.dark) #footer-bubble {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.78) 0%, rgba(241, 245, 249, 0.72) 100%) !important;
-  border-top: 1.5px solid rgba(255, 255, 255, 0.90) !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.88) 0%, rgba(248, 250, 252, 0.82) 40%, rgba(241, 245, 249, 0.88) 100%) !important;
+  border-top: 1.8px solid rgba(255, 255, 255, 1) !important;
 }
 :is(html.gp-android, html.gp-mobile) #footer-expandable-menu {
-  -webkit-backdrop-filter: blur(12px) saturate(140%) !important;
-  backdrop-filter: blur(12px) saturate(140%) !important;
-  background: linear-gradient(135deg, rgba(30, 41, 59, 0.75) 0%, rgba(15, 23, 42, 0.82) 100%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.16) !important;
-  border-top: 1.5px solid rgba(255, 255, 255, 0.45) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(140%) !important;
+  backdrop-filter: blur(16px) saturate(140%) !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(30, 41, 59, 0.82) 40%, rgba(15, 23, 42, 0.92) 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  border-top: 1.8px solid rgba(255, 255, 255, 0.65) !important;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.75) !important;
 }
 :is(html.gp-android, html.gp-mobile):not(.dark) #footer-expandable-menu {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.78) 0%, rgba(241, 245, 249, 0.72) 100%) !important;
-  border-top: 1.5px solid rgba(255, 255, 255, 0.90) !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.88) 0%, rgba(248, 250, 252, 0.82) 40%, rgba(241, 245, 249, 0.88) 100%) !important;
+  border-top: 1.8px solid rgba(255, 255, 255, 1) !important;
 }
 
 /* Ensure all elements inside settings menus on Android are visible */
@@ -8213,17 +8225,18 @@ html.glass-strat-fluid:not(.gp-android) :is(#global-settings-menu, #lyrics-setti
   backdrop-filter: none !important;
 }
 
-/* --- 5. Header: authentic translucent frosted glass + tuned blur --- */
+/* --- 5. Header: authentic translucent frosted glass + tuned blur (harmonisiert mit allen Karten) --- */
 :is(html.gp-android, html.gp-mobile) #header-section {
-  -webkit-backdrop-filter: blur(12px) saturate(140%) !important;
-  backdrop-filter: blur(12px) saturate(140%) !important;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.10) 0%, rgba(30, 41, 59, 0.58) 40%, rgba(15, 23, 42, 0.68) 100%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.14) !important;
-  border-top: 1.5px solid rgba(255, 255, 255, 0.40) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(140%) !important;
+  backdrop-filter: blur(16px) saturate(140%) !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(30, 41, 59, 0.82) 40%, rgba(15, 23, 42, 0.92) 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  border-top: 1.8px solid rgba(255, 255, 255, 0.65) !important;
 }
 :is(html.gp-android, html.gp-mobile):not(.dark) #header-section {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.75) 0%, rgba(241, 245, 249, 0.64) 100%) !important;
-  border-top: 1.5px solid rgba(255, 255, 255, 0.90) !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.88) 0%, rgba(248, 250, 252, 0.82) 40%, rgba(241, 245, 249, 0.88) 100%) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.85) !important;
+  border-top: 2px solid rgba(255, 255, 255, 1) !important;
 }
 
 /* --- 6. CP trigger: solid frosted glass + tuned blur & royal blue text in light mode --- */
@@ -8530,7 +8543,7 @@ html.gp-android:not(.dark) #ui-controls {
     <div id="footer-expandable-menu" class="hidden fixed z-[95] p-3.5 rounded-2xl bg-slate-900/95 border border-slate-700/80 shadow-2xl backdrop-blur-xl w-[315px] xxs:w-[340px] sm:w-[370px] max-w-[calc(100vw-1.5rem)] text-xs space-y-2.5" onclick="event.stopPropagation()">
         <div class="flex items-center justify-between px-1 pb-1.5 border-b border-white/10 gap-2">
             <span id="footer-menu-title" data-i18n="footer_menu_title" class="font-bold text-slate-400 text-[10px] uppercase tracking-wider truncate">Navigation &amp; Rechtliches</span>
-            <span id="footer-menu-hint" class="text-[9px] text-pink-400 font-mono font-bold shrink-0 whitespace-nowrap">v24.210.0</span>
+            <span id="footer-menu-hint" class="text-[9px] text-pink-400 font-mono font-bold shrink-0 whitespace-nowrap">v24.211.0</span>
         </div>
         <div class="grid grid-cols-2 gap-2 text-left">
             <button onclick="openEpicWhatsNewTour(false); toggleFooterMenu(false)" id="footer-whats-new-btn" class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/90 text-slate-200 hover:text-white font-medium flex items-center gap-2 transition-all active:scale-[0.98]">
@@ -8564,7 +8577,7 @@ html.gp-android:not(.dark) #ui-controls {
     <div id="footer-bubble" class="fixed z-[91] inline-flex items-center justify-center gap-1.5 sm:gap-3 px-3 sm:px-6 rounded-full bg-slate-900/85 backdrop-blur-xl border border-white/15 shadow-xl text-[10px] xs:text-xs sm:text-sm text-slate-300 select-none opacity-0 pointer-events-none">
         <span id="footer-established" class="font-bold tracking-tight text-slate-300 whitespace-nowrap">© 2026 GAMINGPIG</span>
         <span class="text-white/20 select-none">•</span>
-        <span id="footer-version-label" class="font-mono font-bold text-pink-400 whitespace-nowrap">v24.210.0</span>
+        <span id="footer-version-label" class="font-mono font-bold text-pink-400 whitespace-nowrap">v24.211.0</span>
         <span class="text-white/20 select-none">•</span>
         <button id="footer-menu-toggle-btn" onclick="toggleFooterMenu()" class="text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1 sm:gap-1.5 transition-all px-1.5 sm:px-2 py-1 rounded-full hover:bg-white/10 active:scale-95 whitespace-nowrap" aria-expanded="false" aria-label="Mehr Menü öffnen">
             <span id="footer-more-label">Mehr</span>
@@ -8633,7 +8646,7 @@ html.gp-android:not(.dark) #ui-controls {
     <!-- Safe-Area Probe für exakte iOS / Notched Screen Messung -->
     <div id="safe-area-top-probe" style="position: fixed; top: env(safe-area-inset-top, 0px); left: 0; width: 0; height: 0; pointer-events: none; opacity: 0; visibility: hidden;" aria-hidden="true"></div>
     <div id="dynamic-island-ring" aria-hidden="true"></div>
-    <div id="dynamic-island" role="button" tabindex="0" aria-label="Song-Details öffnen, nach oben wischen zum Ausblenden">
+    <div id="dynamic-island" onclick="handleIslandTap(event)" role="button" tabindex="0" aria-label="Song-Details öffnen, nach oben wischen zum Ausblenden">
         <div id="dynamic-island-row">
             <!-- FIX v24.87: <img> -> <canvas> umgebaut. Zeichnet das bereits vom
                  Haupt-Cover (#artwork) fertig dekodierte Bild direkt rein (drawImage), statt
@@ -8866,7 +8879,7 @@ html.gp-android:not(.dark) #ui-controls {
 
         <!-- ZIELGRUPPEN AUDIENCE HUB -->
         <div id="audience-hub" class="mb-6 sm:mb-10 reveal">
-            <div class="glass-card p-3.5 xxs:p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-white/20 dark:border-white/10 shadow-lg bg-gradient-to-r from-blue-500/5 via-purple-500/5 to-emerald-500/5">
+            <div class="glass-card p-3.5 xxs:p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-white/20 dark:border-white/10 shadow-lg">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-3.5">
                     <div>
                         <span class="text-[9px] xxs:text-[10px] font-black uppercase tracking-wider text-blue-500 dark:text-blue-400">Bereiche &amp; Zielgruppen</span>
@@ -15797,7 +15810,17 @@ html.gp-android:not(.dark) #ui-controls {
         }
         window.addEventListener('resize', () => { clearTimeout(window._diPosTimeout); window._diPosTimeout = setTimeout(positionDynamicIsland, 100); });
         window.addEventListener('orientationchange', () => setTimeout(positionDynamicIsland, 150));
+        let lastIslandInteractionTime = 0;
+        let lastIslandTapTime = 0;
+        let lastIslandScrollY = typeof window !== 'undefined' ? window.scrollY : 0;
         window.addEventListener('scroll', () => {
+            const currentScrollY = window.scrollY;
+            const scrollDelta = Math.abs(currentScrollY - lastIslandScrollY);
+            lastIslandScrollY = currentScrollY;
+            // iOS Tap-Schutz: Wenn die Insel kürzlich angetippt wurde (< 800ms) oder es sich
+            // nur um einen Microscroll / Rubberband-Bouncing (< 25px) handelt, nicht schließen!
+            if (Date.now() - lastIslandInteractionTime < 800) return;
+            if (scrollDelta < 25) return;
             const island = document.getElementById('dynamic-island');
             if (island && island.classList.contains('di-expanded')) {
                 island.classList.remove('di-expanded');
@@ -15859,7 +15882,14 @@ html.gp-android:not(.dark) #ui-controls {
 
         // Tap auf die (sichtbare) Insel: expandiert <-> kollabiert, öffnet NICHT mehr automatisch
         // das Dashboard (das war zu aufdringlich in Kombination mit dem neuen Dauer-Zustand).
-        function handleIslandTap() {
+        function handleIslandTap(e) {
+            if (e && typeof e.stopPropagation === 'function') {
+                e.stopPropagation();
+            }
+            const now = Date.now();
+            if (now - lastIslandTapTime < 350) return; // Verhindert Doppelauslösung touchend + click
+            lastIslandTapTime = now;
+            lastIslandInteractionTime = now;
             const island = document.getElementById('dynamic-island');
             if (!island || !island.classList.contains('di-visible')) return;
             haptic(10);
@@ -15887,6 +15917,7 @@ html.gp-android:not(.dark) #ui-controls {
         (function initIslandGestures() {
             const island = document.getElementById('dynamic-island');
             if (!island) return;
+            island.style.touchAction = 'manipulation';
             const DISMISS_THRESHOLD = 32; // px nach oben, um als "Wegwisch-Geste" zu zählen
             const TAP_TOLERANCE = 16; // px Toleranz, ab der es als Wisch statt Tap zählt (robust auf iOS Touchscreens)
 
@@ -15930,6 +15961,9 @@ html.gp-android:not(.dark) #ui-controls {
             window.addEventListener('mousemove', (e) => { if (islandDragging) dragMove(e.clientY); });
             window.addEventListener('mouseup', () => { if (islandDragging) dragEnd(); });
 
+            island.addEventListener('click', (e) => {
+                handleIslandTap(e);
+            });
             island.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleIslandTap(); }
             });
@@ -17324,6 +17358,38 @@ let shareCardLoading;
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+    { version: "v24.211.0", date: "10. Oktober 2026", type: "fix", items: {
+        de: [
+            "🏝️ iOS Dynamic Island Tipp- & Öffnungs-Fix: Schützt gegen sofortiges Zuklappen durch iOS-Microscroll / Rubberband-Bouncing (800ms Tap-Lock & 25px Schwellwert) und integriert direkte Klick- & Tipp-Handler",
+            "🔙 Unterseiten Top-Bar & Zurück-Button Tippbarkeit: Vollständiger iOS Safe-Area-Inset-Top Puffer, z-index Isolierung gegen die System-Statusleiste und touch-action: manipulation auf allen Unterseiten (Privacy, Impressum, Release, Status, Roadmap, Arcade)",
+            "🪞 Perfekt harmonisierte Glaskarten-Transparenz: Beseitigt abweichende 0.58 Deckkraft auf Mobilgeräten und ungleiche Gradient-Filter – alle Karten besitzen nun dieselbe einheitliche Transparenz (0.82 Dark / 0.85 Light)",
+            "🛡️ Pseudo-Element Isolierung: Absicherung von .card und .glass-stage mit position: relative verhindert unerwünschte Overlay-Blockaden auf iOS"
+        ],
+        en: [
+            "🏝️ iOS Dynamic Island Tap & Open Fix: Prevents immediate collapse from iOS micro-scroll or rubber-band bounce with 800ms tap-lock and 25px scroll filter, plus dedicated click synthesis",
+            "🔙 Subpage Top Bar & Back Button Tappability: Full iOS safe-area-inset-top padding, z-index isolation above the system status bar, and touch-action: manipulation across all subpages",
+            "🪞 Completely Harmonized Card Transparency: Eliminated divergent 0.58 mobile opacity and background tints – all glass cards now share the identical 0.82 dark / 0.85 light opacity token",
+            "🛡️ Pseudo-Element Containment: Enforced position: relative on .card and .glass-stage to prevent viewport overlay bleeds on iOS"
+        ],
+        es: [
+            "🏝️ Corrección al abrir Dynamic Island en iOS: Protección contra cierre inmediato por microdesplazamiento en iOS con bloqueo de 800ms y controlador directo de toques",
+            "🔙 Barra superior y botón Volver accesibles en subpáginas: Margen de safe-area superior en iOS, aislamiento de z-index y touch-action: manipulation en todas las subpáginas",
+            "🪞 Transparencia de tarjetas unificada: Se eliminó la inconsistencia de opacidad en móviles, todas las tarjetas ahora comparten el mismo nivel de transparencia",
+            "🛡️ Aislamiento de capas superpuestas: Posicionamiento relativo en tarjetas que evita bloqueos táctiles en iOS"
+        ],
+        fr: [
+            "🏝️ Correction de l'ouverture de Dynamic Island sur iOS : Protection contre la fermeture immédiate due aux micro-défilements avec verrouillage tactile de 800ms",
+            "🔙 Barre supérieure et bouton Retour tactiles sur les sous-pages : Prise en compte de safe-area-inset-top sur iOS, isolation z-index et touch-action: manipulation",
+            "🪞 Transparence harmonisée des cartes : Suppression de l'opacité divergente sur mobile, toutes les cartes partagent désormais la même transparence",
+            "🛡️ Confinement des calques superposés : Positionnement relatif assurant l'absence de blocages tactiles sur iOS"
+        ],
+        pt: [
+            "🏝️ Correção de abertura da Dynamic Island no iOS: Evita fechamento imediato por micro-rolagem com bloqueio de 800ms e eventos de toque unificados",
+            "🔙 Barra superior e botão Voltar acessíveis em subpáginas: Espaçamento de safe-area superior no iOS, isolamento de z-index e touch-action: manipulation",
+            "🪞 Transparência de cartões totalmente harmonizada: Eliminada opacidade divergente no celular, todos os cartões compartilham o mesmo nível de transparência",
+            "🛡️ Isolamento de sobreposições: Posicionamento relativo em cartões prevenindo bloqueios no iOS"
+        ]
+    }},
     { version: "v24.210.0", date: "10. Oktober 2026", type: "fix", items: {
         de: [
             "🛡️ StandBy Anti-Burn-In Rand-Schutz: Pixel-Shifting bleibt mathematisch sicher innerhalb der Bildschirmgrenzen, sodass die Lockscreen-Karte niemals über den Rand hinausgeschoben wird",
