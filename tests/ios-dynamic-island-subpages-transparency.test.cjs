@@ -103,12 +103,12 @@ test('Issue 3: Harmonized Liquid Glass Card Transparency', async (t) => {
         assert.doesNotMatch(indexHtml, /id="audience-hub"[^>]*>[\s\S]*?<div class="glass-card[^"]*bg-gradient-to-r/);
     });
 
-    await t.test('C4: Version 24.211.0 is synchronized across version.json, sw.js, index.html, release.html', () => {
-        assert.equal(versionJson.version, '24.211.0');
-        assert.match(swJs, /const SW_VERSION = "24\.211\.0";/);
-        assert.match(indexHtml, /ONBOARDING_VERSION = 'v24\.211\.0/);
-        assert.match(indexHtml, /id="footer-menu-hint"[^>]*>v24\.211\.0<\/span>/);
-        assert.match(indexHtml, /id="footer-version-label"[^>]*>v24\.211\.0<\/span>/);
-        assert.match(releaseHtml, /<title>Release Notes v24\.211\.0 – Gamingpig<\/title>/);
+    await t.test('C4: Version 24.212.0 is synchronized across version.json, sw.js, index.html, release.html', () => {
+        assert.equal(versionJson.version, '24.212.0');
+        assert.match(swJs, /const SW_VERSION = "24\.212\.0";/);
+        assert.match(indexHtml, /ONBOARDING_VERSION = 'v24\.212\.0/);
+        assert.match(indexHtml, /id="footer-menu-hint"[^>]*>v24\.212\.0<\/span>/);
+        assert.match(indexHtml, /id="footer-version-label"[^>]*>v24\.212\.0<\/span>/);
+        assert.match(releaseHtml, /<title>Release Notes v24\.212\.0 – Gamingpig<\/title>/);
     });
 });
