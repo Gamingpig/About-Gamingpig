@@ -14,12 +14,38 @@ const FALLBACK_ART = "https://gamingpig.github.io/About-Gamingpig/og-v2.jpg";
 async function fetchNowPlaying() {
     try {
         let req = new Request(API_URL);
-        req.timeoutInterval = 5;
+        req.timeoutInterval = 3;
         let data = await req.loadJSON();
-        return data;
-    } catch(e) {
-        return null;
-    }
+        if (data && data.status === "playing" && data.track) {
+            return data;
+        }
+    } catch(e) {}
+
+    // Fallback auf stats.fm, falls die NPC-API / der Raspberry Pi offline ist
+    try {
+        let sfmReq = new Request("https://api.stats.fm/api/v1/users/gamingpig/streams/current");
+        sfmReq.timeoutInterval = 4;
+        let payload = await sfmReq.loadJSON();
+        let item = payload && payload.item;
+        let trk = item && item.track;
+        if (item && trk && item.isPlaying) {
+            let artists = Array.isArray(trk.artists) ? trk.artists.map(a => a && a.name).filter(Boolean) : [];
+            let albums = trk.albums || [];
+            let album = albums[0] || {};
+            return {
+                status: "playing",
+                track: {
+                    title: trk.name || "",
+                    artist: artists.join(", ") || "Unknown",
+                    artwork_url: album.image || "",
+                    duration_ms: Number(trk.durationMs) || 0,
+                    progress_ms: Number(item.progressMs) || 0
+                }
+            };
+        }
+    } catch(e) {}
+
+    return null;
 }
 
 async function getImage(url) {

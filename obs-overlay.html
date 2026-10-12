@@ -281,9 +281,45 @@
 
         async function fetchNowPlaying() {
             try {
-                const res = await fetch(API_URL, { cache: 'no-store' });
-                if (!res.ok) throw new Error('API down');
-                const data = await res.json();
+                let data = null;
+                try {
+                    const res = await fetch(API_URL, { cache: 'no-store', signal: AbortSignal.timeout(2500) });
+                    if (res.status === 200) {
+                        data = await res.json();
+                    }
+                } catch(e) {}
+
+                // Fallback auf stats.fm, wenn NPC 204 oder offline ist
+                if (!data || data.status !== 'playing' || !data.track) {
+                    try {
+                        const sfmRes = await fetch('https://api.stats.fm/api/v1/users/gamingpig/streams/current', { cache: 'no-store', signal: AbortSignal.timeout(3500) });
+                        if (sfmRes.status === 200) {
+                            const payload = await sfmRes.json();
+                            const item = payload && payload.item;
+                            const trk = item && item.track;
+                            if (item && trk && item.isPlaying) {
+                                const artists = Array.isArray(trk.artists) ? trk.artists.map(a => a && a.name).filter(Boolean) : [];
+                                const albums = trk.albums || [];
+                                const album = albums[0] || {};
+                                data = {
+                                    status: 'playing',
+                                    progress_ms: Number(item.progressMs) || 0,
+                                    timestamp: item.date ? new Date(item.date).getTime() : Date.now(),
+                                    track: {
+                                        title: trk.name || '',
+                                        artist: artists.join(', ') || 'Unknown',
+                                        artwork_url: album.image || '',
+                                        duration_ms: Number(trk.durationMs) || 0,
+                                        progress_ms: Number(item.progressMs) || 0,
+                                        platform_links: {}
+                                    }
+                                };
+                            }
+                        }
+                    } catch(e) {}
+                }
+
+                if (!data) throw new Error('API down');
 
                 const status = data.status;
                 const track = data.track || {};

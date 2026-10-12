@@ -189,4 +189,19 @@ test('Android-Style System-Update Center & Controlled Update Workflow (v24.215.0
         // Crisp dark text for white/slate elements in light mode
         assert.match(indexHtml, /html:not\(\.dark\)\s+#global-settings-menu\s+:is\([\s\S]*?\.text-slate-100[\s\S]*?color:\s*#0f172a/);
     });
+
+    await t.test('U10: Spotlight Search Button Design Swap & Resilient Fallback', () => {
+        // Normal mode has clean frosted glass with standard 1px border
+        assert.match(indexHtml, /#cp-trigger\s*\{[\s\S]*?border:\s*1px solid rgba\(255, 255, 255, 0\.12\)/);
+
+        // Liquid Glass mode has rich linear-gradient and glossy specular border
+        assert.match(indexHtml, /body\.liquid-glass-active\s+#cp-trigger\s*\{[\s\S]*?background:\s*linear-gradient/);
+        assert.match(indexHtml, /body\.liquid-glass-active\s+:is\([^)]*#cp-trigger[^)]*\)::after/);
+
+        // Music fallback handles stats.fm correctly with abort signal and proper timestamps
+        assert.match(indexHtml, /function normalizeStatsFmMusicData\(payload\)/);
+        assert.match(indexHtml, /AbortSignal\.timeout\(2500\)/);
+        assert.match(indexHtml, /AbortSignal\.timeout\(3500\)/);
+    });
 });
+

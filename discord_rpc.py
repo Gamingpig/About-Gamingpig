@@ -46,11 +46,41 @@ from pypresence import Presence
 def fetch_now_playing():
     try:
         req = urllib.request.Request(MUSIC_API_URL, headers={"User-Agent": "Gamingpig-RPC/1.0"})
-        with urllib.request.urlopen(req, timeout=4) as response:
+        with urllib.request.urlopen(req, timeout=3) as response:
             if response.status == 200:
-                return json.loads(response.read().decode("utf-8"))
+                data = json.loads(response.read().decode("utf-8"))
+                if data and data.get("status") == "playing" and data.get("track"):
+                    return data
     except Exception:
         pass
+
+    # Fallback auf stats.fm, falls die NPC-API oder der Raspberry Pi offline ist
+    try:
+        sfm_url = "https://api.stats.fm/api/v1/users/gamingpig/streams/current"
+        req = urllib.request.Request(sfm_url, headers={"User-Agent": "Gamingpig-RPC/1.0"})
+        with urllib.request.urlopen(req, timeout=4) as response:
+            if response.status == 200:
+                payload = json.loads(response.read().decode("utf-8"))
+                item = payload.get("item") if payload else None
+                track = item.get("track") if item else None
+                if item and track and item.get("isPlaying"):
+                    artists = [a.get("name") for a in track.get("artists", []) if a.get("name")]
+                    albums = track.get("albums") or []
+                    album = albums[0] if albums else {}
+                    return {
+                        "status": "playing",
+                        "track": {
+                            "title": track.get("name", ""),
+                            "artist": ", ".join(artists) or "Unknown",
+                            "album": album.get("name", ""),
+                            "duration_ms": track.get("durationMs", 0),
+                            "progress_ms": item.get("progressMs", 0),
+                            "artwork_url": album.get("image", "")
+                        }
+                    }
+    except Exception:
+        pass
+
     return None
 
 def main():
