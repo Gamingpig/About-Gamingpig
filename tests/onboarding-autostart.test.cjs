@@ -97,4 +97,25 @@ test('Automatic Language Selection & Tutorial Startup (v24.213.0)', async (t) =>
         // closeLanguagePicker only launches tutorial if a language is chosen
         assert.match(indexHtml, /if \(wasOnboarding && hasLang\)/);
     });
+
+    await t.test('O8: Language Picker perfection points: Step 1 badge, active state, a11y, sound, escape, storage sync', () => {
+        // Step 1 badge element
+        assert.match(indexHtml, /id="lang-picker-step-badge"/);
+
+        // A11y role="dialog" and aria-modal="true"
+        assert.match(indexHtml, /id="language-picker-overlay"[^>]*role="dialog"[^>]*aria-modal="true"/);
+
+        // Active state and checkmark in renderLanguagePicker
+        assert.match(indexHtml, /aria-current="\$\{isActive \? 'true' : 'false'\}"/);
+        assert.match(indexHtml, /lang-check text-blue-500 font-black/);
+
+        // Sound feedback on select
+        assert.match(indexHtml, /playUISound\('click'\)/);
+
+        // Keyboard Escape handling
+        assert.match(indexHtml, /if \(e\.key === 'Escape'\)/);
+
+        // Cross-tab storage sync
+        assert.match(indexHtml, /window\.addEventListener\('storage',\s*\(e\)\s*=>/);
+    });
 });

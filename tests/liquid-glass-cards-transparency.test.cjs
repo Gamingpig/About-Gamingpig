@@ -101,4 +101,10 @@ test('Liquid Glass Card Transparency Unification (v24.213.0)', async (t) => {
         const mainMusic = dom.window.getComputedStyle(doc.getElementById('main-music-card')).background;
         assert.match(mainMusic, /rgba\(15,\s*23,\s*42,\s*0\.4\)/, 'Main music card retains standard background in normal mode');
     });
+
+    await t.test('LG6: Desktop Hover in Liquid Glass mode retains solid opacity and avoids jarring transparency drops', () => {
+        // Assert no hover rule drops the glass card to 0.28 or 0.01 opacity in Liquid Glass
+        assert.doesNotMatch(indexHtml, /\.dark\s+body\.liquid-glass-active\s+\.glass-card[^{]*\{[^}]*rgba\(15,\s*23,\s*42,\s*0\.28\)/);
+        assert.match(indexHtml, /\.dark\s+body\.liquid-glass-active\s+\.glass-card:not\(#main-music-card\):not\(#mini-player-toggle\):not\(#back-to-top\):hover/);
+    });
 });
