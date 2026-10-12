@@ -1,0 +1,98 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('fs');
+const path = require('path');
+const jsdom = require('jsdom');
+const { JSDOM } = jsdom;
+
+const ROOT = path.join(__dirname, '..');
+const indexHtml = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+const versionJson = JSON.parse(fs.readFileSync(path.join(ROOT, 'version.json'), 'utf8'));
+const swJs = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
+const releaseHtml = fs.readFileSync(path.join(ROOT, 'release.html'), 'utf8');
+
+test('Android-Style System-Update Center & Controlled Update Workflow (v24.214.0)', async (t) => {
+    await t.test('U1: Version 24.214.0 is synchronized across all core files', () => {
+        assert.equal(versionJson.version, '24.214.0');
+        assert.ok(Array.isArray(versionJson.shortNotes) && versionJson.shortNotes.length > 0, 'version.json has shortNotes');
+        assert.match(swJs, /const SW_VERSION = "24\.214\.0";/);
+        assert.match(indexHtml, /ONBOARDING_VERSION = 'v24\.214\.0/);
+        assert.match(indexHtml, /id="footer-menu-hint"[^>]*>v24\.214\.0<\/span>/);
+        assert.match(indexHtml, /id="footer-version-label"[^>]*>v24\.214\.0<\/span>/);
+        assert.match(releaseHtml, /<title>Release Notes v24\.214\.0 – Gamingpig<\/title>/);
+        assert.match(indexHtml, /version:\s*"v24\.214\.0"/);
+    });
+
+    await t.test('U2: Android-Style Update Center DOM elements exist in website settings', () => {
+        const dom = new JSDOM(indexHtml);
+        const doc = dom.window.document;
+
+        const updateCard = doc.getElementById('settings-update-card');
+        assert.ok(updateCard, '#settings-update-card must exist in DOM');
+
+        const currentVer = doc.getElementById('settings-update-current-ver');
+        assert.ok(currentVer, '#settings-update-current-ver must exist');
+
+        const statusPill = doc.getElementById('settings-update-status-pill');
+        assert.ok(statusPill, '#settings-update-status-pill must exist');
+
+        const availBox = doc.getElementById('settings-update-available-box');
+        assert.ok(availBox, '#settings-update-available-box must exist');
+
+        const newVerTitle = doc.getElementById('settings-update-new-ver-title');
+        assert.ok(newVerTitle, '#settings-update-new-ver-title must exist');
+
+        const shortNotes = doc.getElementById('settings-update-short-notes');
+        assert.ok(shortNotes, '#settings-update-short-notes must exist');
+
+        const applyBtn = doc.getElementById('btn-settings-apply-update');
+        assert.ok(applyBtn, '#btn-settings-apply-update must exist');
+
+        const checkBtn = doc.getElementById('btn-manual-update-check');
+        assert.ok(checkBtn, '#btn-manual-update-check must exist');
+
+        const spinner = doc.getElementById('manual-check-spinner');
+        assert.ok(spinner, '#manual-check-spinner must exist');
+
+        const lastChecked = doc.getElementById('settings-update-last-checked');
+        assert.ok(lastChecked, '#settings-update-last-checked must exist');
+    });
+
+    await t.test('U3: Badges exist on settings entry points', () => {
+        const dom = new JSDOM(indexHtml);
+        const doc = dom.window.document;
+
+        const toggleBadge = doc.getElementById('settings-toggle-badge');
+        assert.ok(toggleBadge, '#settings-toggle-badge on header settings button must exist');
+
+        const footerBadge = doc.getElementById('footer-settings-badge');
+        assert.ok(footerBadge, '#footer-settings-badge on footer settings button must exist');
+    });
+
+    await t.test('U4: Update prompt banner structure & persistent Notes behavior', () => {
+        // Assert showUpdatePrompt definition exists and wires up buttons
+        assert.match(indexHtml, /function showUpdatePrompt\(/);
+        assert.match(indexHtml, /window\.showUpdatePrompt = showUpdatePrompt;/);
+
+        // Notes button links to release.html without dismissing or snoozing
+        assert.match(indexHtml, /id="gp-update-notes-btn"/);
+        assert.match(indexHtml, /href="release\.html"/);
+
+        // Apply update triggers applyPendingUpdate
+        assert.match(indexHtml, /id="gp-update-reload-btn"[^>]*onclick="applyPendingUpdate\(\)"/);
+
+        // Dismiss button marks snooze and activates settings badge
+        assert.match(indexHtml, /id="gp-update-dismiss-btn"/);
+        assert.match(indexHtml, /AppStorage\.setItem\('gp_update_snoozed_'/);
+        assert.match(indexHtml, /setSettingsUpdateBadge\(true\)/);
+    });
+
+    await t.test('U5: Controlled user-driven updates (no automatic skipWaiting on install)', () => {
+        // applyPendingUpdate sends SKIP_WAITING and reloads
+        assert.match(indexHtml, /window\.applyPendingUpdate = function\(\)/);
+        assert.match(indexHtml, /swRegistration\.waiting\.postMessage\(\{\s*type:\s*'SKIP_WAITING'\s*\}\)/);
+
+        // Manual check function exists and triggers update check
+        assert.match(indexHtml, /window\.manualCheckForUpdates = async function/);
+    });
+});
