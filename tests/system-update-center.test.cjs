@@ -95,4 +95,27 @@ test('Android-Style System-Update Center & Controlled Update Workflow (v24.214.0
         // Manual check function exists and triggers update check
         assert.match(indexHtml, /window\.manualCheckForUpdates = async function/);
     });
+
+    await t.test('U6: Android Settings search bar, categorized layout and mobile touch sizing', () => {
+        const dom = new JSDOM(indexHtml);
+        const doc = dom.window.document;
+
+        const searchInput = doc.getElementById('settings-search-input');
+        assert.ok(searchInput, '#settings-search-input must exist');
+        assert.equal(searchInput.getAttribute('type'), 'search');
+
+        const searchClear = doc.getElementById('settings-search-clear');
+        assert.ok(searchClear, '#settings-search-clear must exist');
+
+        const categories = doc.querySelectorAll('#global-settings-menu .settings-category');
+        assert.ok(categories.length >= 5, 'Must have at least 5 settings categories');
+
+        assert.match(indexHtml, /window\.filterSettings = function/);
+        assert.match(indexHtml, /window\.clearSettingsSearch = function/);
+
+        // Mobile touch targets: buttons have min-h-[44px]
+        const menu = doc.getElementById('global-settings-menu');
+        assert.ok(menu.className.includes('w-[94vw]'), 'Settings menu is responsive for mobile');
+        assert.match(indexHtml, /min-h-\[44px\]/);
+    });
 });
