@@ -79,4 +79,22 @@ test('Automatic Language Selection & Tutorial Startup (v24.213.0)', async (t) =>
         const manualTut = evaluateAutostart({ _forceOnboarding: false, _savedLang: 'de', _isCompleted: true, _isTutorialDone: true, hasTutorialParam: true });
         assert.equal(manualTut.needsTut, true, 'Explicit ?tutorial query param must trigger tutorial');
     });
+
+    await t.test('O7: Tutorial start is strictly blocked until a language is selected', () => {
+        // hasUserSelectedLanguage helper exists
+        assert.match(indexHtml, /function hasUserSelectedLanguage\(\)/);
+        assert.match(indexHtml, /window\.hasUserSelectedLanguage = hasUserSelectedLanguage;/);
+
+        // startTutorial routes to language picker if no language is selected
+        assert.match(indexHtml, /window\.startTutorial = function startTutorial\(\) \{\s*if \(typeof hasUserSelectedLanguage === 'function' && !hasUserSelectedLanguage\(\)\)/);
+
+        // showTutorialModeChoiceModal routes to language picker if no language is selected
+        assert.match(indexHtml, /function showTutorialModeChoiceModal\(\) \{\s*if \(typeof hasUserSelectedLanguage === 'function' && !hasUserSelectedLanguage\(\)\)/);
+
+        // OnboardingCoordinator.step2_tutorial routes back to step1_language if no language is selected
+        assert.match(indexHtml, /step2_tutorial\(\) \{\s*if \(typeof hasUserSelectedLanguage === 'function' && !hasUserSelectedLanguage\(\)\) \{\s*this\.step1_language\(\);/);
+
+        // closeLanguagePicker only launches tutorial if a language is chosen
+        assert.match(indexHtml, /if \(wasOnboarding && hasLang\)/);
+    });
 });

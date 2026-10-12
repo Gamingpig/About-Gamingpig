@@ -8678,7 +8678,7 @@ html.gp-android:not(.dark) #ui-controls {
 
     <!-- NEW: Dynamic Island 2.0 -->
     <!-- NEW: Sprachauswahl (Clean iOS/Android Native Setup Style) -->
-    <div id="language-picker-overlay" class="hidden" onclick="if(event.target===this)closeLanguagePicker()">
+    <div id="language-picker-overlay" class="hidden" onclick="if(event.target===this && (window.hasUserSelectedLanguage ? window.hasUserSelectedLanguage() : true))closeLanguagePicker()">
         <div id="language-picker-box" class="relative">
             <button onclick="closeLanguagePicker()" id="lang-picker-close-btn" class="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-all text-xs font-semibold border border-white/10 active:scale-95 z-20" aria-label="Schließen / Close">✕</button>
             <div id="lang-picker-titles">
@@ -12183,6 +12183,18 @@ html.gp-android:not(.dark) #ui-controls {
             return val !== undefined ? val : key;
         }
 
+        function hasUserSelectedLanguage() {
+            try {
+                const lang = (window.AppStorage ? (AppStorage.getItem('app_language') || AppStorage.getItem('selectedLanguage')) : null) ||
+                             localStorage.getItem('app_language') ||
+                             localStorage.getItem('selectedLanguage');
+                return Boolean(lang && ['de', 'en', 'es', 'fr', 'pt', 'tr'].includes(lang));
+            } catch(e) {
+                return false;
+            }
+        }
+        window.hasUserSelectedLanguage = hasUserSelectedLanguage;
+
         // --- Sprachauswahl-Overlay (Setup-Assistent-Stil) ---
         function renderLanguagePicker() {
             const grid = document.getElementById('lang-picker-grid');
@@ -12204,6 +12216,7 @@ html.gp-android:not(.dark) #ui-controls {
 
         window.closeLanguagePicker = function() {
             const wasOnboarding = window.OnboardingCoordinator && window.OnboardingCoordinator.isOnboarding;
+            const hasLang = hasUserSelectedLanguage();
             document.documentElement.classList.remove('needs-onboarding');
             const overlay = document.getElementById('language-picker-overlay');
             if (overlay) {
@@ -12216,7 +12229,8 @@ html.gp-android:not(.dark) #ui-controls {
                     overlay.style.visibility = 'hidden';
                 }, isLiquid ? 320 : 180);
             }
-            if (wasOnboarding) {
+            // ERST wenn eine Sprache ausgewählt wurde, darf das Tutorial starten!
+            if (wasOnboarding && hasLang) {
                 setTimeout(() => {
                     if (window.OnboardingCoordinator && typeof window.OnboardingCoordinator.step2_tutorial === 'function') {
                         window.OnboardingCoordinator.step2_tutorial();
@@ -12235,7 +12249,8 @@ html.gp-android:not(.dark) #ui-controls {
             if (!overlay) return;
             const closeBtn = document.getElementById('lang-picker-close-btn');
             if (closeBtn) {
-                closeBtn.style.display = 'flex';
+                const hasLang = hasUserSelectedLanguage();
+                closeBtn.style.display = (isManual || hasLang) ? 'flex' : 'none';
             }
             overlay.classList.remove('hidden', 'lp-active');
             overlay.style.display = 'flex';
@@ -12249,7 +12264,7 @@ html.gp-android:not(.dark) #ui-controls {
         window.selectLanguage = function(code) {
             if (typeof haptic === 'function') haptic(10);
             try {
-                applyLanguage(code);
+                applyLanguage(code, { syncStorage: true, dispatch: true });
             } catch (e) {
                 console.error('applyLanguage error:', e);
             }
@@ -12266,9 +12281,7 @@ html.gp-android:not(.dark) #ui-controls {
             }
             
             // Single-source onboarding flow:
-            // During onboarding ONLY the coordinator is allowed to advance.
-            // This prevents the tutorial from opening once here and then a second time
-            // through the onboarding coordinator.
+            // ERST wenn eine Sprache ausgewählt wurde, darf das Tutorial starten:
             if (window.OnboardingCoordinator && window.OnboardingCoordinator.isOnboarding) {
                 if (typeof window.OnboardingCoordinator.step2_tutorial === 'function') {
                     window.OnboardingCoordinator.step2_tutorial();
@@ -12298,17 +12311,24 @@ html.gp-android:not(.dark) #ui-controls {
 
         // Aktualisiert alle übersetzbaren Bedienelemente auf der Seite. Persönliche
         // Bio-Texte (details-Objekt) werden hier bewusst NICHT angefasst.
-        function applyLanguage(lang) {
+        function applyLanguage(lang, options = { syncStorage: true }) {
             if (!translations[lang]) lang = 'de';
             currentLang = lang;
-            if (window.I18nManager) {
-                window.I18nManager.setLanguage(lang);
-            } else {
+            const shouldSync = Boolean(options && options.syncStorage);
+            if (shouldSync) {
                 try {
-                    AppStorage.setItem('app_language', lang);
-                    AppStorage.setItem('selectedLanguage', lang);
+                    if (window.AppStorage) {
+                        AppStorage.setItem('app_language', lang);
+                        AppStorage.setItem('selectedLanguage', lang);
+                    }
+                    localStorage.setItem('app_language', lang);
+                    localStorage.setItem('selectedLanguage', lang);
                 } catch(e) {}
-                syncLangToIndexedDB(lang);
+            }
+            if (window.I18nManager) {
+                window.I18nManager.setLanguage(lang, { syncStorage: shouldSync, dispatch: true });
+            } else {
+                if (shouldSync) syncLangToIndexedDB(lang);
                 document.documentElement.setAttribute('lang', lang);
             }
 
@@ -17260,6 +17280,15 @@ let shareCardLoading;
         }
 
         function showTutorialModeChoiceModal() {
+            if (typeof hasUserSelectedLanguage === 'function' && !hasUserSelectedLanguage()) {
+                if (window.OnboardingCoordinator && typeof window.OnboardingCoordinator.step1_language === 'function') {
+                    window.OnboardingCoordinator.step1_language();
+                } else if (typeof window.openLanguagePicker === 'function') {
+                    window.openLanguagePicker(false);
+                }
+                return;
+            }
+
             const modalOverlay = document.getElementById('modal-overlay');
             const modalBody = document.getElementById('modal-body');
             if (!modalOverlay || !modalBody) {
@@ -17313,6 +17342,15 @@ let shareCardLoading;
         };
 
         window.startInteractiveLearning = function() {
+            if (typeof hasUserSelectedLanguage === 'function' && !hasUserSelectedLanguage()) {
+                if (window.OnboardingCoordinator && typeof window.OnboardingCoordinator.step1_language === 'function') {
+                    window.OnboardingCoordinator.step1_language();
+                } else if (typeof window.openLanguagePicker === 'function') {
+                    window.openLanguagePicker(false);
+                }
+                return;
+            }
+
             window._tutorialChoiceModalOpen = false;
             if (modalOverlay) {
                 modalOverlay.classList.remove('flex');
@@ -17333,6 +17371,15 @@ let shareCardLoading;
         };
 
         function runClassicTutorial() {
+            if (typeof hasUserSelectedLanguage === 'function' && !hasUserSelectedLanguage()) {
+                if (window.OnboardingCoordinator && typeof window.OnboardingCoordinator.step1_language === 'function') {
+                    window.OnboardingCoordinator.step1_language();
+                } else if (typeof window.openLanguagePicker === 'function') {
+                    window.openLanguagePicker(false);
+                }
+                return;
+            }
+
             window._tutorialChoiceModalOpen = false;
             if (modalOverlay) {
                 modalOverlay.classList.remove('flex');
@@ -17362,6 +17409,14 @@ let shareCardLoading;
         }
 
         window.startTutorial = function startTutorial() {
+            if (typeof hasUserSelectedLanguage === 'function' && !hasUserSelectedLanguage()) {
+                if (window.OnboardingCoordinator && typeof window.OnboardingCoordinator.step1_language === 'function') {
+                    window.OnboardingCoordinator.step1_language();
+                } else if (typeof window.openLanguagePicker === 'function') {
+                    window.openLanguagePicker(false);
+                }
+                return;
+            }
             showTutorialModeChoiceModal();
         }
 
@@ -20705,6 +20760,10 @@ let shareCardLoading;
 
             // Schritt 2: Tutorial
             step2_tutorial() {
+                if (typeof hasUserSelectedLanguage === 'function' && !hasUserSelectedLanguage()) {
+                    this.step1_language();
+                    return;
+                }
                 setTimeout(() => {
                     showTutorialModeChoiceModal();
                 }, 400);
@@ -24472,17 +24531,19 @@ window.setLyricsStyle = function(style) {
         })();
         const _isCompleted = window.OnboardingTracker.isCompleted();
 
-        // Gespeicherte Nutzersprache sofort synchron anwenden
+        // Gespeicherte Nutzersprache sofort synchron anwenden (ohne Storage zu setzen, falls Nutzer noch nicht gewählt hat)
         const effectiveLang = _savedLang || currentLang || 'de';
-        applyLanguage(effectiveLang);
+        applyLanguage(effectiveLang, { syncStorage: Boolean(_savedLang) });
 
         const _isTutorialDone = typeof window.isTutorialCompleted === 'function' ? window.isTutorialCompleted() : false;
 
         // 🌟 AUTOMATISCHER ONBOARDING- & SPRACHAUSWAHL-START:
         // Startet automatisch bei Erstbesuchern (noch keine Sprache gespeichert) ODER wenn Onboarding/Erstbesuch forciert wird
+        const _hasUserLang = typeof hasUserSelectedLanguage === 'function' ? hasUserSelectedLanguage() : Boolean(_savedLang);
         const _needsLanguageSelection = Boolean(
             _forceOnboarding ||
             !_savedLang ||
+            !_hasUserLang ||
             (!_isCompleted && !_savedLang)
         );
 
@@ -24501,12 +24562,13 @@ window.setLyricsStyle = function(style) {
             }
 
             // 🧭 AUTOMATISCHER TUTORIAL-START:
-            // Wenn die Sprache bereits feststeht, aber das Tutorial bzw. Onboarding noch nicht
-            // abgeschlossen ist (oder per ?tutorial aufgerufen wurde):
+            // Erst wenn eine Sprache ausgewählt wurde darf das Tutorial starten:
             const _needsTutorial = Boolean(
-                _urlParams.has('tutorial') ||
-                !_isTutorialDone ||
-                !_isCompleted
+                _hasUserLang && (
+                    _urlParams.has('tutorial') ||
+                    !_isTutorialDone ||
+                    !_isCompleted
+                )
             );
 
             if (_needsTutorial) {
