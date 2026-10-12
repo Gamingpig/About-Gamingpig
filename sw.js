@@ -1,5 +1,5 @@
 // ==============================================================================
-// Gamingpig Portfolio PWA Service Worker (v24.214.0)
+// Gamingpig Portfolio PWA Service Worker (v24.215.0)
 // Robust Update- & Cache-Strategie:
 // - HTML / Navigation: ECHTES Network-First mit Offline-Fallback
 // - Statische Assets (Bilder, Icons, Manifest): Stale-While-Revalidate mit Cache-Fallback
@@ -7,7 +7,7 @@
 // - Kontrollierte Übernahme: Nutzer-gesteuerte Aktivierung via Update-Center
 // ==============================================================================
 
-const SW_VERSION = "24.214.0";
+const SW_VERSION = "24.215.0";
 const CURRENT_CACHE_VERSION = `gamingpig-cache-v${SW_VERSION}`;
 const CACHE_NAME = CURRENT_CACHE_VERSION;
 
@@ -39,12 +39,12 @@ const PRECACHE_URLS = [
     "./version.json"
 ];
 
-// Sofortige Installation ohne Warten
+// Kontrollierte Installation (kein automatisches skipWaiting — wartet auf Nutzerbestätigung)
 self.addEventListener("install", (event) => {
     event.waitUntil(
         caches.open(CURRENT_CACHE_VERSION).then((cache) => {
             return cache.addAll(PRECACHE_URLS);
-        }).then(() => self.skipWaiting())
+        })
     );
 });
 

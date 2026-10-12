@@ -3430,7 +3430,7 @@
             AppStorage.setItem('app_visit_count', String(_visitCount));
 
             // 🛡️ INSTANT ONBOARDING SHIELD
-            const _currVer = window.ONBOARDING_VERSION = 'v24.214.0 · 2026-10-12';
+            const _currVer = window.ONBOARDING_VERSION = 'v24.215.0 · 2026-10-12';
             const _installedVer = AppStorage.getItem('site_version_installed');
             if (_installedVer !== _currVer) {
                 AppStorage.setItem('site_version_installed', _currVer);
@@ -8647,7 +8647,7 @@ html.gp-android:not(.dark) #ui-controls {
     <div id="footer-expandable-menu" class="hidden fixed z-[95] p-3.5 rounded-2xl bg-slate-900/95 border border-slate-700/80 shadow-2xl backdrop-blur-xl w-[315px] xxs:w-[340px] sm:w-[370px] max-w-[calc(100vw-1.5rem)] text-xs space-y-2.5" onclick="event.stopPropagation()">
         <div class="flex items-center justify-between px-1 pb-1.5 border-b border-white/10 gap-2">
             <span id="footer-menu-title" data-i18n="footer_menu_title" class="font-bold text-slate-400 text-[10px] uppercase tracking-wider truncate">Navigation &amp; Rechtliches</span>
-            <span id="footer-menu-hint" class="text-[9px] text-pink-400 font-mono font-bold shrink-0 whitespace-nowrap">v24.214.0</span>
+            <span id="footer-menu-hint" class="text-[9px] text-pink-400 font-mono font-bold shrink-0 whitespace-nowrap">v24.215.0</span>
         </div>
         <div class="grid grid-cols-2 gap-2 text-left">
             <button onclick="openEpicWhatsNewTour(false); toggleFooterMenu(false)" id="footer-whats-new-btn" class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/90 text-slate-200 hover:text-white font-medium flex items-center gap-2 transition-all active:scale-[0.98]">
@@ -8682,7 +8682,7 @@ html.gp-android:not(.dark) #ui-controls {
     <div id="footer-bubble" class="fixed z-[91] inline-flex items-center justify-center gap-1.5 sm:gap-3 px-3 sm:px-6 rounded-full bg-slate-900/85 backdrop-blur-xl border border-white/15 shadow-xl text-[10px] xs:text-xs sm:text-sm text-slate-300 select-none opacity-0 pointer-events-none">
         <span id="footer-established" class="font-bold tracking-tight text-slate-300 whitespace-nowrap">© 2026 GAMINGPIG</span>
         <span class="text-white/20 select-none">•</span>
-        <span id="footer-version-label" class="font-mono font-bold text-pink-400 whitespace-nowrap">v24.214.0</span>
+        <span id="footer-version-label" class="font-mono font-bold text-pink-400 whitespace-nowrap">v24.215.0</span>
         <span class="text-white/20 select-none">•</span>
         <button id="footer-menu-toggle-btn" onclick="toggleFooterMenu()" class="text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1 sm:gap-1.5 transition-all px-1.5 sm:px-2 py-1 rounded-full hover:bg-white/10 active:scale-95 whitespace-nowrap" aria-expanded="false" aria-label="Mehr Menü öffnen">
             <span id="footer-more-label">Mehr</span>
@@ -9911,20 +9911,28 @@ html.gp-android:not(.dark) #ui-controls {
     </div>
 </div>
 
-<!-- Global Standalone Website Settings Modal (Android Settings Style) -->
+<!-- Global Standalone Website Settings Modal (Android Settings Style with Drilldown) -->
 <div id="global-settings-menu" class="fixed top-[calc(env(safe-area-inset-top,0px)+4.5rem)] right-2 xs:right-4 sm:right-6 bg-slate-900/95 border border-slate-700/80 rounded-3xl p-3.5 sm:p-5 shadow-2xl backdrop-blur-2xl hidden flex flex-col gap-3.5 w-[94vw] xs:w-[390px] sm:w-[440px] md:w-[470px] max-w-[calc(100vw-1rem)] z-[10000] origin-top-right max-h-[85vh] overflow-y-auto" style="-webkit-overflow-scrolling: touch; overscroll-behavior-y: contain;" onclick="event.stopPropagation()">
     <!-- Header -->
     <div class="flex items-center justify-between pb-2.5 border-b border-white/10 shrink-0 sticky top-0 bg-slate-900/95 backdrop-blur-md z-20 -mx-1 px-1">
-        <div class="flex items-center gap-2.5">
-            <div class="w-9 h-9 rounded-2xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-lg shadow-sm">
+        <!-- Main title view -->
+        <div id="settings-header-main" class="flex items-center gap-2.5 min-w-0">
+            <div class="w-9 h-9 rounded-2xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-lg shadow-sm shrink-0">
                 ⚙️
             </div>
-            <div>
-                <span id="global-settings-title" class="text-sm sm:text-base font-extrabold tracking-tight text-white block" data-i18n="settings_title">Website-Einstellungen</span>
+            <div class="min-w-0">
+                <span id="global-settings-title" class="text-sm sm:text-base font-extrabold tracking-tight text-white block truncate" data-i18n="settings_title">Website-Einstellungen</span>
                 <span class="text-[11px] text-slate-400 font-medium hidden xs:block">System &amp; Personalisierung</span>
             </div>
         </div>
-        <button onclick="toggleStandaloneSettings(event)" class="w-10 h-10 rounded-2xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition-all text-sm font-bold flex items-center justify-center active:scale-95 cursor-pointer border border-white/5" aria-label="Schließen">✕</button>
+        <!-- Subpage back button view (hidden initially) -->
+        <div id="settings-header-subpage" class="hidden flex items-center gap-2 min-w-0">
+            <button type="button" onclick="closeSettingsCategory()" class="min-h-[40px] px-3 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 text-xs sm:text-sm font-bold flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer border border-white/10 shrink-0" aria-label="Zurück zur Übersicht">
+                <span>←</span> <span>Zurück</span>
+            </button>
+            <span id="settings-subpage-title" class="text-xs sm:text-sm font-bold text-white truncate max-w-[170px] xs:max-w-[210px]">Kategorie</span>
+        </div>
+        <button type="button" onclick="toggleStandaloneSettings(event)" class="w-10 h-10 rounded-2xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition-all text-sm font-bold flex items-center justify-center active:scale-95 cursor-pointer border border-white/5 shrink-0" aria-label="Schließen">✕</button>
     </div>
 
     <!-- 🔍 Android-Style Search Bar -->
@@ -9939,311 +9947,433 @@ html.gp-android:not(.dark) #ui-controls {
         <div class="text-xs text-slate-400">Versuche einen anderen Suchbegriff</div>
     </div>
 
-    <!-- 📱 KATEGORIE 1: SYSTEM & UPDATES -->
-    <div class="settings-category space-y-2">
-        <div class="flex items-center gap-2 px-1 text-xs font-bold uppercase tracking-wider text-blue-400">
-            <span>📱</span> <span>System &amp; Updates</span>
-        </div>
-        <div id="settings-update-card" class="settings-item p-3.5 rounded-2xl bg-slate-800/60 border border-white/10 flex flex-col gap-3">
-            <div class="flex items-center justify-between gap-2">
-                <div class="flex items-center gap-3 min-w-0">
-                    <div class="w-10 h-10 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-lg shrink-0">
-                        📱
+    <!-- 📋 KATEGORIEN-ÜBERSICHT (TOP-LEVEL ANSICHT) -->
+    <div id="settings-categories-list" class="space-y-2.5">
+        <!-- Tile 1: System & Updates -->
+        <button type="button" onclick="openSettingsCategory('cat-system')" class="settings-category-tile w-full text-left p-3.5 rounded-2xl bg-slate-800/60 hover:bg-slate-800/90 border border-white/10 flex items-center justify-between gap-3 transition-all active:scale-98 cursor-pointer group">
+            <div class="flex items-center gap-3 min-w-0">
+                <div class="w-10 h-10 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-lg shrink-0">📱</div>
+                <div class="min-w-0">
+                    <div class="text-xs sm:text-sm font-bold text-slate-100 flex items-center gap-2">
+                        <span>System &amp; Updates</span>
+                        <span id="tile-update-badge" class="hidden px-2 py-0.5 rounded-full bg-blue-500 text-white text-[10px] font-bold animate-pulse">Update</span>
                     </div>
-                    <div class="min-w-0">
-                        <div class="text-xs sm:text-sm font-bold text-slate-100">System-Update</div>
-                        <div id="settings-update-current-ver" class="text-xs text-slate-400 font-mono truncate">Installiert: v24.214.0</div>
-                    </div>
+                    <div class="text-xs text-slate-400 truncate">Software-Update, Version &amp; Release-Prüfung</div>
                 </div>
-                <span id="settings-update-status-pill" class="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-bold whitespace-nowrap shrink-0">Aktuell ✓</span>
             </div>
+            <span class="text-slate-400 group-hover:text-white group-hover:translate-x-0.5 transition-all text-base shrink-0 font-bold">›</span>
+        </button>
 
-            <!-- Detail-Container: Wenn Update verfügbar ist -->
-            <div id="settings-update-available-box" class="hidden p-3 rounded-xl bg-blue-950/40 border border-blue-500/30 flex flex-col gap-2">
-                <div class="flex items-center justify-between">
-                    <span id="settings-update-new-ver-title" class="text-xs sm:text-sm font-bold text-blue-300">Version verfügbar</span>
-                    <span class="text-[10px] sm:text-xs text-pink-400 font-mono font-bold px-2 py-0.5 rounded-full bg-pink-500/10 border border-pink-500/20 animate-pulse">Neu</span>
+        <!-- Tile 2: Darstellung & Display -->
+        <button type="button" onclick="openSettingsCategory('cat-display')" class="settings-category-tile w-full text-left p-3.5 rounded-2xl bg-slate-800/60 hover:bg-slate-800/90 border border-white/10 flex items-center justify-between gap-3 transition-all active:scale-98 cursor-pointer group">
+            <div class="flex items-center gap-3 min-w-0">
+                <div class="w-10 h-10 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-lg shrink-0">🎨</div>
+                <div class="min-w-0">
+                    <div class="text-xs sm:text-sm font-bold text-slate-100">Darstellung &amp; Display</div>
+                    <div class="text-xs text-slate-400 truncate">Zoom, Dark/Light, 60 FPS, Liquid Glass &amp; Flackerschutz</div>
                 </div>
-                <ul id="settings-update-short-notes" class="text-xs text-slate-300 space-y-1 list-disc list-inside leading-relaxed"></ul>
-                <a href="release.html" target="_blank" rel="noopener noreferrer" class="text-xs text-blue-400 hover:text-blue-300 underline font-semibold mt-0.5 inline-block">Vollständige Release Notes ansehen ↗</a>
-                <button onclick="applyPendingUpdate()" id="btn-settings-apply-update" class="mt-1 w-full min-h-[44px] py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs sm:text-sm transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
-                    <span>⚡</span> <span>Jetzt aktualisieren &amp; neu laden</span>
-                </button>
             </div>
+            <span class="text-slate-400 group-hover:text-white group-hover:translate-x-0.5 transition-all text-base shrink-0 font-bold">›</span>
+        </button>
 
-            <!-- Suche & Zeitstempel -->
-            <div class="flex items-center justify-between text-xs text-slate-400 pt-1 border-t border-white/5">
-                <span id="settings-update-last-checked" class="truncate">Zuletzt geprüft: Gerade eben</span>
-                <button onclick="manualCheckForUpdates(true)" id="btn-manual-update-check" class="min-h-[38px] px-3 py-1.5 rounded-xl bg-slate-700/80 hover:bg-slate-600 text-slate-200 font-semibold transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer text-xs shrink-0">
-                    <span id="manual-check-spinner" class="inline-block transition-transform duration-500">🔄</span> <span>Prüfen</span>
-                </button>
+        <!-- Tile 3: Animationen & Feedback -->
+        <button type="button" onclick="openSettingsCategory('cat-animations')" class="settings-category-tile w-full text-left p-3.5 rounded-2xl bg-slate-800/60 hover:bg-slate-800/90 border border-white/10 flex items-center justify-between gap-3 transition-all active:scale-98 cursor-pointer group">
+            <div class="flex items-center gap-3 min-w-0">
+                <div class="w-10 h-10 rounded-xl bg-teal-500/15 border border-teal-500/30 flex items-center justify-center text-lg shrink-0">🎭</div>
+                <div class="min-w-0">
+                    <div class="text-xs sm:text-sm font-bold text-slate-100">Animationen &amp; Feedback</div>
+                    <div class="text-xs text-slate-400 truncate">Animationsstil, UI-Sounds &amp; Haptik</div>
+                </div>
             </div>
-        </div>
+            <span class="text-slate-400 group-hover:text-white group-hover:translate-x-0.5 transition-all text-base shrink-0 font-bold">›</span>
+        </button>
+
+        <!-- Tile 4: StandBy-Display (Lockscreen) -->
+        <button type="button" onclick="openSettingsCategory('cat-standby')" class="settings-category-tile w-full text-left p-3.5 rounded-2xl bg-slate-800/60 hover:bg-slate-800/90 border border-white/10 flex items-center justify-between gap-3 transition-all active:scale-98 cursor-pointer group">
+            <div class="flex items-center gap-3 min-w-0">
+                <div class="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-lg shrink-0">⏰</div>
+                <div class="min-w-0">
+                    <div class="text-xs sm:text-sm font-bold text-slate-100">StandBy-Display</div>
+                    <div class="text-xs text-slate-400 truncate">Lockscreen-Designs, Schärfe, Wake Lock &amp; Code</div>
+                </div>
+            </div>
+            <span class="text-slate-400 group-hover:text-white group-hover:translate-x-0.5 transition-all text-base shrink-0 font-bold">›</span>
+        </button>
+
+        <!-- Tile 5: Audio & Medien -->
+        <button type="button" onclick="openSettingsCategory('cat-audio')" class="settings-category-tile w-full text-left p-3.5 rounded-2xl bg-slate-800/60 hover:bg-slate-800/90 border border-white/10 flex items-center justify-between gap-3 transition-all active:scale-98 cursor-pointer group">
+            <div class="flex items-center gap-3 min-w-0">
+                <div class="w-10 h-10 rounded-xl bg-pink-500/15 border border-pink-500/30 flex items-center justify-center text-lg shrink-0">🎵</div>
+                <div class="min-w-0">
+                    <div class="text-xs sm:text-sm font-bold text-slate-100">Audio &amp; Medien</div>
+                    <div class="text-xs text-slate-400 truncate">Songtext-Dashboard Shortcut &amp; Benachrichtigungen</div>
+                </div>
+            </div>
+            <span class="text-slate-400 group-hover:text-white group-hover:translate-x-0.5 transition-all text-base shrink-0 font-bold">›</span>
+        </button>
+
+        <!-- Tile 6: Wiederherstellung & Onboarding (Kombiniert!) -->
+        <button type="button" onclick="openSettingsCategory('cat-recovery')" class="settings-category-tile w-full text-left p-3.5 rounded-2xl bg-slate-800/60 hover:bg-slate-800/90 border border-white/10 flex items-center justify-between gap-3 transition-all active:scale-98 cursor-pointer group">
+            <div class="flex items-center gap-3 min-w-0">
+                <div class="w-10 h-10 rounded-xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-lg shrink-0">🔄</div>
+                <div class="min-w-0">
+                    <div class="text-xs sm:text-sm font-bold text-slate-100">Wiederherstellung &amp; Onboarding</div>
+                    <div class="text-xs text-slate-400 truncate">Tutorial, 5-Stufen Onboarding &amp; Erstbesuch-Reset</div>
+                </div>
+            </div>
+            <span class="text-slate-400 group-hover:text-white group-hover:translate-x-0.5 transition-all text-base shrink-0 font-bold">›</span>
+        </button>
+
+        <!-- Tile 7: System-Info (NEU!) -->
+        <button type="button" onclick="openSettingsCategory('cat-info')" class="settings-category-tile w-full text-left p-3.5 rounded-2xl bg-slate-800/60 hover:bg-slate-800/90 border border-white/10 flex items-center justify-between gap-3 transition-all active:scale-98 cursor-pointer group">
+            <div class="flex items-center gap-3 min-w-0">
+                <div class="w-10 h-10 rounded-xl bg-slate-500/15 border border-slate-500/30 flex items-center justify-center text-lg shrink-0">ℹ️</div>
+                <div class="min-w-0">
+                    <div class="text-xs sm:text-sm font-bold text-slate-100">System-Info</div>
+                    <div class="text-xs text-slate-400 truncate">Version, Build-Nummer &amp; Systemdetails</div>
+                </div>
+            </div>
+            <span class="text-slate-400 group-hover:text-white group-hover:translate-x-0.5 transition-all text-base shrink-0 font-bold">›</span>
+        </button>
+
+        <!-- Tile 8: Entwickleroptionen (Wird nach 7x Tippen sichtbar!) -->
+        <button id="cat-tile-developer" type="button" onclick="openSettingsCategory('cat-developer')" class="settings-category-tile hidden w-full text-left p-3.5 rounded-2xl bg-amber-950/40 hover:bg-amber-900/50 border border-amber-500/30 flex items-center justify-between gap-3 transition-all active:scale-98 cursor-pointer group">
+            <div class="flex items-center gap-3 min-w-0">
+                <div class="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-lg shrink-0">🛠️</div>
+                <div class="min-w-0">
+                    <div class="text-xs sm:text-sm font-bold text-amber-300">Entwickleroptionen</div>
+                    <div class="text-xs text-slate-400 truncate">Diagnose, Mock-Updates, Stabilitätstest</div>
+                </div>
+            </div>
+            <span class="text-amber-400 group-hover:translate-x-0.5 transition-all text-base shrink-0 font-bold">›</span>
+        </button>
     </div>
 
-    <!-- 🎨 KATEGORIE 2: DARSTELLUNG & DESIGN -->
-    <div class="settings-category space-y-2.5">
-        <div class="flex items-center gap-2 px-1 text-xs font-bold uppercase tracking-wider text-purple-400">
-            <span>🎨</span> <span>Darstellung &amp; Design</span>
+    <!-- 📂 SUBPAGE-CONTAINER (DETAIL-ANSICHTEN DER KATEGORIEN) -->
+    <div id="settings-subpages-container" class="hidden space-y-3">
+        <!-- SUBPAGE 1: SYSTEM & UPDATES -->
+        <div id="subpage-cat-system" class="settings-category settings-subpage hidden space-y-3">
+            <div id="settings-update-card" class="settings-item p-3.5 rounded-2xl bg-slate-800/60 border border-white/10 flex flex-col gap-3">
+                <div class="flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-10 h-10 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-lg shrink-0">📱</div>
+                        <div class="min-w-0">
+                            <div class="text-xs sm:text-sm font-bold text-slate-100">System-Update</div>
+                            <div id="settings-update-current-ver" class="text-xs text-slate-400 font-mono truncate">Installiert: v24.215.0</div>
+                        </div>
+                    </div>
+                    <span id="settings-update-status-pill" class="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-bold whitespace-nowrap shrink-0">Aktuell ✓</span>
+                </div>
+
+                <!-- Detail-Container: Wenn Update verfügbar ist -->
+                <div id="settings-update-available-box" class="hidden p-3 rounded-xl bg-blue-950/40 border border-blue-500/30 flex flex-col gap-2">
+                    <div class="flex items-center justify-between">
+                        <span id="settings-update-new-ver-title" class="text-xs sm:text-sm font-bold text-blue-300">Version verfügbar</span>
+                        <span class="text-[10px] sm:text-xs text-pink-400 font-mono font-bold px-2 py-0.5 rounded-full bg-pink-500/10 border border-pink-500/20 animate-pulse">Neu</span>
+                    </div>
+                    <ul id="settings-update-short-notes" class="text-xs text-slate-300 space-y-1 list-disc list-inside leading-relaxed"></ul>
+                    <a href="release.html" target="_blank" rel="noopener noreferrer" class="text-xs text-blue-400 hover:text-blue-300 underline font-semibold mt-0.5 inline-block">Vollständige Release Notes ansehen ↗</a>
+                    <button onclick="applyPendingUpdate()" id="btn-settings-apply-update" class="mt-1 w-full min-h-[44px] py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs sm:text-sm transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
+                        <span>⚡</span> <span>Jetzt aktualisieren &amp; neu laden</span>
+                    </button>
+                </div>
+
+                <!-- Suche & Zeitstempel -->
+                <div class="flex items-center justify-between text-xs text-slate-400 pt-1 border-t border-white/5">
+                    <span id="settings-update-last-checked" class="truncate">Zuletzt geprüft: Gerade eben</span>
+                    <button onclick="manualCheckForUpdates(true)" id="btn-manual-update-check" class="min-h-[38px] px-3 py-1.5 rounded-xl bg-slate-700/80 hover:bg-slate-600 text-slate-200 font-semibold transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer text-xs shrink-0">
+                        <span id="manual-check-spinner" class="inline-block transition-transform duration-500">🔄</span> <span>Prüfen</span>
+                    </button>
+                </div>
+            </div>
         </div>
 
-        <!-- Darstellungs-Größe (Zoom / Skalierung) -->
-        <div class="settings-item p-3.5 rounded-2xl bg-slate-800/60 border border-white/10 space-y-2">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2.5">
-                    <div class="w-8 h-8 rounded-lg bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-sm shrink-0">
-                        🔍
+        <!-- SUBPAGE 2: DARSTELLUNG & DISPLAY -->
+        <div id="subpage-cat-display" class="settings-category settings-subpage hidden space-y-3">
+            <!-- Darstellungs-Größe (Zoom / Skalierung) -->
+            <div class="settings-item p-3.5 rounded-2xl bg-slate-800/60 border border-white/10 space-y-2">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-lg bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-sm shrink-0">🔍</div>
+                        <div>
+                            <label for="app-zoom-slider" class="text-xs sm:text-sm font-bold text-slate-100 block">Darstellungs-Größe</label>
+                            <span class="text-xs text-slate-400">Zoom &amp; UI-Skalierung</span>
+                        </div>
                     </div>
+                    <div class="flex items-center gap-2">
+                        <span id="app-zoom-val" class="text-xs font-mono font-bold text-purple-300 bg-purple-500/20 px-2.5 py-1 rounded-lg border border-purple-500/30">100%</span>
+                        <button onclick="resetAppZoom()" class="min-h-[34px] px-2.5 py-1 rounded-lg bg-slate-700/80 hover:bg-slate-600 text-slate-200 text-xs font-bold transition-colors cursor-pointer">Reset</button>
+                    </div>
+                </div>
+                <input type="range" id="app-zoom-slider" min="0.85" max="1.40" step="0.05" value="1.0" oninput="changeAppZoom(this.value)" class="w-full accent-purple-500 cursor-pointer h-2 bg-slate-700 rounded-lg">
+                <div class="flex justify-between text-[11px] text-slate-400 font-mono px-0.5">
+                    <span>85%</span>
+                    <span>100% (Standard)</span>
+                    <span>140%</span>
+                </div>
+            </div>
+
+            <!-- Theme, Performance, Liquid Glass Grid -->
+            <div class="settings-item p-3.5 rounded-2xl bg-slate-800/60 border border-white/10 space-y-2.5">
+                <div class="text-xs font-bold text-slate-300">Darstellungs-Modus &amp; Grafik</div>
+                <div class="grid grid-cols-2 gap-2 w-full">
+                    <button onclick="toggleSiteTheme()" id="btn-toggle-theme" class="min-h-[44px] text-center text-xs sm:text-sm text-blue-300 px-3 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-blue-500/30 transition-all font-bold truncate active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
+                        <span>🌙</span> <span>Dunkel</span>
+                    </button>
+                    <button onclick="toggleSitePerf()" id="btn-toggle-perf" class="min-h-[44px] text-center text-xs sm:text-sm text-green-400 px-3 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-green-500/30 transition-all font-bold truncate active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
+                        <span>🚀</span> <span>60 FPS</span>
+                    </button>
+                    <button onclick="toggleSiteLiquid()" id="btn-toggle-liquid" class="col-span-2 min-h-[44px] text-center text-xs sm:text-sm text-cyan-300 px-3 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-cyan-500/30 transition-all font-bold truncate active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
+                        <span>💧</span> <span>Liquid Glass</span>
+                    </button>
+                </div>
+
+                <!-- Pixel-Flacker-Schutz -->
+                <div id="pixel-guard-card" class="flex flex-col gap-2 p-2.5 rounded-xl bg-slate-900/80 border border-indigo-500/25 mt-1">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                            <span>🛡️</span> <span>Pixel-Flacker-Schutz</span>
+                        </span>
+                        <span id="pixel-guard-badge" class="text-xs font-mono font-bold px-2 py-0.5 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Auto (Shield)</span>
+                    </div>
+                    <div class="grid grid-cols-3 gap-1.5">
+                        <button type="button" onclick="window.PixelFlickerGuard.setStrategy('auto')" id="btn-strat-auto" class="min-h-[38px] text-xs py-1.5 px-2 rounded-xl border text-center font-bold transition-all bg-indigo-600/30 border-indigo-500 text-white cursor-pointer active:scale-95">Auto</button>
+                        <button type="button" onclick="window.PixelFlickerGuard.setStrategy('shield')" id="btn-strat-shield" class="min-h-[38px] text-xs py-1.5 px-2 rounded-xl border text-center font-bold transition-all bg-slate-800/80 border-slate-700 text-slate-300 hover:text-white cursor-pointer active:scale-95">Shield</button>
+                        <button type="button" onclick="window.PixelFlickerGuard.setStrategy('fluid')" id="btn-strat-fluid" class="min-h-[38px] text-xs py-1.5 px-2 rounded-xl border text-center font-bold transition-all bg-slate-800/80 border-slate-700 text-slate-300 hover:text-white cursor-pointer active:scale-95">Fluid</button>
+                    </div>
+                    <div class="flex items-center justify-between text-xs text-slate-400 px-0.5 pt-0.5">
+                        <span id="pixel-guard-metric">Echtzeit-Jitter: &lt; 2ms ✓</span>
+                        <button type="button" onclick="window.PixelFlickerGuard.runDiagnostic(true)" class="text-indigo-400 hover:text-indigo-300 underline font-bold cursor-pointer">Stabilitätstest</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SUBPAGE 3: ANIMATIONEN & FEEDBACK -->
+        <div id="subpage-cat-animations" class="settings-category settings-subpage hidden space-y-3">
+            <div class="settings-item p-3.5 rounded-2xl bg-slate-800/60 border border-white/10 space-y-3">
+                <div>
+                    <label for="app-animation-style-select" class="text-xs sm:text-sm font-bold text-slate-200 block mb-1.5">Animationsstil</label>
+                    <select id="app-animation-style-select" onchange="setAnimationStyle(this.value)" class="w-full min-h-[44px] text-xs sm:text-sm bg-slate-800 text-indigo-300 border border-slate-700 rounded-xl px-3 py-2.5 font-bold cursor-pointer">
+                        <option value="smooth">Smooth (Cubic 250ms)</option>
+                        <option value="dynamic">Dynamic (Spring &amp; Bounce)</option>
+                        <option value="minimal">Minimal (Micro-Fade 110ms)</option>
+                        <option value="reduced">Reduced (Aus / 0ms)</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-2 w-full pt-1">
+                    <button onclick="toggleUiSoundEnabled()" id="btn-toggle-sound" class="min-h-[44px] text-center text-xs sm:text-sm text-teal-400 px-3 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-teal-500/20 transition-all font-bold whitespace-nowrap active:scale-95 cursor-pointer">UI-Sounds: AN</button>
+                    <button onclick="toggleHapticEnabled()" id="btn-toggle-haptic" class="min-h-[44px] text-center text-xs sm:text-sm text-teal-400 px-3 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-teal-500/20 transition-all font-bold whitespace-nowrap active:scale-95 cursor-pointer">Haptik: AN</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SUBPAGE 4: STANDBY-DISPLAY -->
+        <div id="subpage-cat-standby" class="settings-category settings-subpage hidden space-y-3">
+            <div class="settings-item p-3.5 rounded-2xl bg-slate-800/60 border border-white/10 space-y-3">
+                <div>
+                    <label for="standby-design-select" id="label-standby-design" class="text-xs sm:text-sm font-bold text-slate-200 block mb-1.5">StandBy-Design</label>
+                    <select id="standby-design-select" onchange="changeStandbyDesign(this.value)" class="w-full min-h-[44px] text-xs sm:text-sm bg-slate-800 text-teal-300 border border-slate-700 rounded-xl px-3 py-2.5 font-bold cursor-pointer">
+                        <option value="classic" id="opt-standby-design-classic">🍎 Apple Classic</option>
+                        <option value="vinyl" id="opt-standby-design-vinyl">💿 Vinyl Plattenspieler</option>
+                        <option value="giant-clock" id="opt-standby-design-giant-clock">⏰ Riesen-Uhr (Monolith)</option>
+                        <option value="cyberpunk" id="opt-standby-design-cyberpunk">⚡ Cyberpunk HUD</option>
+                        <option value="cover-focus" id="opt-standby-design-cover-focus">🖼️ Album Art Hero</option>
+                        <option value="cassette" id="opt-standby-design-cassette">📼 Retro-Kassette</option>
+                        <option value="oled" id="opt-standby-design-oled">🖤 True OLED (Pitch Black)</option>
+                        <option value="aurora" id="opt-standby-design-aurora">🌌 Nordlicht Aurora</option>
+                    </select>
+                </div>
+
+                <!-- Schärfe & Skalierung -->
+                <div class="space-y-2 pt-1">
                     <div>
-                        <label for="app-zoom-slider" class="text-xs sm:text-sm font-bold text-slate-100 block">Darstellungs-Größe</label>
-                        <span class="text-xs text-slate-400">Zoom &amp; UI-Skalierung</span>
+                        <div class="flex items-center justify-between mb-1">
+                            <label for="standby-opacity-slider" id="label-standby-opacity" class="text-xs font-bold text-slate-300">StandBy-Bild schärfer</label>
+                            <span id="standby-opacity-value" class="text-xs font-mono text-slate-400">0%</span>
+                        </div>
+                        <input type="range" id="standby-opacity-slider" min="0" max="100" step="5" value="0" class="w-full accent-blue-500 cursor-pointer h-2 bg-slate-700 rounded-lg" oninput="updateStandbyOpacity(this.value)">
+                    </div>
+
+                    <div>
+                        <div class="flex items-center justify-between mb-1">
+                            <label for="standby-scale-slider" id="label-standby-scale" class="text-xs font-bold text-slate-300">StandBy-Größe</label>
+                            <span id="standby-scale-label" class="text-xs text-teal-400 font-mono">100%</span>
+                        </div>
+                        <input type="range" id="standby-scale-slider" min="0.6" max="1.3" step="0.05" value="1" oninput="changeStandbyManualScale(this.value)" class="w-full cursor-pointer h-2 bg-slate-700 rounded-lg">
+                        <p id="settings-standby-scale-hint" class="text-xs text-slate-400 leading-snug mt-1">Passt sich automatisch an deinen Bildschirm an – hier nur bei Bedarf feinjustieren.</p>
                     </div>
                 </div>
-                <div class="flex items-center gap-2">
-                    <span id="app-zoom-val" class="text-xs font-mono font-bold text-purple-300 bg-purple-500/20 px-2.5 py-1 rounded-lg border border-purple-500/30">100%</span>
-                    <button onclick="resetAppZoom()" class="min-h-[34px] px-2.5 py-1 rounded-lg bg-slate-700/80 hover:bg-slate-600 text-slate-200 text-xs font-bold transition-colors cursor-pointer">Reset</button>
+
+                <!-- Wake Lock Button -->
+                <div class="pt-1">
+                    <button onclick="toggleStandbyWakeLock()" id="btn-toggle-wakelock" class="w-full min-h-[44px] text-left text-xs sm:text-sm text-teal-400 px-3 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-teal-500/20 transition-all font-bold cursor-pointer active:scale-98">Bildschirm an (StandBy): AN</button>
+                    <p id="settings-wakelock-hint" class="text-xs text-slate-400 px-1 leading-snug mt-1">Hält den Bildschirm nur wach, solange Musik läuft – pausiert sie, darf das Handy normal einschlafen.</p>
                 </div>
-            </div>
-            <input type="range" id="app-zoom-slider" min="0.85" max="1.40" step="0.05" value="1.0" oninput="changeAppZoom(this.value)" class="w-full accent-purple-500 cursor-pointer h-2 bg-slate-700 rounded-lg">
-            <div class="flex justify-between text-[11px] text-slate-400 font-mono px-0.5">
-                <span>85%</span>
-                <span>100% (Standard)</span>
-                <span>140%</span>
-            </div>
-        </div>
 
-        <!-- Theme, Performance, Liquid Glass Grid -->
-        <div class="settings-item p-3.5 rounded-2xl bg-slate-800/60 border border-white/10 space-y-2.5">
-            <div class="text-xs font-bold text-slate-300">Darstellungs-Modus &amp; Grafik</div>
-            <div class="grid grid-cols-2 gap-2 w-full">
-                <button onclick="toggleSiteTheme()" id="btn-toggle-theme" class="min-h-[44px] text-center text-xs sm:text-sm text-blue-300 px-3 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-blue-500/30 transition-all font-bold truncate active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
-                    <span>🌙</span> <span>Dunkel</span>
-                </button>
-                <button onclick="toggleSitePerf()" id="btn-toggle-perf" class="min-h-[44px] text-center text-xs sm:text-sm text-green-400 px-3 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-green-500/30 transition-all font-bold truncate active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
-                    <span>🚀</span> <span>60 FPS</span>
-                </button>
-                <button onclick="toggleSiteLiquid()" id="btn-toggle-liquid" class="col-span-2 min-h-[44px] text-center text-xs sm:text-sm text-cyan-300 px-3 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-cyan-500/30 transition-all font-bold truncate active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
-                    <span>💧</span> <span>Liquid Glass</span>
-                </button>
-            </div>
-
-            <!-- Pixel-Flacker-Schutz -->
-            <div id="pixel-guard-card" class="flex flex-col gap-2 p-2.5 rounded-xl bg-slate-900/80 border border-indigo-500/25 mt-1">
-                <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                        <span>🛡️</span> <span>Pixel-Flacker-Schutz</span>
-                    </span>
-                    <span id="pixel-guard-badge" class="text-xs font-mono font-bold px-2 py-0.5 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Auto (Shield)</span>
-                </div>
-                <div class="grid grid-cols-3 gap-1.5">
-                    <button type="button" onclick="window.PixelFlickerGuard.setStrategy('auto')" id="btn-strat-auto" class="min-h-[38px] text-xs py-1.5 px-2 rounded-xl border text-center font-bold transition-all bg-indigo-600/30 border-indigo-500 text-white cursor-pointer active:scale-95">Auto</button>
-                    <button type="button" onclick="window.PixelFlickerGuard.setStrategy('shield')" id="btn-strat-shield" class="min-h-[38px] text-xs py-1.5 px-2 rounded-xl border text-center font-bold transition-all bg-slate-800/80 border-slate-700 text-slate-300 hover:text-white cursor-pointer active:scale-95">Shield</button>
-                    <button type="button" onclick="window.PixelFlickerGuard.setStrategy('fluid')" id="btn-strat-fluid" class="min-h-[38px] text-xs py-1.5 px-2 rounded-xl border text-center font-bold transition-all bg-slate-800/80 border-slate-700 text-slate-300 hover:text-white cursor-pointer active:scale-95">Fluid</button>
-                </div>
-                <div class="flex items-center justify-between text-xs text-slate-400 px-0.5 pt-0.5">
-                    <span id="pixel-guard-metric">Echtzeit-Jitter: &lt; 2ms ✓</span>
-                    <button type="button" onclick="window.PixelFlickerGuard.runDiagnostic(true)" class="text-indigo-400 hover:text-indigo-300 underline font-bold cursor-pointer">Stabilitätstest</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 🎭 KATEGORIE 3: ANIMATIONEN & FEEDBACK -->
-    <div class="settings-category space-y-2.5">
-        <div class="flex items-center gap-2 px-1 text-xs font-bold uppercase tracking-wider text-teal-400">
-            <span>🎭</span> <span>Animationen &amp; Feedback</span>
-        </div>
-        <div class="settings-item p-3.5 rounded-2xl bg-slate-800/60 border border-white/10 space-y-3">
-            <div>
-                <label for="app-animation-style-select" class="text-xs sm:text-sm font-bold text-slate-200 block mb-1.5">Animationsstil</label>
-                <select id="app-animation-style-select" onchange="setAnimationStyle(this.value)" class="w-full min-h-[44px] text-xs sm:text-sm bg-slate-800 text-indigo-300 border border-slate-700 rounded-xl px-3 py-2.5 font-bold cursor-pointer">
-                    <option value="smooth">Smooth (Cubic 250ms)</option>
-                    <option value="dynamic">Dynamic (Spring &amp; Bounce)</option>
-                    <option value="minimal">Minimal (Micro-Fade 110ms)</option>
-                    <option value="reduced">Reduced (Aus / 0ms)</option>
-                </select>
-            </div>
-            <div class="grid grid-cols-2 gap-2 w-full pt-1">
-                <button onclick="toggleUiSoundEnabled()" id="btn-toggle-sound" class="min-h-[44px] text-center text-xs sm:text-sm text-teal-400 px-3 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-teal-500/20 transition-all font-bold whitespace-nowrap active:scale-95 cursor-pointer">UI-Sounds: AN</button>
-                <button onclick="toggleHapticEnabled()" id="btn-toggle-haptic" class="min-h-[44px] text-center text-xs sm:text-sm text-teal-400 px-3 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-teal-500/20 transition-all font-bold whitespace-nowrap active:scale-95 cursor-pointer">Haptik: AN</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ⏰ KATEGORIE 4: STANDBY-DISPLAY -->
-    <div class="settings-category space-y-2.5">
-        <div class="flex items-center gap-2 px-1 text-xs font-bold uppercase tracking-wider text-amber-400">
-            <span>⏰</span> <span>StandBy-Display (Lockscreen)</span>
-        </div>
-        <div class="settings-item p-3.5 rounded-2xl bg-slate-800/60 border border-white/10 space-y-3">
-            <div>
-                <label for="standby-design-select" id="label-standby-design" class="text-xs sm:text-sm font-bold text-slate-200 block mb-1.5">StandBy-Design</label>
-                <select id="standby-design-select" onchange="changeStandbyDesign(this.value)" class="w-full min-h-[44px] text-xs sm:text-sm bg-slate-800 text-teal-300 border border-slate-700 rounded-xl px-3 py-2.5 font-bold cursor-pointer">
-                    <option value="classic" id="opt-standby-design-classic">🍎 Apple Classic</option>
-                    <option value="vinyl" id="opt-standby-design-vinyl">💿 Vinyl Plattenspieler</option>
-                    <option value="giant-clock" id="opt-standby-design-giant-clock">⏰ Riesen-Uhr (Monolith)</option>
-                    <option value="cyberpunk" id="opt-standby-design-cyberpunk">⚡ Cyberpunk HUD</option>
-                    <option value="cover-focus" id="opt-standby-design-cover-focus">🖼️ Album Art Hero</option>
-                    <option value="cassette" id="opt-standby-design-cassette">📼 Retro-Kassette</option>
-                    <option value="oled" id="opt-standby-design-oled">🖤 True OLED (Pitch Black)</option>
-                    <option value="aurora" id="opt-standby-design-aurora">🌌 Nordlicht Aurora</option>
-                </select>
-            </div>
-
-            <!-- Schärfe & Skalierung -->
-            <div class="space-y-2 pt-1">
-                <div>
-                    <div class="flex items-center justify-between mb-1">
-                        <label for="standby-opacity-slider" id="label-standby-opacity" class="text-xs font-bold text-slate-300">StandBy-Bild schärfer</label>
-                        <span id="standby-opacity-value" class="text-xs font-mono text-slate-400">0%</span>
+                <!-- Akzentfarbe & Radius -->
+                <div class="space-y-2 pt-1 border-t border-white/5">
+                    <div class="flex items-center justify-between gap-3">
+                        <label for="standby-accent-input" id="label-standby-accent" class="text-xs sm:text-sm font-bold text-slate-300">Akzentfarbe</label>
+                        <input type="color" id="standby-accent-input" value="#ffffff" onchange="changeStandbyAccent(this.value)" class="h-9 w-12 rounded-xl border border-slate-700 bg-slate-800 cursor-pointer">
                     </div>
-                    <input type="range" id="standby-opacity-slider" min="0" max="100" step="5" value="0" class="w-full accent-blue-500 cursor-pointer h-2 bg-slate-700 rounded-lg" oninput="updateStandbyOpacity(this.value)">
-                </div>
 
-                <div>
-                    <div class="flex items-center justify-between mb-1">
-                        <label for="standby-scale-slider" id="label-standby-scale" class="text-xs font-bold text-slate-300">StandBy-Größe</label>
-                        <span id="standby-scale-label" class="text-xs text-teal-400 font-mono">100%</span>
+                    <div>
+                        <div class="flex items-center justify-between mb-1">
+                            <label for="standby-radius-slider" id="label-standby-radius" class="text-xs font-bold text-slate-300">Eckenradius</label>
+                            <span id="standby-radius-label" class="text-xs text-teal-400 font-mono">32px</span>
+                        </div>
+                        <input type="range" id="standby-radius-slider" min="0" max="48" step="2" value="32" oninput="changeStandbyRadius(this.value)" class="w-full cursor-pointer h-2 bg-slate-700 rounded-lg">
                     </div>
-                    <input type="range" id="standby-scale-slider" min="0.6" max="1.3" step="0.05" value="1" oninput="changeStandbyManualScale(this.value)" class="w-full cursor-pointer h-2 bg-slate-700 rounded-lg">
-                    <p id="settings-standby-scale-hint" class="text-xs text-slate-400 leading-snug mt-1">Passt sich automatisch an deinen Bildschirm an – hier nur bei Bedarf feinjustieren.</p>
+                </div>
+
+                <!-- Design-Code teilen -->
+                <div class="pt-1 border-t border-white/5 space-y-1.5">
+                    <p id="label-standby-design-code" class="text-xs font-bold text-slate-300">Design-Code teilen</p>
+                    <div class="flex gap-2">
+                        <input type="text" id="standby-design-code-input" placeholder="Code hier einfügen..." class="flex-1 min-w-0 min-h-[40px] text-xs bg-slate-800 text-slate-300 border border-slate-700 rounded-xl px-3 py-2 font-mono">
+                        <button onclick="copyStandbyDesignCode()" id="btn-standby-design-copy" class="shrink-0 min-h-[40px] px-3 py-2 text-xs bg-teal-700 hover:bg-teal-600 text-white rounded-xl font-bold transition-colors cursor-pointer active:scale-95">Kopieren</button>
+                        <button onclick="loadStandbyDesignCode()" id="btn-standby-design-load" class="shrink-0 min-h-[40px] px-3 py-2 text-xs bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-bold transition-colors cursor-pointer active:scale-95">Laden</button>
+                    </div>
+                    <p id="settings-design-code-hint" class="text-xs text-slate-400 leading-snug">Kopiere deinen StandBy-Look als Code und schick ihn Freunden.</p>
                 </div>
             </div>
+        </div>
 
-            <!-- Wake Lock Button -->
-            <div class="pt-1">
-                <button onclick="toggleStandbyWakeLock()" id="btn-toggle-wakelock" class="w-full min-h-[44px] text-left text-xs sm:text-sm text-teal-400 px-3 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-teal-500/20 transition-all font-bold cursor-pointer active:scale-98">Bildschirm an (StandBy): AN</button>
-                <p id="settings-wakelock-hint" class="text-xs text-slate-400 px-1 leading-snug mt-1">Hält den Bildschirm nur wach, solange Musik läuft – pausiert sie, darf das Handy normal einschlafen.</p>
-            </div>
-
-            <!-- Akzentfarbe & Radius -->
-            <div class="space-y-2 pt-1 border-t border-white/5">
+        <!-- SUBPAGE 5: AUDIO & MEDIEN -->
+        <div id="subpage-cat-audio" class="settings-category settings-subpage hidden space-y-3">
+            <div class="settings-item p-3.5 rounded-2xl bg-slate-800/60 border border-white/10 space-y-3">
                 <div class="flex items-center justify-between gap-3">
-                    <label for="standby-accent-input" id="label-standby-accent" class="text-xs sm:text-sm font-bold text-slate-300">Akzentfarbe</label>
-                    <input type="color" id="standby-accent-input" value="#ffffff" onchange="changeStandbyAccent(this.value)" class="h-9 w-12 rounded-xl border border-slate-700 bg-slate-800 cursor-pointer">
-                </div>
-
-                <div>
-                    <div class="flex items-center justify-between mb-1">
-                        <label for="standby-radius-slider" id="label-standby-radius" class="text-xs font-bold text-slate-300">Eckenradius</label>
-                        <span id="standby-radius-label" class="text-xs text-teal-400 font-mono">32px</span>
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-lg bg-pink-500/15 border border-pink-500/30 flex items-center justify-center text-sm shrink-0">🎵</div>
+                        <div>
+                            <div class="text-xs sm:text-sm font-bold text-slate-200">Songtext &amp; Animationen</div>
+                            <div class="text-xs text-slate-400">Timing, Styles &amp; Offset</div>
+                        </div>
                     </div>
-                    <input type="range" id="standby-radius-slider" min="0" max="48" step="2" value="32" oninput="changeStandbyRadius(this.value)" class="w-full cursor-pointer h-2 bg-slate-700 rounded-lg">
+                    <button onclick="openLyricsSettingsFromGlobal(event)" class="min-h-[40px] px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all border border-blue-400/30 cursor-pointer active:scale-95 shrink-0">Öffnen ➔</button>
                 </div>
-            </div>
 
-            <!-- Design-Code teilen -->
-            <div class="pt-1 border-t border-white/5 space-y-1.5">
-                <p id="label-standby-design-code" class="text-xs font-bold text-slate-300">Design-Code teilen</p>
-                <div class="flex gap-2">
-                    <input type="text" id="standby-design-code-input" placeholder="Code hier einfügen..." class="flex-1 min-w-0 min-h-[40px] text-xs bg-slate-800 text-slate-300 border border-slate-700 rounded-xl px-3 py-2 font-mono">
-                    <button onclick="copyStandbyDesignCode()" id="btn-standby-design-copy" class="shrink-0 min-h-[40px] px-3 py-2 text-xs bg-teal-700 hover:bg-teal-600 text-white rounded-xl font-bold transition-colors cursor-pointer active:scale-95">Kopieren</button>
-                    <button onclick="loadStandbyDesignCode()" id="btn-standby-design-load" class="shrink-0 min-h-[40px] px-3 py-2 text-xs bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-bold transition-colors cursor-pointer active:scale-95">Laden</button>
+                <div class="pt-2 border-t border-white/5 space-y-1">
+                    <button onclick="requestNotificationPermissionManually()" id="btn-notification-permission" class="w-full min-h-[44px] text-left text-xs sm:text-sm text-teal-400 px-3 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-teal-500/20 transition-all font-bold cursor-pointer active:scale-98">Benachrichtigungen: nicht eingerichtet</button>
+                    <p id="settings-notification-hint" class="text-xs text-slate-400 px-1 leading-snug">Für die „Willkommen zurück“-Meldung, falls Musik pausiert war während du weg warst.</p>
                 </div>
-                <p id="settings-design-code-hint" class="text-xs text-slate-400 leading-snug">Kopiere deinen StandBy-Look als Code und schick ihn Freunden.</p>
             </div>
         </div>
-    </div>
 
-    <!-- 🎵 KATEGORIE 5: AUDIO & MEDIEN -->
-    <div class="settings-category space-y-2.5">
-        <div class="flex items-center gap-2 px-1 text-xs font-bold uppercase tracking-wider text-pink-400">
-            <span>🎵</span> <span>Audio &amp; Medien</span>
-        </div>
-        <div class="settings-item p-3.5 rounded-2xl bg-slate-800/60 border border-white/10 space-y-3">
-            <div class="flex items-center justify-between gap-3">
-                <div class="flex items-center gap-2.5">
-                    <div class="w-8 h-8 rounded-lg bg-pink-500/15 border border-pink-500/30 flex items-center justify-center text-sm shrink-0">
-                        🎵
+        <!-- SUBPAGE 6: WIEDERHERSTELLUNG & ONBOARDING (KOMBINIERT!) -->
+        <div id="subpage-cat-recovery" class="settings-category settings-subpage hidden space-y-3">
+            <!-- Interactive Tutorial -->
+            <div class="settings-item p-3.5 rounded-2xl bg-slate-800/60 border border-white/10 space-y-3">
+                <div class="flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-sm shrink-0">🎓</div>
+                        <div>
+                            <div id="settings-tutorial-title" data-i18n="settings_tutorial_title" class="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-200">Interactive Tutorial</div>
+                            <div id="tutorial-status-badge" class="text-xs font-bold text-amber-400">Status: Nicht abgeschlossen (0)</div>
+                        </div>
                     </div>
-                    <div>
-                        <div class="text-xs sm:text-sm font-bold text-slate-200">Songtext &amp; Animationen</div>
-                        <div class="text-xs text-slate-400">Timing, Styles &amp; Offset</div>
-                    </div>
+                    <span id="tutorial-counter-badge" class="px-3 py-1 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-300 font-mono text-xs font-bold">0</span>
                 </div>
-                <button onclick="openLyricsSettingsFromGlobal(event)" class="min-h-[40px] px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all border border-blue-400/30 cursor-pointer active:scale-95 shrink-0">Öffnen ➔</button>
-            </div>
-
-            <div class="pt-2 border-t border-white/5 space-y-1">
-                <button onclick="requestNotificationPermissionManually()" id="btn-notification-permission" class="w-full min-h-[44px] text-left text-xs sm:text-sm text-teal-400 px-3 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-teal-500/20 transition-all font-bold cursor-pointer active:scale-98">Benachrichtigungen: nicht eingerichtet</button>
-                <p id="settings-notification-hint" class="text-xs text-slate-400 px-1 leading-snug">Für die „Willkommen zurück“-Meldung, falls Musik pausiert war während du weg warst.</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- 🎓 KATEGORIE 6: TUTORIAL & ONBOARDING -->
-    <div class="settings-category space-y-2.5">
-        <div class="flex items-center gap-2 px-1 text-xs font-bold uppercase tracking-wider text-amber-400">
-            <span>🎓</span> <span>Tutorial &amp; Onboarding</span>
-        </div>
-
-        <!-- Interactive Tutorial -->
-        <div class="settings-item p-3.5 rounded-2xl bg-slate-800/60 border border-white/10 space-y-3">
-            <div class="flex items-center justify-between gap-2">
-                <div class="flex items-center gap-2.5">
-                    <div class="w-8 h-8 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-sm shrink-0">
-                        🎓
-                    </div>
-                    <div>
-                        <div id="settings-tutorial-title" data-i18n="settings_tutorial_title" class="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-200">Interactive Tutorial</div>
-                        <div id="tutorial-status-badge" class="text-xs font-bold text-amber-400">Status: Nicht abgeschlossen (0)</div>
-                    </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="window.resetTutorialAndStart()" id="btn-restart-tutorial" class="min-h-[44px] py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs sm:text-sm transition-all active:scale-95 flex items-center justify-center gap-2 border border-blue-400/30 cursor-pointer">
+                        <span>▶️</span> <span id="btn-restart-tutorial-text" data-i18n="settings_tutorial_restart">Tutorial starten</span>
+                    </button>
+                    <button onclick="window.toggleTutorialCompletedStatus()" id="btn-toggle-tutorial-status" class="min-h-[44px] py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs sm:text-sm transition-all active:scale-95 flex items-center justify-center gap-2 border border-white/10 cursor-pointer">
+                        <span>🔄</span> <span id="btn-toggle-tutorial-text">Auf 0 setzen</span>
+                    </button>
                 </div>
-                <span id="tutorial-counter-badge" class="px-3 py-1 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-300 font-mono text-xs font-bold">0</span>
             </div>
-            <div class="grid grid-cols-2 gap-2">
-                <button onclick="window.resetTutorialAndStart()" id="btn-restart-tutorial" class="min-h-[44px] py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs sm:text-sm transition-all active:scale-95 flex items-center justify-center gap-2 border border-blue-400/30 cursor-pointer">
-                    <span>▶️</span> <span id="btn-restart-tutorial-text" data-i18n="settings_tutorial_restart">Tutorial starten</span>
+
+            <!-- 5-Stufen Onboarding -->
+            <div class="settings-item p-3.5 rounded-2xl bg-slate-800/60 border border-white/10 space-y-3">
+                <div class="flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-lg bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-sm shrink-0">🚀</div>
+                        <div>
+                            <div class="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-200">5-Stufen Onboarding</div>
+                            <div id="onboarding-status-badge" class="text-xs font-bold text-amber-400">Status: Nicht abgeschlossen</div>
+                        </div>
+                    </div>
+                    <span id="onboarding-counter-badge" class="px-3 py-1 rounded-full bg-slate-800 border border-white/10 text-slate-300 font-mono text-xs font-bold">0 / 5</span>
+                </div>
+                <button onclick="window.resetOnboarding()" id="btn-reset-onboarding" class="w-full min-h-[44px] py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs sm:text-sm transition-all active:scale-95 flex items-center justify-center gap-2 border border-white/10 cursor-pointer">
+                    <span>🔄</span> <span>Onboarding zurücksetzen &amp; starten</span>
                 </button>
-                <button onclick="window.toggleTutorialCompletedStatus()" id="btn-toggle-tutorial-status" class="min-h-[44px] py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs sm:text-sm transition-all active:scale-95 flex items-center justify-center gap-2 border border-white/10 cursor-pointer">
-                    <span>🔄</span> <span id="btn-toggle-tutorial-text">Auf 0 setzen</span>
+            </div>
+
+            <!-- Komplett-Reset -->
+            <div class="settings-item p-3.5 rounded-2xl bg-slate-800/40 border border-red-500/25 space-y-2.5">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-red-500/15 border border-red-500/30 flex items-center justify-center text-sm shrink-0">⚠️</div>
+                    <div>
+                        <div class="text-xs sm:text-sm font-bold uppercase tracking-wider text-red-300">Komplett-Reset</div>
+                        <div class="text-xs text-slate-400 leading-tight">Löscht Speicher &amp; startet wie ein allererster Webseiten-Besuch</div>
+                    </div>
+                </div>
+                <button onclick="resetEverythingToFirstVisit()" class="w-full min-h-[44px] py-2.5 px-3 rounded-xl bg-red-950/40 hover:bg-red-900/60 text-red-200 font-bold text-xs sm:text-sm transition-all active:scale-95 flex items-center justify-center gap-2 border border-red-500/30 cursor-pointer">
+                    <span>🔄</span> <span>Auf Erstbesuch zurücksetzen</span>
                 </button>
             </div>
         </div>
 
-        <!-- 5-Stufen Onboarding -->
-        <div class="settings-item p-3.5 rounded-2xl bg-slate-800/60 border border-white/10 space-y-3">
-            <div class="flex items-center justify-between gap-2">
-                <div class="flex items-center gap-2.5">
-                    <div class="w-8 h-8 rounded-lg bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-sm shrink-0">
-                        🚀
-                    </div>
+        <!-- SUBPAGE 7: SYSTEM-INFO (NEU!) -->
+        <div id="subpage-cat-info" class="settings-category settings-subpage hidden space-y-3">
+            <div class="settings-item p-3.5 rounded-2xl bg-slate-800/60 border border-white/10 space-y-3">
+                <div class="flex items-center justify-between py-1 border-b border-white/5">
+                    <span class="text-xs text-slate-400">Website-Version</span>
+                    <span id="settings-info-version-val" class="text-xs font-mono font-bold text-slate-200">v24.215.0</span>
+                </div>
+                <!-- 7-Tap Target Build-Nummer! -->
+                <div id="settings-build-number-row" onclick="handleBuildNumberTap()" class="flex items-center justify-between py-2 px-2.5 -mx-1 rounded-xl hover:bg-slate-700/50 cursor-pointer transition-colors active:scale-98 select-none border border-transparent hover:border-white/5" title="7x schnell tippen für Entwickleroptionen">
                     <div>
-                        <div class="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-200">5-Stufen Onboarding</div>
-                        <div id="onboarding-status-badge" class="text-xs font-bold text-amber-400">Status: Nicht abgeschlossen</div>
+                        <div class="text-xs sm:text-sm font-bold text-slate-200 flex items-center gap-1.5">
+                            <span>Build-Nummer</span>
+                            <span class="text-[10px] text-slate-400">(Tippen)</span>
+                        </div>
+                        <div class="text-[11px] text-slate-400 font-mono">GP-2026.10.12-215 (Produktion)</div>
                     </div>
+                    <span id="settings-build-dev-badge" class="px-2 py-0.5 rounded-full bg-slate-700 text-slate-300 text-[10px] font-mono font-bold">v24.215.0</span>
                 </div>
-                <span id="onboarding-counter-badge" class="px-3 py-1 rounded-full bg-slate-800 border border-white/10 text-slate-300 font-mono text-xs font-bold">0 / 5</span>
+                <div class="flex items-center justify-between py-1 border-t border-white/5">
+                    <span class="text-xs text-slate-400">PWA &amp; Offline-Cache</span>
+                    <span id="settings-info-pwa-val" class="text-xs font-bold text-emerald-400">Aktiv ✓</span>
+                </div>
+                <div class="flex items-center justify-between py-1 border-t border-white/5">
+                    <span class="text-xs text-slate-400">Release Notes</span>
+                    <a href="release.html" target="_blank" rel="noopener noreferrer" class="text-xs font-bold text-blue-400 hover:text-blue-300 underline">Vollständiges Changelog ↗</a>
+                </div>
             </div>
-            <button onclick="window.resetOnboarding()" id="btn-reset-onboarding" class="w-full min-h-[44px] py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs sm:text-sm transition-all active:scale-95 flex items-center justify-center gap-2 border border-white/10 cursor-pointer">
-                <span>🔄</span> <span>Onboarding zurücksetzen &amp; starten</span>
-            </button>
         </div>
-    </div>
 
-    <!-- ⚠️ KATEGORIE 7: ERWEITERT & ZURÜCKSETZEN -->
-    <div class="settings-category space-y-2.5">
-        <div class="flex items-center gap-2 px-1 text-xs font-bold uppercase tracking-wider text-red-400">
-            <span>⚠️</span> <span>Erweitert &amp; Zurücksetzen</span>
-        </div>
-        <div class="settings-item p-3.5 rounded-2xl bg-slate-800/40 border border-red-500/25 space-y-2.5">
-            <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-lg bg-red-500/15 border border-red-500/30 flex items-center justify-center text-sm shrink-0">
-                    ⚠️
+        <!-- SUBPAGE 8: ENTWICKLEROPTIONEN (FREISCHALTBAR) -->
+        <div id="subpage-cat-developer" class="settings-category settings-subpage hidden space-y-3">
+            <div class="settings-item p-3.5 rounded-2xl bg-slate-800/60 border border-amber-500/30 space-y-3">
+                <div class="flex items-center justify-between pb-2 border-b border-white/5">
+                    <div class="flex items-center gap-2">
+                        <span class="text-base">🛠️</span>
+                        <span class="text-xs sm:text-sm font-bold text-amber-300">Entwicklermodus Aktiv</span>
+                    </div>
+                    <button onclick="disableDeveloperMode()" class="px-2.5 py-1 rounded-lg bg-red-950/60 hover:bg-red-900 border border-red-500/30 text-red-300 text-xs font-bold transition-all active:scale-95 cursor-pointer">Deaktivieren</button>
                 </div>
-                <div>
-                    <div class="text-xs sm:text-sm font-bold uppercase tracking-wider text-red-300">Komplett-Reset</div>
-                    <div class="text-xs text-slate-400 leading-tight">Löscht Speicher &amp; startet wie ein allererster Webseiten-Besuch</div>
+                <div class="space-y-2">
+                    <div class="text-xs font-bold text-slate-300">Test &amp; Diagnose Tools</div>
+                    <button onclick="window.PixelFlickerGuard?.runDiagnostic(true)" class="w-full min-h-[44px] py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold transition-all active:scale-95 flex items-center justify-center gap-2 border border-white/10 cursor-pointer">
+                        <span>🛡️</span> <span>Pixel-Flacker-Schutz Stabilitätstest</span>
+                    </button>
+                    <button onclick="simulateMockUpdate()" class="w-full min-h-[44px] py-2 px-3 rounded-xl bg-blue-950/50 hover:bg-blue-900/60 text-blue-200 text-xs font-bold transition-all active:scale-95 flex items-center justify-center gap-2 border border-blue-500/30 cursor-pointer">
+                        <span>📱</span> <span>Mock-Update simulieren (Test)</span>
+                    </button>
+                    <button onclick="testFeedbackAndHaptics()" class="w-full min-h-[44px] py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-all active:scale-95 flex items-center justify-center gap-2 border border-white/10 cursor-pointer">
+                        <span>🔊</span> <span>Audio &amp; Haptik Signal testen</span>
+                    </button>
                 </div>
             </div>
-            <button onclick="resetEverythingToFirstVisit()" class="w-full min-h-[44px] py-2.5 px-3 rounded-xl bg-red-950/40 hover:bg-red-900/60 text-red-200 font-bold text-xs sm:text-sm transition-all active:scale-95 flex items-center justify-center gap-2 border border-red-500/30 cursor-pointer">
-                <span>🔄</span> <span>Auf Erstbesuch zurücksetzen</span>
-            </button>
         </div>
     </div>
 
     <!-- Version Label -->
-    <p id="settings-version-label" class="text-center text-xs text-slate-500 px-2 py-1 font-mono select-all shrink-0">Version —</p>
+    <p id="settings-version-label" class="text-center text-xs text-slate-500 px-2 py-1 font-mono select-all shrink-0">v24.215.0</p>
 </div>
 
 <!-- ========================================================= -->
@@ -15785,6 +15915,7 @@ html.gp-android:not(.dark) #ui-controls {
             function setSettingsUpdateBadge(hasUpdate) {
                 const tBadge = document.getElementById('settings-toggle-badge');
                 const fBadge = document.getElementById('footer-settings-badge');
+                const tileBadge = document.getElementById('tile-update-badge');
                 if (tBadge) {
                     if (hasUpdate) tBadge.classList.remove('hidden');
                     else tBadge.classList.add('hidden');
@@ -15793,13 +15924,17 @@ html.gp-android:not(.dark) #ui-controls {
                     if (hasUpdate) fBadge.classList.remove('hidden');
                     else fBadge.classList.add('hidden');
                 }
+                if (tileBadge) {
+                    if (hasUpdate) tileBadge.classList.remove('hidden');
+                    else tileBadge.classList.add('hidden');
+                }
             }
             window.setSettingsUpdateBadge = setSettingsUpdateBadge;
 
             function updateSettingsSystemUpdateUI(pending) {
                 const currentVer = String(window.ONBOARDING_VERSION || '').split(' · ')[0].replace(/^v/, '').trim();
                 const currEl = document.getElementById('settings-update-current-ver');
-                if (currEl) currEl.textContent = 'Installiert: v' + (currentVer || '24.214.0');
+                if (currEl) currEl.textContent = 'Installiert: v' + (currentVer || '24.215.0');
 
                 const statusPill = document.getElementById('settings-update-status-pill');
                 const availBox = document.getElementById('settings-update-available-box');
@@ -17875,6 +18010,44 @@ let shareCardLoading;
         // NEU v24.22: um "type" pro Eintrag erweitert (feature/performance/fix), damit die
         // Anzeige kategorisiert werden kann statt nur als flache Liste.
         const PUBLIC_CHANGELOG = [
+    { version: "v24.215.0", date: "12. Oktober 2026", type: "feature", items: {
+        de: [
+            "📱 Android Settings Navigation: Aufgeräumte Kategorien-Übersicht auf oberster Ebene mit animiertem Subpage-Drilldown und Zurück-Pfeil",
+            "🔄 Zusammengeführtes Onboarding & Reset: Tutorial, 5-Stufen Onboarding und Erstbesuch-Reset übersichtlich in einer Wiederherstellungs-Kategorie vereint",
+            "ℹ️ System-Info & Entwickleroptionen: Neue System-Info Kategorie mit klickbarer Build-Nummer (7 Taps schalten Entwickleroptionen mit Diagnose-Tools frei)",
+            "🛡️ PWA Update-Kontrolle gehärtet: Service Worker skipWaiting erfolgt ausschließlich nach explizitem Klick im Update Center"
+        ],
+        en: [
+            "📱 Android Settings Navigation: Clean top-level category overview with drilldown subpages and back navigation",
+            "🔄 Unified Recovery & Onboarding: Tutorial, 5-step onboarding, and complete reset gathered into a single clean recovery category",
+            "ℹ️ System Info & Developer Options: New System Info section featuring 7-tap build number easter egg unlocking developer diagnostics",
+            "🛡️ Hardened PWA Update Control: Service Worker skipWaiting strictly deferred until user confirms update in update center"
+        ],
+        es: [
+            "📱 Navegación estilo Android: Vista principal solo con categorías y subpáginas detalladas con botón Atrás",
+            "🔄 Recuperación y Onboarding unificados: Tutorial, onboarding de 5 pasos y reinicio total en una sola categoría",
+            "ℹ️ Información del sistema y opciones de desarrollador: 7 toques en el número de compilación desbloquean herramientas avanzadas",
+            "🛡️ Control de actualización PWA mejorado: La activación solo ocurre por confirmación explícita"
+        ],
+        fr: [
+            "📱 Navigation paramètres style Android : Vue principale épurée avec catégories et sous-pages dédiées",
+            "🔄 Récupération et intégration unifiées : Tutoriel, intégration en 5 étapes et réinitialisation regroupés",
+            "ℹ️ Infos système & Options pour développeurs : 7 tapes sur le numéro de build débloquent les outils développeur",
+            "🛡️ Contrôle PWA renforcé : Aucune mise à jour silencieuse sans confirmation utilisateur"
+        ],
+        pt: [
+            "📱 Navegação de configurações estilo Android: Lista limpa de categorias com subpáginas e botão Voltar",
+            "🔄 Recuperação e Onboarding unificados: Tutorial, onboarding de 5 etapas e reset total reunidos em uma categoria",
+            "ℹ️ Informações do sistema e opções de desenvolvedor: 7 toques no número de build liberam ferramentas de teste",
+            "🛡️ Controle de PWA aprimorado: Service Worker só atualiza com confirmação explícita do usuário"
+        ],
+        tr: [
+            "📱 Android Tarzı Ayarlar Gezintisi: Üst düzey temiz kategori listesi ve geri butonlu alt sayfalar",
+            "🔄 Birleştirilmiş Kurtarma ve Başlangıç: Eğitici, 5 adımlı başlangıç ve sıfırlama tek bir kurtarma kategorisinde",
+            "ℹ️ Sistem Bilgisi ve Geliştirici Seçenekleri: Yapı numarasına 7 kez tıklayarak geliştirici araçlarını açma",
+            "🛡️ Güçlendirilmiş PWA Güncellemesi: Sadece kullanıcı onayladığında devreye giren kontrollü güncelleme"
+        ]
+    }},
     { version: "v24.214.0", date: "12. Oktober 2026", type: "feature", items: {
         de: [
             "📱 Android-Style System-Update Center: Neues übersichtliches Update-Menü in den Website-Einstellungen mit Versionsanzeige, Status-Pill und Kurznotizen",
@@ -22158,6 +22331,177 @@ let shareCardLoading;
             if (labelZoom) labelZoom.textContent = Math.round(currentScale * 100) + '%';
         };
 
+        // --- ANDROID SETTINGS DRILLDOWN & CATEGORY NAVIGATION ---
+        window.openSettingsCategory = function(catId) {
+            const list = document.getElementById('settings-categories-list');
+            const container = document.getElementById('settings-subpages-container');
+            const headerMain = document.getElementById('settings-header-main');
+            const headerSub = document.getElementById('settings-header-subpage');
+            const titleSub = document.getElementById('settings-subpage-title');
+            const searchEmpty = document.getElementById('settings-search-empty');
+            if (!list || !container) return;
+
+            if (searchEmpty) searchEmpty.classList.add('hidden');
+
+            const titles = {
+                'cat-system': 'System & Updates',
+                'cat-display': 'Darstellung & Display',
+                'cat-animations': 'Animationen & Feedback',
+                'cat-standby': 'StandBy-Display',
+                'cat-audio': 'Audio & Medien',
+                'cat-recovery': 'Wiederherstellung & Onboarding',
+                'cat-info': 'System-Info',
+                'cat-developer': 'Entwickleroptionen'
+            };
+
+            const allSubpages = container.querySelectorAll('.settings-subpage');
+            allSubpages.forEach(sp => sp.classList.add('hidden'));
+
+            const target = document.getElementById('subpage-' + catId);
+            if (target) {
+                target.classList.remove('hidden');
+            }
+
+            list.classList.add('hidden');
+            container.classList.remove('hidden');
+
+            if (headerMain) headerMain.classList.add('hidden');
+            if (headerSub) headerSub.classList.remove('hidden');
+            if (titleSub) titleSub.textContent = titles[catId] || 'Kategorie';
+
+            const globalMenu = document.getElementById('global-settings-menu');
+            if (globalMenu) globalMenu.scrollTop = 0;
+
+            if (typeof haptic === 'function') haptic(10);
+        };
+
+        window.closeSettingsCategory = function() {
+            const list = document.getElementById('settings-categories-list');
+            const container = document.getElementById('settings-subpages-container');
+            const headerMain = document.getElementById('settings-header-main');
+            const headerSub = document.getElementById('settings-header-subpage');
+            if (!list || !container) return;
+
+            container.classList.add('hidden');
+            const allSubpages = container.querySelectorAll('.settings-subpage');
+            allSubpages.forEach(sp => sp.classList.add('hidden'));
+
+            list.classList.remove('hidden');
+            if (headerMain) headerMain.classList.remove('hidden');
+            if (headerSub) headerSub.classList.add('hidden');
+
+            const searchInput = document.getElementById('settings-search-input');
+            if (searchInput && searchInput.value.trim().length > 0) {
+                filterSettings(searchInput.value);
+            } else {
+                updateDeveloperCategoryVisibility();
+            }
+
+            const globalMenu = document.getElementById('global-settings-menu');
+            if (globalMenu) globalMenu.scrollTop = 0;
+
+            if (typeof haptic === 'function') haptic(10);
+        };
+
+        // --- 7-TAP BUILD NUMBER EASTER EGG & DEVELOPER OPTIONS ---
+        let buildTapCount = 0;
+        let lastBuildTapTime = 0;
+
+        window.handleBuildNumberTap = function() {
+            const now = Date.now();
+            if (now - lastBuildTapTime > 2500) {
+                buildTapCount = 0;
+            }
+            lastBuildTapTime = now;
+            buildTapCount++;
+
+            const isAlreadyDev = AppStorage.getItem('gp_developer_mode_enabled') === 'true';
+
+            if (isAlreadyDev) {
+                if (typeof showToast === 'function') {
+                    showToast('Entwickleroptionen sind bereits aktiv! 🛠️', 'info');
+                }
+                if (typeof haptic === 'function') haptic(15);
+                return;
+            }
+
+            const remaining = 7 - buildTapCount;
+
+            if (remaining > 0 && remaining <= 4) {
+                if (typeof showToast === 'function') {
+                    showToast(`Noch ${remaining} Klick${remaining === 1 ? '' : 's'} bis zu den Entwickleroptionen! 🛠️`, 'info');
+                }
+                if (typeof haptic === 'function') haptic(12);
+            } else if (remaining <= 0) {
+                buildTapCount = 0;
+                AppStorage.setItem('gp_developer_mode_enabled', 'true');
+                updateDeveloperCategoryVisibility();
+                if (typeof showToast === 'function') {
+                    showToast('🎉 Du bist jetzt ein Entwickler! Entwickleroptionen freigeschaltet.', 'success');
+                }
+                if (typeof playUISound === 'function') playUISound('click');
+                if (typeof haptic === 'function') haptic(50);
+            }
+        };
+
+        window.updateDeveloperCategoryVisibility = function() {
+            const devTile = document.getElementById('cat-tile-developer');
+            const isDev = AppStorage.getItem('gp_developer_mode_enabled') === 'true';
+            if (devTile) {
+                if (isDev) {
+                    devTile.classList.remove('hidden');
+                } else {
+                    devTile.classList.add('hidden');
+                }
+            }
+        };
+        try {
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', updateDeveloperCategoryVisibility);
+            } else {
+                updateDeveloperCategoryVisibility();
+            }
+        } catch(e) {}
+
+        window.disableDeveloperMode = function() {
+            AppStorage.setItem('gp_developer_mode_enabled', 'false');
+            updateDeveloperCategoryVisibility();
+            closeSettingsCategory();
+            if (typeof showToast === 'function') {
+                showToast('Entwickleroptionen deaktiviert.', 'info');
+            }
+            if (typeof haptic === 'function') haptic(20);
+        };
+
+        window.simulateMockUpdate = function() {
+            const mockUpdate = {
+                version: '24.216.0-beta',
+                shortNotes: [
+                    'Simuliertes Entwickler-Update für Stabilitäts- und UI-Tests',
+                    'Authentischer Android-Update-Ablauf verifiziert'
+                ]
+            };
+            AppStorage.setItem('gp_pending_update', JSON.stringify(mockUpdate));
+            if (typeof updateSettingsSystemUpdateUI === 'function') {
+                updateSettingsSystemUpdateUI(mockUpdate);
+            }
+            const tileBadge = document.getElementById('tile-update-badge');
+            if (tileBadge) tileBadge.classList.remove('hidden');
+            if (typeof setSettingsUpdateBadge === 'function') setSettingsUpdateBadge(true);
+            if (typeof showToast === 'function') {
+                showToast('Mock-Update v24.216.0-beta simuliert! Siehe "System & Updates".', 'success');
+            }
+            if (typeof haptic === 'function') haptic(30);
+        };
+
+        window.testFeedbackAndHaptics = function() {
+            if (typeof playUISound === 'function') playUISound('click');
+            if (typeof haptic === 'function') haptic(40);
+            if (typeof showToast === 'function') {
+                showToast('🔊 Audio & Haptik Signal erfolgreich ausgelöst!', 'info');
+            }
+        };
+
         window.filterSettings = function(query) {
             const q = (query || '').toLowerCase().trim();
             const clearBtn = document.getElementById('settings-search-clear');
@@ -22165,28 +22509,45 @@ let shareCardLoading;
                 if (q.length > 0) clearBtn.classList.remove('hidden');
                 else clearBtn.classList.add('hidden');
             }
-            const categories = document.querySelectorAll('#global-settings-menu .settings-category');
+            const isDev = AppStorage.getItem('gp_developer_mode_enabled') === 'true';
+            const tiles = document.querySelectorAll('.settings-category-tile');
             let totalVisible = 0;
-            categories.forEach(cat => {
-                let catHasMatch = false;
-                const items = cat.querySelectorAll('.settings-item');
-                items.forEach(item => {
-                    const text = (item.textContent || '').toLowerCase();
-                    const match = !q || text.includes(q);
-                    if (match) {
-                        item.classList.remove('hidden');
-                        catHasMatch = true;
-                        totalVisible++;
-                    } else {
-                        item.classList.add('hidden');
-                    }
-                });
-                if (catHasMatch || !q) {
-                    cat.classList.remove('hidden');
+
+            tiles.forEach(tile => {
+                if (tile.id === 'cat-tile-developer' && !isDev) {
+                    tile.classList.add('hidden');
+                    return;
+                }
+                const onclickAttr = tile.getAttribute('onclick') || '';
+                const matchCat = onclickAttr.match(/openSettingsCategory\('([^']+)'\)/);
+                const catId = matchCat ? matchCat[1] : '';
+                const subpage = catId ? document.getElementById('subpage-' + catId) : null;
+
+                const tileText = (tile.textContent || '').toLowerCase();
+                const subpageText = subpage ? (subpage.textContent || '').toLowerCase() : '';
+
+                const isMatch = !q || tileText.includes(q) || subpageText.includes(q);
+                if (isMatch) {
+                    tile.classList.remove('hidden');
+                    totalVisible++;
                 } else {
-                    cat.classList.add('hidden');
+                    tile.classList.add('hidden');
+                }
+
+                if (subpage) {
+                    const items = subpage.querySelectorAll('.settings-item');
+                    items.forEach(item => {
+                        const itemText = (item.textContent || '').toLowerCase();
+                        const itemMatch = !q || itemText.includes(q) || tileText.includes(q);
+                        if (itemMatch) {
+                            item.classList.remove('hidden');
+                        } else {
+                            item.classList.add('hidden');
+                        }
+                    });
                 }
             });
+
             const emptyEl = document.getElementById('settings-search-empty');
             if (emptyEl) {
                 if (q.length > 0 && totalVisible === 0) emptyEl.classList.remove('hidden');
@@ -22426,6 +22787,8 @@ let shareCardLoading;
                 if (titleSpan) {
                     titleSpan.innerHTML = '<span>⚙️</span> <span>' + (typeof t === 'function' ? t('settings_title', 'Website-Einstellungen') : 'Website-Einstellungen') + '</span>';
                 }
+                if (typeof updateDeveloperCategoryVisibility === 'function') updateDeveloperCategoryVisibility();
+                if (typeof closeSettingsCategory === 'function') closeSettingsCategory();
                 globalMenu.classList.remove('hidden', 'settings-closing', 'is-open');
                 globalMenu.classList.add('settings-opening');
                 if (window.PixelFlickerGuard) window.PixelFlickerGuard.watchTransition(globalMenu);
@@ -22443,6 +22806,7 @@ let shareCardLoading;
                     globalMenu.classList.add('is-open');
                 }, 240);
             } else {
+                if (typeof closeSettingsCategory === 'function') closeSettingsCategory();
                 globalMenu.classList.remove('settings-opening', 'is-open');
                 globalMenu.classList.add('settings-closing');
                 const isLiquid = document.body.classList.contains('liquid-glass-active');

@@ -11,15 +11,15 @@ const versionJson = JSON.parse(fs.readFileSync(path.join(ROOT, 'version.json'), 
 const swJs = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
 const releaseHtml = fs.readFileSync(path.join(ROOT, 'release.html'), 'utf8');
 
-test('Liquid Glass Card Transparency Unification (v24.214.0)', async (t) => {
-    await t.test('LG1: Version 24.214.0 is synchronized across all core files', () => {
-        assert.equal(versionJson.version, '24.214.0');
-        assert.match(swJs, /const SW_VERSION = "24\.214\.0";/);
-        assert.match(indexHtml, /ONBOARDING_VERSION = 'v24\.214\.0/);
-        assert.match(indexHtml, /id="footer-menu-hint"[^>]*>v24\.214\.0<\/span>/);
-        assert.match(indexHtml, /id="footer-version-label"[^>]*>v24\.214\.0<\/span>/);
-        assert.match(releaseHtml, /<title>Release Notes v24\.214\.0 – Gamingpig<\/title>/);
-        assert.match(indexHtml, /version:\s*"v24\.214\.0"/);
+test('Liquid Glass Card Transparency Unification (v24.215.0)', async (t) => {
+    await t.test('LG1: Version 24.215.0 is synchronized across all core files', () => {
+        assert.equal(versionJson.version, '24.215.0');
+        assert.match(swJs, /const SW_VERSION = "24\.215\.0";/);
+        assert.match(indexHtml, /ONBOARDING_VERSION = 'v24\.215\.0/);
+        assert.match(indexHtml, /id="footer-menu-hint"[^>]*>v24\.215\.0<\/span>/);
+        assert.match(indexHtml, /id="footer-version-label"[^>]*>v24\.215\.0<\/span>/);
+        assert.match(releaseHtml, /<title>Release Notes v24\.215\.0 – Gamingpig<\/title>/);
+        assert.match(indexHtml, /version:\s*"v24\.215\.0"/);
     });
 
     await t.test('LG2: Desktop Dark Mode — all cards have identical background in Liquid Glass', () => {

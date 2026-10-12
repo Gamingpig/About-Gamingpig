@@ -11,16 +11,16 @@ const versionJson = JSON.parse(fs.readFileSync(path.join(ROOT, 'version.json'), 
 const swJs = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
 const releaseHtml = fs.readFileSync(path.join(ROOT, 'release.html'), 'utf8');
 
-test('Android-Style System-Update Center & Controlled Update Workflow (v24.214.0)', async (t) => {
-    await t.test('U1: Version 24.214.0 is synchronized across all core files', () => {
-        assert.equal(versionJson.version, '24.214.0');
+test('Android-Style System-Update Center & Controlled Update Workflow (v24.215.0)', async (t) => {
+    await t.test('U1: Version 24.215.0 is synchronized across all core files', () => {
+        assert.equal(versionJson.version, '24.215.0');
         assert.ok(Array.isArray(versionJson.shortNotes) && versionJson.shortNotes.length > 0, 'version.json has shortNotes');
-        assert.match(swJs, /const SW_VERSION = "24\.214\.0";/);
-        assert.match(indexHtml, /ONBOARDING_VERSION = 'v24\.214\.0/);
-        assert.match(indexHtml, /id="footer-menu-hint"[^>]*>v24\.214\.0<\/span>/);
-        assert.match(indexHtml, /id="footer-version-label"[^>]*>v24\.214\.0<\/span>/);
-        assert.match(releaseHtml, /<title>Release Notes v24\.214\.0 – Gamingpig<\/title>/);
-        assert.match(indexHtml, /version:\s*"v24\.214\.0"/);
+        assert.match(swJs, /const SW_VERSION = "24\.215\.0";/);
+        assert.match(indexHtml, /ONBOARDING_VERSION = 'v24\.215\.0/);
+        assert.match(indexHtml, /id="footer-menu-hint"[^>]*>v24\.215\.0<\/span>/);
+        assert.match(indexHtml, /id="footer-version-label"[^>]*>v24\.215\.0<\/span>/);
+        assert.match(releaseHtml, /<title>Release Notes v24\.215\.0 – Gamingpig<\/title>/);
+        assert.match(indexHtml, /version:\s*"v24\.215\.0"/);
     });
 
     await t.test('U2: Android-Style Update Center DOM elements exist in website settings', () => {
@@ -92,6 +92,9 @@ test('Android-Style System-Update Center & Controlled Update Workflow (v24.214.0
         assert.match(indexHtml, /window\.applyPendingUpdate = function\(\)/);
         assert.match(indexHtml, /swRegistration\.waiting\.postMessage\(\{\s*type:\s*'SKIP_WAITING'\s*\}\)/);
 
+        // sw.js does not unconditionally call self.skipWaiting() on install
+        assert.ok(!swJs.includes('.then(() => self.skipWaiting())'), 'sw.js install does not call skipWaiting');
+
         // Manual check function exists and triggers update check
         assert.match(indexHtml, /window\.manualCheckForUpdates = async function/);
     });
@@ -117,5 +120,61 @@ test('Android-Style System-Update Center & Controlled Update Workflow (v24.214.0
         const menu = doc.getElementById('global-settings-menu');
         assert.ok(menu.className.includes('w-[94vw]'), 'Settings menu is responsive for mobile');
         assert.match(indexHtml, /min-h-\[44px\]/);
+    });
+
+    await t.test('U7: Android Settings Drilldown Navigation & Combined Recovery Category', () => {
+        const dom = new JSDOM(indexHtml);
+        const doc = dom.window.document;
+
+        // Categories overview list and subpages container
+        const categoriesList = doc.getElementById('settings-categories-list');
+        assert.ok(categoriesList, '#settings-categories-list must exist');
+
+        const subpagesContainer = doc.getElementById('settings-subpages-container');
+        assert.ok(subpagesContainer, '#settings-subpages-container must exist');
+
+        const headerMain = doc.getElementById('settings-header-main');
+        assert.ok(headerMain, '#settings-header-main must exist');
+
+        const headerSubpage = doc.getElementById('settings-header-subpage');
+        assert.ok(headerSubpage, '#settings-header-subpage must exist');
+
+        // Combined Recovery Category contains tutorial, onboarding, and full reset
+        const recoverySubpage = doc.getElementById('subpage-cat-recovery');
+        assert.ok(recoverySubpage, '#subpage-cat-recovery must exist');
+        assert.ok(recoverySubpage.querySelector('#btn-restart-tutorial'), 'Recovery contains tutorial restart');
+        assert.ok(recoverySubpage.querySelector('#btn-reset-onboarding'), 'Recovery contains onboarding reset');
+        assert.ok(recoverySubpage.querySelector('button[onclick*="resetEverythingToFirstVisit"]'), 'Recovery contains full reset button');
+
+        // Functions defined
+        assert.match(indexHtml, /window\.openSettingsCategory = function/);
+        assert.match(indexHtml, /window\.closeSettingsCategory = function/);
+    });
+
+    await t.test('U8: System-Info, 7-Tap Build Number & Developer Options', () => {
+        const dom = new JSDOM(indexHtml);
+        const doc = dom.window.document;
+
+        const infoSubpage = doc.getElementById('subpage-cat-info');
+        assert.ok(infoSubpage, '#subpage-cat-info must exist');
+
+        const buildRow = doc.getElementById('settings-build-number-row');
+        assert.ok(buildRow, '#settings-build-number-row must exist');
+        assert.match(buildRow.getAttribute('onclick'), /handleBuildNumberTap\(\)/);
+
+        const devTile = doc.getElementById('cat-tile-developer');
+        assert.ok(devTile, '#cat-tile-developer tile must exist in DOM');
+        assert.ok(devTile.classList.contains('hidden'), '#cat-tile-developer is hidden by default');
+
+        const devSubpage = doc.getElementById('subpage-cat-developer');
+        assert.ok(devSubpage, '#subpage-cat-developer must exist');
+        assert.ok(devSubpage.querySelector('button[onclick*="simulateMockUpdate"]'), 'Mock update button exists');
+        assert.ok(devSubpage.querySelector('button[onclick*="testFeedbackAndHaptics"]'), 'Haptics test button exists');
+
+        assert.match(indexHtml, /window\.handleBuildNumberTap = function/);
+        assert.match(indexHtml, /window\.updateDeveloperCategoryVisibility = function/);
+        assert.match(indexHtml, /window\.disableDeveloperMode = function/);
+        assert.match(indexHtml, /window\.simulateMockUpdate = function/);
+        assert.match(indexHtml, /window\.testFeedbackAndHaptics = function/);
     });
 });
