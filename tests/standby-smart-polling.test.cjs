@@ -48,4 +48,20 @@ describe('Intelligent Adaptive StandBy & Music Polling (v24.216.0)', () => {
     it('S8: toggleStandBy immediately triggers fetchMusicData on StandBy activation', () => {
         assert.match(indexHtml, /\/\/ Frische Musikdaten beim Aktivieren von StandBy sofort abrufen\s*if \(typeof fetchMusicData === 'function'\) \{\s*fetchMusicData\(\)\.finally/);
     });
+
+    it('S9: stats.fm 429 rate limit is gracefully handled with cooldown and backoff', () => {
+        assert.match(indexHtml, /if\s*\(response\.status === 429\)\s*\{\s*statsFmRateLimitedUntil = Date\.now\(\) \+ 10000;/);
+        assert.match(indexHtml, /if\s*\(Date\.now\(\) < statsFmRateLimitedUntil\)\s*\{\s*return Math\.max\(5000, statsFmRateLimitedUntil - Date\.now\(\)\);\s*\}/);
+        assert.match(indexHtml, /if\s*\(fallbackData && fallbackData\.isRateLimited\)\s*\{/);
+    });
+
+    it('S10: Dedup check does not block un-clamping from totalMs when track is active', () => {
+        assert.match(indexHtml, /if\s*\(currentApiProgress === lastSeenProgressMs && trackIsPlaying === isPlaying && !isNewTrack && currentResolvedArtUrl && \(totalMs <= 0 \|\| currentMs < totalMs\)\)/);
+    });
+
+    it('S11: Time sync un-clamps currentMs and resets isHuntingForNextTrack if track is still playing', () => {
+        assert.match(indexHtml, /const needsUnclamp = trackIsPlaying && totalMs > 0 && \(currentMs >= totalMs \|\| expectedLocalProgress >= totalMs\) && \(apiProgress \+ addedDelay\) < totalMs;/);
+        assert.match(indexHtml, /const needsUnclamp = playing && totalMs > 0 && currentMs >= totalMs && progress !== null && progress < totalMs;/);
+    });
 });
+

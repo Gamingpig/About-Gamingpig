@@ -13805,6 +13805,7 @@ html.gp-android:not(.dark) #ui-controls {
         let lineAnimCache = null;
         let lastProcessedUpdate = 0;
         let lastSeenProgressMs = -1;
+        let lastSeenStatsFmProgressMs = -1;
         let localClockOffset = 0;
         let isTimeSynced = false;
         let recentFetchLatencies = [];
@@ -17264,6 +17265,7 @@ let shareCardLoading;
                     const pending = standbyPendingMusic;
                     standbyPendingMusic = null;
                     lastSeenProgressMs = -1;
+                    lastSeenStatsFmProgressMs = -1;
                     updateMusicUI(pending.data, pending.latency);
                 }
                 releaseStandbyWakeLock();
@@ -23424,6 +23426,7 @@ window.setLyricsStyle = function(style) {
                     }
                 } else if (currentMs < totalMs - 3000) {
                     hasTriggeredSongEndFetch = false;
+                    isHuntingForNextTrack = false;
                 }
             }
         }
@@ -24337,8 +24340,10 @@ window.setLyricsStyle = function(style) {
                 totalMs = Number(track?.duration_ms || data?.duration_ms) || 0;
                 const now = performance.now();
                 const expected = serverBaseProgress + (trackIsPlaying ? now - localStartTime : 0);
-                // Repeated API snapshots must not restart the locally advancing clock.
-                if (newTrack || playbackChanged || (progress !== null && progress !== previous.progress)) {
+                const needsUnclamp = playing && totalMs > 0 && currentMs >= totalMs && progress !== null && progress < totalMs;
+                // Repeated API snapshots must not restart the locally advancing clock, außer wenn
+                // die lokale Zeit bereits am Ende festsitzt (needsUnclamp) und entklemmt werden muss.
+                if (newTrack || playbackChanged || (progress !== null && progress !== previous.progress) || needsUnclamp) {
                     let target = progress ?? (newTrack ? 0 : expected);
                     if (playing && progress !== null) {
                         const timestamp = data.timestamp || data.updated_at || data.fetched_at || track?.timestamp;
@@ -24349,9 +24354,14 @@ window.setLyricsStyle = function(style) {
                     }
                     target = Math.max(0, totalMs > 0 ? Math.min(target, totalMs) : target);
                     const drift = target - expected;
-                    if (newTrack || playbackChanged || Math.abs(drift) > 1200) {
+                    if (newTrack || playbackChanged || needsUnclamp || Math.abs(drift) > 1200) {
                         serverBaseProgress = target;
                         localStartTime = now;
+                        if (needsUnclamp) {
+                            currentMs = serverBaseProgress;
+                            isHuntingForNextTrack = false;
+                            hasTriggeredSongEndFetch = false;
+                        }
                     } else if (Math.abs(drift) > 120) {
                         serverBaseProgress = expected + drift * 0.35;
                         localStartTime = now;
@@ -24571,7 +24581,9 @@ window.setLyricsStyle = function(style) {
             let currentApiProgress = data.progress_ms !== undefined ? data.progress_ms : (data.track && data.track.progress_ms) || 0;
 
             // Auf keinen Fall bei erstem Laden abbrechen (fehlendes Cover immer durchlassen)
-            if (currentApiProgress === lastSeenProgressMs && trackIsPlaying === isPlaying && !isNewTrack && currentResolvedArtUrl) {
+            // Auch NICHT abbrechen, wenn die lokale Zeitmessung bereits am Songende festsitzt (currentMs >= totalMs)
+            // und entklemmt werden muss!
+            if (currentApiProgress === lastSeenProgressMs && trackIsPlaying === isPlaying && !isNewTrack && currentResolvedArtUrl && (totalMs <= 0 || currentMs < totalMs)) {
                 return;
             }
             lastSeenProgressMs = currentApiProgress;
@@ -24713,6 +24725,11 @@ window.setLyricsStyle = function(style) {
                     serverBaseProgress = apiProgress + addedDelay;
                     localStartTime = performance.now();
                     currentMs = serverBaseProgress;
+                    hasTriggeredSongEndFetch = false;
+                    isHuntingForNextTrack = false;
+                    if (data.source === 'statsfm') {
+                        lastSeenStatsFmProgressMs = currentApiProgress;
+                    }
                     
                     currentNoLyricsMessage = fallbackMessages[Math.floor(Math.random() * fallbackMessages.length)];
                     if (isPlaying) fetchExternalLyrics(trackTitle, cleanArtist, trackDuration);
@@ -24728,6 +24745,11 @@ window.setLyricsStyle = function(style) {
                         serverBaseProgress = apiProgress + addedDelay;
                         localStartTime = performance.now();
                         currentMs = serverBaseProgress;
+                        hasTriggeredSongEndFetch = false;
+                        isHuntingForNextTrack = false;
+                        if (data.source === 'statsfm') {
+                            lastSeenStatsFmProgressMs = currentApiProgress;
+                        }
                         syncLyricsUI(true, true);
                     } else if (trackIsPlaying && !isPlaying) {
                         trackIsPlaying = false;
@@ -24745,13 +24767,22 @@ window.setLyricsStyle = function(style) {
                         let drift = (apiProgress + addedDelay) - expectedLocalProgress;
                         let absDrift = Math.abs(drift);
 
-                        if (data.source === 'statsfm') {
+                        const needsUnclamp = trackIsPlaying && totalMs > 0 && (currentMs >= totalMs || expectedLocalProgress >= totalMs) && (apiProgress + addedDelay) < totalMs;
+                        if (needsUnclamp) {
+                            serverBaseProgress = apiProgress + addedDelay;
+                            localStartTime = performance.now();
+                            currentMs = serverBaseProgress;
+                            hasTriggeredSongEndFetch = false;
+                            isHuntingForNextTrack = false;
+                            syncLyricsUI(true, true);
+                        } else if (data.source === 'statsfm') {
                             // stats.fm pollt Spotify mit ca. 10-15s Verzögerung. Wenn stats.fm hinter
                             // unserer stetigen lokalen Zeitmessung zurückhängt (bis zu -15s), ziehen wir den
                             // Song NIEMALS ruckartig zurück!
-                            if (drift < 0 && drift > -15000) {
+                            const isSameSnapshot = (typeof lastSeenStatsFmProgressMs !== 'undefined' && currentApiProgress === lastSeenStatsFmProgressMs);
+                            if (isSameSnapshot && drift < 0 && drift > -15000) {
                                 // Lokale Zeitmessung läuft ungestört und butterweich weiter
-                            } else if (absDrift > 15000) {
+                            } else if (absDrift > 15000 || (!isSameSnapshot && absDrift > 2500)) {
                                 // Echter großer Seek oder Skip durch Nutzer -> harter Re-Sync
                                 serverBaseProgress = apiProgress + addedDelay;
                                 localStartTime = performance.now();
@@ -24762,6 +24793,7 @@ window.setLyricsStyle = function(style) {
                                 serverBaseProgress = expectedLocalProgress + drift * 0.25;
                                 localStartTime = performance.now();
                             }
+                            lastSeenStatsFmProgressMs = currentApiProgress;
                         } else {
                             if (absDrift > 1200) {
                                 serverBaseProgress = apiProgress + addedDelay;
@@ -24878,11 +24910,21 @@ window.setLyricsStyle = function(style) {
             };
         }
 
+        let statsFmRateLimitedUntil = 0;
+
         async function fetchStatsFmMusicFallback() {
+            if (Date.now() < statsFmRateLimitedUntil) {
+                return { status: 'rate_limited', isRateLimited: true, source: 'statsfm' };
+            }
             const response = await fetch('https://api.stats.fm/api/v1/users/gamingpig/streams/current', {
                 cache: 'no-store',
                 signal: AbortSignal.timeout(3500)
             });
+            if (response.status === 429) {
+                statsFmRateLimitedUntil = Date.now() + 10000;
+                console.warn('stats.fm: Spotify rate-limited account (429). Backoff für 10s aktiv.');
+                return { status: 'rate_limited', isRateLimited: true, source: 'statsfm' };
+            }
             if (!response.ok && response.status !== 204 && response.status !== 404) {
                 throw new Error('stats.fm fallback failed with status ' + response.status);
             }
@@ -24917,6 +24959,10 @@ window.setLyricsStyle = function(style) {
 
             try {
                 const fallbackData = await fetchStatsFmMusicFallback();
+                if (fallbackData && fallbackData.isRateLimited) {
+                    if (typeof lastSuccessfulFetchAt !== 'undefined') lastSuccessfulFetchAt = Date.now();
+                    return;
+                }
                 updateMusicUI(fallbackData, 0);
                 if (typeof lastSuccessfulFetchAt !== 'undefined') lastSuccessfulFetchAt = Date.now();
                 if (typeof consecutiveFetchFailures !== 'undefined') consecutiveFetchFailures = 0;
@@ -24945,6 +24991,10 @@ window.setLyricsStyle = function(style) {
         // 2. Wenn ein Song aktiv läuft mit Restzeit: Entspannter 18s-Takt (schont Akku, API & Netzwerk)
         // 3. Wenn nichts läuft (Ruhemodus): Sparsamer 25s-Takt
         function getAdaptiveMusicPollDelay() {
+            if (Date.now() < statsFmRateLimitedUntil) {
+                return Math.max(5000, statsFmRateLimitedUntil - Date.now());
+            }
+
             if (isHuntingForNextTrack) {
                 if (Date.now() - songTransitionStartedAt > 35000) {
                     isHuntingForNextTrack = false;
@@ -24985,6 +25035,12 @@ window.setLyricsStyle = function(style) {
         }
         window.scheduleNextMusicPoll = scheduleNextMusicPoll;
         window.getAdaptiveMusicPollDelay = getAdaptiveMusicPollDelay;
+        window.fetchStatsFmMusicFallback = fetchStatsFmMusicFallback;
+        Object.defineProperty(window, 'statsFmRateLimitedUntil', {
+            get: () => statsFmRateLimitedUntil,
+            set: (v) => { statsFmRateLimitedUntil = v; },
+            configurable: true
+        });
         scheduleNextMusicPoll();
 
         // NEU v24.60 (v24.216.0): Watchdog - prüft alle 15s, ob trotz vermeintlich laufender Musik oder aktivem
