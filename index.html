@@ -14624,7 +14624,8 @@ html.gp-android:not(.dark) #ui-controls {
                 releaseStandbyWakeLock();
                 return;
             }
-            if (trackIsPlaying) requestStandbyWakeLock();
+            const isTransitioning = typeof isHuntingForNextTrack !== 'undefined' && isHuntingForNextTrack && (Date.now() - songTransitionStartedAt < 35000);
+            if (trackIsPlaying || isTransitioning) requestStandbyWakeLock();
             else releaseStandbyWakeLock();
         }
         // Manche Browser geben den Wake Lock automatisch frei, sobald der Tab kurz in den
@@ -17237,6 +17238,12 @@ let shareCardLoading;
                 if (canvasVideo && !canvasVideo.paused) {
                     canvasVideo.pause();
                     canvasVideo.dataset.pausedByStandby = 'true';
+                }
+                // Frische Musikdaten beim Aktivieren von StandBy sofort abrufen
+                if (typeof fetchMusicData === 'function') {
+                    fetchMusicData().finally(() => {
+                        if (typeof scheduleNextMusicPoll === 'function') scheduleNextMusicPoll();
+                    });
                 }
             } else {
                 for (const [element, previous] of standbyInertElements) {
@@ -23397,17 +23404,43 @@ window.setLyricsStyle = function(style) {
         // Wanduhr-Extrapolation korrekt eingebaut, der Intervall-Modus hat sie beim Aufteilen
         // in v24.47 schlicht nie bekommen. Neue Funktion rechnet currentMs jetzt bei jedem
         // Tick live nach, genau wie es animateLoop() für den rAF-Fall schon immer tut.
+        let isHuntingForNextTrack = false;
+        let songTransitionStartedAt = 0;
+        let hasTriggeredSongEndFetch = false;
+
+        function checkSongEndTrigger() {
+            if (trackIsPlaying && totalMs > 0) {
+                if (currentMs >= totalMs) {
+                    if (!hasTriggeredSongEndFetch) {
+                        hasTriggeredSongEndFetch = true;
+                        isHuntingForNextTrack = true;
+                        songTransitionStartedAt = Date.now();
+                        if (typeof fetchMusicData === 'function') {
+                            if (typeof musicPollTimer !== 'undefined' && musicPollTimer) clearTimeout(musicPollTimer);
+                            fetchMusicData().finally(() => {
+                                if (typeof scheduleNextMusicPoll === 'function') scheduleNextMusicPoll();
+                            });
+                        }
+                    }
+                } else if (currentMs < totalMs - 3000) {
+                    hasTriggeredSongEndFetch = false;
+                }
+            }
+        }
+
         function tickProgressInterval() {
             if (trackIsPlaying && totalMs > 0) {
                 currentMs = serverBaseProgress + (performance.now() - localStartTime);
                 if (currentMs > totalMs) currentMs = totalMs;
+                checkSongEndTrigger();
             }
             updateProgressUI();
         }
 
         function updateProgressUI() {
             if (standByActive) {
-                if (trackIsPlaying && totalMs > 0 && currentMs >= totalMs && lastStandbyTrackInfo.isPlaying) {
+                const isTransitioning = isHuntingForNextTrack && (Date.now() - songTransitionStartedAt < 35000);
+                if (trackIsPlaying && totalMs > 0 && currentMs >= totalMs && lastStandbyTrackInfo.isPlaying && !isTransitioning) {
                     syncStandByTrackInfo(lastStandbyTrackInfo.title, lastStandbyTrackInfo.artist, null, false, false, true);
                     releaseStandbyWakeLock();
                 }
@@ -24023,6 +24056,7 @@ window.setLyricsStyle = function(style) {
             if (totalMs && currentMs > totalMs) {
                 currentMs = totalMs;
             }
+            checkSongEndTrigger();
 
             // PERF-OPTIMIERUNG (Pixel/120Hz Fix): DOM-Text- & Skalierungs-Updates auf max 25fps drosseln (~40ms),
             // während Wort-Highlights und sanfte Animationen flüssig bleiben. Verhindert massive Überhitzung & Lag.
@@ -24328,10 +24362,18 @@ window.setLyricsStyle = function(style) {
                 if (totalMs > 0) currentMs = Math.min(currentMs, totalMs);
                 standbyProgressSample = { id, progress: progress ?? (newTrack ? null : previous.progress), playing };
                 const ended = playing && totalMs > 0 && currentMs >= totalMs;
+                if (playing && !ended) {
+                    isHuntingForNextTrack = false;
+                    hasTriggeredSongEndFetch = false;
+                } else if (!playing && !isHuntingForNextTrack) {
+                    isHuntingForNextTrack = true;
+                    songTransitionStartedAt = Date.now();
+                }
                 const changed = newTrack || title !== lastStandbyTrackInfo?.title || artist !== lastStandbyTrackInfo?.artist;
                 const art = track?.artwork_url || (changed ? fallbackImg : lastStandbyTrackInfo?.artUrl) || fallbackImg;
                 syncStandByTrackInfo(title, artist, art, changed, playing && !ended, true);
-                if (ended || !playing) releaseStandbyWakeLock(); else updateWakeLockForPlaybackState();
+                const isTransitioning = isHuntingForNextTrack && (Date.now() - songTransitionStartedAt < 35000);
+                if ((ended || !playing) && !isTransitioning) releaseStandbyWakeLock(); else updateWakeLockForPlaybackState();
                 updateProgressUI();
                 return;
             }
@@ -24341,6 +24383,10 @@ window.setLyricsStyle = function(style) {
             // Entweder läuft was oder es ist Ruhe — Pause gibt es nicht.
             // Wenn pausiert oder kein Track → sofort Offline-/Ruhe-Zustand.
             if (!hasTrack || !isPlaying) {
+                if (trackIsPlaying && !isHuntingForNextTrack) {
+                    isHuntingForNextTrack = true;
+                    songTransitionStartedAt = Date.now();
+                }
                 consecutiveEmptyPolls++;
                 if (consecutiveEmptyPolls < 3) {
                     return;
@@ -24380,6 +24426,8 @@ window.setLyricsStyle = function(style) {
 
             // Ab hier: Song läuft wirklich.
             consecutiveEmptyPolls = 0;
+            isHuntingForNextTrack = false;
+            hasTriggeredSongEndFetch = false;
 
             if (offlineTimeout) {
                 clearTimeout(offlineTimeout);
@@ -24892,12 +24940,39 @@ window.setLyricsStyle = function(style) {
             return document.hidden;
         }
 
-        // Adaptive Polling: Wenn Musik läuft -> alle 5 Sekunden abfragen.
-        // Wenn keine Musik läuft (Ruhemodus / leeres Resultat) -> alle 15 Sekunden statt komplett aufzuhören.
+        // Intelligentes adaptives Polling (v24.216.0):
+        // 1. Wenn ein Song zu Ende geht / im Songwechsel: Schnelle 5s-Frequenz ("Jagd nach neuem Song")
+        // 2. Wenn ein Song aktiv läuft mit Restzeit: Entspannter 18s-Takt (schont Akku, API & Netzwerk)
+        // 3. Wenn nichts läuft (Ruhemodus): Sparsamer 25s-Takt
+        function getAdaptiveMusicPollDelay() {
+            if (isHuntingForNextTrack) {
+                if (Date.now() - songTransitionStartedAt > 35000) {
+                    isHuntingForNextTrack = false;
+                    hasTriggeredSongEndFetch = false;
+                    if (standByActive) updateWakeLockForPlaybackState();
+                } else {
+                    return 5000;
+                }
+            }
+
+            if (trackIsPlaying && totalMs > 0) {
+                const remainingMs = Math.max(0, totalMs - currentMs);
+                if (remainingMs <= 6000) {
+                    isHuntingForNextTrack = true;
+                    songTransitionStartedAt = Date.now();
+                    return Math.max(1000, remainingMs);
+                }
+                const targetDelay = remainingMs > 25000 ? 18000 : Math.max(5000, remainingMs - 2500);
+                return targetDelay;
+            }
+
+            return 25000;
+        }
+
         let musicPollTimer = null;
-        function scheduleNextMusicPoll() {
+        function scheduleNextMusicPoll(customDelay) {
             if (musicPollTimer) clearTimeout(musicPollTimer);
-            const delay = trackIsPlaying ? 5000 : 15000;
+            const delay = typeof customDelay === 'number' ? customDelay : getAdaptiveMusicPollDelay();
             musicPollTimer = setTimeout(() => {
                 if (!shouldPauseBackgroundWork()) {
                     fetchMusicData().finally(() => {
@@ -24908,36 +24983,37 @@ window.setLyricsStyle = function(style) {
                 }
             }, delay);
         }
+        window.scheduleNextMusicPoll = scheduleNextMusicPoll;
+        window.getAdaptiveMusicPollDelay = getAdaptiveMusicPollDelay;
         scheduleNextMusicPoll();
 
-        // NEU v24.60: Watchdog - prüft alle 15s, ob trotz vermeintlich laufender Musik seit
-        // über 30 Sekunden kein erfolgreiches Update mehr angekommen ist. Falls doch, wird
-        // aktiv ein sofortiger neuer Abrufversuch erzwungen UND das Fortschritts-Tracking
-        // sicherheitshalber neu gestartet, falls es aus irgendeinem Grund hängen geblieben
-        // sein sollte, statt dass der Nutzer erst manuell neu laden muss.
+        // NEU v24.60 (v24.216.0): Watchdog - prüft alle 15s, ob trotz vermeintlich laufender Musik oder aktivem
+        // Songwechsel seit über 30 Sekunden kein erfolgreiches Update mehr angekommen ist.
+        // Schützt JETZT AUCH DEN STANDBY-MODUS vor dem Einschlafen!
         setInterval(() => {
-            if (standByActive || shouldPauseBackgroundWork() || !trackIsPlaying) return;
-            const silentForMs = Date.now() - lastSuccessfulFetchAt;
-            if (silentForMs > 30000) {
-                console.warn(`Watchdog: seit ${Math.round(silentForMs / 1000)}s kein erfolgreiches Musikdaten-Update mehr erhalten - erzwinge Wiederherstellungsversuch.`);
-                fetchMusicData();
-                // FIX v24.65: bedingungslos statt fragilem !isAnimating-Check - siehe
-                // ausführlichen Kommentar bei der anderen Stelle weiter oben.
-                startProgressTracking();
+            if (shouldPauseBackgroundWork()) return;
+            const needsActiveMonitoring = trackIsPlaying || isHuntingForNextTrack;
+            if (needsActiveMonitoring) {
+                const silentForMs = Date.now() - lastSuccessfulFetchAt;
+                if (silentForMs > 30000) {
+                    console.warn(`Watchdog: seit ${Math.round(silentForMs / 1000)}s kein erfolgreiches Musikdaten-Update erhalten - erzwinge Wiederherstellungsversuch.`);
+                    fetchMusicData().finally(() => scheduleNextMusicPoll());
+                    startProgressTracking();
+                }
+            } else if (standByActive) {
+                const silentForMs = Date.now() - lastSuccessfulFetchAt;
+                if (silentForMs > 60000) {
+                    fetchMusicData().finally(() => scheduleNextMusicPoll());
+                }
             }
         }, 15000);
 
         // NEU v24.65: Zusätzlicher, engmaschiger Selbstheilungs-Check - unabhängig vom
         // 30s-Watchdog oben (der nur bei ausbleibenden Musikdaten-Updates greift). Prüft
         // alle 3 Sekunden: läuft trotz aktiver Musik kein Fortschritts-Tracking? Dann neu
-        // starten - BEDINGUNGSLOS, nicht mit einem fragilen !isAnimating-Check (der hatte
-        // hier ironischerweise beim ersten Versuch genau denselben Fehler wie die
-        // ursprüngliche Bug-Stelle - beim eigenen Testen mit einem künstlich hängen
-        // gebliebenen isAnimating-Zustand aufgefallen und sofort korrigiert). Extra
-        // Sicherheitsnetz nach mehreren Runden hartnäckiger "Fortschritt eingefroren"-
-        // Bugreports - lieber einmal zu oft geprüft als nochmal derselbe Bug.
+        // starten - BEDINGUNGSLOS, nicht mit einem fragilen !isAnimating-Check.
         setInterval(() => {
-            if (standByActive || shouldPauseBackgroundWork()) return;
+            if (shouldPauseBackgroundWork()) return;
             if (trackIsPlaying && !progressTickerInterval && !(mainMusicCard && mainMusicCard.classList.contains('lyrics-open'))) {
                 console.warn('Selbstheilungs-Check: Fortschritts-Tracking war trotz laufender Musik inaktiv - starte neu.');
                 startProgressTracking();
