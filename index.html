@@ -23339,15 +23339,21 @@ window.setLyricsStyle = function(style) {
             // keinem externen Dienst ab, der abgeschaltet oder unzuverlässig werden könnte.
             const cacheBuster = Date.now();
             let best = null;
+            const targetBase = (typeof window !== 'undefined' && window.location && window.location.origin && window.location.origin.startsWith('http'))
+                ? (window.location.origin + window.location.pathname)
+                : 'https://gamingpig.github.io/About-Gamingpig/';
+
             // Mehrere Messungen für bessere Genauigkeit (kürzeste Round-Trip-Zeit gewinnt)
             for (let i = 0; i < 3; i++) {
                 try {
                     const t0 = performance.now();
-                    const res = await fetch(`https://gamingpig.github.io/About-Gamingpig/?_=${cacheBuster}_${i}`, { cache: 'no-store', method: 'HEAD' });
-                    const serverDate = res.headers.get('Date');
+                    const separator = targetBase.includes('?') ? '&' : '?';
+                    const res = await fetch(`${targetBase}${separator}_=${cacheBuster}_${i}`, { cache: 'no-store', method: 'HEAD', signal: AbortSignal.timeout(2500) });
+                    const serverDate = res.headers.get('Date') || res.headers.get('date');
                     if (!serverDate) continue;
                     const rtt = performance.now() - t0;
                     const trueTime = new Date(serverDate).getTime();
+                    if (isNaN(trueTime)) continue;
                     const estimatedTrueNow = trueTime + rtt / 2; // Latenz hälftig als einseitige Signallaufzeit angenommen (NTP-Näherung)
                     if (!best || rtt < best.rtt) {
                         best = { trueWorldTime: estimatedTrueNow, rtt };
@@ -23357,11 +23363,14 @@ window.setLyricsStyle = function(style) {
             }
 
             if (best) {
-                localClockOffset = Date.now() - best.trueWorldTime;
+                const calculatedOffset = Date.now() - best.trueWorldTime;
+                // Bei vernachlässigbarer Abweichung (< 500ms) Offset auf 0 belassen, um künstliches Zittern zu vermeiden
+                localClockOffset = Math.abs(calculatedOffset) < 500 ? 0 : calculatedOffset;
                 isTimeSynced = true;
                 lastTimeSyncQualityMs = Math.round(best.rtt);
             } else if (!isTimeSynced) {
-                console.warn("Weltzeit-Sync fehlgeschlagen, vertraue lokaler Uhr.");
+                localClockOffset = 0;
+                isTimeSynced = true;
             }
         }
 
@@ -24688,14 +24697,33 @@ window.setLyricsStyle = function(style) {
                         let drift = (apiProgress + addedDelay) - expectedLocalProgress;
                         let absDrift = Math.abs(drift);
 
-                        if (absDrift > 1200) {
-                            serverBaseProgress = apiProgress + addedDelay;
-                            localStartTime = performance.now();
-                            currentMs = serverBaseProgress;
-                            syncLyricsUI(true, true);
-                        } else if (absDrift > 120) {
-                            serverBaseProgress = expectedLocalProgress + drift * 0.35;
-                            localStartTime = performance.now();
+                        if (data.source === 'statsfm') {
+                            // stats.fm pollt Spotify mit ca. 10-15s Verzögerung. Wenn stats.fm hinter
+                            // unserer stetigen lokalen Zeitmessung zurückhängt (bis zu -15s), ziehen wir den
+                            // Song NIEMALS ruckartig zurück!
+                            if (drift < 0 && drift > -15000) {
+                                // Lokale Zeitmessung läuft ungestört und butterweich weiter
+                            } else if (absDrift > 15000) {
+                                // Echter großer Seek oder Skip durch Nutzer -> harter Re-Sync
+                                serverBaseProgress = apiProgress + addedDelay;
+                                localStartTime = performance.now();
+                                currentMs = serverBaseProgress;
+                                syncLyricsUI(true, true);
+                            } else if (drift > 1500) {
+                                // stats.fm liegt vor uns -> sanft annähern ohne Ruckler
+                                serverBaseProgress = expectedLocalProgress + drift * 0.25;
+                                localStartTime = performance.now();
+                            }
+                        } else {
+                            if (absDrift > 1200) {
+                                serverBaseProgress = apiProgress + addedDelay;
+                                localStartTime = performance.now();
+                                currentMs = serverBaseProgress;
+                                syncLyricsUI(true, true);
+                            } else if (absDrift > 120) {
+                                serverBaseProgress = expectedLocalProgress + drift * 0.35;
+                                localStartTime = performance.now();
+                            }
                         }
                     }
                 }
@@ -24783,12 +24811,11 @@ window.setLyricsStyle = function(style) {
             const artists = Array.isArray(track.artists) ? track.artists.map(a => a && a.name).filter(Boolean) : [];
             const album = Array.isArray(track.albums) ? track.albums[0] : null;
             const spotifyId = track.externalIds && Array.isArray(track.externalIds.spotify) ? track.externalIds.spotify[0] : null;
-            const streamDate = item.date ? new Date(item.date).getTime() : Date.now();
             return {
                 status: item.isPlaying ? 'playing' : 'stopped',
                 provider: item.platform ? String(item.platform).toLowerCase() : 'spotify',
                 progress_ms: Number(item.progressMs) || 0,
-                timestamp: streamDate,
+                timestamp: Date.now(),
                 source: 'statsfm',
                 track: {
                     id: spotifyId || track.id || '',

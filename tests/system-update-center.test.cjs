@@ -200,8 +200,10 @@ test('Android-Style System-Update Center & Controlled Update Workflow (v24.215.0
 
         // Music fallback handles stats.fm correctly with abort signal and proper timestamps
         assert.match(indexHtml, /function normalizeStatsFmMusicData\(payload\)/);
-        assert.match(indexHtml, /AbortSignal\.timeout\(2500\)/);
-        assert.match(indexHtml, /AbortSignal\.timeout\(3500\)/);
+        assert.match(indexHtml, /timestamp:\s*Date\.now\(\)/);
+        assert.match(indexHtml, /data\.source\s*===\s*'statsfm'/);
+        assert.match(indexHtml, /drift\s*<\s*0\s*&&\s*drift\s*>\s*-15000/);
+        assert.match(indexHtml, /Math\.abs\(calculatedOffset\)\s*<\s*500\s*\?\s*0\s*:\s*calculatedOffset/);
     });
 });
 
