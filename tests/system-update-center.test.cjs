@@ -177,4 +177,16 @@ test('Android-Style System-Update Center & Controlled Update Workflow (v24.215.0
         assert.match(indexHtml, /window\.simulateMockUpdate = function/);
         assert.match(indexHtml, /window\.testFeedbackAndHaptics = function/);
     });
+
+    await t.test('U9: Light Mode Contrast in Settings & Quest HUD', () => {
+        // Light mode rules for global settings menu
+        assert.match(indexHtml, /html:not\(\.dark\)\s+#global-settings-menu/);
+        assert.match(indexHtml, /html:not\(\.dark\)\s+#global-settings-menu\s+\.settings-category-tile/);
+        assert.match(indexHtml, /html:not\(\.dark\)\s+#global-settings-menu\s+\.settings-item/);
+        assert.match(indexHtml, /html:not\(\.dark\)\s+#global-settings-menu\s+#settings-search-input/);
+        assert.match(indexHtml, /html:not\(\.dark\)\s+#interactive-quest-hud\s+> div/);
+
+        // Crisp dark text for white/slate elements in light mode
+        assert.match(indexHtml, /html:not\(\.dark\)\s+#global-settings-menu\s+:is\([\s\S]*?\.text-slate-100[\s\S]*?color:\s*#0f172a/);
+    });
 });
