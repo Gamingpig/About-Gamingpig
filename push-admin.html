@@ -621,6 +621,7 @@
                 await AdminVault.setToken(token);
                 document.getElementById('gh-token-input').value = '';
                 updateGitHubBridgeUI();
+                loadSubscribersCount();
                 showToast('Token verschlüsselt gespeichert!', '🔒');
             } catch (e) { showToast(e.message, '⚠️'); }
         }
@@ -641,17 +642,106 @@
         async function loadSubscribersCount() {
             const el = document.getElementById('subscribers-count');
             const queueEl = document.getElementById('push-queue-count');
-            if (!el) return;
+            if (!el && !queueEl) return;
+
+            let subscribersCount = null;
+            let queueCount = 0;
+            let token = null;
+
             try {
-                const res = await fetch('https://raw.githubusercontent.com/Gamingpig/About-Gamingpig/main/data/push-summary.json', { cache: 'no-store' });
-                const data = await res.json();
-                el.textContent = `${data.count || 0} Geräte`;
-                const since = Math.floor(new Date(data.updatedAt || 0).getTime() / 1000);
-                const queued = await fetch(`https://ntfy.sh/gamingpig_push_sub_vault_v2_9f8a2b3c4d5e/json?poll=1&since=${Math.max(0, since)}`, { cache: 'no-store' });
-                const text = queued.ok ? await queued.text() : '';
-                const count = text.split('\n').filter(Boolean).reduce((sum, line) => { try { const item=JSON.parse(line); return sum + (item.event === 'message' && item.message ? 1 : 0); } catch (_) { return sum; } }, 0);
-                if (queueEl) queueEl.textContent = `${count} wartend`;
-            } catch (_) { el.textContent = 'Unbekannt'; if (queueEl) queueEl.textContent = 'Unbekannt'; }
+                token = await AdminVault.getToken();
+            } catch (_) {}
+
+            // 1. Geräteanzahl laden (zuerst GitHub API mit Token falls vorhanden, dann raw/local)
+            try {
+                if (token) {
+                    const ghRes = await fetch('https://api.github.com/repos/Gamingpig/About-Gamingpig/contents/data/subscribers.json', {
+                        headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' }
+                    });
+                    if (ghRes.ok) {
+                        const ghJson = await ghRes.json();
+                        const decodedStr = decodeURIComponent(escape(atob(ghJson.content.replace(/\s/g, ''))));
+                        const subs = JSON.parse(decodedStr);
+                        if (Array.isArray(subs)) {
+                            subscribersCount = subs.length;
+                        }
+                    }
+                }
+            } catch (err) {
+                console.warn('Subscribers fetch via GitHub API failed, using fallback:', err);
+            }
+
+            if (subscribersCount === null) {
+                try {
+                    const rawRes = await fetch('https://raw.githubusercontent.com/Gamingpig/About-Gamingpig/main/data/subscribers.json', { cache: 'no-store' });
+                    if (rawRes.ok) {
+                        const subs = await rawRes.json();
+                        if (Array.isArray(subs)) subscribersCount = subs.length;
+                    }
+                } catch (_) {}
+            }
+
+            if (subscribersCount === null) {
+                try {
+                    const localRes = await fetch('./data/subscribers.json', { cache: 'no-store' });
+                    if (localRes.ok) {
+                        const subs = await localRes.json();
+                        if (Array.isArray(subs)) subscribersCount = subs.length;
+                    }
+                } catch (_) {}
+            }
+
+            if (el) {
+                el.textContent = subscribersCount !== null ? `${subscribersCount} Geräte` : '0 Geräte';
+            }
+
+            // 2. Queue prüfen (pending_push.json + ntfy.sh)
+            let pendingPushActive = false;
+            try {
+                if (token) {
+                    const pendRes = await fetch('https://api.github.com/repos/Gamingpig/About-Gamingpig/contents/data/pending_push.json', {
+                        headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' }
+                    });
+                    if (pendRes.ok) {
+                        const pendJson = await pendRes.json();
+                        const decodedStr = decodeURIComponent(escape(atob(pendJson.content.replace(/\s/g, ''))));
+                        const pData = JSON.parse(decodedStr);
+                        if (pData && pData.pending) {
+                            pendingPushActive = true;
+                            queueCount += 1;
+                        }
+                    }
+                }
+            } catch (_) {}
+
+            if (!pendingPushActive) {
+                try {
+                    const rawPendRes = await fetch('https://raw.githubusercontent.com/Gamingpig/About-Gamingpig/main/data/pending_push.json', { cache: 'no-store' });
+                    if (rawPendRes.ok) {
+                        const pData = await rawPendRes.json();
+                        if (pData && pData.pending) queueCount += 1;
+                    }
+                } catch (_) {}
+            }
+
+            // ntfy queue (für neue Registrierungen)
+            try {
+                const queued = await fetch(`https://ntfy.sh/gamingpig_push_sub_vault_9f8a2b3c4d5e/json?poll=1`, { cache: 'no-store' });
+                if (queued.ok) {
+                    const text = await queued.text();
+                    const ntfyCount = text.split('\n').filter(Boolean).reduce((sum, line) => {
+                        try {
+                            const item = JSON.parse(line);
+                            return sum + (item.event === 'message' && item.message ? 1 : 0);
+                        } catch (_) { return sum; }
+                    }, 0);
+                    queueCount += ntfyCount;
+                }
+            } catch (_) {}
+
+            if (queueEl) {
+                queueEl.textContent = `${queueCount} wartend`;
+            }
         }
 
         async function syncQueueNow() {

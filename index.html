@@ -9167,6 +9167,21 @@ html.gp-android:not(.dark) #ui-controls {
 
     <main id="main-content" class="max-w-4xl mx-auto px-4 xs:px-6 sm:px-8 pt-24 xs:pt-28 sm:pt-32 pb-16 sm:pb-24">
         
+        <!-- ⏳ ADMIN ACTION & RELEASE GATE BANNER -->
+        <div id="admin-action-banner" class="mb-6 p-4 rounded-2xl bg-gradient-to-r from-amber-500/20 via-orange-500/15 to-amber-500/20 border border-amber-500/40 backdrop-blur-xl shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-amber-200 animate-pulse">
+            <div class="flex items-center gap-3">
+                <span class="text-2xl p-2 rounded-xl bg-amber-500/20 border border-amber-500/30 shrink-0">⏳</span>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <strong class="text-amber-300 font-bold text-sm sm:text-base">Release v24.216.0 pausiert</strong>
+                        <span class="px-2 py-0.5 rounded-full bg-amber-500/30 text-amber-300 text-[10px] font-mono font-bold border border-amber-400/40 uppercase">Admin Action Required</span>
+                    </div>
+                    <p class="text-xs text-amber-200/90 mt-0.5 leading-snug">Warten auf Server-Admin-Rückmeldung &amp; Freigabe. Das neue Einstellungs-Zentrum ist vorübergehend gesperrt.</p>
+                </div>
+            </div>
+            <a href="status.html" class="px-3.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-400/40 font-bold text-xs whitespace-nowrap transition-all self-end sm:self-auto">Status prüfen ➔</a>
+        </div>
+
         <header id="header-section" class="glass-card mb-6 xxs:mb-8 sm:mb-12 reveal mt-2 sm:mt-0 rounded-2xl relative z-10 p-4 xxs:p-6 sm:p-8">
             <div class="inline-flex items-center gap-2 px-2 py-1 sm:px-3 sm:py-1 mb-2 sm:mb-3 text-[8px] xxs:text-[10px] xs:text-xs font-bold tracking-widest text-blue-600 uppercase bg-blue-100 dark:bg-blue-500/10 dark:text-blue-400 rounded-full shadow-sm">
                 <span class="relative flex h-1.5 w-1.5 sm:h-2 sm:w-2">
@@ -13240,6 +13255,7 @@ html.gp-android:not(.dark) #ui-controls {
         function getTutorialSteps() {
             return [
                 { targetId: 'header-section', title: t('t_step1_title'), text: t('t_step1_text') },
+                { targetId: 'settings-global-toggle', title: t('t_step_settings_title', '⚙️ Einstellungs-Zentrum'), text: t('t_step_settings_text', 'Hier findest du System-Updates, Design-Anpassungen, Sounds, Entwickleroptionen und Reset-Funktionen.') },
                 { targetId: 'ui-controls', title: t('t_step2_title'), text: t('t_step2_text') },
                 { targetId: 'cards-section', title: t('t_step3_title'), text: t('t_step3_text') },
                 { targetId: 'music-section', title: t('t_step4_title'), text: t('t_step4_text') },
@@ -20814,26 +20830,63 @@ let shareCardLoading;
         // --- NEUES FEATURE: Toast-Benachrichtigungen -------------- //
         // ========================================================= //
         const toastContainer = document.getElementById('toast-container');
-        window.showToast = function(message, duration = 3200, actionBtn = null) {
+        window.showToast = function(message, durationOrType = 4500, actionBtnOrDuration = null, actionBtn = null) {
             if (!toastContainer) return;
+
+            let duration = 4500;
+            let type = 'default';
+            let btn = null;
+
+            if (typeof durationOrType === 'string') {
+                type = durationOrType;
+                if (typeof actionBtnOrDuration === 'number') {
+                    duration = actionBtnOrDuration;
+                    btn = actionBtn;
+                } else if (typeof actionBtnOrDuration === 'object' && actionBtnOrDuration !== null) {
+                    btn = actionBtnOrDuration;
+                }
+            } else if (typeof durationOrType === 'number') {
+                duration = durationOrType;
+                if (typeof actionBtnOrDuration === 'string') {
+                    type = actionBtnOrDuration;
+                    btn = actionBtn;
+                } else if (typeof actionBtnOrDuration === 'object' && actionBtnOrDuration !== null) {
+                    btn = actionBtnOrDuration;
+                }
+            }
+
+            // Sicherstellen, dass Benachrichtigungen genug Lesezeit haben (mind. 4200ms, bei längerem Text proportional mehr)
+            const minReadingTime = Math.max(4200, 2200 + (String(message || '').length * 45));
+            duration = Math.max(duration, minReadingTime);
+
             const toast = document.createElement('div');
-            toast.className = 'toast pointer-events-auto';
-            
+            toast.className = 'toast pointer-events-auto toast-' + type;
+            if (type === 'success') {
+                toast.style.borderColor = 'rgba(52, 211, 153, 0.45)';
+                toast.style.boxShadow = '0 10px 30px rgba(0,0,0,0.5), 0 0 15px rgba(52, 211, 153, 0.2)';
+            } else if (type === 'info') {
+                toast.style.borderColor = 'rgba(96, 165, 250, 0.45)';
+                toast.style.boxShadow = '0 10px 30px rgba(0,0,0,0.5), 0 0 15px rgba(96, 165, 250, 0.2)';
+            } else if (type === 'warn' || type === 'warning' || type === '⚠️') {
+                toast.style.borderColor = 'rgba(251, 191, 36, 0.45)';
+                toast.style.boxShadow = '0 10px 30px rgba(0,0,0,0.5), 0 0 15px rgba(251, 191, 36, 0.2)';
+            }
+
             const textSpan = document.createElement('span');
             textSpan.innerText = message;
             toast.appendChild(textSpan);
 
-            if (actionBtn && actionBtn.text && typeof actionBtn.onClick === 'function') {
-                const btn = document.createElement('button');
-                btn.className = 'toast-action-btn';
-                btn.innerText = actionBtn.text;
-                btn.onclick = (e) => {
+            if (btn && btn.text && typeof btn.onClick === 'function') {
+                const actionBtnEl = document.createElement('button');
+                actionBtnEl.className = 'toast-action-btn';
+                actionBtnEl.innerText = btn.text;
+                actionBtnEl.onclick = (e) => {
                     e.stopPropagation();
-                    actionBtn.onClick();
+                    btn.onClick();
                     toast.classList.add('toast-out');
                     setTimeout(() => toast.remove(), 400);
                 };
-                toast.appendChild(btn);
+                toast.appendChild(actionBtnEl);
             }
 
             toastContainer.appendChild(toast);
@@ -21712,6 +21765,55 @@ let shareCardLoading;
         // 🚀 EPIC "WAS IST NEU" SHOWCASE ENGINE                     //
         // ========================================================= //
         const EPIC_MILESTONES = [
+            {
+                tag: 'v24.215',
+                title: {
+                    de: 'Neues Einstellungs-Zentrum & Entwickler-Optionen',
+                    en: 'New Settings Center & Developer Tools',
+                    es: 'Nuevo centro de ajustes y herramientas de desarrollador',
+                    fr: 'Nouveau centre de réglages et outils de développeur',
+                    pt: 'Novo centro de configurações e ferramentas de desenvolvedor',
+                    tr: 'Yeni Ayarlar Merkezi ve Geliştirici Araçları'
+                },
+                highlights: {
+                    de: [
+                        '⚙️ Aufgeräumtes Einstellungs-Zentrum mit Subpage-Drilldown & System-Update',
+                        '🛠️ Geheime Entwickleroptionen (7x auf die Build-Nummer tippen)',
+                        '🛡️ Anti-Burn-In StandBy-Schutz, iOS Safe-Area & Dynamic Island Tap-Lock',
+                        '🎵 Robuste Spotify Stats.fm Integration & harmonisierte Apple-Glass-Transparenz'
+                    ],
+                    en: [
+                        '⚙️ Redesigned Settings Center with subpage drilldown & system updates',
+                        '🛠️ Secret Developer Options (tap the build number 7 times)',
+                        '🛡️ Anti-burn-in StandBy protection, iOS safe area & Dynamic Island tap-lock',
+                        '🎵 Robust Spotify stats.fm integration & unified Apple Glass transparency'
+                    ],
+                    es: [
+                        '⚙️ Centro de ajustes rediseñado con subpáginas y actualización del sistema',
+                        '🛠️ Opciones secretas de desarrollador (toca 7 veces el número de compilación)',
+                        '🛡️ Protección contra quemaduras en StandBy, área segura de iOS y Dynamic Island',
+                        '🎵 Integración robusta de Spotify stats.fm y transparencia de cristal armonizada'
+                    ],
+                    fr: [
+                        '⚙️ Centre de réglages repensé avec sous-pages et mise à jour système',
+                        '🛠️ Options de développeur secrètes (appuyez 7 fois sur le numéro de build)',
+                        '🛡️ Protection anti-marquage StandBy, zone sécurisée iOS et Dynamic Island',
+                        '🎵 Intégration Spotify stats.fm robuste et transparence Liquid Glass harmonisée'
+                    ],
+                    pt: [
+                        '⚙️ Centro de configurações reformulado com subpáginas e atualização do sistema',
+                        '🛠️ Opções secretas de desenvolvedor (toque 7 vezes no número da versão)',
+                        '🛡️ Proteção contra queima em StandBy, área segura do iOS e Dynamic Island',
+                        '🎵 Integração robusta do Spotify stats.fm e transparência Apple Glass harmonizada'
+                    ],
+                    tr: [
+                        '⚙️ Alt sayfa geçişleri ve sistem güncellemesiyle yenilenen Ayarlar Merkezi',
+                        '🛠️ Gizli Geliştirici Seçenekleri (Yapı numarasına 7 kez dokunun)',
+                        '🛡️ Yanma korumalı StandBy, iOS güvenli alan ve Dynamic Island kilit koruması',
+                        '🎵 Güçlendirilmiş Spotify stats.fm entegrasyonu ve Apple Glass şeffaflığı'
+                    ]
+                }
+            },
             {
                 tag: 'v24.201',
                 title: {
@@ -23037,7 +23139,17 @@ let shareCardLoading;
             }
         };
 
+        window.SETTINGS_LOCKED_PENDING_ADMIN = true; // 🔒 Vorübergehend pausiert bis Admin-Rückmeldung erfolgt
+
         window.toggleStandaloneSettings = function(event) {
+            if (window.SETTINGS_LOCKED_PENDING_ADMIN) {
+                if (typeof showToast === 'function') {
+                    showToast('🔒 Einstellungs-Zentrum vorübergehend gesperrt – Wartet auf Server-Admin-Freigabe für Release v24.216.0!', 'warn');
+                }
+                if (typeof haptic === 'function') haptic([40, 30, 40]);
+                if (event) event.stopPropagation();
+                return;
+            }
             if (typeof triggerTutorialEvent === "function") triggerTutorialEvent("settings_opened");
             if (event) event.stopPropagation();
             const globalMenu = document.getElementById('global-settings-menu');
