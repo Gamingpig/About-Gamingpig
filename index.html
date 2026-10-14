@@ -23139,7 +23139,24 @@ let shareCardLoading;
             }
         };
 
-        window.SETTINGS_LOCKED_PENDING_ADMIN = true; // 🔒 Vorübergehend pausiert bis Admin-Rückmeldung erfolgt
+        try {
+            const _urlQAParam = new URLSearchParams(window.location.search).get('qa_unlocked') === '1';
+            const _sessionQA = sessionStorage.getItem('gp_qa_auth') === 'true';
+            window.SETTINGS_LOCKED_PENDING_ADMIN = !(_urlQAParam || _sessionQA);
+        } catch(e) {
+            window.SETTINGS_LOCKED_PENDING_ADMIN = true;
+        }
+
+        // Falls im QA-Modus, Banner visuell auf Freigabe umstellen
+        try {
+            if (!window.SETTINGS_LOCKED_PENDING_ADMIN) {
+                const banner = document.getElementById('admin-action-banner');
+                if (banner) {
+                    banner.className = 'mb-6 p-4 rounded-2xl bg-gradient-to-r from-emerald-500/20 via-teal-500/15 to-emerald-500/20 border border-emerald-500/40 backdrop-blur-xl shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-emerald-200';
+                    banner.innerHTML = '<div class="flex items-center gap-3"><span class="text-2xl p-2 rounded-xl bg-emerald-500/20 border border-emerald-500/30 shrink-0">🧪</span><div><div class="flex items-center gap-2"><strong class="text-emerald-300 font-bold text-sm sm:text-base">QA Test-Modus aktiv (Entsperrt)</strong><span class="px-2 py-0.5 rounded-full bg-emerald-500/30 text-emerald-300 text-[10px] font-mono font-bold border border-emerald-400/40 uppercase">Tester Access</span></div><p class="text-xs text-emerald-200/90 mt-0.5 leading-snug">Einstellungs-Zentrum ist zur Prüfung freigegeben. Bitte alle Funktionen durchtesten.</p></div></div><span class="px-3 py-1 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 font-bold text-xs">PIN 2957 Auth ✓</span>';
+                }
+            }
+        } catch(e) {}
 
         window.toggleStandaloneSettings = function(event) {
             if (window.SETTINGS_LOCKED_PENDING_ADMIN) {
