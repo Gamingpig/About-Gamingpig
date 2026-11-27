@@ -200,7 +200,22 @@
     border-radius: 999px;
     background: rgba(255, 255, 255, 0.08);
     overflow: hidden;
-    margin-bottom: 22px;
+    margin-bottom: 18px;
+  }
+  .countdown-box {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 18px;
+    border-radius: 16px;
+    background: rgba(56, 189, 248, 0.1);
+    border: 1px solid rgba(56, 189, 248, 0.32);
+    margin-bottom: 20px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    color: #bae6fd;
   }
   .progress-bar {
     width: 48%;
@@ -278,6 +293,8 @@
       <div class="progress-bar"></div>
     </div>
 
+    <div class="countdown-box" id="countdownBox">⏱️ <span id="cdTimer">--:--</span></div>
+
     <div class="actions">
       <a class="btn btn-discord" href="https://discord.gg/E8BS9BDAst" target="_blank" rel="noopener">💬 Discord Community</a>
       <button class="btn btn-reload" onclick="location.reload(true)">↻ Neu laden</button>
@@ -287,6 +304,25 @@
   </main>
 
   <script>
+    (function () {
+      var targetMs = new Date('2026-11-27T20:00:00+01:00').getTime();
+      var el = document.getElementById('cdTimer');
+      var box = document.getElementById('countdownBox');
+      function tick() {
+        var diff = targetMs - Date.now();
+        if (diff <= 0) {
+          box.textContent = '🚀 Gleich live – lade neu…';
+          setTimeout(function () { location.reload(true); }, 4000);
+          return;
+        }
+        var totalSec = Math.floor(diff / 1000);
+        var m = Math.floor(totalSec / 60);
+        var s = totalSec % 60;
+        el.textContent = String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+        setTimeout(tick, 500);
+      }
+      tick();
+    })();
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistrations().then(regs => {
         regs.forEach(reg => reg.update());
