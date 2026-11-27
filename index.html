@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Gamingpig | Aktuell Wartungsarbeiten</title>
 <link rel="icon" href="icon-192.png" type="image/png">
+<link rel="manifest" href="manifest.json">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body {
@@ -19,13 +20,14 @@
   }
   body {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    padding: clamp(16px, 4vw, 32px);
+    justify-content: space-between;
+    padding: clamp(18px, 4vh, 36px) clamp(16px, 4vw, 28px);
     position: relative;
   }
 
-  /* Fixed stage keeps ambient orbs from affecting mobile viewport/zoom bounds */
+  /* Fixed stage keeps ambient orbs, grid & particles from affecting mobile zoom/bounds */
   .bg-stage {
     position: fixed;
     inset: 0;
@@ -33,36 +35,45 @@
     pointer-events: none;
     z-index: 0;
   }
+  .bg-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(56, 189, 248, 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(56, 189, 248, 0.05) 1px, transparent 1px);
+    background-size: 42px 42px;
+    mask-image: radial-gradient(circle at center, rgba(0,0,0,0.85) 20%, transparent 80%);
+    -webkit-mask-image: radial-gradient(circle at center, rgba(0,0,0,0.85) 20%, transparent 80%);
+    animation: gridPulse 8s ease-in-out infinite alternate;
+  }
+  @keyframes gridPulse {
+    0% { opacity: 0.4; transform: scale(1); }
+    100% { opacity: 0.75; transform: scale(1.03); }
+  }
   .orb {
     position: absolute;
     border-radius: 50%;
     filter: blur(75px);
-    opacity: 0.42;
+    opacity: 0.44;
     will-change: transform;
   }
   .orb-1 {
-    width: min(70vw, 360px);
-    height: min(70vw, 360px);
+    width: min(72vw, 380px); height: min(72vw, 380px);
     background: radial-gradient(circle, #38bdf8, #0284c7);
-    top: -12%;
-    left: -12%;
+    top: -12%; left: -12%;
     animation: driftA 11s ease-in-out infinite alternate;
   }
   .orb-2 {
-    width: min(75vw, 400px);
-    height: min(75vw, 400px);
+    width: min(76vw, 420px); height: min(76vw, 420px);
     background: radial-gradient(circle, #818cf8, #4f46e5);
-    bottom: -14%;
-    right: -12%;
+    bottom: -14%; right: -12%;
     animation: driftB 13s ease-in-out infinite alternate;
   }
   .orb-3 {
-    width: min(50vw, 240px);
-    height: min(50vw, 240px);
+    width: min(52vw, 260px); height: min(52vw, 260px);
     background: radial-gradient(circle, #ec4899, #9333ea);
-    top: 45%;
-    left: 50%;
-    opacity: 0.18;
+    top: 48%; left: 50%;
+    opacity: 0.2;
     animation: driftC 15s ease-in-out infinite alternate;
   }
   @keyframes driftA {
@@ -78,6 +89,47 @@
     100% { transform: translate3d(-40%, -60%, 0) scale(1.2); }
   }
 
+  /* Top animated equalizer & status strip */
+  .top-strip {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 16px;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #94a3b8;
+    text-transform: uppercase;
+  }
+  .eq {
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: 14px;
+  }
+  .eq span {
+    width: 3px;
+    border-radius: 99px;
+    background: linear-gradient(180deg, #38bdf8, #818cf8);
+    animation: eqBar 1.1s ease-in-out infinite;
+  }
+  .eq span:nth-child(1) { height: 5px; animation-delay: 0s; }
+  .eq span:nth-child(2) { height: 12px; animation-delay: 0.2s; }
+  .eq span:nth-child(3) { height: 8px; animation-delay: 0.4s; }
+  .eq span:nth-child(4) { height: 14px; animation-delay: 0.15s; }
+  @keyframes eqBar {
+    0%, 100% { transform: scaleY(0.45); opacity: 0.7; }
+    50% { transform: scaleY(1); opacity: 1; }
+  }
+
+  /* Main Liquid Glass Card */
   .card {
     position: relative;
     z-index: 2;
@@ -88,10 +140,24 @@
     -webkit-backdrop-filter: blur(28px);
     border: 1px solid rgba(255, 255, 255, 0.14);
     border-radius: 28px;
-    padding: clamp(24px, 5vw, 36px) clamp(20px, 5vw, 28px);
+    padding: clamp(24px, 5vw, 34px) clamp(20px, 5vw, 28px);
     text-align: center;
     box-shadow: 0 28px 80px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    overflow: hidden;
     animation: cardRise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .card::before {
+    content: "";
+    position: absolute;
+    inset: -40%;
+    background: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, 0.06) 50%, transparent 60%);
+    transform: translateX(-100%);
+    animation: glassSheen 6.5s ease-in-out infinite;
+    pointer-events: none;
+  }
+  @keyframes glassSheen {
+    0%, 60% { transform: translateX(-100%); }
+    100% { transform: translateX(120%); }
   }
   @keyframes cardRise {
     from { opacity: 0; transform: translate3d(0, 22px, 0) scale(0.96); }
@@ -115,7 +181,7 @@
   .logo-wrap {
     width: 78px;
     height: 78px;
-    margin: 0 auto 20px;
+    margin: 0 auto 18px;
     border-radius: 22px;
     background: rgba(56, 189, 248, 0.12);
     border: 1px solid rgba(56, 189, 248, 0.4);
@@ -134,31 +200,23 @@
     position: absolute;
     inset: -7px;
     border-radius: 26px;
-    border: 1.5px solid rgba(56, 189, 248, 0.3);
+    border: 1.5px solid rgba(56, 189, 248, 0.32);
     animation: ringPulse 2.6s ease-out infinite;
     pointer-events: none;
   }
   @keyframes ringPulse {
     0% { transform: scale(0.96); opacity: 0.7; }
-    100% { transform: scale(1.16); opacity: 0; }
+    100% { transform: scale(1.18); opacity: 0; }
   }
-  .logo-wrap img {
-    width: 50px;
-    height: 50px;
-    border-radius: 13px;
-  }
+  .logo-wrap img { width: 50px; height: 50px; border-radius: 13px; }
   .gear-badge {
     position: absolute;
-    bottom: -6px;
-    right: -6px;
-    width: 28px;
-    height: 28px;
+    bottom: -6px; right: -6px;
+    width: 28px; height: 28px;
     border-radius: 50%;
     background: #0f172a;
     border: 1px solid rgba(251, 191, 36, 0.55);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: flex; align-items: center; justify-content: center;
     font-size: 14px;
     animation: spinSlow 5s linear infinite;
   }
@@ -183,8 +241,7 @@
     margin-bottom: 14px;
   }
   .pulse-dot {
-    width: 8px;
-    height: 8px;
+    width: 8px; height: 8px;
     border-radius: 50%;
     background: #fbbf24;
     box-shadow: 0 0 10px #fbbf24;
@@ -218,7 +275,6 @@
     background: rgba(255, 255, 255, 0.08);
     overflow: hidden;
     margin-bottom: 22px;
-    position: relative;
   }
   .progress-bar {
     width: 48%;
@@ -267,8 +323,39 @@
     color: #e2e8f0;
     cursor: pointer;
   }
+
+  /* Bottom animated wave & footer strip */
+  .bottom-strip {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    text-align: center;
+  }
+  .wave-dots {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .wave-dots span {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #38bdf8;
+    opacity: 0.35;
+    animation: waveDot 1.6s ease-in-out infinite;
+  }
+  .wave-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .wave-dots span:nth-child(3) { animation-delay: 0.4s; }
+  .wave-dots span:nth-child(4) { animation-delay: 0.6s; }
+  .wave-dots span:nth-child(5) { animation-delay: 0.8s; }
+  @keyframes waveDot {
+    0%, 100% { transform: translateY(0); opacity: 0.3; }
+    50% { transform: translateY(-5px); opacity: 0.95; }
+  }
   .footer {
-    margin-top: 22px;
     font-size: 11.5px;
     color: #64748b;
   }
@@ -276,9 +363,15 @@
 </head>
 <body>
   <div class="bg-stage" aria-hidden="true">
+    <div class="bg-grid"></div>
     <div class="orb orb-1"></div>
     <div class="orb orb-2"></div>
     <div class="orb orb-3"></div>
+  </div>
+
+  <div class="top-strip">
+    <div class="eq" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+    <span>Gamingpig · Systemstatus</span>
   </div>
 
   <main class="card">
@@ -305,10 +398,23 @@
 
     <div class="actions stagger s5">
       <a class="btn btn-discord" href="https://discord.gg/E8BS9BDAst" target="_blank" rel="noopener">💬 Discord Community</a>
-      <button class="btn btn-reload" onclick="location.reload()">↻ Neu laden</button>
+      <button class="btn btn-reload" onclick="location.reload(true)">↻ Neu laden</button>
     </div>
-
-    <div class="footer stagger s5">© 2026 Gamingpig &amp; Team Gamingpig</div>
   </main>
+
+  <div class="bottom-strip">
+    <div class="wave-dots" aria-hidden="true">
+      <span></span><span></span><span></span><span></span><span></span>
+    </div>
+    <div class="footer">© 2026 Gamingpig &amp; Team Gamingpig</div>
+  </div>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(regs => {
+        regs.forEach(reg => reg.update());
+      }).catch(() => {});
+    }
+  </script>
 </body>
 </html>
