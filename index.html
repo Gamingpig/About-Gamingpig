@@ -9849,6 +9849,149 @@ html.gp-android:not(.dark) #ui-controls {
     <script src="./js/services/kartingService.js"></script>
 </head>
 <body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen selection:bg-blue-500/30 overflow-x-hidden">
+    <!-- ========================================================= -->
+    <!-- 🚀 FIRST-VISIT UPDATE INSTALLER & DEVICE CALIBRATION      -->
+    <!-- ========================================================= -->
+    <style>
+      #gp-upd-overlay { position: fixed; inset: 0; z-index: 999999; background: radial-gradient(circle at top center, #0f172a 0%, #030712 72%); color: #f8fafc; display: none; align-items: center; justify-content: center; padding: 20px; font-family: system-ui, -apple-system, sans-serif; }
+      #gp-upd-overlay.active { display: flex; }
+      .gp-upd-card { width: 100%; max-width: 450px; background: rgba(15,23,42,0.85); backdrop-filter: blur(26px); -webkit-backdrop-filter: blur(26px); border: 1px solid rgba(255,255,255,0.14); border-radius: 28px; padding: 30px 24px; text-align: center; box-shadow: 0 28px 80px rgba(0,0,0,0.7); }
+      .gp-upd-stage { width: 110px; height: 90px; margin: 0 auto 16px; position: relative; display: flex; align-items: center; justify-content: center; }
+      .gp-upd-logo { width: 72px; height: 72px; border-radius: 20px; background: rgba(56,189,248,0.12); border: 1px solid rgba(56,189,248,0.4); display: flex; align-items: center; justify-content: center; }
+      .gp-upd-logo img { width: 48px; height: 48px; border-radius: 12px; }
+      .gp-upd-gear { position: absolute; border-radius: 50%; background: #0f172a; border: 1px solid rgba(251,191,36,0.55); display: flex; align-items: center; justify-content: center; }
+      .gp-upd-g1 { width: 30px; height: 30px; bottom: 2px; right: 10px; font-size: 16px; animation: gpSpinCW 4.5s linear infinite; }
+      .gp-upd-g2 { width: 24px; height: 24px; top: 2px; left: 10px; font-size: 12px; border-color: rgba(56,189,248,0.55); animation: gpSpinCCW 3.5s linear infinite; }
+      @keyframes gpSpinCW { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      @keyframes gpSpinCCW { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }
+      .gp-upd-pill { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px; border-radius: 999px; background: rgba(56,189,248,0.14); border: 1px solid rgba(56,189,248,0.35); color: #7dd3fc; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 12px; }
+      .gp-upd-btn { width: 100%; padding: 13px 18px; border-radius: 14px; border: none; font-size: 14px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, #0284c7, #4f46e5); margin-top: 14px; }
+      .gp-upd-bar-bg { width: 100%; height: 8px; border-radius: 999px; background: rgba(255,255,255,0.08); overflow: hidden; margin: 14px 0 8px; }
+      .gp-upd-bar-fill { width: 0%; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #38bdf8, #818cf8, #34d399); transition: width 0.5s ease; }
+      .gp-upd-scan { text-align: left; background: rgba(2,6,23,0.6); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 11px; font-size: 11.5px; color: #94a3b8; font-family: monospace; line-height: 1.55; margin-top: 10px; }
+      #gp-boot-screen { position: fixed; inset: 0; z-index: 1000000; background: #000; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px; }
+      #gp-boot-screen.active { display: flex; }
+      .gp-boot-logo { width: 90px; height: 90px; border-radius: 26px; background: rgba(56,189,248,0.12); border: 1px solid rgba(56,189,248,0.45); display: flex; align-items: center; justify-content: center; margin-bottom: 24px; box-shadow: 0 0 42px rgba(56,189,248,0.35); }
+      .gp-boot-logo img { width: 58px; height: 58px; border-radius: 16px; }
+      .gp-boot-track { width: min(220px, 70vw); height: 5px; border-radius: 999px; background: rgba(255,255,255,0.15); overflow: hidden; margin-bottom: 12px; }
+      .gp-boot-fill { width: 0%; height: 100%; border-radius: 999px; background: #fff; transition: width 2s cubic-bezier(0.22,1,0.36,1); }
+    </style>
+    <div id="gp-upd-overlay">
+      <div class="gp-upd-card" id="gp-upd-step1">
+        <div class="gp-upd-stage">
+          <div class="gp-upd-gear gp-upd-g2">⚙️</div>
+          <div class="gp-upd-logo"><img src="icon-192.png" alt="Gamingpig"></div>
+          <div class="gp-upd-gear gp-upd-g1">⚙️</div>
+        </div>
+        <div class="gp-upd-pill">Update verfügbar · v24.245.104</div>
+        <h2 style="font-size:22px;font-weight:800;margin-bottom:8px;">Neues Update bereit</h2>
+        <p style="font-size:14px;color:#cbd5e1;line-height:1.55;">Die Wartungsarbeiten sind abgeschlossen. Tippe auf den Button, um dein Gerät zu prüfen und das Update anzuwenden.</p>
+        <button type="button" class="gp-upd-btn" id="gp-upd-start-btn">⬇️ Update jetzt installieren &amp; optimieren</button>
+      </div>
+      <div class="gp-upd-card" id="gp-upd-step2" style="display:none;">
+        <div class="gp-upd-stage">
+          <div class="gp-upd-gear gp-upd-g2">⚙️</div>
+          <div class="gp-upd-logo"><img src="icon-192.png" alt="Gamingpig"></div>
+          <div class="gp-upd-gear gp-upd-g1">⚙️</div>
+        </div>
+        <div class="gp-upd-pill" id="gp-upd-badge">Vorbereitung</div>
+        <h2 id="gp-upd-title" style="font-size:21px;font-weight:800;margin-bottom:8px;">Update wird vorbereitet</h2>
+        <p id="gp-upd-msg" style="font-size:13.5px;color:#cbd5e1;line-height:1.55;min-height:42px;">Wir bereiten gerade alles für dich vor. Bitte hab noch einen Augenblick Geduld…</p>
+        <div id="gp-upd-delay" style="display:none;font-size:12px;color:#fcd34d;background:rgba(251,191,36,0.12);border:1px solid rgba(251,191,36,0.32);border-radius:10px;padding:8px 10px;margin-top:8px;">⏳ Es dauert etwas länger als erwartet. Bitte hab weiterhin Geduld.</div>
+        <div class="gp-upd-bar-bg"><div class="gp-upd-bar-fill" id="gp-upd-fill"></div></div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:#94a3b8;font-family:monospace;"><span id="gp-upd-step">Initialisiere…</span><span id="gp-upd-pct">0%</span></div>
+        <div class="gp-upd-scan" id="gp-upd-scan">Starte System- &amp; Hardware-Analyse…</div>
+      </div>
+    </div>
+    <div id="gp-boot-screen">
+      <div class="gp-boot-logo"><img src="icon-192.png" alt="Gamingpig"></div>
+      <div class="gp-boot-track"><div class="gp-boot-fill" id="gp-boot-fill"></div></div>
+      <div id="gp-boot-txt" style="font-size:13px;color:#94a3b8;">App wird neu gestartet…</div>
+    </div>
+    <script>
+      (function initLiveUpdateInstaller() {
+        var SEEN_KEY = 'gp_live_update_seen_24_245_104';
+        try { if (localStorage.getItem(SEEN_KEY) === '1') return; } catch (e) { return; }
+        var ov = document.getElementById('gp-upd-overlay');
+        if (!ov) return;
+        ov.classList.add('active');
+        document.documentElement.classList.add('overflow-hidden');
+
+        function scanDevice() {
+          var cores = navigator.hardwareConcurrency || 4;
+          var ram = navigator.deviceMemory || null;
+          var net = (navigator.connection && navigator.connection.effectiveType) ? navigator.connection.effectiveType : '4g/WLAN';
+          var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+          var t0 = performance.now(), acc = 0;
+          for (var i = 0; i < 600000; i++) acc += Math.sqrt(i);
+          var benchMs = Math.round(performance.now() - t0);
+          var profile = 'high', anim = 'smooth', lg = 'true', canvas = 'true', label = 'High-Performance (Liquid Glass + Canvas)';
+          if (reduced || cores <= 2 || (ram !== null && ram <= 2) || net === '2g' || net === 'slow-2g') {
+            profile = 'eco'; anim = 'minimal'; lg = 'false'; canvas = 'false'; label = 'Eco-Optimiert (Ressourcenschonend)';
+          } else if (cores <= 4 || net === '3g' || benchMs > 28) {
+            profile = 'balanced'; anim = 'smooth'; lg = 'true'; canvas = 'false'; label = 'Balanced Mobile (Flüssig + Datensparend)';
+          }
+          try {
+            localStorage.setItem('gp_perf_profile', profile);
+            localStorage.setItem('app_animation_style', anim);
+            localStorage.setItem('gp_liquid_glass_enabled', lg);
+            localStorage.setItem('gp_canvas_auto_play', canvas);
+            localStorage.setItem('gp_device_scan_ts', String(Date.now()));
+            document.documentElement.setAttribute('data-animation-style', anim);
+          } catch (e) {}
+          return { cores: cores, ram: ram ? ram + ' GB' : 'k.A.', net: net, benchMs: benchMs, label: label, isSlow: profile !== 'high' };
+        }
+
+        document.getElementById('gp-upd-start-btn').addEventListener('click', function () {
+          document.getElementById('gp-upd-step1').style.display = 'none';
+          document.getElementById('gp-upd-step2').style.display = 'block';
+          var dev = scanDevice();
+          var totalMs = dev.isSlow ? 90000 : 68000;
+          var f = function (r) { return Math.round(totalMs * r); };
+          var setP = function (p, s) {
+            document.getElementById('gp-upd-fill').style.width = p + '%';
+            document.getElementById('gp-upd-pct').textContent = p + '%';
+            document.getElementById('gp-upd-step').textContent = s;
+          };
+          setP(6, 'Vorbereitung');
+          setTimeout(function () {
+            document.getElementById('gp-upd-badge').textContent = 'Gerätescan';
+            document.getElementById('gp-upd-title').textContent = 'Gerät wird gescannt';
+            document.getElementById('gp-upd-msg').textContent = 'Hardware, Display und Verbindung werden geprüft, um die App perfekt anzupassen…';
+            document.getElementById('gp-upd-scan').innerHTML = 'CPU-Kerne: ' + dev.cores + ' | RAM: ' + dev.ram + '<br>Netz: ' + dev.net + ' | Benchmark: ' + dev.benchMs + ' ms<br>Profil: ' + dev.label;
+            setP(28, 'Hardware gescannt');
+          }, f(0.14));
+          setTimeout(function () {
+            document.getElementById('gp-upd-badge').textContent = 'Optimierung';
+            document.getElementById('gp-upd-title').textContent = 'App wird optimiert';
+            document.getElementById('gp-upd-msg').textContent = 'Die App wird optimiert für das beste Erlebnis auf deinem Gerät…';
+            setP(55, 'Einstellungen angepasst');
+          }, f(0.38));
+          setTimeout(function () {
+            setP(76, 'Cache & Lyrics-Engine');
+            document.getElementById('gp-upd-delay').style.display = 'block';
+          }, f(0.60));
+          setTimeout(function () {
+            document.getElementById('gp-upd-msg').textContent = 'Update installiert! App wird neu gestartet…';
+            setP(100, 'Abgeschlossen');
+          }, f(0.95));
+          setTimeout(function () {
+            ov.classList.remove('active');
+            var bs = document.getElementById('gp-boot-screen');
+            bs.classList.add('active');
+            setTimeout(function () {
+              document.getElementById('gp-boot-txt').textContent = 'Gamingpig wird gebootet…';
+              document.getElementById('gp-boot-fill').style.width = '100%';
+            }, 400);
+            setTimeout(function () {
+              try { localStorage.setItem(SEEN_KEY, '1'); } catch (e) {}
+              bs.classList.remove('active');
+              document.documentElement.classList.remove('overflow-hidden');
+            }, 2600);
+          }, totalMs + 500);
+        });
+      })();
+    </script>
     <!-- PRECISE APPLE BEZEL OPTICS FILTER (Displacement NUR am Rand) -->
     <svg id="liquid-glass-optics-filter" style="position: absolute; width: 0; height: 0; pointer-events: none; overflow: hidden;" aria-hidden="true">
         <defs>
