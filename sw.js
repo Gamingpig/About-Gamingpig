@@ -1,5 +1,5 @@
 // ==============================================================================
-// Gamingpig Portfolio PWA Service Worker (v24.215.0)
+// Gamingpig Portfolio PWA Service Worker (v24.245.90)
 // Robust Update- & Cache-Strategie:
 // - HTML / Navigation: ECHTES Network-First mit Offline-Fallback
 // - Statische Assets (Bilder, Icons, Manifest): Stale-While-Revalidate mit Cache-Fallback
@@ -7,7 +7,7 @@
 // - Kontrollierte Übernahme: Nutzer-gesteuerte Aktivierung via Update-Center
 // ==============================================================================
 
-const SW_VERSION = "24.215.0";
+const SW_VERSION = "24.245.104";
 const CURRENT_CACHE_VERSION = `gamingpig-cache-v${SW_VERSION}`;
 const CACHE_NAME = CURRENT_CACHE_VERSION;
 
@@ -39,8 +39,9 @@ const PRECACHE_URLS = [
     "./version.json"
 ];
 
-// Kontrollierte Installation (kein automatisches skipWaiting — wartet auf Nutzerbestätigung)
+// Sofortige Übernahme & Cache-Aktualisierung (v24.245.90)
 self.addEventListener("install", (event) => {
+    // Kein automatisches skipWaiting beim Installieren - Nutzer entscheidet selbst über Updates
     event.waitUntil(
         caches.open(CURRENT_CACHE_VERSION).then((cache) => {
             return cache.addAll(PRECACHE_URLS);
@@ -54,7 +55,7 @@ self.addEventListener("activate", (event) => {
         caches.keys().then((keys) => {
             return Promise.all(
                 keys.map((key) => {
-                    if (key.startsWith("gamingpig-cache-v") && key !== CURRENT_CACHE_VERSION) {
+                    if (key !== CURRENT_CACHE_VERSION) {
                         console.log("[SW] Lösche veralteten Cache:", key);
                         return caches.delete(key);
                     }
@@ -191,8 +192,11 @@ self.addEventListener("fetch", (event) => {
 
     // 1. Live APIs, Musik-Streams & externe Ressourcen (Spotify, stats.fm, Discord, Apple, etc.)
     // -> IMMER direkt aus dem Netzwerk, niemals aus altem statischen Cache
-    if (!isSameOrigin || url.pathname.includes("/api/") || url.searchParams.has("api")) {
-        return; // Direkt dem Browser-Netzwerk überlassen
+    if (!isSameOrigin || url.pathname.includes("/api/") || url.searchParams.has("api") ||
+        url.pathname.endsWith(".mp4") || url.pathname.endsWith(".cnvs.mp4") ||
+        url.hostname.includes("scdn.co") || url.hostname.includes("jina.ai") ||
+        url.hostname.includes("stats.fm") || url.hostname.includes("deezer.com")) {
+        return; // Direkt dem Browser-Netzwerk überlassen, niemals Cache aufblähen
     }
 
     // Network-first for documents/scripts: never serve stale JS before checking the release.
@@ -218,7 +222,7 @@ self.addEventListener("fetch", (event) => {
                     const keys = await cache.keys();
                     const core = new Set(PRECACHE_URLS.map(value => new URL(value, self.registration.scope).href));
                     const runtime = keys.filter(request => !core.has(request.url));
-                    for (const request of runtime.slice(0, Math.max(0, runtime.length - 80))) await cache.delete(request);
+                    for (const request of runtime.slice(0, Math.max(0, runtime.length - 25))) await cache.delete(request);
                 })().catch(() => {}));
                 return response;
             }
