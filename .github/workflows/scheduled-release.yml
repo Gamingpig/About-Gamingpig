@@ -1,0 +1,42 @@
+name: "🚀 Scheduled Live Release (v24.245.104)"
+
+on:
+  schedule:
+    # 22:35 UTC = 23:35 MEZ (CET) on 2026-11-27
+    - cron: "35 22 27 11 *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Apply prepared v24.245.104 release from release-v24.245.104
+        run: |
+          git fetch origin release-v24.245.104
+          git checkout origin/release-v24.245.104 -- .
+          git checkout HEAD -- .github/workflows/scheduled-release.yml || true
+
+      - name: Commit and push live release
+        run: |
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Already up to date."
+          else
+            git commit -m "chore(release): publish v24.245.104 live"
+            git pull --rebase origin main
+            git push origin main
+          fi
