@@ -2,86 +2,150 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Gamingpig | Aktuell Wartungsarbeiten</title>
 <link rel="icon" href="icon-192.png" type="image/png">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    min-height: 100vh;
+  html, body {
+    width: 100%;
+    min-height: 100dvh;
     background: #030712;
     color: #f8fafc;
     font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    overflow-x: hidden;
+    touch-action: manipulation;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 24px;
-    overflow: hidden;
+    padding: clamp(16px, 4vw, 32px);
     position: relative;
   }
 
-  /* Animated ambient orbs */
+  /* Fixed stage keeps ambient orbs from affecting mobile viewport/zoom bounds */
+  .bg-stage {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 0;
+  }
   .orb {
     position: absolute;
     border-radius: 50%;
-    filter: blur(80px);
-    opacity: 0.45;
-    pointer-events: none;
-    animation: floatOrb 10s ease-in-out infinite alternate;
+    filter: blur(75px);
+    opacity: 0.42;
+    will-change: transform;
   }
   .orb-1 {
-    width: 340px; height: 340px;
-    background: #0284c7;
-    top: -90px; left: -90px;
+    width: min(70vw, 360px);
+    height: min(70vw, 360px);
+    background: radial-gradient(circle, #38bdf8, #0284c7);
+    top: -12%;
+    left: -12%;
+    animation: driftA 11s ease-in-out infinite alternate;
   }
   .orb-2 {
-    width: 380px; height: 380px;
-    background: #6366f1;
-    bottom: -110px; right: -90px;
-    animation-delay: -5s;
+    width: min(75vw, 400px);
+    height: min(75vw, 400px);
+    background: radial-gradient(circle, #818cf8, #4f46e5);
+    bottom: -14%;
+    right: -12%;
+    animation: driftB 13s ease-in-out infinite alternate;
   }
-  @keyframes floatOrb {
-    0% { transform: translate(0, 0) scale(1); }
-    100% { transform: translate(35px, -25px) scale(1.12); }
+  .orb-3 {
+    width: min(50vw, 240px);
+    height: min(50vw, 240px);
+    background: radial-gradient(circle, #ec4899, #9333ea);
+    top: 45%;
+    left: 50%;
+    opacity: 0.18;
+    animation: driftC 15s ease-in-out infinite alternate;
+  }
+  @keyframes driftA {
+    0% { transform: translate3d(0, 0, 0) scale(1); }
+    100% { transform: translate3d(8vw, 6vh, 0) scale(1.15); }
+  }
+  @keyframes driftB {
+    0% { transform: translate3d(0, 0, 0) scale(1); }
+    100% { transform: translate3d(-8vw, -6vh, 0) scale(1.12); }
+  }
+  @keyframes driftC {
+    0% { transform: translate3d(-50%, -50%, 0) scale(0.95); }
+    100% { transform: translate3d(-40%, -60%, 0) scale(1.2); }
   }
 
   .card {
     position: relative;
     z-index: 2;
     width: 100%;
-    max-width: 480px;
-    background: rgba(15, 23, 42, 0.72);
-    backdrop-filter: blur(26px);
-    -webkit-backdrop-filter: blur(26px);
+    max-width: 460px;
+    background: rgba(15, 23, 42, 0.74);
+    backdrop-filter: blur(28px);
+    -webkit-backdrop-filter: blur(28px);
     border: 1px solid rgba(255, 255, 255, 0.14);
     border-radius: 28px;
-    padding: 36px 28px;
+    padding: clamp(24px, 5vw, 36px) clamp(20px, 5vw, 28px);
     text-align: center;
-    box-shadow: 0 28px 80px rgba(0, 0, 0, 0.65);
-    animation: cardIn 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+    box-shadow: 0 28px 80px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    animation: cardRise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
-  @keyframes cardIn {
-    from { opacity: 0; transform: translateY(18px) scale(0.97); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
+  @keyframes cardRise {
+    from { opacity: 0; transform: translate3d(0, 22px, 0) scale(0.96); }
+    to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+  }
+
+  .stagger {
+    opacity: 0;
+    animation: fadeUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+  .s1 { animation-delay: 0.08s; }
+  .s2 { animation-delay: 0.16s; }
+  .s3 { animation-delay: 0.24s; }
+  .s4 { animation-delay: 0.32s; }
+  .s5 { animation-delay: 0.40s; }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translate3d(0, 12px, 0); }
+    to { opacity: 1; transform: translate3d(0, 0, 0); }
   }
 
   .logo-wrap {
-    width: 72px;
-    height: 72px;
-    margin: 0 auto 18px;
-    border-radius: 20px;
+    width: 78px;
+    height: 78px;
+    margin: 0 auto 20px;
+    border-radius: 22px;
     background: rgba(56, 189, 248, 0.12);
-    border: 1px solid rgba(56, 189, 248, 0.35);
+    border: 1px solid rgba(56, 189, 248, 0.4);
     display: flex;
     align-items: center;
     justify-content: center;
     position: relative;
-    box-shadow: 0 0 30px rgba(56, 189, 248, 0.2);
+    box-shadow: 0 0 36px rgba(56, 189, 248, 0.24);
+    animation: logoFloat 4s ease-in-out infinite;
+  }
+  @keyframes logoFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+  }
+  .logo-ring {
+    position: absolute;
+    inset: -7px;
+    border-radius: 26px;
+    border: 1.5px solid rgba(56, 189, 248, 0.3);
+    animation: ringPulse 2.6s ease-out infinite;
+    pointer-events: none;
+  }
+  @keyframes ringPulse {
+    0% { transform: scale(0.96); opacity: 0.7; }
+    100% { transform: scale(1.16); opacity: 0; }
   }
   .logo-wrap img {
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
+    width: 50px;
+    height: 50px;
+    border-radius: 13px;
   }
   .gear-badge {
     position: absolute;
@@ -91,12 +155,12 @@
     height: 28px;
     border-radius: 50%;
     background: #0f172a;
-    border: 1px solid rgba(251, 191, 36, 0.5);
+    border: 1px solid rgba(251, 191, 36, 0.55);
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 14px;
-    animation: spinSlow 6s linear infinite;
+    animation: spinSlow 5s linear infinite;
   }
   @keyframes spinSlow {
     from { transform: rotate(0deg); }
@@ -116,7 +180,7 @@
     font-weight: 800;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    margin-bottom: 16px;
+    margin-bottom: 14px;
   }
   .pulse-dot {
     width: 8px;
@@ -128,11 +192,11 @@
   }
   @keyframes pulse {
     0%, 100% { transform: scale(1); opacity: 1; }
-    50% { transform: scale(1.4); opacity: 0.5; }
+    50% { transform: scale(1.45); opacity: 0.45; }
   }
 
   h1 {
-    font-size: 28px;
+    font-size: clamp(23px, 5.5vw, 29px);
     font-weight: 800;
     letter-spacing: -0.02em;
     margin-bottom: 10px;
@@ -143,29 +207,34 @@
   p {
     font-size: 14.5px;
     line-height: 1.6;
-    color: #94a3b8;
-    margin-bottom: 24px;
+    color: #cbd5e1;
+    margin-bottom: 22px;
   }
 
   .progress-track {
     width: 100%;
-    height: 6px;
+    height: 7px;
     border-radius: 999px;
     background: rgba(255, 255, 255, 0.08);
     overflow: hidden;
     margin-bottom: 22px;
+    position: relative;
   }
   .progress-bar {
-    width: 45%;
+    width: 48%;
     height: 100%;
     border-radius: 999px;
-    background: linear-gradient(90deg, #38bdf8, #818cf8, #38bdf8);
+    background: linear-gradient(90deg, #38bdf8, #818cf8, #ec4899, #38bdf8);
     background-size: 200% 100%;
-    animation: slideBar 1.8s ease-in-out infinite;
+    animation: slideBar 2s cubic-bezier(0.4, 0, 0.2, 1) infinite, glowFlow 3s linear infinite;
   }
   @keyframes slideBar {
     0% { transform: translateX(-110%); }
-    100% { transform: translateX(240%); }
+    100% { transform: translateX(230%); }
+  }
+  @keyframes glowFlow {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 200% 50%; }
   }
 
   .actions {
@@ -177,63 +246,69 @@
   .btn {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 8px;
-    padding: 11px 18px;
+    padding: 12px 18px;
     border-radius: 14px;
     font-size: 13px;
     font-weight: 700;
     text-decoration: none;
     transition: transform 0.15s, background 0.15s;
   }
-  .btn:hover { transform: translateY(-2px); }
+  .btn:active { transform: scale(0.96); }
   .btn-discord {
     background: #5865F2;
     color: #fff;
+    box-shadow: 0 8px 24px rgba(88, 101, 242, 0.35);
   }
   .btn-reload {
-    background: rgba(255, 255, 255, 0.07);
-    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.16);
     color: #e2e8f0;
     cursor: pointer;
   }
   .footer {
     margin-top: 22px;
     font-size: 11.5px;
-    color: #475569;
+    color: #64748b;
   }
 </style>
 </head>
 <body>
-  <div class="orb orb-1"></div>
-  <div class="orb orb-2"></div>
+  <div class="bg-stage" aria-hidden="true">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
 
   <main class="card">
-    <div class="logo-wrap">
+    <div class="logo-wrap stagger s1">
+      <div class="logo-ring"></div>
       <img src="icon-192.png" alt="Gamingpig">
       <div class="gear-badge">⚙️</div>
     </div>
 
-    <div class="pill">
+    <div class="pill stagger s2">
       <span class="pulse-dot"></span>
-      <span>Update-Rollout läuft</span>
+      <span>Wartungsmodus aktiv</span>
     </div>
 
-    <h1>Aktuell Wartungsarbeiten</h1>
-    <p>
-      Wir schalten gerade das große Gamingpig-Update (<strong>v24.245.104</strong>) für euch live.
-      In wenigen Minuten sind alle neuen Features wieder wie gewohnt erreichbar!
+    <h1 class="stagger s3">Aktuell Wartungsarbeiten</h1>
+    <p class="stagger s4">
+      Wir bereiten gerade das große Gamingpig-Update (<strong>v24.245.104</strong>) vor.
+      Die Wartungsarbeiten dauern voraussichtlich etwas länger – wir geben euch in der Community Bescheid, sobald alles wieder live ist!
     </p>
 
-    <div class="progress-track">
+    <div class="progress-track stagger s4">
       <div class="progress-bar"></div>
     </div>
 
-    <div class="actions">
+    <div class="actions stagger s5">
       <a class="btn btn-discord" href="https://discord.gg/E8BS9BDAst" target="_blank" rel="noopener">💬 Discord Community</a>
       <button class="btn btn-reload" onclick="location.reload()">↻ Neu laden</button>
     </div>
 
-    <div class="footer">© 2026 Gamingpig &amp; Team Gamingpig</div>
+    <div class="footer stagger s5">© 2026 Gamingpig &amp; Team Gamingpig</div>
   </main>
 </body>
 </html>
